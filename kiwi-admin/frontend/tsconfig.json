@@ -17,6 +17,7 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
+      "diagram-js-grid": ["node_modules/diagram-js-grid/dist/index.js"],
       "@app/*": ["src/app/*"],
       "@app": ["src/app"],
       "@store/*": ["src/app/core/services/store/*"],

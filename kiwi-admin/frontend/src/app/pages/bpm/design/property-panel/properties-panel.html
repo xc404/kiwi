@@ -3,25 +3,28 @@
     <bpm-panel-header [element]="element()"></bpm-panel-header>
     @if(element()){
     <div class="properties-panel-tabs">
+        @if (instanceMode()) {
+        <nz-collapse>
+            <nz-collapse-panel nzHeader="流程变量" [nzActive]="true" nzShowArrow="true">
+                @for (row of filteredVariables(); track row.name + '\0' + (row.activityInstanceId ?? '')) {
+                <div class="instance-var-row"><span class="instance-var-name">{{ row.name }}</span><span
+                        class="instance-var-type">{{ row.type }}</span><span class="instance-var-value">{{ row.value | json }}</span>
+                </div>
+                } @empty {
+                <div class="instance-var-empty">暂无变量</div>
+                }
+            </nz-collapse-panel>
+        </nz-collapse>
+        } @else {
         <nz-tabs>
-            @if (instanceMode()) {
-            <nz-tab nzTitle="运行时变量">
-                <bpm-instance-properties
-                    [variables]="runtimeVariables()"
-                    [selectionIsRoot]="instanceSelectionIsRoot()"
-                />
-            </nz-tab>
-            }
-            @if (!instanceMode()) {
             @for (tab of tabs(); track $index) {
             <nz-tab [nzTitle]="tab.name!">
                 <nz-collapse>
                     @for (group of tab.groups; track $index) {
-                    <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false" nzShowArrow="true">
+                    <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false"
+                        nzShowArrow="true">
                         <div style="width: 100%;">
-                            <property-group
-                                [element]="element()"
-                                [bpmnModeler]="$any(bpmnModeler())"
+                            <property-group [element]="element()" [bpmnModeler]="$any(bpmnModeler())"
                                 [properties]="group.properties"></property-group>
                         </div>
                     </nz-collapse-panel>
@@ -32,8 +35,8 @@
             </nz-tab>
             }
 
-            }
         </nz-tabs>
+        }
     </div>
 
     }
