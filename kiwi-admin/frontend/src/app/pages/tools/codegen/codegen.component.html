@@ -1,0 +1,35 @@
+<app-page-header></app-page-header>
+<section class="page-content">
+      <crud-page [pageConfig]="pageConfig()">
+      </crud-page>
+
+      <ng-template #zorroIconTpl let-record="record">
+            <i nz-icon nzTheme="outline" [nzType]="record.icon"></i>
+      </ng-template>
+
+      <ng-template #importBtn let-record="record">
+            <button nz-button nz-dropdown [nzDropdownMenu]="menu" nzSize="small" nzType="primary">导入</button>
+            <nz-dropdown-menu #menu="nzDropdownMenu">
+                  <ul nz-menu>
+                        <li nz-menu-item nz-tooltip="导入数据库表" (click)="showImportModal()">
+                              导入数据库表
+                        </li>
+
+                        <li nz-menu-item nz-tooltip="导入Java文件">
+
+                              <nz-upload [nzAction]="uploadJavaUrl()"
+                                    [nzHeaders]="{ authorization: 'authorization-text' }"
+                                    (nzChange)="uploadJavaFile($event)" [nzShowUploadList]="false">
+                                    导入Java文件
+                              </nz-upload>
+                        </li>
+
+                        <li nz-menu-item nz-tooltip="导入JSON" (click)="showImportJsonModal()">
+                              导入JSON
+                        </li>
+                  </ul>
+            </nz-dropdown-menu>
+      </ng-template>
+
+
+</section>

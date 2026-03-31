@@ -1,0 +1,11 @@
+<app-page-header></app-page-header>
+<section class="page-content">
+      <crud-page [pageConfig]="pageConfig()">
+      </crud-page>
+
+      <ng-template #zorroIconTpl let-record="record">
+            <i nz-icon nzTheme="outline" [nzType]="record.icon"></i>
+      </ng-template>
+
+     
+</section>

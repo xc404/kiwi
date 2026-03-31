@@ -1,0 +1,17 @@
+<app-page-header></app-page-header>
+<section class="page-content">
+      <crud-page [pageConfig]="pageConfig">
+      </crud-page>
+
+      @if(selectedComponent()){
+      <nz-modal nzxModalDrag [nzVisible]="parametersModalVisible()" nzWidth="80vw"
+            [nzTitle]="'参数配置 - ' + selectedComponent().name" (nzOnCancel)="parametersModalVisible.set(false)"
+            (nzOnOk)="saveParameters()">
+            <div *nzModalContent class="crud-edit-form">
+                  <app-bpm-input-output-parameters [component]="selectedComponent()">
+
+                  </app-bpm-input-output-parameters>
+            </div>
+      </nz-modal>
+      }
+</section>

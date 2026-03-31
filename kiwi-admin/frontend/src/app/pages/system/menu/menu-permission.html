@@ -1,0 +1,15 @@
+    
+    <div class="search-box">
+    <nz-input-search >
+            <input nz-input [(ngModel)]="searchValue" placeholder="模块或权限名称" />
+    </nz-input-search>
+</div>
+<app-table [tableConfig]="tableConfig()" [tableData]="permissions()">
+    <ng-template #permissionChooseTpl let-record="record">
+        <nz-radio-group [(ngModel)]="record.required">
+            <label nz-radio nzValue="none">不需要</label>
+            <label nz-radio nzValue="required">必须</label>
+            <label nz-radio nzValue="optional">可选</label>
+        </nz-radio-group>
+    </ng-template>
+</app-table>

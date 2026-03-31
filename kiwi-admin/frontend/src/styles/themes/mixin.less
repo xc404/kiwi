@@ -1,0 +1,24 @@
+.themeMixin(@rules) {
+  html {
+    &.default {
+      @import './default.less';
+      @rules();
+    }
+
+    &.dark {
+      @import './dark.less';
+      @rules();
+    }
+
+    &.aliyun {
+      @import './aliyun.less';
+
+      @rules();
+    }
+
+    &.compact {
+      @import './compact.less';
+      @rules();
+    }
+  }
+}

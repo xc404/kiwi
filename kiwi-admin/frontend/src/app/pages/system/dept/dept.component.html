@@ -1,0 +1,33 @@
+<div class="content-wrap">
+  <div nz-row>
+    <div nz-col nzFlex="240px">
+      <nz-card [nzExtra]="tableToolbar" nzTitle="部门结构">
+        <nz-tree #deptTree [nzData]="nodes()"
+        (nzContextMenu)="contextMenu($event, treeMenu)"
+          (nzClick)="editCurrent($event.node!)"
+        nzAsyncData  (nzExpandChange)="loadChildren($event.node!)"></nz-tree>
+      </nz-card>
+    </div>
+    <div class="m-l-8" nz-col nzFlex="1">
+      <nz-card>
+        
+        <app-formly-panel [fields]="fields" [form]="form" [model]="model()">
+        </app-formly-panel>
+        <div class="text-right m-t-15">
+          <button nz-button nzType="primary" (click)="submit()">保存</button>
+          <button class="m-l-8" nz-button nzType="default">重置</button>
+        </div>
+      </nz-card>
+    </div>
+  </div>
+<ng-template #tableToolbar>
+  <!-- <app-button [config]="addBtn"></app-button> -->
+</ng-template>
+<nz-dropdown-menu #treeMenu="nzDropdownMenu">
+      <ul nz-menu>
+        <li nz-menu-item (click)="addSub()">添加</li>
+        <li nz-menu-item (click)="editCurrent()">修改</li>      
+        <li nz-menu-item (click)="deleteCurrent()">删除</li>      
+      </ul>
+    </nz-dropdown-menu>
+</div>

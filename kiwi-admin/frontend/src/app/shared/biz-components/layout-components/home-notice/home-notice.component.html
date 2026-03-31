@@ -1,0 +1,42 @@
+<nz-card [nzBodyStyle]="{ padding: 0 }">
+  <nz-spin [nzSpinning]="loading()">
+    <nz-tabs nzCentered [nzTabBarStyle]="{ paddingLeft: '15px', paddingRight: '15px' }">
+      @for (ch of channels; track ch; let i = $index) {
+        <nz-tab [nzTitle]="tabTitle(i)">
+          <nz-list nzItemLayout="horizontal" class="home-notice-list">
+            @if (forChannel(ch).length === 0) {
+              <nz-empty nzNotFoundContent="暂无消息" class="home-notice-empty"></nz-empty>
+            } @else {
+              @for (item of forChannel(ch); track item.id) {
+                <nz-list-item>
+                  <nz-list-item-meta>
+                    <nz-list-item-meta-title>
+                      <div class="flex p-l-10 p-r-10">
+                        <span class="flex-1" nz-typography nzEllipsis>{{ item.title }}</span>
+                        @if (item.tag) {
+                          <nz-tag class="m-l-10" [nzColor]="item.tag.color">{{ item.tag.text }}</nz-tag>
+                        }
+                      </div>
+                    </nz-list-item-meta-title>
+                    <nz-list-item-meta-description>
+                      <div class="p-l-10 p-r-10">
+                        <p nz-typography nzEllipsis nzType="secondary" [nzEllipsisRows]="3">{{ item.summary }}</p>
+                        @if (item.extra) {
+                          <p class="extra-line">{{ item.extra }}</p>
+                        }
+                        <p class="time-line">{{ item.createdAt | date: 'yyyy-MM-dd HH:mm' }}</p>
+                      </div>
+                    </nz-list-item-meta-description>
+                  </nz-list-item-meta>
+                </nz-list-item>
+              }
+            }
+          </nz-list>
+        </nz-tab>
+      }
+    </nz-tabs>
+  </nz-spin>
+  <div class="footer-wrap">
+    <a routerLink="/default/personal/notifications" class="footer-link">查看全部</a>
+  </div>
+</nz-card>

@@ -1,0 +1,9 @@
+.app-form-label {
+    min-width: 80px;
+    max-width: 100px;
+    flex: 0 0 auto;
+}
+
+.app-form-control {
+    flex: 1 1 auto;
+}

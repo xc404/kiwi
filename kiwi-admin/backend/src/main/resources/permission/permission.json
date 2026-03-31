@@ -1,0 +1,15 @@
+{
+  "permissions": [
+    { "key": "sa:role:add", "description": "添加角色" },
+    { "key": "sa:role:list", "description": "查看角色列表" },
+    { "key": "sa:role:view", "description": "查看角色详情" },
+    { "key": "sa:role:update", "description": "更新角色" },
+    { "key": "sa:role:delete", "description": "删除角色" },
+    { "key": "sa:role:saToken", "description": "角色管理saToken权限" },
+    { "key": "sa:user:add", "description": "添加用户" },
+    { "key": "sa:user:list", "description": "查看用户列表" },
+    { "key": "sa:user:view", "description": "查看用户详情" },
+    { "key": "sa:user:update", "description": "更新用户" },
+    { "key": "sa:user:delete", "description": "删除用户" }
+  ]
+}

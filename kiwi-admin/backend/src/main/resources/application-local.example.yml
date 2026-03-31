@@ -1,0 +1,34 @@
+# 复制本文件为 application-local.yml（已被 .gitignore 忽略），并按环境填写。
+# 启动时增加：--spring.profiles.active=local,dev
+# （dev 可选，用于开启 application-dev.yml 中的 MyBatis StdOut 调试）
+
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true
+    username: root
+    password: your-mysql-password
+  data:
+    mongodb:
+      uri: mongodb://127.0.0.1:27017/x404?authSource=admin
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password:
+
+camunda.bpm:
+  admin-user:
+    id: demo
+    password: your-camunda-admin-password
+
+app:
+  password:
+    secret: your-long-random-secret-for-password-hashing
+
+# 可选：外部任务 / Slurm 等扩展
+# kiwi:
+#   bpm:
+#     slurm:
+#       slurm-file-path: /path/to/slurm
+# kiwi.external-task:
+#   lock-duration: 10000
+#   workerId: kiwi-admin

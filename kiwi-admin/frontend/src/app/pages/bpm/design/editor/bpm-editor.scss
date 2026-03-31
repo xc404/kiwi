@@ -1,0 +1,39 @@
+.containers {
+  background-color: #ffffff;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas {
+  height: 100%;
+  width: 100%;
+}
+
+.editor {
+  height: 100%;
+  flex: 1 1 auto;
+  position: relative;
+}
+
+.editor .toolbar {
+  position: absolute;
+  left: 200px;
+  top: 10px;
+  z-index: 1000;
+}
+
+.editor .statusbar {
+  position: absolute;
+  bottom: 0px;
+  z-index: 1000;
+  border: 1px solid #ddd;
+  // border-right: 1px solid #ddd;
+  // border-left: 1px solid #ddd;
+  width: 100%;
+}
+
+.bpmn-button {
+  padding: 2px !important;
+}

@@ -1,0 +1,126 @@
+// 项目下拉浮层挂在 body 的 CDK overlay 上，通过专用类名控制宽度（与 nzOverlayClassName 对应）
+.cdk-overlay-pane.bpm-workspace-project-menu-overlay,
+.bpm-workspace-project-menu-overlay.ant-dropdown,
+.bpm-workspace-project-menu-overlay {
+  min-width: 150px;
+  max-width: min(400px, calc(100vw - 24px));
+}
+
+app-bpm-project-process {
+  .bpm-workspace-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+  }
+
+  .bpm-workspace-toolbar-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .bpm-workspace-toolbar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #e6f7ff;
+    color: #1890ff;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .bpm-workspace-toolbar-text {
+    min-width: 0;
+  }
+
+  .bpm-workspace-toolbar-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.88);
+    line-height: 1.4;
+  }
+
+  .bpm-workspace-toolbar-desc {
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    line-height: 1.5;
+  }
+
+  .bpm-workspace-toolbar-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .bpm-workspace-toolbar-label {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  .bpm-workspace-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bpm-workspace-trigger-label {
+    padding: 0 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .bpm-workspace-dropdown {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 0 0;
+  }
+
+  .bpm-workspace-search {
+    display: block;
+    width: calc(100% - 16px);
+    max-width: 100%;
+    margin: 0 8px 4px;
+    box-sizing: border-box;
+  }
+
+  .bpm-workspace-menu {
+    max-height: min(320px, 50vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: none;
+    box-shadow: none;
+    width: 100%;
+  }
+
+  .bpm-workspace-menu .ant-menu-item {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bpm-workspace-menu-empty {
+    padding: 8px 16px 12px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    text-align: center;
+    list-style: none;
+  }
+}

@@ -1,0 +1,83 @@
+import { Component, OnInit, ChangeDetectionStrategy, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
+
+import { SessionService } from '@app/core/services/common/session.service';
+import { LoginService } from '@core/services/http/login/login.service';
+import { SpinService } from '@store/common-store/spin.service';
+import { fnCheckForm } from '@utils/tools';
+
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzWaveModule } from 'ng-zorro-antd/core/wave';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+
+@Component({
+  selector: 'app-login-form',
+  templateUrl: './login-form.component.html',
+  styleUrls: ['./login-form.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormsModule, NzFormModule, ReactiveFormsModule, NzTabsModule, NzGridModule, NzButtonModule, NzInputModule, NzWaveModule, NzCheckboxModule, NzIconModule, RouterLink]
+})
+export class LoginFormComponent implements OnInit {
+  validateForm!: FormGroup;
+  destroyRef = inject(DestroyRef);
+
+  private fb = inject(FormBuilder);
+  private notification = inject(NzNotificationService);
+  private router = inject(Router);
+  private spinService = inject(SpinService);
+  private dataService = inject(LoginService);
+  private loginInOutService = inject(SessionService);
+
+  enableOtherLogin = false;
+  enablePhoneLogin = false;
+  enableForgetPwd = false;
+  submitForm(): void {
+    // 校验表单
+    if (!fnCheckForm(this.validateForm)) {
+      return;
+    }
+    // 设置全局loading
+    this.spinService.$globalSpinStore.set(true);
+    // 获取表单的值
+    const param = this.validateForm.getRawValue();
+    // 调用登录接口
+    // todo 登录后台返回统一模式为,如果code不为200，会自动被拦截，如果需要修改，请在src/app/core/services/http/base-http.service.ts中进行修改
+    // {
+    //   code:number,
+    //   data:NzSafeAny,
+    //   msg：string
+    // }
+    this.dataService
+      .login(param)
+      .pipe(
+        // 无论如何设置全局loading为false
+        finalize(() => {
+          this.spinService.$globalSpinStore.set(false);
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(res => {
+        this.loginInOutService.setSession(res.token);
+        this.router.navigateByUrl('default/dashboard/analysis');
+      });
+  }
+
+  ngOnInit(): void {
+    // 只要进入登录页面，就清除各种缓存
+    // this.loginInOutService.loginOut();
+    this.validateForm = this.fb.group({
+      userName: [null, [Validators.required]],
+      password: [null, [Validators.required]],
+      remember: [null]
+    });
+  }
+}

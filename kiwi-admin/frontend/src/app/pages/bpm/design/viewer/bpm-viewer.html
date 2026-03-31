@@ -1,0 +1,20 @@
+<nz-layout class="full-height">
+  <nz-sider class="mix-sider-height side-explorer" nzWidth="250px" nzTheme="light" nzNoAnimation>
+    <bpm-pallete> </bpm-pallete>
+  </nz-sider>
+  <nz-content class="flex flex-column">
+    <nz-layout>
+      <nz-content class="flex flex-column">
+        <div class="top-bar">
+          <bpm-toolbar [bpmnModeler]="bpmnModeler"></bpm-toolbar>
+        </div>
+        <!-- </nz-header> -->
+        <div class="canvas" ref="canvas">
+        </div>
+      </nz-content>
+      <nz-sider class="mix-sider-height side-explorer" nzWidth="400px" nzTheme="light" nzNoAnimation>
+        <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
+      </nz-sider>
+    </nz-layout>
+  </nz-content>
+</nz-layout>
