@@ -5,6 +5,7 @@ import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -205,6 +206,38 @@ import java.util.concurrent.CompletableFuture;
             name = "Slurm GPUs per Task",
             type = "Integer",
             description = "GPUs per task."
+        )
+    },
+    outputs = {
+        @ComponentParameter(
+            key = "slurmJobId",
+            name = "Slurm Job ID",
+            type = "String",
+            description = "Successfully submitted Slurm batch job ID (from sbatch stdout)."
+        ),
+        @ComponentParameter(
+            key = "slurmJobName",
+            name = "Slurm Job Name",
+            type = "String",
+            description = "Resolved job name (--job-name), same as SBATCH job name."
+        ),
+        @ComponentParameter(
+            key = "sbatchFilePath",
+            name = "Sbatch Script Path",
+            type = "String",
+            description = "Absolute path of the generated .sbatch file under the Slurm work directory."
+        ),
+        @ComponentParameter(
+            key = "outputFilePath",
+            name = "Stdout Log Path",
+            type = "String",
+            description = "Resolved Slurm stdout file path (--output)."
+        ),
+        @ComponentParameter(
+            key = "errorFilePath",
+            name = "Stderr Log Path",
+            type = "String",
+            description = "Resolved Slurm stderr file path (--error)."
         )
     }
 )

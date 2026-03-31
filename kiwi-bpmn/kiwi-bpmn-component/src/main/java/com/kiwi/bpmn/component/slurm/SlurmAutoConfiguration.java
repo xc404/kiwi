@@ -6,13 +6,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
-@ConditionalOnProperty(prefix = "kiwi.bpm.slurm",  name = "workDirectory")
+@ConditionalOnProperty(prefix = "kiwi.bpm.slurm", name = "workDirectory")
 @EnableConfigurationProperties({SlurmProperties.class})
+@EnableScheduling
 @Slf4j
-public class SlurmAutoConfiguration 
-{
+public class SlurmAutoConfiguration {
 
 
     @Bean
