@@ -37,3 +37,43 @@
 .bpmn-button {
   padding: 2px !important;
 }
+
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-editor-layout,
+.bpm-editor-main-content,
+.bpm-editor-workspace,
+.bpm-editor-canvas-content,
+.bpm-editor-properties-sider {
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-editor-workspace {
+  overflow: hidden;
+}
+
+.bpm-editor-canvas-content {
+  overflow: hidden;
+}
+
+.bpm-editor-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.bpm-editor-properties-sider {
+  overflow: hidden;
+  border-left: 1px solid #f0f0f0;
+}
+
+.bpm-editor-properties-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
