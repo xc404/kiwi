@@ -7,6 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 public class SlurmProperties
 {
-    private String slurmFilePath;
+    private String workDirectory;
     private int threadPoolSize = 5;
 }

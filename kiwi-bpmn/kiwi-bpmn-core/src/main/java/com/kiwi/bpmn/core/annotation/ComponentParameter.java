@@ -63,4 +63,6 @@ public @interface ComponentParameter
     String htmlType() default "";
 
     String type() default "string";
+
+    boolean important() default false;
 }

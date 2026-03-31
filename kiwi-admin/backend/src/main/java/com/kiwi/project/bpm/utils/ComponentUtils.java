@@ -66,6 +66,7 @@ public class ComponentUtils
         bpmComponentParameter.setDescription(parameter.description());
         bpmComponentParameter.setHtmlType(parameter.htmlType());
         bpmComponentParameter.setRequired(parameter.required());
+        bpmComponentParameter.setImportant(parameter.required() || parameter.important());
         bpmComponentParameter.setDefaultValue(parameter.schema().defaultValue());
         bpmComponentParameter.setType(parameter.type());
         return bpmComponentParameter;
