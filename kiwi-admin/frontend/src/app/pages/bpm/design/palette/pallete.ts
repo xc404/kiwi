@@ -11,9 +11,8 @@ import { NzDropDownModule } from "ng-zorro-antd/dropdown";
 import { NzFormModule } from "ng-zorro-antd/form";
 import { NzIconModule } from "ng-zorro-antd/icon";
 import { NzLayoutModule } from "ng-zorro-antd/layout";
-import { NzSpaceModule } from "ng-zorro-antd/space";
 import { NzTabsModule } from "ng-zorro-antd/tabs";
-import { NzTooltipDirective } from "ng-zorro-antd/tooltip";
+import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { DndModule } from 'ngx-drag-drop';
 import { combineLatest, map, Observable, of } from 'rxjs';
 import { ComponentPalleteProvider } from '../../component/ComponentPalleteProvider';
@@ -54,7 +53,7 @@ declare interface PalleteTab {
     NzCollapseModule,
     NzButtonModule,
     NzFormModule,
-    DndModule, NzSpaceModule, NzTooltipDirective],
+    DndModule, NzTooltipModule],
   standalone: true,
 })
 export class BpmPallete implements OnInit {
