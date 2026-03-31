@@ -1,40 +1,33 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
-import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
-import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
-import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
-import 'bpmn-js/dist/assets/diagram-js.css'; // 左边工具栏以及编辑节点的样式
-import gridModule from 'diagram-js-grid';
-import BpmnModeler from 'bpmn-js/lib/Modeler';
-import Create from 'diagram-js/lib/features/create/Create';
-// import 'bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css'
-// import "bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css"
-// import "node_modules/bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css"
-// import paletteModule from '../palette';
-// import propertiesProviderModule from 'bpmn-js-properties-panel/lib/provider/camunda.json'
-// import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda'
-// 而这个引入的是右侧属性栏里的内容
 import { HttpClient } from '@angular/common/http';
+import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from "@angular/material/expansion";
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
+import 'bpmn-js/dist/assets/diagram-js.css'; // 左边工具栏以及编辑节点的样式
 import BpmnFactory from 'bpmn-js/lib/features/modeling/BpmnFactory';
 import ElementFactory from 'bpmn-js/lib/features/modeling/ElementFactory';
+import BpmnModeler from 'bpmn-js/lib/Modeler';
+import gridModule from 'diagram-js-grid';
+import Create from 'diagram-js/lib/features/create/Create';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule, NzIconService } from 'ng-zorro-antd/icon';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { finalize } from 'rxjs/operators';
+import kiwiDescriptor from '../../component/kiwi.json';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from "../palette/pallete";
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";
-import kiwiDescriptor from '../../component/kiwi.json';
 
 export abstract class BpmEditorToken {
   abstract deploy(): void;
@@ -57,6 +50,7 @@ export abstract class BpmEditorToken {
     }
   ],
   imports: [
+    DatePipe,
     BpmPropertiesPanel,
     MatIconModule,
     MatExpansionModule,
@@ -67,7 +61,6 @@ export abstract class BpmEditorToken {
     NzLayoutComponent,
     NzLayoutModule,
     BpmToolbar,
-    DatePipe,
     NzSpinModule,
     NzButtonModule,
     NzIconModule,

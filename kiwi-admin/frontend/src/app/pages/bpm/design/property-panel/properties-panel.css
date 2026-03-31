@@ -2,3 +2,27 @@
     margin-bottom: 0 !important;
     margin: 0 !important;
 }
+
+.instance-var-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+    word-break: break-all;
+}
+
+.instance-var-name {
+    font-weight: 500;
+}
+
+.instance-var-type {
+    color: #888;
+}
+
+.instance-var-empty {
+    color: #999;
+    font-size: 12px;
+    padding: 8px 0;
+}

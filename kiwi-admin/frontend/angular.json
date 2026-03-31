@@ -88,6 +88,13 @@
             "scripts": [
               "node_modules/driver.js/dist/driver.js.iife.js"
             ],
+            "loader": {
+              ".eot": "file",
+              ".svg": "file",
+              ".ttf": "file",
+              ".woff": "file",
+              ".woff2": "file"
+            },
             "allowedCommonJsDependencies": [
               "crypto-js",
               "qs",

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   AfterViewInit,
   Component,
@@ -18,13 +19,13 @@ import { Element } from 'bpmn-js/lib/model/Types';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { firstValueFrom } from 'rxjs';
-import { filter, map } from 'rxjs/operators';
+import { catchError, firstValueFrom, of } from 'rxjs';
+import { filter, map as mapOp } from 'rxjs/operators';
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
 import {
+  CamundaHistoricActivityInstance,
   ProcessInstanceDiagramView,
   ProcessInstanceService,
-  ProcessVariableRow,
 } from '../service/process-instance.service';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
 
@@ -83,30 +84,8 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     return 'processing';
   });
 
-  /** 按选中 Activity / 流程根过滤后的变量 */
   /** 当前选中高亮 marker 所在图元 id（与 kiwi-bpmn-selected 对应） */
   private selectionMarkerElementId: string | null = null;
-
-  protected readonly filteredVariables = computed((): ProcessVariableRow[] => {
-    const v = this.view();
-    if (!v) {
-      return [];
-    }
-    const vars = v.variables;
-    if (this.selectionIsRoot()) {
-      return vars.filter((r) => !r.activityInstanceId);
-    }
-    const el = this.selectedElement();
-    if (!el) {
-      return [];
-    }
-    const ids = v.activityInstanceIdsByActivityId[el.id];
-    if (!ids?.length) {
-      return [];
-    }
-    const idSet = new Set(ids);
-    return vars.filter((r) => r.activityInstanceId != null && idSet.has(r.activityInstanceId));
-  });
 
   protected viewer: NavigatedViewer | null = null;
 
@@ -118,7 +97,7 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
 
     this.route.paramMap
       .pipe(
-        map((p) => p.get('processInstanceId')),
+        mapOp((p) => p.get('processInstanceId')),
         filter((id): id is string => !!id),
       )
       .subscribe((id) => {
@@ -192,9 +171,7 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     this.loading.set(true);
     this.view.set(null);
     try {
-      const data = await firstValueFrom(
-        this.processInstanceService.getDiagramView(processInstanceId),
-      );
+      const data = await this.loadDiagramViewData(processInstanceId);
       this.view.set(data);
       this.clearSelectionMarker();
       await this.viewer.importXML(data.bpmnXml);
@@ -234,4 +211,113 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** 组件内按顺序调用 service 各单接口，再组装视图（service 内不做多请求聚合）。 */
+  private async loadDiagramViewData(processInstanceId: string): Promise<ProcessInstanceDiagramView> {
+    const pi = await this.loadProcessInstancePayload(processInstanceId);
+    const processDefinitionId = (pi['definitionId'] ?? pi['processDefinitionId']) as string | undefined;
+    if (!processDefinitionId) {
+      throw new Error('响应中缺少流程定义 ID');
+    }
+
+    const xml = await firstValueFrom(this.processInstanceService.getProcessDefinitionXml(processDefinitionId));
+    const activities = await firstValueFrom(
+      this.processInstanceService.getHistoryActivityInstances(processInstanceId),
+    );
+    const def = await firstValueFrom(
+      this.processInstanceService.getProcessDefinition(processDefinitionId).pipe(
+        catchError(() => of({ key: undefined })),
+      ),
+    );
+
+    return this.buildDiagramView(
+      processInstanceId,
+      pi,
+      processDefinitionId,
+      def.key ?? null,
+      xml.bpmn20Xml,
+      activities,
+    );
+  }
+
+  private async loadProcessInstancePayload(processInstanceId: string): Promise<Record<string, unknown>> {
+    try {
+      return await firstValueFrom(this.processInstanceService.getRuntimeProcessInstance(processInstanceId));
+    } catch (err) {
+      const e = err as HttpErrorResponse;
+      if (e.status === 404) {
+        return firstValueFrom(this.processInstanceService.getHistoricProcessInstance(processInstanceId));
+      }
+      throw err;
+    }
+  }
+
+  private buildActivityInstanceIndex(activities: CamundaHistoricActivityInstance[]): Record<string, string[]> {
+    const index: Record<string, string[]> = {};
+    for (const row of activities) {
+      const aid = row.activityId;
+      const instanceId = row.id ?? (row as { activityInstanceId?: string }).activityInstanceId;
+      if (!aid || !instanceId || row.activityType === 'sequenceFlow') {
+        continue;
+      }
+      if (!index[aid]) {
+        index[aid] = [];
+      }
+      if (!index[aid].includes(instanceId)) {
+        index[aid].push(instanceId);
+      }
+    }
+    return index;
+  }
+
+  private buildDiagramView(
+    processInstanceId: string,
+    pi: Record<string, unknown>,
+    processDefinitionId: string,
+    processDefinitionKey: string | null,
+    bpmnXml: string,
+    activities: CamundaHistoricActivityInstance[],
+  ): ProcessInstanceDiagramView {
+    const ended = this.isProcessEnded(pi);
+    const suspended = pi['suspended'] === true;
+
+    const activeSet = new Set<string>();
+    const completedSet = new Set<string>();
+
+    for (const row of activities) {
+      const aid = row.activityId;
+      if (!aid || row.activityType === 'sequenceFlow') {
+        continue;
+      }
+      if (row.endTime == null || row.endTime === '') {
+        activeSet.add(aid);
+      } else {
+        completedSet.add(aid);
+      }
+    }
+
+    for (const aid of activeSet) {
+      completedSet.delete(aid);
+    }
+
+    return {
+      processInstanceId,
+      processDefinitionId,
+      processDefinitionKey,
+      ended,
+      suspended,
+      businessKey: (pi['businessKey'] as string) ?? null,
+      bpmnXml,
+      activeActivityIds: [...activeSet],
+      completedActivityIds: [...completedSet],
+      activityInstanceIdsByActivityId: this.buildActivityInstanceIndex(activities),
+    };
+  }
+
+  private isProcessEnded(pi: Record<string, unknown>): boolean {
+    if (pi['ended'] === true) {
+      return true;
+    }
+    const endTime = pi['endTime'];
+    return endTime != null && endTime !== '';
+  }
 }
