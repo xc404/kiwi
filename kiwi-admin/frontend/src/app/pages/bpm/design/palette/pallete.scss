@@ -1,0 +1,28 @@
+.palette-label {
+    font-size: 12px;
+}
+
+.bpm-pallete {
+    width: 100%;
+}
+
+.bpm-pallete .ant-tabs-nav {
+    margin-bottom: 0 !important;
+    margin: 0 !important;
+}
+
+.bpmn-entries-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 36px);
+    gap: 4px;
+}
+
+.bpmn-item {
+    height: 36px;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    color: var(--color-text-1);
+}

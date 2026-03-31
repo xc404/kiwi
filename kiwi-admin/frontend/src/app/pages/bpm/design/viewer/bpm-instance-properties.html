@@ -1,0 +1,45 @@
+<div class="properties-panel-tabs">
+  <nz-tabs>
+    <nz-tab nzTitle="变量">
+      <nz-collapse>
+        <nz-collapse-panel nzHeader="流程变量" [nzActive]="true" nzShowArrow="true">
+          @if (variables().length > 0) {
+            <nz-table
+              nzSize="small"
+              [nzData]="variables()"
+              [nzShowPagination]="false"
+              class="variables-table"
+            >
+              <thead>
+                <tr>
+                  <th nzWidth="120px">名称</th>
+                  <th nzWidth="72px">类型</th>
+                  <th nzWidth="56px">作用域</th>
+                  <th>值</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of variables(); track row.name + (row.activityInstanceId ?? '')) {
+                  <tr>
+                    <td class="cell-mono">{{ row.name }}</td>
+                    <td>{{ row.type }}</td>
+                    <td>{{ scopeLabel(row.scope) }}</td>
+                    <td class="cell-value" [title]="formatVariableValue(row.value)">{{
+                      formatVariableValue(row.value)
+                    }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          } @else if (selectionIsRoot()) {
+            <div class="variables-empty">暂无流程变量</div>
+          } @else {
+            <p class="variables-filter-hint">
+              该元素无活动实例记录，或尚无挂在此活动上的变量（局部变量需在执行过该节点后出现）。
+            </p>
+          }
+        </nz-collapse-panel>
+      </nz-collapse>
+    </nz-tab>
+  </nz-tabs>
+</div>

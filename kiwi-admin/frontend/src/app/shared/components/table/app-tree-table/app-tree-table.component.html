@@ -1,0 +1,96 @@
+@let tableConfig = this.tableConfig();
+<nz-table
+  nzShowPagination
+  nzShowQuickJumper
+  nzShowSizeChanger
+  nzTableLayout="fixed"
+  [nzBordered]="true"
+  [nzData]="_dataList()"
+  [nzFrontPagination]="false"
+  [nzLoading]="loading()"
+  [nzOuterBordered]="true"
+  [nzPageSize]="pageSize()"
+  [nzScroll]="tableConfig.needNoScroll ? {} : { x: '1100px' }"
+  [nzShowTotal]="rangeTemplate"
+  [nzShowPagination]="showPagination()"
+  [nzSize]="tableSize"
+  [nzTotal]="total()"
+  (nzQueryParams)="onQueryParamsChange($event)"
+>
+  <ng-template #rangeTemplate let-range="range" let-total>{{ range[0] }}-{{ range[1] }} 共 {{ total }} 条</ng-template>
+  <thead>
+    <tr>
+      @if (tableConfig.showCheckbox) {
+        <th class="animate-bg-0" [nzChecked]="_allChecked()" [nzIndeterminate]="_indeterminateChecked()" [nzLeft]="true" [nzWidth]="'40px'" (nzCheckedChange)="onAllChecked($event)"></th>
+      }
+      @for (column of tableConfig.columns; track column; let headIndex = $index; let last = $last; let first = $first) {
+        @if (column.show === undefined || column.show === true) {
+          <th
+            class="animate-bg-0"
+            nz-resizable
+            nzBounds="parent"
+            nzPreview
+            [nzLeft]="!!column.fixed && column.fixedDir === 'left'"
+            [nzMaxWidth]="1200"
+            [nzMinWidth]="1"
+            [nzRight]="!!column.fixed && column.fixedDir === 'right'"
+            [nzWidth]="column.width + 'px'"
+            (nzResizeEnd)="onResize($event, column.name)"
+            [nzColumnKey]="column.dataIndex"
+            [nzSortOrder]="column.sortDirection||null"
+            [nzShowSort]="column.showSort"
+            [nzSortFn]="true"
+          >
+            @if (!last && (tableConfig.showCheckbox ? true : !last)) {
+              <nz-resize-handle nzDirection="right">
+                <div class="resize-trigger"></div>
+              </nz-resize-handle>
+            }
+           <app-table-header-cell [field]="column" ></app-table-header-cell>
+            <!-- @if (column.showSort) {
+              <div class="sort-wrap m-l-8 hand-model" (click)="changeSort(column)">
+                <i class="sort-caret ascending" [class.sort-caret-sel-asc]="column.sortDirection === 'asc'"></i>
+                <i class="sort-caret descending" [class.sort-caret-sel-desc]="column.sortDirection === 'desc'"></i>
+              </div>
+            } -->
+          </th>
+        }
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (item of _dataList(); track item.id || $index) {
+      @if ((item._parent && isExpanded(item._parent)) || !item._parent) {
+      <!-- @for (item of mapOfExpandedData[data.id]; track item; let rowIndex = $index) { -->
+          <tr (click)="onRowClick(item)">
+            @if (tableConfig.showCheckbox) {
+              <td
+                class="animate-bg-0"
+                nzEllipsis
+                [nzChecked]="isItemSelected(item)"
+                [nzIndeterminate]="isItemIndeterminate(item)"
+                [nzLeft]="true"
+                (nzCheckedChange)="checkRowSingle($event, item)"
+              ></td>
+            }
+            @for (column of tableConfig.columns; track column; let headIndex = $index; let last = $last; let first = $first) {
+              @if (column.show === undefined || column.show === true) {
+                <td
+                  [ngClass]="column.tdClassList ? column.tdClassList : ''"
+                  [nzEllipsis]="!column.notNeedEllipsis"
+                  [nzIndentSize]="first ? item._level! * 20 : 0"
+                  [nzLeft]="!!column.fixed && column.fixedDir === 'left'"
+                  [nzRight]="!!column.fixed && column.fixedDir === 'right'"
+                  [nzShowExpand]="item.children && item.children.length > 0 && first"
+                  [nzExpand]="isExpanded(item)"
+                  (nzExpandChange)="collapse(item, $event)"
+                >
+                    <app-table-cell [field]="column" [record]="item"></app-table-cell>
+                </td>
+              }
+            }
+          </tr>
+        }
+      }
+  </tbody>
+</nz-table>

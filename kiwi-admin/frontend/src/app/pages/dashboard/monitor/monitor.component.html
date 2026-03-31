@@ -1,0 +1,73 @@
+<nz-card [nzBodyStyle]="{ padding: '10px 24px' }" [nzBordered]="false">
+  <div class="left-start-center monitor-toolbar">
+    <nz-breadcrumb>
+      <nz-breadcrumb-item>首页</nz-breadcrumb-item>
+      <nz-breadcrumb-item>Dashboard</nz-breadcrumb-item>
+      <nz-breadcrumb-item>监控页</nz-breadcrumb-item>
+    </nz-breadcrumb>
+    <div class="toolbar-actions">
+      @if (snapshot()?.collectedAt) {
+      <span class="collected-at" nz-typography nzType="secondary">
+        采集时间 {{ snapshot()!.collectedAt | date: 'yyyy-MM-dd HH:mm:ss' }}
+      </span>
+      }
+      <button nz-button nzType="default" (click)="refresh()">刷新</button>
+    </div>
+  </div>
+</nz-card>
+
+<section class="content-wrap">
+  @if (error()) {
+  <nz-card>
+    <p nz-typography nzType="danger">{{ error() }}</p>
+  </nz-card>
+  }
+
+  <nz-spin [nzSpinning]="loading()">
+    <div nz-row [nzGutter]="[16, 16]">
+      @for (mod of snapshot()?.modules; track mod.id) {
+      <div nz-col [nzXs]="24" [nzLg]="12" [nzXl]="8">
+        <nz-card [nzTitle]="mod.title">
+          <div nz-row [nzGutter]="[12, 16]">
+            @for (met of mod.metrics; track met.id) {
+            <div nz-col [nzSpan]="12" class="metric-cell">
+              <div class="metric-label" nz-typography nzType="secondary">{{ met.label }}</div>
+              @switch (met.kind) {
+              @case ('percent') {
+              <nz-progress [nzPercent]="clampPercent(met.value)" nzSize="small" [nzShowInfo]="false"></nz-progress>
+              <span class="metric-unit">{{ (met.value ?? 0) | number: '1.0-1' }}{{ met.unit ?? '' }}</span>
+              }
+              @case ('number') {
+              <div class="metric-value-text">
+                {{ met.value ?? 0 | number: '1.0-2' }}@if (met.unit) {
+                <span class="metric-unit">{{ met.unit }}</span>
+                }
+              </div>
+              }
+              @case ('bytes') {
+              <div class="metric-value-text">{{ formatBytes(met.value) }}</div>
+              }
+              @case ('boolean') {
+              <nz-tag [nzColor]="boolOk(met) ? 'success' : 'error'">
+                {{ met.valueText || (boolOk(met) ? '是' : '否') }}
+              </nz-tag>
+              }
+              @default {
+              <div class="metric-value-text">{{ met.valueText ?? '—' }}</div>
+              }
+              }
+            </div>
+            }
+          </div>
+        </nz-card>
+      </div>
+      }
+    </div>
+
+    @if (!loading() && !snapshot()?.modules?.length) {
+    <nz-card>
+      <p nz-typography nzType="secondary">暂无监控数据</p>
+    </nz-card>
+    }
+  </nz-spin>
+</section>

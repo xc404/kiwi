@@ -1,0 +1,14 @@
+   
+<nz-tree #bpmTree [nzData]="nodes()" 
+    (nzContextMenu)="contextMenu($event)" (nzDblClick)="fileOpen.emit($event.node?.origin)">
+</nz-tree>
+
+
+<nz-dropdown-menu #treeMenu="nzDropdownMenu">
+      <ul nz-menu>
+        <li nz-menu-item (click)="addFolder()">添加目录</li>
+        <li nz-menu-item (click)="addFile()">添加文件</li>
+        <li nz-menu-item (click)="editCurrent()">重命名</li>      
+        <li nz-menu-item (click)="deleteCurrent()">删除</li>      
+      </ul>
+</nz-dropdown-menu>

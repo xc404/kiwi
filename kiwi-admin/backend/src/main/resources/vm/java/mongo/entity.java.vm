@@ -1,0 +1,29 @@
+package ${packageName}.entity;
+
+
+import com.kiwi.common.entity.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+/**
+ * ${functionName}Controller
+ *
+ * @author ${author}
+ */
+@EqualsAndHashCode(callSuper = true)
+@Data
+@Document("${entity.tableName}")
+public class $ClassName extends BaseEntity<String>
+{
+
+#foreach($field in $fields)
+#if(!$com.kiwi.project.tools.codegen.utils.GenUtils.isSuperColumn($field.javaField))
+    /**
+     * $field.columnComment
+     */
+    private String $field.javaField;
+
+#end
+#end
+
+}

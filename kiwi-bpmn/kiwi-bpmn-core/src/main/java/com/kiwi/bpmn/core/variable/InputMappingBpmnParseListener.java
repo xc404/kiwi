@@ -1,0 +1,23 @@
+package com.kiwi.bpmn.core.variable;
+
+import org.camunda.bpm.engine.impl.bpmn.parser.AbstractBpmnParseListener;
+import org.camunda.bpm.engine.impl.core.variable.mapping.InputParameter;
+import org.camunda.bpm.engine.impl.core.variable.mapping.IoMapping;
+import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
+import org.camunda.bpm.engine.impl.util.xml.Element;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class InputMappingBpmnParseListener extends AbstractBpmnParseListener
+{
+    @Override
+    public void parseIoMapping(Element extensionElements, ActivityImpl activity, IoMapping inputOutput) {
+        super.parseIoMapping(extensionElements, activity, inputOutput);
+        List<InputParameter> list = inputOutput.getInputParameters().stream().map(inputParameter -> {
+            return (InputParameter)new InputParameterWrapper(inputParameter);
+        }).toList();
+        inputOutput.setInputParameters(list);
+    }
+}

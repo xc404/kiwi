@@ -1,0 +1,28 @@
+<div class="normal-table-wrap">
+  @if(searchFormFields().length > 0){
+  <crud-search-form [fields]="searchFormFields()" [searchModel]="searchModel()" (search)="doSearch($event)"></crud-search-form>
+  }
+  <app-table-wrap [toolbarActions]="toolbarActions()" (reload)="reloadTable()">
+    @if (tableConfig().type == 'tree') {
+    <app-tree-table [tableConfig]="tableConfig()" [tableData]="pageData()" [total]="pageData().totalCount||0"
+      [loading]="tableLoading()" (pageQueryChange)="pageQuery($event)" (rowClick)="onRowClick($event)"></app-tree-table>
+    } @else if(tableConfig().type == 'edit' && enableEdit()){
+    <app-edit-table [tableConfig]="tableConfig()" [tableData]="pageData()" [total]="pageData().totalCount||0"
+      [loading]="tableLoading()" (pageQueryChange)="pageQuery($event)" (rowClick)="onRowClick($event)"
+      (rowChange)="rowValueChange($event)"></app-edit-table>
+    }@else {
+    <app-table [tableConfig]="tableConfig()" [tableData]="pageData()" [total]="pageData().totalCount||0"
+      [loading]="tableLoading()" (pageQueryChange)="pageQuery($event)" (rowClick)="onRowClick($event)"></app-table>
+    }
+
+  </app-table-wrap>
+  @if(enableEdit() || enableCreate()){
+  <nz-modal nzxModalDrag [nzVisible]="editModalVisible()" [nzTitle]="editTitle()" (nzOnOk)="saveItem()"
+    (nzOnCancel)="dismissEditModal()" [nzWidth]="editModalOptions().width">
+    <div *nzModalContent class="crud-edit-form">
+      <crud-edit-form [form]="editForm" [record]="editRecord()" [fields]="editFormFields()"
+        [columns]="editModalOptions().columns || 1"></crud-edit-form>
+    </div>
+  </nz-modal>
+  }
+</div>

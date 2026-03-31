@@ -1,0 +1,29 @@
+<div class="bpm-pallete">
+    <nz-tabs>
+        @for (item of palleteTabs();let tabIndex = $index; track $index) {
+        <nz-tab [nzTitle]="item.name">
+            <nz-collapse>
+                @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
+
+                <nz-collapse-panel [nzHeader]="group.group" nzShowArrow="true" nzActive>
+                    <div nz-row nzGutter="8px" class="palette-items">
+                        <nz-space [nzSize]="8">
+                            @for (paletteItem of group.palettes; let paletteIndex = $index; track $index) {
+
+                            <button nz-button *nzSpaceItem (dragstart)="onDragStart($event, tabIndex, paletteItem)"
+                                (click)="onPaletteItemClick($event, tabIndex, paletteItem)" nzShape="circle"
+                                nz-tooltip="{{paletteItem.title}}" draggable="true" nzType="dashed">
+                                <nz-icon nzIconfont="{{paletteItem.icon}}" />
+                            </button>
+                            }
+                        </nz-space>
+                    </div>
+                </nz-collapse-panel>
+
+                }
+            </nz-collapse>
+        </nz-tab>
+        }
+    </nz-tabs>
+
+</div>

@@ -1,0 +1,31 @@
+  <nz-card class="m-b-10" nzHoverable [nzBodyStyle]="{ 'padding-bottom': 0 }">
+    <form nz-form  class="search-form">
+      <div nz-row [nzGutter]="{ xs: 8, sm: 16, md: 24 }">
+        @for (field of searchFormFields(); track $index) {
+        <formly-field [field]="field"  nz-col >
+
+        </formly-field>
+        }
+        <div class="m-b-10 p-0 text-right" nz-col >
+          <button nz-button [nzType]="'primary'" (click)="doSearch()">
+            <i nz-icon nzType="search"></i>
+            搜索
+          </button>
+          <button class="m-l-15" nz-button (click)="reset()">
+            <i nz-icon nzTheme="outline" nzType="close-circle"></i>
+            重置
+          </button>
+          @if (needCollapse()){
+          <a class="collapse operate-text" (click)="toggleCollapse()">
+            @if (collapsed()) {
+            <span>展开</span>
+            } @else {
+            <span>收起</span>
+            }
+            <i nz-icon [nzType]="collapsed() ? 'down' : 'up'"></i>
+          </a>
+          }
+        </div>
+      </div>
+    </form>
+  </nz-card>

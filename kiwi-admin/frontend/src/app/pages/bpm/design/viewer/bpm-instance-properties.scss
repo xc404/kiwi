@@ -1,0 +1,44 @@
+@import '../property-panel/properties-panel.css';
+
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.properties-panel-tabs {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+
+.variables-filter-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.5;
+}
+
+.variables-empty {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.35);
+  padding: 16px 0;
+}
+
+.variables-table {
+  width: 100%;
+}
+
+.cell-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.cell-value {
+  max-width: 0;
+  font-size: 12px;
+  word-break: break-all;
+  white-space: pre-wrap;
+  vertical-align: top;
+}

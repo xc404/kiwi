@@ -1,0 +1,29 @@
+@import (multiple) '../../../node_modules/ng-zorro-antd/src/style/themes/compact';
+@import './base';
+
+@layout-header-background: @component-background;
+@menu-dark-bg: #001529;
+@layout-sider-background: @menu-dark-bg;
+
+@component-background: #fff; // 该主题zorro中没有这个变量，会报错
+@white: #fff; // 该主题zorro中没有这个变量，会报错
+@text-color-inverse: @white; // 该主题zorro中没有这个变量，会报错
+@primary-6: @primary-color; // 该主题zorro中没有这个变量，会报错
+.operate-text {
+  color: @primary-color;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: #f1f1f1;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #ccc;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}

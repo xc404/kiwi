@@ -1,0 +1,30 @@
+.ant-pro-footer-bar {
+  position: fixed;
+  z-index: 99;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  // width: calc(100% - 208px)!important;
+  align-items: center;
+  height: 44px;
+  padding: 0 24px;
+  line-height: 44px;
+  //  border-top: 1px solid rgb(240, 240, 240);
+  box-shadow:
+    rgb(0 0 0 / 0.08) 0 -6px 16px -8px,
+    rgb(0 0 0 / 0.05) 0 -9px 28px 0,
+    rgb(0 0 0 / 0.03) 0 -12px 48px 16px;
+  transition: width 0.2s;
+}
+
+.ant-pro-footer-bar-left {
+  flex: 1 1 0;
+}
+
+.ant-pro-footer-bar-right > * {
+  margin-right: 8px;
+}
+
+.ant-pro-footer-bar-right > :last-child {
+  margin: 0;
+}

@@ -1,0 +1,66 @@
+@let tableConfig = this.tableConfig();
+@let _scrollConfig = this._scrollConfig();
+<nz-table nzShowPagination nzShowQuickJumper nzShowSizeChanger nzTableLayout="fixed" [nzBordered]="true"
+  [nzData]="tableData()" [nzFrontPagination]="false" [nzLoading]="loading()" [nzOuterBordered]="true"
+  [nzPageSize]="pageSize()" [nzScroll]="_scrollConfig" [nzShowTotal]="rangeTemplate" [nzSize]="_tableSize()"
+  [nzShowPagination]="showPagination()" [nzTotal]="total()" [nzVirtualForTrackBy]="trackById"
+  (nzQueryParams)="onQueryParamsChange($event)">
+  <ng-template #rangeTemplate let-range="range" let-total>{{ range[0] }}-{{ range[1] }} 共 {{ total }} 条</ng-template>
+  <thead>
+    <tr>
+      @if (tableConfig.showCheckbox) {
+      <th class="animate-bg-0" [nzChecked]="_allChecked()" [nzIndeterminate]="_indeterminateChecked()" [nzLeft]="true"
+        [nzWidth]="'40px'" (nzCheckedChange)="onAllChecked($event)"></th>
+      }
+      @for (column of tableConfig.columns; track trackByTableHead(headIndex, column); let headIndex = $index; let last =
+      $last; let first = $first) {
+      @if (column.show === undefined || column.show === true) {
+      <th class="animate-bg-0" nz-resizable nzBounds="parent" nzPreview
+      
+        [ngClass]="[column.thClassList ? column.thClassList : [], column.thClassFn ? column.thClassFn(column) : ''].flat()"
+        [nzLeft]="!!column.fixed && column.fixedDir === 'left'" [nzMaxWidth]="1200" [nzMinWidth]="200"
+        [nzRight]="!!column.fixed && column.fixedDir === 'right'" [nzWidth]="(column.width||200) + 'px'"
+        [nzColumnKey]="column.dataIndex" [nzSortOrder]="column.sortDirection||null" [nzShowSort]="column.showSort"
+        [nzSortFn]="true" (nzResizeEnd)="onResize($event, column.name)">
+        @if (!last && (tableConfig.showCheckbox ? true : !last)) {
+        <nz-resize-handle nzDirection="right">
+          <div class="resize-trigger"></div>
+        </nz-resize-handle>
+        }
+        <div>
+          <app-table-header-cell [field]="column"></app-table-header-cell>
+
+        </div>
+      </th>
+      }
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of _dataList(); track trackByTableBody(rowIndex, row); let rowIndex = $index) {
+    <tr>
+      @if (tableConfig.showCheckbox) {
+      <td class="animate-bg-0" nzEllipsis [nzChecked]="isItemSelected(row)" [nzDisabled]="row['_disabled']"
+        [nzLeft]="true"></td>
+      }
+      @for (column of tableConfig.columns; track trackByTableHead($index, column)) {
+      @if (column.show === undefined || column.show === true) {
+      <td
+        [ngClass]="[column.tdClassList ? column.tdClassList : [], column.tdClassFn ? column.tdClassFn(row, rowIndex) : ''].flat()"
+        [nzEllipsis]="!column.notNeedEllipsis" [nzLeft]="!!column.fixed && column.fixedDir === 'left'"
+        [nzRight]="!!column.fixed && column.fixedDir === 'right'">
+        <!-- <input nz-input placeholder="Basic usage"/> -->
+        @if (column.dataIndex) {
+
+        <edit-cell [field]="column" [model]="row[column['dataIndex']]"
+          (valueChange)="_rowChange(row, column, $event)"></edit-cell>
+        }@else {
+        <app-table-cell [field]="column" [record]="row"></app-table-cell>
+        }
+      </td>
+      }
+      }
+    </tr>
+    }
+  </tbody>
+</nz-table>

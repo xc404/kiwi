@@ -1,0 +1,5 @@
+# 使用方式：spring.profiles.active=dev 或包含 dev 的 profile 组
+# MyBatis 将 SQL 打到 stdout，仅用于本地调试，勿用于生产
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

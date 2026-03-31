@@ -1,0 +1,12 @@
+<div class="bpm-toolbar" nz-row nzGutter="8">
+    @for (action of actions; track $index) {
+    <div nz-col nzFlex class="toolbar-item">
+        <button nz-col nzFlex nz-button nzType="dashed" nzShape="circle" 
+        [nz-tooltip]="action.label"
+        (click)="action.onClick($event)"
+            nzSize="small">
+            <nz-icon nzIconfont="{{action.icon}}" />
+        </button>
+    </div>
+    }
+</div>

@@ -1,0 +1,315 @@
+import { CdkDrag } from '@angular/cdk/drag-drop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, Renderer2, signal, DOCUMENT } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+
+import { StyleThemeModelKey, ThemeOptionsKey } from '@config/constant';
+import { SimpleReuseStrategy } from '@core/services/common/reuse-strategy';
+import { TabService } from '@core/services/common/tab.service';
+import { ThemeSkinService } from '@core/services/common/theme-skin.service';
+import { WindowService } from '@core/services/common/window.service';
+import { SettingInterface, StyleTheme, StyleThemeInterface, ThemeService } from '@store/common-store/theme.service';
+import { fnFormatToHump } from '@utils/tools';
+
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzConfigService } from 'ng-zorro-antd/core/config';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzListModule } from 'ng-zorro-antd/list';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+
+interface NormalModel {
+  image?: string;
+  title: string;
+  isChecked: boolean;
+}
+
+export interface Theme extends NormalModel {
+  key: 'dark' | 'light';
+}
+
+type SpecialTheme = 'color-weak' | 'grey-theme';
+type SpecialThemeHump = 'colorWeak' | 'greyTheme';
+
+interface Color extends NormalModel {
+  key: string;
+  color: string;
+}
+
+export interface ThemeMode extends NormalModel {
+  key: 'side' | 'top' | 'mixin';
+}
+
+type ExcludedKeys = 'theme' | 'color' | 'mode';
+type SettingKey = Exclude<keyof SettingInterface, ExcludedKeys>;
+
+@Component({
+  selector: 'app-setting-drawer',
+  templateUrl: './setting-drawer.component.html',
+  styleUrls: ['./setting-drawer.component.less'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CdkDrag, NzIconModule, NzButtonModule, NzDrawerModule, NzTooltipModule, NzDividerModule, NzListModule, NzSwitchModule, FormsModule]
+})
+export class SettingDrawerComponent implements OnInit {
+  private themesService = inject(ThemeService);
+  private tabService = inject(TabService);
+  private activatedRoute = inject(ActivatedRoute);
+  private doc = inject(DOCUMENT);
+  private nzConfigService = inject(NzConfigService);
+  private themeSkinService = inject(ThemeSkinService);
+  private windowServe = inject(WindowService);
+  private rd2 = inject(Renderer2);
+  destroyRef = inject(DestroyRef);
+
+  $themesOptions = computed(() => {
+    return this.themesService.$themesOptions();
+  });
+  $currentStyleTheme = signal<StyleThemeInterface>({
+    default: false,
+    dark: false,
+    compact: false,
+    aliyun: false
+  });
+  themeStyleEffect = effect(() => {
+    const source = this.themesService.$themeStyle();
+    this.$currentStyleTheme.set({
+      ...{
+        default: false,
+        dark: false,
+        compact: false,
+        aliyun: false
+      },
+      [source]: true
+    });
+  });
+
+  isCollapsed = false;
+  dragging = false;
+
+  themes: Theme[] = [
+    {
+      key: 'dark',
+      image: 'imgs/theme-dark.svg',
+      title: '暗色菜单风格',
+      isChecked: true
+    },
+    {
+      key: 'light',
+      image: 'imgs/theme-light.svg',
+      title: '亮色菜单风格',
+      isChecked: false
+    }
+  ];
+  colors: Color[] = [
+    {
+      key: 'dust',
+      color: '#F5222D',
+      title: '薄暮',
+      isChecked: false
+    },
+    {
+      key: 'volcano',
+      color: '#FA541C',
+      title: '火山',
+      isChecked: false
+    },
+    {
+      key: 'sunset',
+      color: '#FAAD14',
+      title: '日暮',
+      isChecked: false
+    },
+    {
+      key: 'cyan',
+      color: '#13C2C2',
+      title: '明青',
+      isChecked: false
+    },
+    {
+      key: 'green',
+      color: '#52C41A',
+      title: '极光绿',
+      isChecked: false
+    },
+    {
+      key: 'daybreak',
+      color: '#1890FF',
+      title: '拂晓蓝（默认）',
+      isChecked: true
+    },
+    {
+      key: 'geekblue',
+      color: '#2F54EB',
+      title: '极客蓝',
+      isChecked: false
+    },
+    {
+      key: 'purple',
+      color: '#722ED1',
+      title: '酱紫',
+      isChecked: false
+    }
+  ];
+  modes: ThemeMode[] = [
+    {
+      key: 'side',
+      image: 'imgs/menu-side.svg',
+      title: '侧边菜单布局',
+      isChecked: true
+    },
+    {
+      key: 'top',
+      image: 'imgs/menu-top.svg',
+      title: '顶部菜单布局',
+      isChecked: false
+    },
+    {
+      key: 'mixin',
+      image: 'imgs/menu-top.svg',
+      title: '混合菜单布局',
+      isChecked: false
+    }
+  ];
+
+  changeCollapsed(): void {
+    if (!this.dragging) {
+      this.isCollapsed = !this.isCollapsed;
+    } else {
+      this.dragging = false;
+    }
+  }
+
+  changePrimaryColor(color: Color): void {
+    this.selOne(color as NormalModel, this.colors);
+    this.nzConfigService.set('theme', { primaryColor: color.color });
+    this.themesService.$themesOptions.update(v => {
+      return { ...v, color: color.color };
+    });
+    this.setThemeOptions();
+  }
+
+  // 修改主题
+  changeStyleTheme(styleTheme: StyleTheme): void {
+    // 让每个主题都变成未选中,当前选中的主题变为选中状态
+    this.$currentStyleTheme.set({
+      ...{
+        default: false,
+        dark: false,
+        compact: false,
+        aliyun: false
+      },
+      [styleTheme]: true
+    });
+
+    // 存储主题模式状态
+    this.themesService.$themeStyle.set(styleTheme);
+    // 持久化
+    this.windowServe.setStorage(StyleThemeModelKey, styleTheme);
+    // 切换主题
+    this.themeSkinService.toggleTheme().then();
+  }
+
+  // 选择一个isChecked为true,其他为false
+  selOne(item: NormalModel, itemArray: NormalModel[]): void {
+    itemArray.forEach(_item => (_item.isChecked = false));
+    item.isChecked = true;
+  }
+
+  changeMode(mode: ThemeMode): void {
+    this.selOne(mode, this.modes);
+    this.themesService.$isCollapsed.set(false);
+
+    this.themesService.$themesOptions.update(v => {
+      return { ...v, mode: mode.key };
+    });
+
+    this.setThemeOptions();
+  }
+
+  // 切换主题
+  changeTheme(themeItem: Theme): void {
+    this.selOne(themeItem, this.themes);
+    this.themesService.$themesOptions.update(v => {
+      return { ...v, theme: themeItem.key };
+    });
+    this.setThemeOptions();
+  }
+
+  // 设置主题参数
+  setThemeOptions(): void {
+    this.windowServe.setStorage(ThemeOptionsKey, JSON.stringify(this.$themesOptions()));
+  }
+
+  // 修改主题配置项
+  changeThemeOptions(isTrue: boolean, type: SettingKey): void {
+    // 非固定头部时，设置标签也不固定
+    if (type === 'fixedHead' && !isTrue) {
+      this.themesService.$themesOptions.update(v => {
+        return { ...v, fixedTab: false };
+      });
+    }
+    this.themesService.$themesOptions.update(v => {
+      return { ...v, [type]: isTrue };
+    });
+    this.setThemeOptions();
+
+    // 如果不展示多标签，则要清空tab,以及已经被缓存的所有组件
+    if (type === 'isShowTab') {
+      if (!isTrue) {
+        SimpleReuseStrategy.deleteAllRouteSnapshot(this.activatedRoute.snapshot).then(() => {
+          this.tabService.clearTabs();
+        });
+      } else {
+        this.tabService.refresh();
+      }
+    }
+  }
+
+  // 修改特殊主题，色弱主题，灰色主题
+  changeSpecialTheme(e: boolean, themeType: SpecialTheme): void {
+    const name = this.doc.getElementsByTagName('html');
+    const theme = fnFormatToHump(themeType);
+    if (e) {
+      this.rd2.addClass(name[0], themeType);
+    } else {
+      this.rd2.removeClass(name[0], themeType);
+    }
+    this.themesService.$themesOptions.update(v => {
+      return { ...v, [theme as SpecialThemeHump]: e };
+    });
+    this.setThemeOptions();
+  }
+
+  initThemeOption(): void {
+    // 特殊模式主题变换（色弱模式，灰色模式）
+    (['grey-theme', 'color-weak'] as SpecialTheme[]).forEach(item => {
+      const specialTheme = fnFormatToHump(item);
+      this.changeSpecialTheme(this.$themesOptions()[specialTheme as SpecialThemeHump], item);
+    });
+
+    this.modes.forEach(item => {
+      item.isChecked = item.key === this.$themesOptions().mode;
+    });
+    this.colors.forEach(item => {
+      item.isChecked = item.color === this.$themesOptions().color;
+    });
+    this.changePrimaryColor(this.colors.find(item => item.isChecked)!);
+    this.themes.forEach(item => {
+      item.isChecked = item.key === this.$themesOptions().theme;
+    });
+  }
+
+  ngOnInit(): void {
+    this.initThemeOption();
+  }
+
+  dragEnd(): void {
+    if (this.dragging) {
+      setTimeout(() => {
+        this.dragging = false;
+      });
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+    "name": "Kiwi",
+    "prefix": "kiwi",
+    "uri": "http://kiwi.com/bpmn",
+    "xml": {
+        "tagAlias": "lowerCase"
+    },
+    "associations": [],
+    "types": [
+        {
+            "name": "ComponentServiceTask",
+            "extends": [
+                "bpmn:ServiceTask"
+            ],
+            "properties": [
+                {
+                    "name": "componentId",
+                    "isAttr": true,
+                    "type": "String"
+                }
+            ]
+        }
+    ]
+}

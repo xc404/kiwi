@@ -1,0 +1,76 @@
+package com.kiwi.project.system.ctl;
+
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.kiwi.common.tree.TreeNode;
+import com.kiwi.common.tree.Tree;
+import com.kiwi.project.system.dao.SysMenuDao;
+import com.kiwi.project.system.entity.SysMenu;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequiredArgsConstructor
+@RequestMapping("/system/menu")
+public class SysMenuCtl
+{
+
+    private final SysMenuDao sysMenuDao;
+//    private final SysMenuPermissionDao sysMenuPermissionDao;
+
+    @GetMapping("{id}")
+    @SaCheckPermission("system:menu:view")
+    @Operation(description = "菜单查看")
+    @ResponseBody
+    public SysMenu menu(@PathVariable("id") String id) {
+        return this.sysMenuDao.findById(id).orElseThrow();
+    }
+
+    @GetMapping()
+    @SaCheckPermission("system:menu:view")
+    @Operation(description = "菜单查看")
+    @ResponseBody
+    public List<TreeNode<SysMenu>> menuList() {
+        List<SysMenu> menus = this.sysMenuDao.findAll();
+        return Tree.build(menus).getByParentId("0");
+    }
+
+    @PostMapping()
+    @SaCheckPermission("system:menu:add")
+    @Operation(description = "菜单添加")
+    @ResponseBody
+    public SysMenu addMenu(@RequestBody SysMenu sysMenu) {
+        this.sysMenuDao.insert(sysMenu);
+        return sysMenu;
+    }
+
+    @PutMapping("{id}")
+    @SaCheckPermission("system:menu:update")
+    @Operation(description = "菜单修改")
+    @ResponseBody
+    public SysMenu editMenu(@PathVariable("id") String id, @RequestBody SysMenu sysMenu) {
+        sysMenu.setId(id);
+        this.sysMenuDao.updateSelective(sysMenu);
+        return this.sysMenuDao.findById(id).orElseThrow();
+    }
+
+    @DeleteMapping("/{id}")
+    @SaCheckPermission("system:menu:delete")
+    @Operation(description = "菜单删除")
+    @ResponseBody
+    public void deleteMenu(@PathVariable("id") String id) {
+        this.sysMenuDao.deleteById(id);
+    }
+
+//    @GetMapping("{id}/permissions")
+//    @SaCheckPermission("system:menu:permission")
+//    @Operation(description = "菜单权限管理")
+//    @ResponseBody
+//    public List<SysMenuPermission> menuPermissions(@PathVariable("id") String id) {
+//        return this.sysMenuPermissionDao.findByMenuId(id);
+//    }
+
+}

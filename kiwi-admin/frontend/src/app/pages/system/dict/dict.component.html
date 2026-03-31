@@ -1,0 +1,19 @@
+<app-page-header></app-page-header>
+<section class="page-content">
+
+
+
+  <nz-splitter>
+    <nz-splitter-panel [nzSize]="mainSise()">
+      <div class="box"> <crud-page [pageConfig]="groupPageConfig">
+        </crud-page></div>
+    </nz-splitter-panel>
+    <nz-splitter-panel>
+      <div class="box"> <system-dict-items [group]="selectItem()">
+        </system-dict-items></div>
+    </nz-splitter-panel>
+  </nz-splitter>
+  <ng-template #extra>
+    <button nz-button nzType="primary" (click)="close()">OK</button>
+  </ng-template>
+</section>
