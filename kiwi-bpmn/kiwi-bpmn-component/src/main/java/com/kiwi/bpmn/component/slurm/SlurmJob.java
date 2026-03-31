@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
 public class SlurmJob extends BaseEntity<String>
 {
     private String jobId;
-
+    private String jobName;
+    private String sbatchFilePath;
+    private String outputFilePath;
+    private String errorFilePath;
 
 }

@@ -1,7 +1,5 @@
 package com.kiwi.bpmn.component.slurm;
 
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
-
 public class SbatchConfig
 {
     private String jobName;
