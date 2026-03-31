@@ -3,6 +3,7 @@ package com.kiwi.project.bpm.service;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
+import com.kiwi.project.bpm.utils.BpmComponentDeploymentSignature;
 import com.kiwi.project.system.spi.Refreshable;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -43,6 +44,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
         if( StringUtils.isBlank(bpmComponent.getId()) ) {
             bpmComponent.setId(bpmComponent.getSource() + "_" + bpmComponent.getKey());
         }
+        bpmComponent.setDeploymentSignature(BpmComponentDeploymentSignature.compute(bpmComponent));
         this.bpmComponentDao.save(bpmComponent);
     }
 
@@ -53,12 +55,28 @@ public class BpmComponentService implements InitializingBean, Refreshable
                 component.setId(component.getSource() + "_" + component.getKey());
             }
         });
+        List<BpmComponent> current = this.bpmComponentDao.findBy(Query.query(Criteria.where("source").is(bpmComponentProvider.getSource())));
+        Map<String, BpmComponent> byId = current.stream().collect(Collectors.toMap(BpmComponent::getId, c -> c, (a, b) -> a));
         if( deleteNotExist ) {
-            List<BpmComponent> current = this.bpmComponentDao.findBy(Query.query(Criteria.where("source").is(bpmComponentProvider.getSource())));
             List<BpmComponent> toDelete = current.stream().filter(component -> bpmComponents.stream().noneMatch(c -> Objects.equals(component.getKey(), c.getKey()))).toList();
             this.bpmComponentDao.deleteAll(toDelete);
+            for (BpmComponent removed : toDelete) {
+                byId.remove(removed.getId());
+            }
         }
-        this.bpmComponentDao.saveAll(bpmComponents);
+        List<BpmComponent> toSave = new ArrayList<>();
+        for (BpmComponent inc : bpmComponents) {
+            String sig = BpmComponentDeploymentSignature.compute(inc);
+            BpmComponent existing = byId.get(inc.getId());
+            if (existing != null && Objects.equals(sig, existing.getDeploymentSignature())) {
+                continue;
+            }
+            inc.setDeploymentSignature(sig);
+            toSave.add(inc);
+        }
+        if (!toSave.isEmpty()) {
+            this.bpmComponentDao.saveAll(toSave);
+        }
 
     }
 
