@@ -4,6 +4,15 @@
     @if(element()){
     <div class="properties-panel-tabs">
         <nz-tabs>
+            @if (instanceMode()) {
+            <nz-tab nzTitle="运行时变量">
+                <bpm-instance-properties
+                    [variables]="runtimeVariables()"
+                    [selectionIsRoot]="instanceSelectionIsRoot()"
+                />
+            </nz-tab>
+            }
+            @if (!instanceMode()) {
             @for (tab of tabs(); track $index) {
             <nz-tab [nzTitle]="tab.name!">
                 <nz-collapse>
@@ -12,7 +21,7 @@
                         <div style="width: 100%;">
                             <property-group
                                 [element]="element()"
-                                [bpmnModeler]="bpmnModeler()"
+                                [bpmnModeler]="$any(bpmnModeler())"
                                 [properties]="group.properties"></property-group>
                         </div>
                     </nz-collapse-panel>
@@ -23,6 +32,7 @@
             </nz-tab>
             }
 
+            }
         </nz-tabs>
     </div>
 

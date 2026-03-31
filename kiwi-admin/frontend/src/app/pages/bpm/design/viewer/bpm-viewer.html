@@ -1,5 +1,5 @@
 <app-page-header></app-page-header>
-<section class="page-content instance-viewer-page">
+<section class="page-content bpm-viewer-page">
   <div class="instance-toolbar">
     @if (view(); as v) {
       <span class="instance-id" title="流程实例 ID">{{ v.processInstanceId }}</span>
@@ -15,20 +15,34 @@
       }
     }
   </div>
-  <div class="instance-body">
-    <nz-spin [nzSpinning]="loading()" class="instance-spin canvas-pane">
-      <div #canvasHost class="instance-canvas"></div>
-    </nz-spin>
-    @if (view(); as v) {
-      <aside class="variables-panel properties-panel">
-        @if (selectedElement(); as el) {
-          <bpm-panel-header [element]="el"></bpm-panel-header>
+  <nz-layout class="full-height bpm-viewer-layout">
+    <nz-content class="flex flex-column bpm-viewer-main-content">
+      <nz-layout class="bpm-viewer-workspace">
+        <nz-content class="flex flex-column bpm-viewer-canvas-content">
+          <nz-spin [nzSpinning]="loading()" class="bpm-viewer-canvas-spin">
+            <div #canvasHost class="instance-canvas bpm-editor-canvas"></div>
+          </nz-spin>
+        </nz-content>
+        @if (view()) {
+          <nz-sider
+            class="mix-sider-height side-explorer bpm-viewer-properties-sider"
+            nzWidth="500px"
+            nzTheme="light"
+            nzNoAnimation
+          >
+            <div class="bpm-viewer-properties-scroll">
+              @if (viewer) {
+                <bpm-properties-panel
+                  [bpmnModeler]="viewer"
+                  [instanceMode]="true"
+                  [runtimeVariables]="filteredVariables()"
+                  [instanceSelectionIsRoot]="selectionIsRoot()"
+                />
+              }
+            </div>
+          </nz-sider>
         }
-        <bpm-instance-properties
-          [variables]="filteredVariables()"
-          [selectionIsRoot]="selectionIsRoot()"
-        />
-      </aside>
-    }
-  </div>
+      </nz-layout>
+    </nz-content>
+  </nz-layout>
 </section>

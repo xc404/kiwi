@@ -4,23 +4,33 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Element } from "bpmn-js/lib/model/Types";
 import BpmnModeler from 'bpmn-js/lib/Modeler';
-import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
+import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { PROPERTY_PROVIDER, PropertyTab } from "./property-provider";
 import { NzCollapseModule } from "ng-zorro-antd/collapse";
 import { NzTabsModule } from "ng-zorro-antd/tabs";
 import { PanelHeader } from "./panel-header";
 import { PropertyGroup } from "./property-group";
 import { ComponentDescription } from "../../component/component-provider";
+import { ProcessVariableRow } from "../service/process-instance.service";
+import { BpmInstanceProperties } from "../viewer/bpm-instance-properties";
+
+/** Modeler 与只读 Viewer 均基于 diagram-js，事件与 get('canvas') 一致 */
+export type BpmnDiagramHost = BpmnModeler | NavigatedViewer;
+
 @Component({
     selector: 'bpm-properties-panel',
     templateUrl: "properties-panel.html",
     styleUrls: ["properties-panel.css"],
-    imports: [CommonModule, MatTabsModule, MatExpansionModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup],
+    imports: [CommonModule, MatTabsModule, MatExpansionModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup, BpmInstanceProperties],
     standalone: true
 })
 export class BpmPropertiesPanel implements OnInit {
 
-    bpmnModeler = input.required<BpmnModeler>();
+    bpmnModeler = input.required<BpmnDiagramHost>();
+    /** 流程实例查看：只展示运行时变量，不加载建模属性 */
+    instanceMode = input(false);
+    runtimeVariables = input<ProcessVariableRow[]>([]);
+    instanceSelectionIsRoot = input(true);
     element = signal<Element>(undefined as any as Element);
     tabs = signal<PropertyTab[]>([]);
     component = signal<ComponentDescription>(undefined as any as ComponentDescription);
@@ -49,7 +59,7 @@ export class BpmPropertiesPanel implements OnInit {
             if (this.element()) {
                 this.loadElement();
             }
-        })
+        });
     }
 
     // 更新元素属性
@@ -59,15 +69,11 @@ export class BpmPropertiesPanel implements OnInit {
     // }
 
     loadElement() {
-        // if(type ==  'bpmn:ServiceTask' ){
-        //     let componentId = this.element.businessObject.get("componentId");
-        //     let component = this.bpmComponentProvider.getComponent(componentId);
-
-        // }
+        if (this.instanceMode()) {
+            this.tabs.set([]);
+            return;
+        }
         let tabs = this.propertyProvider.getProperties(this.element());
-        // if (ModelUtil.is(this.element(), "bpmn:ServiceTask")) {
-        //     this.loadComponent();
-        // }
         this.tabs.set(tabs);
     }
 

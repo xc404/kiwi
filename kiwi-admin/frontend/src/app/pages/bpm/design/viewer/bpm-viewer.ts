@@ -20,13 +20,13 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { firstValueFrom } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { PanelHeader } from '../property-panel/panel-header';
+import { BpmPropertiesPanel } from '../property-panel/properties-panel';
 import {
   ProcessInstanceDiagramView,
   ProcessInstanceService,
   ProcessVariableRow,
 } from '../service/process-instance.service';
-import { BpmInstanceProperties } from './bpm-instance-properties';
+import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
 
 @Component({
   selector: 'bpm-viewer',
@@ -34,10 +34,11 @@ import { BpmInstanceProperties } from './bpm-instance-properties';
   styleUrl: './bpm-viewer.scss',
   imports: [
     PageHeaderComponent,
-    BpmInstanceProperties,
+    BpmPropertiesPanel,
     NzSpinModule,
     NzTagModule,
-    PanelHeader,
+    NzLayoutComponent,
+    NzLayoutModule,
   ],
   standalone: true,
 })
@@ -107,7 +108,7 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     return vars.filter((r) => r.activityInstanceId != null && idSet.has(r.activityInstanceId));
   });
 
-  private viewer: NavigatedViewer | null = null;
+  protected viewer: NavigatedViewer | null = null;
 
   ngAfterViewInit(): void {
     this.viewer = new NavigatedViewer({
