@@ -143,17 +143,15 @@ export class BpmProjectProcess implements OnInit {
       page.load({ projectId: id });
     });
 
-    this.activatedRoute.params.subscribe(params => {
-      let id = params['id'] ?? null;
+    this.activatedRoute.queryParamMap.subscribe(qm => {
+      let id = qm.get('projectId');
       if (!id) {
-        const last = this.workspace.getLastProjectId();
-        id = last;
+        id = this.workspace.getLastProjectId();
       }
-      if(id){
-        this.setProjectId(id);
+      if (id) {
+        this.projectId.set(id);
       }
     });
-
   }
 
   ngOnInit(): void {
@@ -185,7 +183,11 @@ export class BpmProjectProcess implements OnInit {
   }
 
   setProjectId(id: string): void {
-    this.projectId.set(id);
+    void this.router.navigate([], {
+      relativeTo: this.activatedRoute,
+      queryParams: { projectId: id },
+      queryParamsHandling: 'merge',
+    });
   }
 
 
@@ -200,6 +202,18 @@ export class BpmProjectProcess implements OnInit {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
             window.open(`http://localhost:4201/#/bpm/design/${record.id}`);
+          }
+        },
+      },
+      {
+        icon: 'cluster',
+        tooltip: '流程实例',
+        handler: () => {
+          const record = inject(ColumnToken, { optional: true })?.getRecord();
+          if (record?.id) {
+            this.router.navigate(['/default/bpm/process-instances'], {
+              queryParams: { processDefinitionKey: record.id },
+            });
           }
         },
       },

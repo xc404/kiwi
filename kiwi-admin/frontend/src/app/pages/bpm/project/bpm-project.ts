@@ -46,7 +46,7 @@ export class BpmProject implements OnInit {
   goLastWorkspace(): void {
     const id = this.lastWorkspaceId();
     if (id) {
-      this.router.navigateByUrl(`/default/bpm/project/${id}`);
+      void this.router.navigate(['/default/bpm/process'], { queryParams: { projectId: id } });
     }
   }
 
@@ -60,7 +60,7 @@ export class BpmProject implements OnInit {
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
-            this.router.navigate([`/default/bpm/project/${record.id}`]);
+            void this.router.navigate(['/default/bpm/process'], { queryParams: { projectId: record.id } });
           }
         },
       },

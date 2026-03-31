@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, DestroyRef, inject, OnInit, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { ColumnToken } from '@app/shared/components/table/column';
@@ -15,8 +16,38 @@ import { Editor } from '@app/shared/components/field/field-editor';
   `,
   imports: [PageHeaderComponent, CrudPage],
 })
-export class BpmProcessInstances {
+export class BpmProcessInstances implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private crudPage = viewChild(CrudPage);
+
+  ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qm => {
+      const key = qm.get('processDefinitionKey');
+      if (!key) {
+        return;
+      }
+      this.pageConfig = {
+        ...this.pageConfig,
+        search: {
+          ...this.pageConfig.search,
+          basicParams: {
+            ...this.pageConfig.search?.basicParams,
+            instanceState: 'running',
+            processDefinitionKey: key,
+          },
+        },
+      };
+      const page = this.crudPage();
+      if (page) {
+        page.load({
+          instanceState: 'running',
+          processDefinitionKey: key,
+        });
+      }
+    });
+  }
 
   pageConfig: PageConfig = {
     title: '运行实例',
@@ -56,6 +87,13 @@ export class BpmProcessInstances {
     ],
     fields: [
       {
+        name: '流程定义 Key',
+        dataIndex: 'processDefinitionKey',
+        width: 280,
+        search: true,
+        edit: false,
+      },
+      {
         name: '实例状态',
         dataIndex: 'instanceState',
         width: 140,
@@ -82,12 +120,7 @@ export class BpmProcessInstances {
         search: true,
         edit: false,
       },
-      {
-        name: '流程定义 Key',
-        dataIndex: 'processDefinitionKey',
-        search: true,
-        edit: false,
-      },
+     
       {
         name: '流程名称',
         dataIndex: 'processDefinitionName',
