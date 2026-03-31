@@ -6,17 +6,25 @@
                 @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
 
                 <nz-collapse-panel [nzHeader]="group.group" nzShowArrow="true" nzActive>
-                    <div nz-row nzGutter="8px" class="palette-items">
-                        <nz-space [nzSize]="8">
-                            @for (paletteItem of group.palettes; let paletteIndex = $index; track $index) {
-
-                            <button nz-button *nzSpaceItem (dragstart)="onDragStart($event, tabIndex, paletteItem)"
-                                (click)="onPaletteItemClick($event, tabIndex, paletteItem)" nzShape="circle"
-                                nz-tooltip="{{paletteItem.title}}" draggable="true" nzType="dashed">
-                                <nz-icon nzIconfont="{{paletteItem.icon}}" />
-                            </button>
-                            }
-                        </nz-space>
+                    <div class="palette-items">
+                        @for (paletteItem of group.palettes; let paletteIndex = $index; track paletteIndex) {
+                        <button
+                            type="button"
+                            nz-button
+                            nzType="dashed"
+                            class="palette-item"
+                            draggable="true"
+                            nz-tooltip
+                            [nzTooltipTitle]="paletteItem.title"
+                            (dragstart)="onDragStart($event, tabIndex, paletteItem)"
+                            (click)="onPaletteItemClick($event, tabIndex, paletteItem)"
+                        >
+                            <span class="palette-item__icon" aria-hidden="true">
+                                <nz-icon [nzIconfont]="paletteItem.icon" />
+                            </span>
+                            <span class="palette-item__name">{{ paletteItem.title }}</span>
+                        </button>
+                        }
                     </div>
                 </nz-collapse-panel>
 
