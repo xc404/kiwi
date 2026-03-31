@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
@@ -19,10 +20,14 @@ import { MatExpansionModule } from "@angular/material/expansion";
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import BpmnFactory from 'bpmn-js/lib/features/modeling/BpmnFactory';
 import ElementFactory from 'bpmn-js/lib/features/modeling/ElementFactory';
-import { NzIconService } from 'ng-zorro-antd/icon';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzIconModule, NzIconService } from 'ng-zorro-antd/icon';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from "../palette/pallete";
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
@@ -50,10 +55,22 @@ export abstract class BpmEditorToken {
       provide: BpmEditorToken, useExisting: BpmEditor,
     }
   ],
-  imports: [BpmPropertiesPanel, MatIconModule, MatExpansionModule,
-
-    MatDialogModule, MatFormFieldModule, FormsModule,
-    BpmPallete, NzLayoutComponent, NzLayoutModule, BpmToolbar],
+  imports: [
+    BpmPropertiesPanel,
+    MatIconModule,
+    MatExpansionModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    FormsModule,
+    BpmPallete,
+    NzLayoutComponent,
+    NzLayoutModule,
+    BpmToolbar,
+    DatePipe,
+    NzSpinModule,
+    NzButtonModule,
+    NzIconModule,
+  ],
   standalone: true,
 })
 export class BpmEditor implements OnInit, BpmEditorToken {
@@ -72,8 +89,11 @@ export class BpmEditor implements OnInit, BpmEditorToken {
 
   bpmnId = signal<string>('');
   bpmProcess = signal<any>(null);
+  /** 流程详情请求进行中 */
+  processLoading = signal(true);
 
-  iconService = inject(NzIconService)
+  iconService = inject(NzIconService);
+  private readonly message = inject(NzMessageService);
 
   @ViewChild('#canvas') canvas: ElementRef | undefined;
   protected readonly title = signal('bpm-frontend');
@@ -84,12 +104,31 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   processName: any;
   autoSave = false;
 
+  /** 后端 BaseEntity 为 updatedTime；兼容旧字段 updatedAt */
   updatedAt = computed(() => {
-    return this.bpmProcess()?.updatedAt;
+    const p = this.bpmProcess();
+    return p?.updatedTime ?? p?.updatedAt;
   });
 
   delopyAt = computed(() => {
     return this.bpmProcess()?.deployedAt;
+  });
+
+  /** 顶栏展示用元信息（与接口字段对齐） */
+  processMeta = computed(() => {
+    const p = this.bpmProcess();
+    if (!p) {
+      return null;
+    }
+    return {
+      id: p.id as string | undefined,
+      name: (p.name as string | undefined) ?? '—',
+      projectId: p.projectId as string | undefined,
+      updatedTime: (p.updatedTime ?? p.updatedAt) as string | Date | undefined,
+      deployedAt: p.deployedAt as string | Date | undefined,
+      version: p.version as number | undefined,
+      deployedVersion: p.deployedVersion as number | undefined,
+    };
   });
   bpmnFactory!: BpmnFactory;
   create!: Create;
@@ -206,16 +245,19 @@ export class BpmEditor implements OnInit, BpmEditorToken {
 
 
   loadDefinition() {
-    this.processDefinitionService.getProcessById(this.bpmnId()).subscribe(
-      (data: any) => {
-        this.bpmProcess.set(data);
-        this.bpmnModeler.importXML(this.bpmProcess().bpmnXml);
-
-        // this.bpmnModeler.on('elements.changed', (e: any) => {
-        //   this.stackIdx = this.bpmnModeler.get('commandStack')._stackIdx;
-        // })
-      }
-    );
+    this.processLoading.set(true);
+    this.processDefinitionService
+      .getProcessById(this.bpmnId())
+      .pipe(finalize(() => this.processLoading.set(false)))
+      .subscribe({
+        next: (data: any) => {
+          this.bpmProcess.set(data);
+          this.bpmnModeler.importXML(this.bpmProcess().bpmnXml);
+        },
+        error: () => {
+          this.bpmProcess.set(null);
+        },
+      });
   }
 
   start() {
@@ -242,7 +284,44 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     // this.createElement({} as ComponentDescription, event.event);
   }
 
-
+  copyProcessId(id: string): void {
+    if (!id) {
+      return;
+    }
+    const ok = () => this.message.success('已复制到剪贴板');
+    const fail = () => this.message.error('复制失败');
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(id).then(ok).catch(() => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = id;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          ok();
+        } catch {
+          fail();
+        }
+      });
+    } else {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = id;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        ok();
+      } catch {
+        fail();
+      }
+    }
+  }
 
 }
 

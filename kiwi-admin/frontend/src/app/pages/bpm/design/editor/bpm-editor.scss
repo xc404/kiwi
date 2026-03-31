@@ -44,7 +44,19 @@
   min-height: 0;
 }
 
-.bpm-editor-layout,
+.bpm-editor-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 流程信息条在整页最顶；下方 nz-layout 占满剩余高度 */
+.bpm-editor-page > .bpm-editor-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .bpm-editor-main-content,
 .bpm-editor-workspace,
 .bpm-editor-canvas-content,
@@ -59,6 +71,115 @@
 
 .bpm-editor-canvas-content {
   overflow: hidden;
+}
+
+.bpm-editor-process-meta {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.bpm-editor-process-meta__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bpm-editor-process-meta__title {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.bpm-editor-process-meta__fields {
+  display: flex;
+  flex: 2 1 320px;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.bpm-editor-process-meta__field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bpm-editor-process-meta__field--secondary .bpm-editor-process-meta__value {
+  max-width: min(200px, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bpm-editor-process-meta__id-row {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bpm-editor-process-meta__id-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 8px;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.bpm-editor-process-meta__id-text {
+  margin: 0;
+  padding: 2px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.bpm-editor-process-meta__id-copy {
+  flex-shrink: 0;
+}
+
+.bpm-editor-process-meta__label {
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.bpm-editor-process-meta__value {
+  color: rgba(0, 0, 0, 0.88);
+  word-break: break-word;
+}
+
+.bpm-editor-process-meta__empty {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.top-bar {
+  flex-shrink: 0;
 }
 
 .bpm-editor-canvas {
@@ -76,4 +197,17 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* bpmn-js / diagram-js：去掉画布根容器上的外框（动态注入的 DOM 需 ::ng-deep） */
+:host ::ng-deep .canvas .bjs-container {
+  border: none !important;
+  outline: none;
+  box-shadow: none;
+}
+
+:host ::ng-deep .canvas .djs-container {
+  border: none !important;
+  outline: none;
+  box-shadow: none;
 }
