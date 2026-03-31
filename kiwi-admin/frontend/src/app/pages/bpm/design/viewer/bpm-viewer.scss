@@ -1,8 +1,47 @@
-.instance-viewer-page {
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-viewer-page {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 64px);
   min-height: 400px;
+}
+
+.bpm-viewer-page > .bpm-viewer-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.bpm-viewer-main-content,
+.bpm-viewer-workspace,
+.bpm-viewer-canvas-content,
+.bpm-viewer-properties-sider {
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-viewer-workspace {
+  overflow: hidden;
+}
+
+.bpm-viewer-canvas-content {
+  overflow: hidden;
+}
+
+.bpm-viewer-properties-sider {
+  overflow: hidden;
+  border-left: 1px solid #f0f0f0;
+}
+
+.bpm-viewer-properties-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .instance-toolbar {
@@ -31,27 +70,14 @@
   font-size: 12px;
 }
 
-.instance-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-}
-
-.canvas-pane {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.instance-spin {
+.bpm-viewer-canvas-spin {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.instance-spin ::ng-deep .ant-spin-container {
+.bpm-viewer-canvas-spin ::ng-deep .ant-spin-container {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -62,19 +88,6 @@
   flex: 1 1 auto;
   min-height: 0;
   background: #fafafa;
-}
-
-.variables-panel {
-  flex: 0 0 400px;
-  width: 400px;
-  max-width: 42vw;
-  border-left: 1px solid var(--neutral-border, #f0f0f0);
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 0;
-  overflow: hidden;
 }
 
 /* bpmn-js 画布上的高亮 marker（与 canvas.addMarker 名称对应） */
