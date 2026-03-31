@@ -1,0 +1,29 @@
+---
+description: 本仓库启用 OpenSpec（spec-driven）；新变更走提案→设计→任务→实施→归档
+alwaysApply: true
+---
+
+# OpenSpec 工作流（kiwi）
+
+本仓库在 `openspec/` 下使用 **OpenSpec**，`openspec/config.yaml` 中 `schema: spec-driven`。
+
+## 何时使用
+
+- **新功能、非琐碎改动、需可追溯规格时**：先建 change，再写代码。
+- **小修小补、单文件 obvious fix**：可直接改代码，不必强行开 change。
+
+## 命令与路径
+
+- **CLI**（需本机已安装 `openspec`）：`openspec list`、`openspec new change "<name>"`、`openspec status --change "<name>" --json`、`openspec instructions apply --change "<name>" --json`。
+- **Cursor 斜杠命令**：`/opsx:propose`、`/opsx:apply`、`/opsx:archive`、`/opsx:explore`（定义见 `.cursor/commands/opsx-*.md`）。
+- **Skills**（用 Read 工具读取后照做）：`.cursor/skills/openspec-propose`、`openspec-apply-change`、`openspec-archive-change`、`openspec-explore`。
+
+## 实施变更时
+
+1. 选定 change 名；若用户未指定且有多条 in-progress，用 `openspec list --json` 再确认。
+2. 执行 `openspec instructions apply --change "<name>" --json`，**按返回的 `contextFiles` 阅读** proposal / design / tasks 等。
+3. 按任务逐项实现，完成后在对应 `tasks.md` 勾选 `- [x]`。
+
+## 归档
+
+变更完成后按 `openspec-archive-change` skill 与 `/opsx:archive` 流程归档到 `openspec/changes/archive/`。

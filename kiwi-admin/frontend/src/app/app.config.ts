@@ -15,7 +15,32 @@ import { FormsModule } from '@angular/forms';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, RouteReuseStrategy, TitleStrategy, withComponentInputBinding, withHashLocation, withInMemoryScrolling, withPreloading, withViewTransitions } from '@angular/router';
 
-import { DashboardOutline, FormOutline, MenuFoldOutline, MenuUnfoldOutline } from '@ant-design/icons-angular/icons';
+import {
+  AppstoreOutline,
+  BorderOutline,
+  CloudUploadOutline,
+  CodeOutline,
+  ColumnWidthOutline,
+  CopyOutline,
+  DashboardOutline,
+  DeleteOutline,
+  DragOutline,
+  ExpandOutline,
+  FileImageOutline,
+  FileTextOutline,
+  FormOutline,
+  LinkOutline,
+  MenuFoldOutline,
+  MenuUnfoldOutline,
+  PlayCircleOutline,
+  RedoOutline,
+  SaveOutline,
+  SearchOutline,
+  SnippetsOutline,
+  UndoOutline,
+  ZoomInOutline,
+  ZoomOutOutline,
+} from '@ant-design/icons-angular/icons';
 import { appRoutes } from '@app/app.routes';
 import { CustomPageTitleResolverService } from '@core/services/common/custom-page-title-resolver.service';
 import { InitThemeService } from '@core/services/common/init-theme.service';
@@ -43,7 +68,32 @@ import { FlowableElementModel } from './pages/bpm/design/extension/flowable/flow
 import { IDictService } from './shared/dict/dict';
 import { formlyConfig } from './shared/formly/public_api';
 import { provideFormlyPreset } from '@ngx-formly/core/preset';
-const icons = [MenuFoldOutline, MenuUnfoldOutline, DashboardOutline, FormOutline];
+const icons = [
+  MenuFoldOutline,
+  MenuUnfoldOutline,
+  DashboardOutline,
+  FormOutline,
+  BorderOutline,
+  DragOutline,
+  LinkOutline,
+  ColumnWidthOutline,
+  UndoOutline,
+  RedoOutline,
+  CopyOutline,
+  SnippetsOutline,
+  DeleteOutline,
+  ZoomInOutline,
+  ZoomOutOutline,
+  ExpandOutline,
+  SearchOutline,
+  AppstoreOutline,
+  SaveOutline,
+  CloudUploadOutline,
+  PlayCircleOutline,
+  CodeOutline,
+  FileImageOutline,
+  FileTextOutline,
+];
 
 registerLocaleData(zh);
 
