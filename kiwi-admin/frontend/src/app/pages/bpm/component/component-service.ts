@@ -62,31 +62,12 @@ export class ComponentService {
     }
 
 
-    getComponentProperties(element: Element): { name: string, properties: PropertyDescription[], important?: boolean }[] {
+    getComponentForElement(element: Element): ComponentDescription | undefined {
         const componentId = this.elementModel.getValue(undefined as any, element, "element", "componentId");
-        if (componentId) {
-            const component = this.componentProvider.getComponent(componentId);
-
-            if (component) {
-                return [
-                    {
-                        name: "输入",
-                        properties: [
-                            ...component.inputParameters || [],
-                        ],
-                        important: true
-                    },
-                    {
-                        name: "输出",
-                        properties: [
-                            ...component.outputParameters || [],
-                        ],
-                        important: true
-                    }
-                ];
-            }
+        if (!componentId) {
+            return undefined;
         }
-        return [];
+        return this.componentProvider.getComponent(componentId);
     }
 
 }
