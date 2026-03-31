@@ -1,12 +1,259 @@
-<div class="bpm-toolbar" nz-row nzGutter="8">
-    @for (action of actions; track $index) {
-    <div nz-col nzFlex class="toolbar-item">
-        <button nz-col nzFlex nz-button nzType="dashed" nzShape="circle" 
-        [nz-tooltip]="action.label"
-        (click)="action.onClick($event)"
-            nzSize="small">
-            <nz-icon nzIconfont="{{action.icon}}" />
-        </button>
-    </div>
-    }
+<div class="bpm-toolbar" role="toolbar" aria-label="BPMN 编辑工具栏">
+  <div class="bpm-toolbar__group">
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="套索选择"
+      (click)="triggerEditorAction('lassoTool')"
+    >
+      <nz-icon nzType="border" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="平移画布（手型）"
+      (click)="triggerEditorAction('handTool')"
+    >
+      <nz-icon nzType="drag" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="全局连线"
+      (click)="triggerEditorAction('globalConnectTool')"
+    >
+      <nz-icon nzType="link" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="空间工具"
+      (click)="triggerEditorAction('spaceTool')"
+    >
+      <nz-icon nzType="column-width" nzTheme="outline" />
+    </button>
+  </div>
+
+  <nz-divider nzType="vertical" class="bpm-toolbar__divider" />
+
+  <div class="bpm-toolbar__group">
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="撤销"
+      (click)="onUndo()"
+    >
+      <nz-icon nzType="undo" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="重做"
+      (click)="onRedo()"
+    >
+      <nz-icon nzType="redo" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="复制"
+      (click)="onCopy()"
+    >
+      <nz-icon nzType="copy" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="粘贴"
+      (click)="onPaste()"
+    >
+      <nz-icon nzType="snippets" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="删除"
+      (click)="onRemoveSelection()"
+    >
+      <nz-icon nzType="delete" nzTheme="outline" />
+    </button>
+  </div>
+
+  <nz-divider nzType="vertical" class="bpm-toolbar__divider" />
+
+  <div class="bpm-toolbar__group">
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="放大"
+      (click)="onZoomIn()"
+    >
+      <nz-icon nzType="zoom-in" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="缩小"
+      (click)="onZoomOut()"
+    >
+      <nz-icon nzType="zoom-out" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="适应画布"
+      (click)="onZoomFit()"
+    >
+      <nz-icon nzType="expand" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="搜索元素"
+      (click)="onFind()"
+    >
+      <nz-icon nzType="search" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="切换网格吸附"
+      (click)="toggleGridSnapping()"
+    >
+      <nz-icon nzType="appstore" nzTheme="outline" />
+    </button>
+  </div>
+
+  <nz-divider nzType="vertical" class="bpm-toolbar__divider" />
+
+  <div class="bpm-toolbar__group">
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="保存"
+      (click)="onSave()"
+    >
+      <nz-icon nzType="save" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="下载 BPMN XML"
+      (click)="onExportXml()"
+    >
+      <nz-icon nzType="file-text" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="下载 SVG"
+      (click)="onExportSvg()"
+    >
+      <nz-icon nzType="file-image" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="控制台输出 XML"
+      (click)="onLogXml()"
+    >
+      <nz-icon nzType="code" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="部署"
+      (click)="onDeploy()"
+    >
+      <nz-icon nzType="cloud-upload" nzTheme="outline" />
+    </button>
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="bpm-toolbar__btn"
+      nz-tooltip
+      nzTooltipTitle="启动流程"
+      (click)="onStart()"
+    >
+      <nz-icon nzType="play-circle" nzTheme="outline" />
+    </button>
+  </div>
 </div>

@@ -1,112 +1,133 @@
 import { Component, inject, input } from '@angular/core';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzIconModule } from 'ng-zorro-antd/icon';
+import { saveAs } from 'file-saver';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
-import { NzTooltipDirective } from "ng-zorro-antd/tooltip";
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { BpmEditorToken } from '../editor/bpm-editor';
+
 @Component({
-    selector: 'bpm-toolbar',
-    templateUrl: './bpm-toolbar.html',
-    styleUrls: ['bpm-toolbar.css'],
-    standalone: true,
-    imports: [
-        NzButtonModule,
-        NzIconModule,
-        NzTooltipDirective
-    ]
+  selector: 'bpm-toolbar',
+  templateUrl: './bpm-toolbar.html',
+  styleUrls: ['bpm-toolbar.css'],
+  standalone: true,
+  imports: [NzButtonModule, NzIconModule, NzTooltipModule, NzDividerModule],
 })
 export class BpmToolbar {
+  private readonly bpmnEditor = inject(BpmEditorToken);
+  private readonly message = inject(NzMessageService);
 
-    bpmnEditor = inject(BpmEditorToken);
-    bpmnModeler = input.required<BpmnModeler>();
+  bpmnModeler = input.required<BpmnModeler>();
 
+  triggerEditorAction(action: string, opts?: Record<string, unknown>): void {
+    const ea = this.bpmnModeler().get('editorActions') as {
+      isRegistered: (a: string) => boolean;
+      trigger: (a: string, o?: Record<string, unknown>) => void;
+    };
+    if (ea?.isRegistered?.(action)) {
+      ea.trigger(action, opts);
+    }
+  }
 
-    actions = [
-        // {
-        //     key: 'mouse', label: '鼠标', icon: 'bpmn-shubiaojiantou', onClick: () => {
-        //         let lassoTool: any = this.bpmnModeler().get("lassoTool")
-        //         lassoTool.activateSelection({ x: 100, y: 100 });
-        //     }
-        // },
-        // {
-        //     key: 'line', label: '连接线', icon: 'bpmn-bottom-arrow-solid', onClick: () => {
-        //         let tool: any = this.bpmnModeler().get("globalConnect")
-        //         tool.toggle();
-        //     }
-        // },
-        // {
-        //     key: 'hand', label: '手型工具', icon: 'bpmn-hand', onClick: () => {
-        //         let handTool: any = this.bpmnModeler().get("handTool")
-        //         handTool.activateHand();
-        //     }
-        // },
-        {
-            key: 'select', label: '选择', icon: 'bpmn-kuangxuan', onClick: (event: any) => {
-                let lassoTool: any = this.bpmnModeler().get("lassoTool")
-                console.log(event);
-                lassoTool.activateSelection(event);
-            }
-        },
-        { key: 'undo', label: '撤销', icon: 'bpmn-undo', onClick: () => this.onUndo() },
-        { key: 'redo', label: '重做', icon: 'bpmn-redo', onClick: () => this.onRedo() },
-        { key: 'save', label: '保存', icon: 'bpmn-save', onClick: () => this.onSave() },
-        {
-            key: 'xml', label: 'XML', icon: 'bpmn-xml', onClick: () => {
-                this.bpmnModeler().saveXML({ format: true }).then(({ xml }) => {
-                    console.log(xml);
-                });
-            }
-        },
-        {
-            key: 'deploy', label: '部署', icon: 'bpmn-deploy', onClick: () => {
-                this.bpmnEditor.deploy()
-            }
-        },
-        {
-            key: 'start', label: '启动', icon: 'bpmn-start', onClick: () => {
-                this.bpmnEditor.start()
-            }
+  toggleGridSnapping(): void {
+    const gs = this.bpmnModeler().get('gridSnapping') as { toggleActive?: () => void } | undefined;
+    gs?.toggleActive?.();
+  }
+
+  onUndo(): void {
+    this.triggerEditorAction('undo');
+  }
+
+  onRedo(): void {
+    this.triggerEditorAction('redo');
+  }
+
+  onCopy(): void {
+    this.triggerEditorAction('copy');
+  }
+
+  onPaste(): void {
+    this.triggerEditorAction('paste');
+  }
+
+  onRemoveSelection(): void {
+    this.triggerEditorAction('removeSelection');
+  }
+
+  onZoomIn(): void {
+    this.triggerEditorAction('stepZoom', { value: 1 });
+  }
+
+  onZoomOut(): void {
+    this.triggerEditorAction('stepZoom', { value: -1 });
+  }
+
+  onZoomFit(): void {
+    this.triggerEditorAction('zoom', { value: 'fit-viewport' });
+  }
+
+  onFind(): void {
+    this.triggerEditorAction('find');
+  }
+
+  onSave(): void {
+    this.bpmnEditor.save();
+  }
+
+  onDeploy(): void {
+    void this.bpmnEditor.deploy();
+  }
+
+  onStart(): void {
+    void this.bpmnEditor.start();
+  }
+
+  onExportXml(): void {
+    void this.bpmnModeler()
+      .saveXML({ format: true })
+      .then((result) => {
+        const xml = result.xml;
+        if (!xml) {
+          this.message.error('导出 XML 失败');
+          return;
         }
+        const blob = new Blob([xml], { type: 'application/bpmn20-xml;charset=utf-8' });
+        saveAs(blob, 'diagram.bpmn');
+        this.message.success('已下载 BPMN XML');
+      })
+      .catch(() => {
+        this.message.error('导出 XML 失败');
+      });
+  }
 
+  onExportSvg(): void {
+    void this.bpmnModeler()
+      .saveSVG()
+      .then((result) => {
+        const svg = result.svg;
+        if (!svg) {
+          this.message.error('导出 SVG 失败');
+          return;
+        }
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        saveAs(blob, 'diagram.svg');
+        this.message.success('已下载 SVG');
+      })
+      .catch(() => {
+        this.message.error('导出 SVG 失败');
+      });
+  }
 
-    ]
-
-    onSelect() {
-    }
-
-
-    onSave(): void {
-        // Save BPM diagram logic
-        this.bpmnEditor.save();
-    }
-
-    onUndo(): void {
-        (<any>this.bpmnModeler().get('commandStack')).undo();
-        // Undo logic
-    }
-
-    onRedo(): void {
-        (<any>this.bpmnModeler().get('commandStack')).redo();
-        // Redo logic
-    }
-
-    onZoomIn(): void {
-        // Zoom in logic
-    }
-
-    onZoomOut(): void {
-        // Zoom out logic
-    }
-
-    onZoomReset(): void {
-        // Reset zoom logic
-    }
-
-    onExport(): void {
-        // Export diagram logic
-    }
-
-    onValidate(): void {
-        // Validate diagram logic
-    }
+  onLogXml(): void {
+    void this.bpmnModeler()
+      .saveXML({ format: true })
+      .then((result) => {
+        if (result.xml) {
+          console.log(result.xml);
+          this.message.info('已在控制台输出 XML');
+        }
+      });
+  }
 }
