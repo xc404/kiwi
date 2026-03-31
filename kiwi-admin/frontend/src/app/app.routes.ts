@@ -10,12 +10,8 @@ export const appRoutes = [
     loadComponent: () => import('./pages/bpm/design/editor/bpm-editor').then(m => m.BpmEditor)
   },
   {
-    path: 'bpm/view/:id', data: { preload: true }, canActivate: [JudgeLoginGuard],
-    loadComponent: () => import('./pages/bpm/design/viewer/bpm-viewer').then(m => m.BpmViewer)
-  },
-  {
     path: 'bpm/process-instance/:processInstanceId', data: { preload: true }, canActivate: [JudgeLoginGuard],
     loadComponent: () =>
-      import('./pages/bpm/design/viewer/bpm-process-instance-viewer').then(m => m.BpmProcessInstanceViewer),
+      import('./pages/bpm/design/viewer/bpm-viewer').then(m => m.BpmViewer),
   },
 ] satisfies Route[];
