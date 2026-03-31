@@ -4,6 +4,7 @@ import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css'; // 左边工具栏以及编辑节点的样式
+import gridModule from 'diagram-js-grid';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import Create from 'diagram-js/lib/features/create/Create';
 // import 'bpmn-js-properties-panel/dist/assets/bpmn-js-properties-panel.css'
@@ -157,6 +158,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     this.bpmnModeler = new BpmnModeler({
       container: ".canvas",
       additionalModules: [
+        gridModule,
         {
           http: ['value', this.http],
         },
