@@ -1,20 +1,34 @@
-<nz-layout class="full-height">
-  <nz-sider class="mix-sider-height side-explorer" nzWidth="250px" nzTheme="light" nzNoAnimation>
-    <bpm-pallete> </bpm-pallete>
-  </nz-sider>
-  <nz-content class="flex flex-column">
-    <nz-layout>
-      <nz-content class="flex flex-column">
-        <div class="top-bar">
-          <bpm-toolbar [bpmnModeler]="bpmnModeler"></bpm-toolbar>
-        </div>
-        <!-- </nz-header> -->
-        <div class="canvas" ref="canvas">
-        </div>
-      </nz-content>
-      <nz-sider class="mix-sider-height side-explorer" nzWidth="400px" nzTheme="light" nzNoAnimation>
-        <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
-      </nz-sider>
-    </nz-layout>
-  </nz-content>
-</nz-layout>
+<app-page-header></app-page-header>
+<section class="page-content instance-viewer-page">
+  <div class="instance-toolbar">
+    @if (view(); as v) {
+      <span class="instance-id" title="流程实例 ID">{{ v.processInstanceId }}</span>
+      @if (v.processDefinitionKey) {
+        <span class="def-key">定义：{{ v.processDefinitionKey }}</span>
+      }
+      @if (v.businessKey) {
+        <span class="biz-key">业务键：{{ v.businessKey }}</span>
+      }
+      <nz-tag [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
+      @if (v.activeActivityIds.length) {
+        <span class="hint">当前节点：{{ v.activeActivityIds.join(', ') }}</span>
+      }
+    }
+  </div>
+  <div class="instance-body">
+    <nz-spin [nzSpinning]="loading()" class="instance-spin canvas-pane">
+      <div #canvasHost class="instance-canvas"></div>
+    </nz-spin>
+    @if (view(); as v) {
+      <aside class="variables-panel properties-panel">
+        @if (selectedElement(); as el) {
+          <bpm-panel-header [element]="el"></bpm-panel-header>
+        }
+        <bpm-instance-properties
+          [variables]="filteredVariables()"
+          [selectionIsRoot]="selectionIsRoot()"
+        />
+      </aside>
+    }
+  </div>
+</section>
