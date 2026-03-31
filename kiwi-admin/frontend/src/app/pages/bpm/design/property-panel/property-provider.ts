@@ -1,56 +1,37 @@
-import { inject, Injectable } from "@angular/core";
-import { ComponentService } from "../../component/component-service";
+import { inject, Injectable, InjectionToken } from "@angular/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { PropertyDescription } from "./types";
+import { BasePropertyProvider } from "./base-property-provider";
+import { ComponentPropertyProvider } from "./component-property-provider";
+import { PropertyProvider, PropertyTab } from "./types";
 
-
-export declare type PropertyTab = {
-    name?: string;
-    groups: { name: string, properties: PropertyDescription[], important?: boolean }[]
-}
+export type { PropertyTab, PropertyProvider } from "./types";
 
 @Injectable({ providedIn: 'root' })
-export class PropertyProvider {
+export class CompositePropertyProvider implements PropertyProvider {
 
-    componentService = inject(ComponentService);
-
+    private base = inject(BasePropertyProvider);
+    private component = inject(ComponentPropertyProvider);
 
     getProperties(element: Element): PropertyTab[] {
-
-        let elementType = element.type;
-        let groups: any[] = [];
-
-        groups.push(
-            {
-                name: "通用", properties: [
-                    { key: "id", name: "id", htmlType: "Text", defaultValue: "", readonly: true, example: "", required: true },
-                    { key: "name", name: "name", htmlType: "input", defaultValue: "", example: "", required: true }
-                ],
-                important: true
-            }
-        )
-        if (elementType == "bpmn:ServiceTask") {
-            groups.push(
-                {
-                    name: "组件类型", properties: [
-                        { key: "componentId", name: "组件", htmlType: "component-selector", readonly: true, namespace: "element", defaultValue: "", example: "", required: true },
-                    ],
-                    important: true
-                }
-            );
-
-            groups.push(
-                ...this.componentService.getComponentProperties(element)
-            );
+        const baseTabs = this.base.getProperties(element);
+        const extraTabs = this.component.getProperties(element);
+        if (extraTabs.length === 0) {
+            return baseTabs;
         }
-
-        return [
-            {
-                name: "基础信息",
-                groups: groups
-            }
-        ];
+        const merged = [...baseTabs];
+        const first = merged[0];
+        merged[0] = {
+            ...first,
+            groups: [...first.groups, ...extraTabs[0].groups]
+        };
+        if (extraTabs.length > 1) {
+            merged.push(...extraTabs.slice(1));
+        }
+        return merged;
     }
-
-
 }
+
+export const PROPERTY_PROVIDER = new InjectionToken<PropertyProvider>('PropertyProvider', {
+    providedIn: 'root',
+    factory: () => inject(CompositePropertyProvider),
+});

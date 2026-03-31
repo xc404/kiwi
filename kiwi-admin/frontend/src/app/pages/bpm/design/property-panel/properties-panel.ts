@@ -5,7 +5,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Element } from "bpmn-js/lib/model/Types";
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
-import { PropertyProvider, PropertyTab } from "./property-provider";
+import { PROPERTY_PROVIDER, PropertyTab } from "./property-provider";
 import { NzCollapseModule } from "ng-zorro-antd/collapse";
 import { NzTabsModule } from "ng-zorro-antd/tabs";
 import { PanelHeader } from "./panel-header";
@@ -24,7 +24,7 @@ export class BpmPropertiesPanel implements OnInit {
     element = signal<Element>(undefined as any as Element);
     tabs = signal<PropertyTab[]>([]);
     component = signal<ComponentDescription>(undefined as any as ComponentDescription);
-    propertyProvider = inject(PropertyProvider);
+    propertyProvider = inject(PROPERTY_PROVIDER);
     constructor() {
         // elementModel.inject(this);
     }

@@ -6,6 +6,7 @@ import com.kiwi.project.bpm.model.BpmComponentParameter;
 import com.kiwi.project.system.spi.Refreshable;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -80,9 +81,40 @@ public class BpmComponentService implements InitializingBean, Refreshable
         result.setType(Optional.ofNullable(bpmComponent.getType()).orElse(parent.getType()))  ;
         result.setParentId(bpmComponent.getParentId());
         result.setVersion(Optional.ofNullable(bpmComponent.getVersion()).orElse(parent.getVersion()))  ;
-        result.setInputParameters(mergeParameters(parent.getInputParameters(), bpmComponent.getInputParameters()));
-        result.setOutputParameters(mergeParameters(parent.getOutputParameters(), bpmComponent.getOutputParameters()));
+        List<BpmComponentParameter> parentInput = copyParameterList(parent.getInputParameters());
+        applyDefaultParameterGroup(parentInput, parent.getName());
+        List<BpmComponentParameter> parentOutput = copyParameterList(parent.getOutputParameters());
+        applyDefaultParameterGroup(parentOutput, parent.getName());
+        result.setInputParameters(mergeParameters(parentInput, bpmComponent.getInputParameters()));
+        result.setOutputParameters(mergeParameters(parentOutput, bpmComponent.getOutputParameters()));
         return result;
+    }
+
+    /**
+     * 父组件参数若未配置分组，则使用父组件名称作为 group（避免直接改缓存中的实体，先 copy 再合并）。
+     */
+    private void applyDefaultParameterGroup(List<BpmComponentParameter> parameters, String componentName) {
+        if (parameters == null || StringUtils.isBlank(componentName)) {
+            return;
+        }
+        for (BpmComponentParameter p : parameters) {
+            if (p != null && StringUtils.isBlank(p.getGroup())) {
+                p.setGroup(componentName);
+            }
+        }
+    }
+
+    private List<BpmComponentParameter> copyParameterList(List<BpmComponentParameter> list) {
+        if (list == null) {
+            return null;
+        }
+        return list.stream().map(this::copyParameter).collect(Collectors.toList());
+    }
+
+    private BpmComponentParameter copyParameter(BpmComponentParameter p) {
+        BpmComponentParameter c = new BpmComponentParameter();
+        BeanUtils.copyProperties(p, c);
+        return c;
     }
 
     private List<BpmComponentParameter> mergeParameters(List<BpmComponentParameter> parent, List<BpmComponentParameter> self) {
