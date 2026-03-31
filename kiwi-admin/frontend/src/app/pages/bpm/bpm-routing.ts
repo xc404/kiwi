@@ -4,7 +4,6 @@ export default [
   { path: '', redirectTo: 'project', pathMatch: 'full' },
   { path: 'com', title: '组件管理', data: { key: 'bpm-component' }, loadComponent: () => import('./component/bpm-component').then(m => m.BpmComponent) },
   { path: 'project', title: '项目管理', data: { key: 'bpm-project' }, loadComponent: () => import('./project/bpm-project').then(m => m.BpmProject) },
-  { path: 'project/:id', title: '项目流程', data: { key: 'bpm-project-process' }, loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess) },
   { path: 'process', title: '项目流程', data: { key: 'bpm-project-process' }, loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess) },
   {
     path: 'process-instances',
