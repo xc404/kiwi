@@ -7,11 +7,11 @@
 .bpm-viewer-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px);
+  height: calc(100vh);
   min-height: 400px;
 }
 
-.bpm-viewer-page > .bpm-viewer-layout {
+.bpm-viewer-page>.bpm-viewer-layout {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -91,26 +91,26 @@
 }
 
 /* bpmn-js 画布上的高亮 marker（与 canvas.addMarker 名称对应） */
-:host ::ng-deep .kiwi-bpmn-completed:not(.djs-connection) .djs-visual > :nth-child(1) {
+:host ::ng-deep .kiwi-bpmn-completed:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: rgba(82, 196, 26, 0.85) !important;
   stroke-width: 3px !important;
 }
 
-:host ::ng-deep .kiwi-bpmn-active:not(.djs-connection) .djs-visual > :nth-child(1) {
+:host ::ng-deep .kiwi-bpmn-active:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: #1890ff !important;
   stroke-width: 4px !important;
   filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.55));
 }
 
 /* 选中态（与完成/当前态可叠加，选中描边优先可见） */
-:host ::ng-deep .kiwi-bpmn-selected:not(.djs-connection) .djs-visual > :nth-child(1) {
+:host ::ng-deep .kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: #722ed1 !important;
   stroke-width: 3px !important;
   filter: drop-shadow(0 0 6px rgba(114, 46, 209, 0.45));
 }
 
-:host ::ng-deep .kiwi-bpmn-active.kiwi-bpmn-selected:not(.djs-connection) .djs-visual > :nth-child(1),
-:host ::ng-deep .kiwi-bpmn-completed.kiwi-bpmn-selected:not(.djs-connection) .djs-visual > :nth-child(1) {
+:host ::ng-deep .kiwi-bpmn-active.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1),
+:host ::ng-deep .kiwi-bpmn-completed.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: #722ed1 !important;
   stroke-width: 3px !important;
   filter: drop-shadow(0 0 6px rgba(114, 46, 209, 0.5));
