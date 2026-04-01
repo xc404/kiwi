@@ -23,6 +23,7 @@ import { ComponentDescription } from '../../component/component-provider';
 import { PanelHeader } from './panel-header';
 import { PropertyGroup } from './property-group';
 import { PROPERTY_PROVIDER, PropertyTab } from './property-provider';
+import { ProcessInstance } from '../service/process-instance.service';
 
 /** Modeler 与只读 Viewer 均基于 diagram-js，事件与 get('canvas') 一致 */
 export type BpmnDiagramHost = BpmnModeler | NavigatedViewer;
@@ -48,7 +49,7 @@ export class BpmPropertiesPanel implements OnInit {
     bpmnModeler = input.required<BpmnDiagramHost>();
     /** 流程实例查看：只展示运行时变量，不加载建模属性 */
     instanceMode = input(false);
-    processInstance = input <);
+    processInstance = input<ProcessInstance>(undefined as unknown as ProcessInstance);
     activityInstanceIdsByActivityId = input<Record<string, string[]>>({});
     instanceSelectionIsRoot = input(true);
     selectedElementId = input<string | null>(null);
@@ -99,33 +100,5 @@ export class BpmPropertiesPanel implements OnInit {
         return `${environment.api.baseUrl}${environment.api.camundaEngineRestPath}`;
     }
 
-    private variableInstanceListToRows(list: CamundaVariableInstanceItem[]): ProcessVariableRow[] {
-        const seen = new Set<string>();
-        const rows: ProcessVariableRow[] = [];
-        for (const row of list) {
-            if (!row.name) {
-                continue;
-            }
-            const key = `${row.name}\0${row.activityInstanceId ?? ''}`;
-            if (seen.has(key)) {
-                continue;
-            }
-            seen.add(key);
-            rows.push({
-                name: row.name,
-                type: row.type ?? 'Unknown',
-                value: row.value,
-                scope: row.activityInstanceId ? 'activity' : 'process',
-                activityInstanceId: row.activityInstanceId,
-            });
-        }
-        rows.sort((a, b) => {
-            const scopeOrder = a.scope === b.scope ? 0 : a.scope === 'process' ? -1 : 1;
-            if (scopeOrder !== 0) {
-                return scopeOrder;
-            }
-            return a.name.localeCompare(b.name);
-        });
-        return rows;
-    }
 }
+
