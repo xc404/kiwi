@@ -66,10 +66,10 @@ export class BpmPropertiesPanel implements OnInit {
 
 
     ngOnInit(): void {
-        this.loadModuler();
+        this.subscribeElementChange();
     }
 
-    loadModuler() {
+    subscribeElementChange() {
         this.bpmnModeler().on('selection.changed', (e: { newSelection: unknown[] }) => {
             let element = e.newSelection[e.newSelection.length - 1];
             if (!element) {

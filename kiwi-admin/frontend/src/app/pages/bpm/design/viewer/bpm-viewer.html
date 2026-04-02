@@ -33,9 +33,9 @@
     </nz-content>
     <nz-sider nzWidth="450px" nzTheme="light" class="bpm-viewer-properties-sider">
       <div class="bpm-viewer-properties-scroll">
-        <div class="bpm-viewer-sider-header">属性</div>
         @if (viewer) {
-        <bpm-properties-panel [bpmnModeler]="viewer"></bpm-properties-panel>
+        <bpm-properties-panel [bpmnModeler]="viewer" [viewMode]="true"
+          [processInstance]="processInstance()"></bpm-properties-panel>
         }
       </div>
     </nz-sider>
