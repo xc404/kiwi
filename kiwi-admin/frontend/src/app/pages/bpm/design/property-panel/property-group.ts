@@ -61,7 +61,7 @@ export class PropertyGroup {
             dataIndex: property.key,
             name: property.name || property.key,
             editor: property.htmlType || '#text',
-        }
+        } as FieldEditorConfig;
     }
 
     toViewFieldConfig(property: PropertyDescription): FieldEditorConfig {
@@ -75,6 +75,6 @@ export class PropertyGroup {
             name: property.name || property.key,
             readonly: true,
             editor: editor,
-        }
+        } as FieldEditorConfig;
     }
 }

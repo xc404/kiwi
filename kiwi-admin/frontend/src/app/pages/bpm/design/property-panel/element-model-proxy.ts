@@ -1,5 +1,5 @@
 import BpmnModeler from 'bpmn-js/lib/Modeler'
-import { PropertyDescription } from "./types";
+import { isTextType, PropertyDescription } from "./types";
 import { ElementModel } from '../extension/element-model';
 import { Element } from "bpmn-js/lib/model/Types";
 import BaseViewer from 'bpmn-js/lib/BaseViewer';
@@ -21,8 +21,11 @@ export class ElementModelProxyHandler {
         let property = this.properties.find(p => p.key == prop);
         if (property) {
             let value = this.elementModel.getValue(this.bpmnModeler, this.element, property.namespace ?? 'bpmn', property.key);
-            if (this.viewMode) {
+            if (this.viewMode && isTextType(property)) {
                 let rawValue = this.variables.find(v => v.name === prop)?.value;
+                if (!value && !rawValue) {
+                    return undefined;
+                }
                 if (rawValue !== undefined && rawValue != value) {
                     return `${rawValue} (${value})`;
                 }

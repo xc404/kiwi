@@ -12,6 +12,7 @@ enum PropertyNamespace {
 
 
 export declare type PropertyDescription = {
+    type?: string;
     key: string;
     name?: string;
     description?: string;
@@ -45,8 +46,14 @@ export function toEditFieldConfig(property: PropertyDescription): FieldEditorCon
         ...property,
         dataIndex: property.key,
         name: property.name || property.key,
-        editor: property.htmlType || 'text',
-    }
+        editor: property.htmlType || '#text',
+    } as FieldEditorConfig;
+}
+
+export function isTextType(property: PropertyDescription): boolean {
+    const textTypes = ['#text', 'textarea', 'input'];
+
+    return property.htmlType ? textTypes.includes(property.htmlType) : true || property.type === 'string';
 }
 
 export { PropertyNamespace };
