@@ -1,19 +1,28 @@
 <section class="page-content bpm-viewer-page">
-  <div class="instance-toolbar">
-    @if ( processInstance(); as v) {
-    <span class="instance-id" title="流程实例 ID">ID:{{ v.id }}</span>
-    @if (v.processDefinitionKey) {
-    <span class="def-key">定义：{{ v.processDefinitionKey }}</span>
+  <header class="instance-toolbar">
+    @if (processInstance(); as v) {
+    <div class="instance-toolbar__head">
+      <h3 class="instance-toolbar__title" nz-typography>{{ processTitle() }}</h3>
+      <nz-tag [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
+    </div>
+    <div class="instance-toolbar__meta">
+      <span class="meta-item instance-id" title="流程实例 ID">ID {{ v.id }}</span>
+      @if (v.processDefinitionKey) {
+      <span class="meta-item def-key" title="流程定义 Key">{{ v.processDefinitionKey }}</span>
+      }
+      @if (v.businessKey) {
+      <span class="meta-item biz-key">业务键 {{ v.businessKey }}</span>
+      }
+    </div>
+    <!-- <div class="instance-toolbar__legend" aria-hidden="true">
+      <span class="legend-item"><i class="legend-dot legend-dot--completed"></i>已完成</span>
+      <span class="legend-item"><i class="legend-dot legend-dot--active"></i>进行中</span>
+      <span class="legend-item"><i class="legend-dot legend-dot--selected"></i>选中</span>
+    </div> -->
+    } @else if (processInstanceId()) {
+    <span class="toolbar-loading">正在加载流程实例…</span>
     }
-    @if (v.businessKey) {
-    <span class="biz-key">业务键：{{ v.businessKey }}</span>
-    }
-    <nz-tag [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
-    <!-- @if (v.activeActivityIds.length) {
-    <span class="hint">当前节点：{{ v.activeActivityIds.join(', ') }}</span>
-    } -->
-    }
-  </div>
+  </header>
   <nz-layout class="full-height bpm-viewer-layout">
     <nz-content class="flex flex-column bpm-viewer-main-content">
       <nz-layout class="bpm-viewer-workspace">
@@ -22,11 +31,11 @@
         </nz-content>
       </nz-layout>
     </nz-content>
-    <nz-sider class="bpm-viewer-properties-sider" nzWidth="400px" nzTheme="light" nzNoAnimation>
+    <nz-sider nzWidth="450px" nzTheme="light" class="bpm-viewer-properties-sider">
       <div class="bpm-viewer-properties-scroll">
-        @if(viewer){
-        <bpm-properties-panel [bpmnModeler]="viewer" [viewMode]="true"
-          [processInstance]="processInstance()"></bpm-properties-panel>
+        <div class="bpm-viewer-sider-header">属性</div>
+        @if (viewer) {
+        <bpm-properties-panel [bpmnModeler]="viewer"></bpm-properties-panel>
         }
       </div>
     </nz-sider>

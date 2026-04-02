@@ -1,6 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   OnDestroy,
@@ -19,6 +17,7 @@ import 'bpmn-js/dist/assets/diagram-js.css';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTypographyModule } from 'ng-zorro-antd/typography';
 import { catchError } from 'rxjs';
 import { filter, map as mapOp } from 'rxjs/operators';
 import {
@@ -33,7 +32,7 @@ import kiwiDescriptor from '../../component/kiwi.json';
   selector: 'bpm-viewer',
   templateUrl: './bpm-viewer.html',
   styleUrl: './bpm-viewer.scss',
-  imports: [NzTagModule, NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel],
+  imports: [NzTagModule, NzTypographyModule, NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel],
   standalone: true,
 })
 export class BpmViewer implements OnInit, OnDestroy {
@@ -122,6 +121,23 @@ export class BpmViewer implements OnInit, OnDestroy {
     return 'processing';
   });
 
+  /** 展示用流程名称：优先 API 名称，其次定义 Key */
+  protected readonly processTitle = computed(() => {
+    const v = this.processInstance();
+    if (!v?.id) {
+      return '';
+    }
+    const name = v.processDefinitionName?.trim();
+    if (name) {
+      return name;
+    }
+    const key = v.processDefinitionKey?.trim();
+    if (key) {
+      return key;
+    }
+    return '流程实例';
+  });
+
 
 
   ngOnInit(): void {
@@ -174,9 +190,39 @@ export class BpmViewer implements OnInit, OnDestroy {
     ).subscribe({
       next: (pi) => {
         this.processInstance.set(pi);
+        this.ensureProcessDefinitionName(pi);
       },
       error: (err) => {
         console.error('加载流程实例失败', err);
+      },
+    });
+  }
+
+  /** 运行时实例常无 processDefinitionName，补拉 GET /process-definition/{id} */
+  private ensureProcessDefinitionName(pi: ProcessInstance): void {
+    if (!pi.definitionId) {
+      return;
+    }
+    if (pi.processDefinitionName?.trim()) {
+      return;
+    }
+    this.processInstanceService.getProcessDefinition(pi.definitionId).subscribe({
+      next: (def) => {
+        const n = def.name != null ? String(def.name).trim() : '';
+        if (!n) {
+          return;
+        }
+        const cur = this.processInstance();
+        if (cur?.id !== pi.id) {
+          return;
+        }
+        if (cur.processDefinitionName?.trim()) {
+          return;
+        }
+        this.processInstance.set({ ...cur, processDefinitionName: n });
+      },
+      error: () => {
+        /* 名称非关键路径，忽略 */
       },
     });
   }
@@ -261,6 +307,10 @@ export class BpmViewer implements OnInit, OnDestroy {
   }
 
   private markActivityState(): void {
+    if (!this.bpmnImportReady()) {
+      this.clearActivityMarkers();
+      return;
+    }
 
     this.clearActivityMarkers();
 

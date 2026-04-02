@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
-import { Observable, map, pipe } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 /**
  * 统一后的流程实例视图（由 {@link ProcessInstanceService} 从运行时 / 历史 API 归一化）。
@@ -11,6 +11,8 @@ export interface ProcessInstance {
   id: string;
   /** 流程定义 ID（已从历史字段 processDefinitionId 对齐） */
   definitionId: string;
+  /** Camunda 流程定义名称（历史实例常带；运行时可能没有，可再调 {@link ProcessInstanceService.getProcessDefinition}） */
+  processDefinitionName?: string;
   processDefinitionKey?: string;
   businessKey?: string;
   caseInstanceId?: string;
@@ -22,6 +24,15 @@ export interface ProcessInstance {
 
 /** Camunda GET /process-instance/{id} 与 GET /history/process-instance/{id} 原始响应（字段因端点而异） */
 type CamundaProcessInstanceResponse = Record<string, any>;
+
+/** Camunda GET /process-definition/{id} 常用字段 */
+export interface CamundaProcessDefinition {
+  id?: string;
+  key?: string;
+  name?: string | null;
+  version?: number;
+  [key: string]: unknown;
+}
 
 /** Camunda GET /history/variable-instance 列表项 */
 export interface CamundaHistoricVariableInstance {
@@ -72,6 +83,10 @@ export class ProcessInstanceService {
       ...raw,
       id: String(raw['id'] ?? ''),
       definitionId,
+      processDefinitionName:
+        raw['processDefinitionName'] != null && String(raw['processDefinitionName']).trim() !== ''
+          ? String(raw['processDefinitionName']).trim()
+          : undefined,
       processDefinitionKey: raw['processDefinitionKey'] || raw['definitionKey'],
       businessKey: raw['businessKey'],
       caseInstanceId: raw['caseInstanceId'],
@@ -106,9 +121,9 @@ export class ProcessInstanceService {
     );
   }
 
-  /** GET /process-definition/{id} */
-  getProcessDefinition(processDefinitionId: string): Observable<{ key?: string }> {
-    return this.http.get<{ key?: string }>(
+  /** GET /process-definition/{id}（Camunda 含 name、key、version 等） */
+  getProcessDefinition(processDefinitionId: string): Observable<CamundaProcessDefinition> {
+    return this.http.get<CamundaProcessDefinition>(
       `${this.engineRestRoot()}/process-definition/${encodeURIComponent(processDefinitionId)}`,
     );
   }
