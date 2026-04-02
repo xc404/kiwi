@@ -1,3 +1,4 @@
+import BaseViewer from "bpmn-js/lib/BaseViewer";
 import BpmnFactory from "bpmn-js/lib/features/modeling/BpmnFactory";
 import Modeling from "bpmn-js/lib/features/modeling/Modeling";
 import { Element } from "bpmn-js/lib/model/Types";
@@ -7,7 +8,7 @@ export abstract class ElementModel {
 
     abstract getModdleExtension(): any;
 
-    public getValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string): any {
+    public getValue(bpmnModeler: BaseViewer, element: Element, namespace: string, key: string): any {
         if (namespace == 'bpmn' || namespace == 'element' || !namespace) {
 
             switch (key) {
@@ -27,7 +28,7 @@ export abstract class ElementModel {
 
     }
 
-    public setValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string, value: any): void {
+    public setValue(bpmnModeler: BaseViewer, element: Element, namespace: string, key: string, value: any): void {
         if (namespace == 'bpmn' || namespace == 'element' || !namespace) {
             switch (key) {
                 case "name":
@@ -43,7 +44,7 @@ export abstract class ElementModel {
 
     }
 
-    public clearComponentProperties(bpmnModeler: BpmnModeler, element: Element) {
+    public clearComponentProperties(bpmnModeler: BaseViewer, element: Element) {
         if (element.type == "bpmn:ServiceTask") {
             let businessObject = ModelUtil.getBusinessObject(element);
             this.updateModdleProperties(bpmnModeler, element, businessObject, {
@@ -79,7 +80,7 @@ export abstract class ElementModel {
         return ele;
     }
 
-    updateProperties(bpmnModeler: BpmnModeler, element: Element, properties: any) {
+    updateProperties(bpmnModeler: BaseViewer, element: Element, properties: any) {
         let bpmnFactory: BpmnFactory = bpmnModeler.get('bpmnFactory');
         const modeling: Modeling = bpmnModeler.get('modeling');
         modeling.updateProperties(element, properties);
@@ -87,12 +88,12 @@ export abstract class ElementModel {
 
 
 
-    updateModdleProperties(bpmnModeler: BpmnModeler, element: Element, moddleElement: any, properties: any) {
+    updateModdleProperties(bpmnModeler: BaseViewer, element: Element, moddleElement: any, properties: any) {
         const modeling: any = bpmnModeler.get('modeling');
         modeling.updateModdleProperties(element, moddleElement, properties);
     }
 
-    createElement(bpmnModeler: BpmnModeler, type: string, properties: any, parent?: Element) {
+    createElement(bpmnModeler: BaseViewer, type: string, properties: any, parent?: Element) {
         let bpmnFactory: any = bpmnModeler.get('bpmnFactory');
         const element = bpmnFactory.create(type, properties);
         if (parent) {

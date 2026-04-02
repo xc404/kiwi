@@ -11,8 +11,9 @@
                     <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false"
                         nzShowArrow="true">
                         <div style="width: 100%;">
-                            <property-group [element]="element()" [bpmnModeler]="$any(bpmnModeler())"
-                                [properties]="group.properties"></property-group>
+                            <property-group [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                [properties]="group.properties" [viewMode]="viewMode()"
+                                [variables]="activityVariables()"></property-group>
                         </div>
                     </nz-collapse-panel>
 

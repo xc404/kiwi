@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   OnDestroy,
+  OnInit,
   ViewChild,
   computed,
   effect,
@@ -25,15 +26,17 @@ import {
   ProcessInstance,
   ProcessInstanceService
 } from '../service/process-instance.service';
-
+import { BpmPropertiesPanel } from "../property-panel/properties-panel";
+import { ElementModel } from '../extension/element-model';
+import kiwiDescriptor from '../../component/kiwi.json';
 @Component({
   selector: 'bpm-viewer',
   templateUrl: './bpm-viewer.html',
   styleUrl: './bpm-viewer.scss',
-  imports: [NzTagModule, NzLayoutComponent, NzLayoutModule],
+  imports: [NzTagModule, NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel],
   standalone: true,
 })
-export class BpmViewer implements AfterViewInit, OnDestroy {
+export class BpmViewer implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly processInstanceService = inject(ProcessInstanceService);
 
@@ -41,9 +44,13 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
 
   protected readonly processInstance = signal<ProcessInstance>(undefined as unknown as ProcessInstance);
 
-  protected viewer: NavigatedViewer | null = null;
+  protected viewer!: NavigatedViewer;
+  protected canvas!: any;
+  protected elementRegistry!: any;
+  elementModel = inject(ElementModel);
   processInstanceId = signal<string | undefined>(undefined);
   processActivities = signal<CamundaHistoricActivityInstance[]>([]);
+  activityStates = signal<Map<string, CamundaHistoricActivityInstance>>(new Map());
   bpmnXml = signal<string | undefined>(undefined);
 
 
@@ -52,6 +59,10 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
 
   private readonly activityMarkerNames = ['kiwi-bpmn-completed', 'kiwi-bpmn-active'] as const;
   private markedActivityElementIds: string[] = [];
+
+  /** diagram-js 默认使用 marker `selected`；在 SelectionVisuals 之后同步为 `kiwi-bpmn-selected`（EventBus 默认优先级 1000，此处用更低优先级以在其后执行） */
+
+
 
   constructor() {
     effect(() => {
@@ -77,9 +88,9 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     });
 
     effect(() => {
-      this.processActivities();
+      this.activityStates();
       this.bpmnImportReady();
-      this.applyActivityMarkers();
+      this.markActivityState();
     });
   }
 
@@ -113,11 +124,16 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
 
 
 
-  ngAfterViewInit(): void {
+  ngOnInit(): void {
     this.viewer = new NavigatedViewer({
       container: this.canvasHost.nativeElement,
+      moddleExtensions: {
+        moddleProvider: this.elementModel.getModdleExtension(),
+        componentProvider: kiwiDescriptor
+      }
     });
-
+    this.canvas = this.viewer.get('canvas');
+    this.elementRegistry = this.viewer.get('elementRegistry');
     this.route.paramMap
       .pipe(
         mapOp((p) => p.get('processInstanceId')),
@@ -131,19 +147,25 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
     if (pendingXml) {
       void this.loadXml(pendingXml);
     }
+
+    this.viewer.on('selection.changed', 100, this.onSelectionChanged, this);
   }
 
   ngOnDestroy(): void {
-    this.viewer?.destroy();
-    this.viewer = null;
+    if (this.viewer) {
+      this.viewer.off('selection.changed', this.onSelectionChanged);
+      this.viewer.destroy();
+    }
   }
 
 
 
   loadProcessInstance() {
     this.processInstanceService.getRuntimeProcessInstance(this.processInstanceId()!).pipe(
-      catchError((err: HttpErrorResponse) => {
-        if (err.status === 404) {
+      // 不要改这里，这里的返回是code: 404，不是HttpErrorResponse
+      catchError((err: any) => {
+
+        if (err.code === 404) {
           // 404 可能是因为流程实例已结束，尝试获取历史流程实例
           return this.processInstanceService.getHistoricProcessInstance(this.processInstanceId()!);
         }
@@ -158,18 +180,6 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
       },
     });
   }
-
-  loadProcessActivities() {
-    this.processInstanceService.getHistoryActivityInstances(this.processInstanceId()!).subscribe({
-      next: (activities) => {
-        this.processActivities.set(activities);
-      },
-    });
-  }
-
-
-
-
   loadBpmnXml() {
     const definitionId = this.processInstance().definitionId;
     if (!definitionId) {
@@ -183,6 +193,31 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
       error: (err) => {
         console.error('获取流程定义 XML 失败', err);
       },
+    });
+  }
+
+  loadProcessActivities() {
+    this.processInstanceService.getHistoryActivityInstances(this.processInstanceId()!).subscribe({
+      next: (activities) => {
+        this.processActivities.set(activities);
+        const activityMap = new Map<string, CamundaHistoricActivityInstance>();
+        for (const activity of activities) {
+          if (activity.activityId == null || activity.activityId === '') {
+            continue;
+          }
+          const activityId = activity.activityId;
+          if (activity.completed) {
+            activityMap.set(activityId, activity);
+          }
+
+          let exist = activityMap.get(activityId);
+          if (exist?.completed) {
+            continue;
+          }
+          activityMap.set(activityId, activity);
+        }
+        this.activityStates.set(activityMap);
+      }
     });
   }
 
@@ -214,73 +249,78 @@ export class BpmViewer implements AfterViewInit, OnDestroy {
       });
   }
 
-  /**
-   * 同一 activityId 多次出现（重试、多实例等）：任一条 endTime 为空则视为当前活动，否则已完成。
-   */
-  private activityStatesFromHistory(
-    activities: CamundaHistoricActivityInstance[],
-  ): Map<string, 'active' | 'completed'> {
-    const byActivityId = new Map<string, CamundaHistoricActivityInstance[]>();
-    for (const a of activities) {
-      const aid = a.activityId;
-      if (aid == null || aid === '') {
-        continue;
-      }
-      let list = byActivityId.get(aid);
-      if (!list) {
-        list = [];
-        byActivityId.set(aid, list);
-      }
-      list.push(a);
-    }
-    const out = new Map<string, 'active' | 'completed'>();
-    for (const [activityId, list] of byActivityId) {
-      const hasOpen = list.some((x) => x.endTime == null || x.endTime === '');
-      out.set(activityId, hasOpen ? 'active' : 'completed');
-    }
-    return out;
-  }
+
 
   private clearActivityMarkers(): void {
-    const viewer = this.viewer;
-    if (!viewer) {
-      return;
-    }
-    const canvas = viewer.get('canvas') as {
-      removeMarker: (elementId: string, marker: string) => void;
-    };
     for (const id of this.markedActivityElementIds) {
       for (const name of this.activityMarkerNames) {
-        canvas.removeMarker(id, name);
+        this.removeActivityMarker(id, name);
       }
     }
     this.markedActivityElementIds = [];
   }
 
-  private applyActivityMarkers(): void {
-    const viewer = this.viewer;
-    if (!viewer || !this.bpmnImportReady()) {
-      return;
-    }
+  private markActivityState(): void {
 
     this.clearActivityMarkers();
 
-    const elementRegistry = viewer.get('elementRegistry') as {
-      get: (id: string) => { type?: string } | undefined;
-    };
-    const canvas = viewer.get('canvas') as {
-      addMarker: (elementId: string, marker: string) => void;
-    };
-
-    const states = this.activityStatesFromHistory(this.processActivities());
-    for (const [activityId, state] of states) {
-      const el = elementRegistry.get(activityId);
-      if (!el) {
-        continue;
-      }
-      const marker = state === 'active' ? 'kiwi-bpmn-active' : 'kiwi-bpmn-completed';
-      canvas.addMarker(activityId, marker);
-      this.markedActivityElementIds.push(activityId);
+    for (const activity of this.activityStates().values()) {
+      const marker = activity.completed ? 'kiwi-bpmn-completed' : 'kiwi-bpmn-active';
+      this.addActivityMarker(activity.activityId!, marker);
+      this.markedActivityElementIds.push(activity.activityId!);
     }
+  }
+
+
+  onSelectionChanged(event: {
+    oldSelection: unknown[];
+    newSelection: unknown[];
+  }): void {
+    if (!this.canvas) {
+      return;
+    }
+    const oldSel = event.oldSelection ?? [];
+    const newSel = event.newSelection ?? [];
+    for (const el of oldSel) {
+      if (newSel.indexOf(el) === -1) {
+        this.canvas.removeMarker(el, 'kiwi-bpmn-selected');
+      }
+    }
+    for (const el of newSel) {
+      if (oldSel.indexOf(el) === -1) {
+        this.canvas.removeMarker(el, 'selected');
+        this.canvas.addMarker(el, 'kiwi-bpmn-selected');
+      }
+    }
+  };
+
+  removeActivityMarker(activityId: string, marker: string) {
+    const viewer = this.viewer;
+    if (!viewer) {
+      return;
+    }
+    this.canvas!.removeMarker(activityId, marker);
+  }
+
+  addActivityMarker(activityId: string, marker: string) {
+    if (!this.elementRegistry) {
+      return;
+    }
+    if (!this.canvas) {
+      return;
+    }
+    let element = this.elementRegistry.get(activityId);
+    if (!element) {
+      return;
+    }
+    this.canvas!.addMarker(activityId, marker);
+  }
+
+  isActivityCompleted(activityId: string): boolean {
+    const activity = this.activityStates().get(activityId);
+    if (!activity) {
+      return false;
+    }
+    return activity.completed;
   }
 }

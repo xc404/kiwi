@@ -7,7 +7,7 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import Create from 'diagram-js/lib/features/create/Create';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCollapseModule } from "ng-zorro-antd/collapse";
-import { NzDropDownModule } from "ng-zorro-antd/dropdown";
+import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { NzFormModule } from "ng-zorro-antd/form";
 import { NzIconModule } from "ng-zorro-antd/icon";
 import { NzLayoutModule } from "ng-zorro-antd/layout";
@@ -15,7 +15,7 @@ import { NzTabsModule } from "ng-zorro-antd/tabs";
 import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { DndModule } from 'ngx-drag-drop';
 import { combineLatest, map, Observable, of } from 'rxjs';
-import { ComponentPalleteProvider } from '../../component/ComponentPalleteProvider';
+import { ComponentPalleteProvider } from '../../component/component-pallete-provider';
 import { BpmEditorToken } from "../editor/bpm-editor";
 import BasePaletteProvider from './base-pallete-provider';
 import { PaletteGroup, PaletteItem, PaletteProvider } from './palette-provider';
@@ -45,7 +45,7 @@ declare interface PalleteTab {
   }
   ]
   ,
-  imports: [NzDropDownModule,
+  imports: [NzDropdownModule,
     NzIconModule,
     NzLayoutModule,
     MatExpansionModule,

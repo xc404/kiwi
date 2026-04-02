@@ -1,3 +1,4 @@
+import { ProcessInstanceService } from './../service/process-instance.service';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -7,8 +8,7 @@ import {
     inject,
     input,
     OnInit,
-    signal,
-    untracked,
+    signal
 } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -18,23 +18,16 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { catchError, map, of } from 'rxjs';
 import { ComponentDescription } from '../../component/component-provider';
+import { ProcessInstance } from '../service/process-instance.service';
 import { PanelHeader } from './panel-header';
 import { PropertyGroup } from './property-group';
 import { PROPERTY_PROVIDER, PropertyTab } from './property-provider';
-import { ProcessInstance } from '../service/process-instance.service';
+import Viewer from 'bpmn-js/lib/Viewer';
 
 /** Modeler 与只读 Viewer 均基于 diagram-js，事件与 get('canvas') 一致 */
 export type BpmnDiagramHost = BpmnModeler | NavigatedViewer;
 
-/** Camunda history variable-instance 列表项 */
-interface CamundaVariableInstanceItem {
-    name: string | null;
-    type?: string | null;
-    value?: unknown;
-    activityInstanceId?: string | null;
-}
 
 @Component({
     selector: 'bpm-properties-panel',
@@ -45,10 +38,11 @@ interface CamundaVariableInstanceItem {
 })
 export class BpmPropertiesPanel implements OnInit {
     private readonly http = inject(HttpClient);
+    private readonly processInstanceService = inject(ProcessInstanceService);
 
-    bpmnModeler = input.required<BpmnDiagramHost>();
+    bpmnModeler = input.required<Viewer>();
     /** 流程实例查看：只展示运行时变量，不加载建模属性 */
-    instanceMode = input(false);
+    viewMode = input(false);
     processInstance = input<ProcessInstance>(undefined as unknown as ProcessInstance);
     activityInstanceIdsByActivityId = input<Record<string, string[]>>({});
     instanceSelectionIsRoot = input(true);
@@ -63,7 +57,13 @@ export class BpmPropertiesPanel implements OnInit {
 
 
     constructor() {
+
+        effect(() => {
+            this.processInstance();
+            this.loadVariables();
+        });
     }
+
 
     ngOnInit(): void {
         this.loadModuler();
@@ -84,10 +84,6 @@ export class BpmPropertiesPanel implements OnInit {
     }
 
     loadElement() {
-        if (this.instanceMode()) {
-            this.tabs.set([]);
-            return;
-        }
         const tabs = this.propertyProvider.getProperties(this.element());
         this.tabs.set(tabs);
     }
@@ -96,9 +92,26 @@ export class BpmPropertiesPanel implements OnInit {
         return this.element().type === 'bpmn:ServiceTask';
     });
 
-    private engineRestRoot(): string {
-        return `${environment.api.baseUrl}${environment.api.camundaEngineRestPath}`;
+    loadVariables() {
+        if (this.viewMode() && this.processInstance()) {
+            this.processInstanceService.getHistoricProcessInstanceVariables(this.processInstance().id).subscribe({
+                next: (variables) => {
+                    this.instanceVariables.set(variables);
+                },
+                error: (err) => {
+                    console.error('Failed to load process variables', err);
+                }
+            });
+        }
     }
 
-}
+    activityVariables = computed(() => {
 
+        if (!this.viewMode() || !this.processInstance()) {
+            return [];
+        }
+
+        const activityVariables = this.instanceVariables().filter(v => v.activityId === this.selectedElementId());
+        return activityVariables;
+    });
+}
