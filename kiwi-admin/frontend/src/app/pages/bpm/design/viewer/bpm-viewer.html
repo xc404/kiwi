@@ -1,7 +1,7 @@
 <section class="page-content bpm-viewer-page">
   <div class="instance-toolbar">
     @if ( processInstance(); as v) {
-    <span class="instance-id" title="流程实例 ID">{{ v.id }}</span>
+    <span class="instance-id" title="流程实例 ID">ID:{{ v.id }}</span>
     @if (v.processDefinitionKey) {
     <span class="def-key">定义：{{ v.processDefinitionKey }}</span>
     }
@@ -20,8 +20,15 @@
         <nz-content class="flex flex-column bpm-viewer-canvas-content">
           <div #canvasHost class="instance-canvas bpm-editor-canvas"></div>
         </nz-content>
-
       </nz-layout>
     </nz-content>
+    <nz-sider class="bpm-viewer-properties-sider" nzWidth="400px" nzTheme="light" nzNoAnimation>
+      <div class="bpm-viewer-properties-scroll">
+        @if(viewer){
+        <bpm-properties-panel [bpmnModeler]="viewer" [viewMode]="true"
+          [processInstance]="processInstance()"></bpm-properties-panel>
+        }
+      </div>
+    </nz-sider>
   </nz-layout>
 </section>

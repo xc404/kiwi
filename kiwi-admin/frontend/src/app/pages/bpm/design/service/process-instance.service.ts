@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
-import { Observable, map } from 'rxjs';
+import { Observable, map, pipe } from 'rxjs';
 
 /**
  * 统一后的流程实例视图（由 {@link ProcessInstanceService} 从运行时 / 历史 API 归一化）。
@@ -37,6 +37,8 @@ export interface CamundaHistoricActivityInstance {
   activityId: string | null;
   activityType: string | null;
   endTime: string | null;
+  completed: boolean;
+  active: boolean;
 }
 
 /** 流程定义 XML（GET /process-definition/{id}/xml） */
@@ -122,9 +124,17 @@ export class ProcessInstanceService {
           sortOrder: 'asc',
         },
       },
-    );
+    ) 
+    .pipe(map((items) => {
+      return items.map((item) => {
+        return {
+          ...item,
+          completed: item.endTime != null && item.endTime !== '',
+          active: item.endTime == null || item.endTime === '',
+        };
+      });
+    }));
   }
-
 
   // getProcessInstanceVariables(processInstanceId: string, runtime = true): Observable<Record<string, any>> {
   //   if (runtime) {

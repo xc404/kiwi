@@ -6,8 +6,6 @@ import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
 import { ElementModel } from "../element-model";
-import { values } from 'lodash';
-import { properties } from 'ng-zorro-antd/core/util';
 export class CamundaElementModel extends ElementModel {
 
     componentProvider = inject(ComponentProvider);
