@@ -4,6 +4,7 @@ import { FormlyDictExtension } from "./formly-dict.extensions";
 import { ColumnEditField, HorizontalFormFieldWrapper, VerticalFormFieldWrapper } from "./formly-field-wrapper";
 import { BizTreeSelectType } from "./types/biz-tree-select-type";
 import { FormlyFieldCheckbox } from "./types/checkbox-type";
+import { AssignmentsEditorType } from "./types/assignments-editor-type";
 import { ComponentSelectorType } from "./types/component-select-type";
 import { IconSelectFieldType } from "./types/icon-select.type";
 
@@ -31,6 +32,11 @@ export function formlyConfig(dictService: IDictService): ConfigOption {
             {
                 name: 'component-selector',
                 component: ComponentSelectorType,
+                wrappers: ['form-field'],
+            },
+            {
+                name: 'assignments-editor',
+                component: AssignmentsEditorType,
                 wrappers: ['form-field'],
             },
             {

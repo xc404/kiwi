@@ -50,7 +50,7 @@ export class PropertyGroup {
                 config = this.toEditFieldConfig(p);
             }
 
-            return toFormlyConfig(config, "horizontal");
+            return toFormlyConfig(config, "horizontal", { variables: this.variables() });
         });
     });
 

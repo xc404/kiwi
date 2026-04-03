@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,18 +22,19 @@ import java.util.regex.Pattern;
  * 仍兼容运行时传入元素为 {@link Map} 的 List，以及 JSON 数组字符串（解析后转为 Assignment）。
  */
 @ComponentDescription(
-        name = "赋值",
+        name = "赋值组件",
         group = "流程控制",
         version = "1.0",
         description = "assignments 为 Assignment 列表（key 目标变量名，value 字面量或 ${变量名} 引用）；可与 Map 列表或 JSON 数组字符串互操作",
         inputs = {
                 @ComponentParameter(
                         key = "assignments",
-                        htmlType = "#text",
+                        htmlType = "assignments-editor",
                         type = "array",
                         name = "assignments",
-                        description = "Assignment 列表（key 目标变量名，value 值）；设计器可用 JSON 数组表示",
-                        required = true)
+                        description = "Assignment 列表（key 目标变量名，value 字面量或 ${变量名} 引用）；设计器为列表编辑器，存储为 JSON 数组字符串",
+                        required = true,
+                        schema = @Schema(defaultValue = "[]"))
         },
         outputs = {})
 @Component("assignmentActivity")

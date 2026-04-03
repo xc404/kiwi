@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ComponentDescription, ComponentProvider } from "./component-provider";
 
 @Component({
-    selector: 'app-component-selector',
+    selector: 'bpm-component-selector',
     template: `
         <nz-select style="width: 100%" [nzOptions]="options()" [formControl]="control()"></nz-select>
     `,
