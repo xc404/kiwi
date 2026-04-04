@@ -16,6 +16,24 @@ export class CamundaElementModel extends ElementModel {
 
 
     public override getValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string): any {
+        if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
+            const binding = this.getCallActivityIns(element).find((i: any) => i.get('target') === key);
+            if (binding) {
+                const src = binding.get('source');
+                if (src != null && src !== '') {
+                    return src;
+                }
+                return binding.get('sourceExpression') ?? null;
+            }
+            return null;
+        }
+        if (element.type === 'bpmn:CallActivity' && namespace === 'Out') {
+            const binding = this.getCallActivityOuts(element).find((o: any) => o.get('source') === key);
+            if (binding) {
+                return binding.get('target') ?? null;
+            }
+            return null;
+        }
         if (namespace == 'inputParameter') {
             let ele: any = this.getInputParameter(element, key);
             if (ele) {
@@ -35,6 +53,23 @@ export class CamundaElementModel extends ElementModel {
     }
 
     public override setValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string, value: any): void {
+        if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
+            const inEl = this.getOrCreateCallActivityIn(bpmnModeler, element, key);
+            const str = value == null ? '' : String(value);
+            this.updateModdleProperties(bpmnModeler, element, inEl, {
+                source: str,
+                sourceExpression: undefined
+            });
+            return;
+        }
+        if (element.type === 'bpmn:CallActivity' && namespace === 'Out') {
+            const outEl = this.getOrCreateCallActivityOut(bpmnModeler, element, key);
+            const str = value == null ? '' : String(value);
+            this.updateModdleProperties(bpmnModeler, element, outEl, {
+                target: str
+            });
+            return;
+        }
         if (namespace == 'inputParameter' || namespace == 'outputParameter') {
             let parameter: Element = this.getOrCreateInputOutputParameter(bpmnModeler, element, namespace, key);
             this.updateModdleProperties(bpmnModeler, element, parameter, {
@@ -191,6 +226,46 @@ export class CamundaElementModel extends ElementModel {
     }
 
 
+
+    private getCallActivityIns(element: Element): any[] {
+        return this.getExtensionElementsList(element, 'camunda:In');
+    }
+
+    private getCallActivityOuts(element: Element): any[] {
+        return this.getExtensionElementsList(element, 'camunda:Out');
+    }
+
+    private getOrCreateCallActivityIn(bpmnModeler: BpmnModeler, element: Element, targetVar: string): Element {
+        const existing = this.getCallActivityIns(element).find((i: any) => i.get('target') === targetVar);
+        if (existing) {
+            return existing;
+        }
+        const extensionElements = this.ensureExtensionElements(bpmnModeler, element);
+        const inEl = this.createElement(bpmnModeler, 'camunda:In', {
+            target: targetVar,
+            source: ''
+        }, extensionElements);
+        this.updateModdleProperties(bpmnModeler, element, extensionElements, {
+            values: [...extensionElements.get('values'), inEl]
+        });
+        return inEl;
+    }
+
+    private getOrCreateCallActivityOut(bpmnModeler: BpmnModeler, element: Element, sourceVar: string): Element {
+        const existing = this.getCallActivityOuts(element).find((o: any) => o.get('source') === sourceVar);
+        if (existing) {
+            return existing;
+        }
+        const extensionElements = this.ensureExtensionElements(bpmnModeler, element);
+        const outEl = this.createElement(bpmnModeler, 'camunda:Out', {
+            source: sourceVar,
+            target: ''
+        }, extensionElements);
+        this.updateModdleProperties(bpmnModeler, element, extensionElements, {
+            values: [...extensionElements.get('values'), outEl]
+        });
+        return outEl;
+    }
 
     private getInputOutput(root: Element) {
         // if (ModelUtil.is(element, 'camunda:Connector')) {

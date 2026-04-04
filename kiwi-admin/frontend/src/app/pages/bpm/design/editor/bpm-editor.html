@@ -72,9 +72,11 @@
   </nz-modal>
 
   <nz-layout class="full-height bpm-editor-layout">
-    <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzWidth="250px" nzTheme="light"
+    <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzWidth="300px" nzTheme="light"
       nzNoAnimation>
-      <bpm-pallete> </bpm-pallete>
+      <div class="bpm-editor-palette-scroll">
+        <bpm-pallete></bpm-pallete>
+      </div>
     </nz-sider>
     <nz-content class="flex flex-column bpm-editor-main-content">
       <nz-layout class="bpm-editor-workspace">

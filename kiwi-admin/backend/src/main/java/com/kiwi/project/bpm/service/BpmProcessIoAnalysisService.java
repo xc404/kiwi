@@ -159,7 +159,7 @@ public class BpmProcessIoAnalysisService
         c.setDescription("流程定义 " + process.getId() + " 的输入/输出分析结果");
         c.setGroup("公共流程");
         c.setSource(BpmProcessDefinitionService.XBPM);
-        c.setType(BpmComponent.Type.SpringBean);
+        c.setType(BpmComponent.Type.CallActivity);
         c.setInputParameters(new ArrayList<>(gap.getProcessInputs()));
         c.setOutputParameters(new ArrayList<>(gap.getProcessOutputs()));
         c.setVersion("1.0");

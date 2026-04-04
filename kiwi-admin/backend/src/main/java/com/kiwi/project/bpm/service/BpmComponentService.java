@@ -154,6 +154,18 @@ public class BpmComponentService implements InitializingBean, Refreshable
     }
 
     /**
+     * 解析继承「命令行」(shell) 父组件时使用的 {@code parentId}，一般为 {@code classpath_shell}。
+     */
+    public String resolveShellParentComponentId() {
+        for (BpmComponent c : CachedComponents.values()) {
+            if ("shell".equals(c.getKey())) {
+                return c.getId();
+            }
+        }
+        return "classpath_shell";
+    }
+
+    /**
      * 从缓存按 id 解析组件定义，并合并父级参数（与列表接口一致）。
      *
      * @return 不存在时返回 null

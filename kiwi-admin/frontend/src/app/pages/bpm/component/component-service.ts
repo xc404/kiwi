@@ -6,6 +6,7 @@ import { ElementModel } from '../design/extension/element-model';
 import { PaletteItem } from "../design/palette/palette-provider";
 import { PropertyDescription } from "../design/property-panel/types";
 import { ComponentDescription, ComponentProvider } from './component-provider';
+import { isCallActivity } from "./utils";
 
 
 @Injectable({ providedIn: 'root' })
@@ -20,15 +21,30 @@ export class ComponentService {
 
 
     public convertComponentToPalette(c: ComponentDescription): PaletteItem {
-        const paletteItem: PaletteItem = { ...c, title: c.name, icon: c.icon || 'bpmn-icon86' };
-        return paletteItem;
+        if (isCallActivity(c.type)) {
+            return {
+                ...c,
+                bpmnType: 'bpmn:CallActivity',
+                title: c.name,
+                icon: c.icon || 'bpmn-icon42',
+                options: {}
+            };
+        }else {
+            return {
+                ...c,
+                bpmnType: `bpmn:ServiceTask`,
+                title: c.name,
+                icon: c.icon || 'bpmn-icon86',
+                options: {}
+            };
+        }
     }
 
 
     public getElementOptions(item: PaletteItem | any): { type: any; options: any; } {
-        let t: any = item;
         return {
-            type: `bpmn:ServiceTask`, // 这里可以根据组件类型进行映射
+
+            type: `${item.bpmnType}`,
             options: {
                 name: item.name
             }
@@ -42,17 +58,17 @@ export class ComponentService {
         // businessObject.componentId = item.key;
         ModelUtil.getBusinessObject(element);
         let type = item.type;
-        if (type == "SpringBean") {
-
-        }
+        
+        let inputNamespace = isCallActivity(type) ? 'In' :  "InputParameter";
+        let outputNamespace = isCallActivity(type) ? 'Out' :  "OutputParameter";
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {
-            this.elementModel.setValue(bpmnModeler, element, p.namespace || 'InputParameter', p.key, p.defaultValue || '');
+            this.elementModel.setValue(bpmnModeler, element, p.namespace || inputNamespace, p.key, p.defaultValue || '');
         });
 
         item.outputParameters?.forEach((p: PropertyDescription) => {
-            this.elementModel.setValue(bpmnModeler, element, p.namespace || 'OutputParameter', p.key, p.defaultValue || '');
+            this.elementModel.setValue(bpmnModeler, element, p.namespace || outputNamespace, p.key, p.defaultValue || '');
         });
     }
 
