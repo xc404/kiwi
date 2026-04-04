@@ -36,6 +36,11 @@ export class ComponentProvider {
     }
 
     constructor() {
+        this.refresh();
+    }
+
+    /** 重新拉取组件列表（另存为组件等场景） */
+    refresh(): void {
         this.http.get('/bpm/component/list').subscribe((res: any) => {
             const groups = res.content as ComponentsGroup[];
             groups.forEach(g => {
