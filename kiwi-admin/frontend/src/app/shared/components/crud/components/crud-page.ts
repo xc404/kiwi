@@ -326,7 +326,7 @@ export class CrudPage implements OnInit, CrudPageToken {
       this.messageService.warning('请检查表单填写是否完整');
       return false;
     }
-    const formValue = this.editForm.value;
+    const formValue = { ...item, ...this.editForm.value };
     const save =
       mode === 'create' ? this.crudHttp().create(formValue) : this.crudHttp().update(formValue, item.id);
     const message = mode === 'create' ? '新增成功' : '修改成功';

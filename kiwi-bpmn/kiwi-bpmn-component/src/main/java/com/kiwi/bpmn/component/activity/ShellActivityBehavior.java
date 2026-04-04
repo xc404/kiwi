@@ -16,6 +16,7 @@
  */
 package com.kiwi.bpmn.component.activity;
 
+import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
@@ -28,6 +29,7 @@ import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.camunda.commons.utils.IoUtil;
 import org.springframework.stereotype.Component;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @ComponentDescription(name = "命令行", description = "Execute a shell command"
 
@@ -92,10 +95,11 @@ public class ShellActivityBehavior implements JavaDelegate
       Process process = processBuilder.start();
 
       if (waitFlag) {
-        int errorCode = process.waitFor();
+        ProcessHelper.StreamResult drained = ProcessHelper.waitForDrain(process, redirectErrorFlag, 0, TimeUnit.SECONDS);
+        int errorCode = drained.exitCode();
 
         if (resultVariableStr != null) {
-          String result = convertStreamToStr(process.getInputStream());
+          String result = convertStreamToStr(new ByteArrayInputStream(drained.stdout()));
           execution.setVariable(resultVariableStr, result);
         }
 

@@ -3,6 +3,22 @@
       <crud-page [pageConfig]="pageConfig">
       </crud-page>
 
+      <nz-modal
+            nzxModalDrag
+            [nzVisible]="generateModalVisible()"
+            nzTitle="从命令行生成组件"
+            nzOkText="生成"
+            nzCancelText="取消"
+            nzWidth="560px"
+            (nzVisibleChange)="generateModalVisible.set($event)"
+            (nzOnOk)="confirmGenerateFromCli()">
+            <div *nzModalContent>
+                  <p class="cli-help-hint">将在服务端执行该命令以获取 help 输出，并生成继承「命令行」父组件的组件元数据。</p>
+                  <textarea nz-input rows="4" name="helpCommand" [(ngModel)]="helpCommandInput"
+                        placeholder="例如：docker --help 或 mvn -help"></textarea>
+            </div>
+      </nz-modal>
+
       @if(selectedComponent()){
       <nz-modal nzxModalDrag [nzVisible]="parametersModalVisible()" nzWidth="80vw"
             [nzTitle]="'参数配置 - ' + selectedComponent().name" (nzOnCancel)="parametersModalVisible.set(false)"

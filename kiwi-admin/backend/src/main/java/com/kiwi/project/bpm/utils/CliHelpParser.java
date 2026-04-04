@@ -1,5 +1,6 @@
 package com.kiwi.project.bpm.utils;
 
+import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import org.apache.commons.lang3.StringUtils;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,6 +68,8 @@ public final class CliHelpParser {
             throw new CliHelpExecutionException("执行 help 命令被中断", e);
         } catch (IOException e) {
             throw new CliHelpExecutionException("执行 help 命令失败: " + e.getMessage(), e);
+        } catch (TimeoutException e) {
+            throw new CliHelpExecutionException("执行 help 命令超时（" + HELP_COMMAND_TIMEOUT_SEC + "s）", e);
         }
         if (StringUtils.isBlank(helpText)) {
             throw new CliHelpExecutionException("help 命令无输出");
@@ -83,24 +87,20 @@ public final class CliHelpParser {
 
     /**
      * Windows：{@code cmd.exe /c &lt;整行&gt;}；其它：{@code sh -c &lt;整行&gt;}。合并 stderr 到 stdout，超时 60s。
+     * 排空管道逻辑见 {@link ProcessHelper#waitForDrain(Process, boolean, long, TimeUnit)}。
      */
-    static String runHelpCommand(String helpCommand) throws IOException, InterruptedException {
+    static String runHelpCommand(String helpCommand) throws IOException, InterruptedException, TimeoutException {
         ProcessBuilder pb = isWindows()
                 ? new ProcessBuilder("cmd.exe", "/c", helpCommand)
                 : new ProcessBuilder("sh", "-c", helpCommand);
         pb.redirectErrorStream(true);
         Process process = pb.start();
-        boolean finished = process.waitFor(HELP_COMMAND_TIMEOUT_SEC, TimeUnit.SECONDS);
-        if (!finished) {
-            process.destroyForcibly();
-            throw new CliHelpExecutionException("执行 help 命令超时（" + HELP_COMMAND_TIMEOUT_SEC + "s）");
-        }
-        byte[] raw = process.getInputStream().readAllBytes();
+
+        ProcessHelper.StreamResult r = ProcessHelper.waitForDrain(process, true, HELP_COMMAND_TIMEOUT_SEC, TimeUnit.SECONDS);
         Charset charset = Charset.defaultCharset();
-        String text = new String(raw, charset);
-        int exit = process.exitValue();
-        if (StringUtils.isBlank(text) && exit != 0) {
-            throw new CliHelpExecutionException("help 命令失败，退出码 " + exit);
+        String text = new String(r.stdout(), charset);
+        if (StringUtils.isBlank(text) && r.exitCode() != 0) {
+            throw new CliHelpExecutionException("help 命令失败，退出码 " + r.exitCode());
         }
         return text;
     }
