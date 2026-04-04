@@ -4,17 +4,20 @@ import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 从常见 GNU/类 GNU 风格 {@code --help} 文本中抽取选项，并生成继承 shell 的 {@link BpmComponent} 元数据：
- * 每个选项对应一个 {@code cli_*} 输入参数，并追加隐藏的 {@code command} 以覆盖父组件「命令行」的 command。
+ * 通过 {@link ProcessBuilder} 执行「help 命令」获取 stdout，从常见 GNU/类 GNU 风格 help 文本中抽取选项，
+ * 生成继承 shell 的 {@link BpmComponent}：每个选项对应 {@code cli_*} 输入参数，并追加隐藏的 {@code command}。
  */
 public final class CliHelpParser {
 
@@ -23,6 +26,10 @@ public final class CliHelpParser {
     /** 行内描述列与选项列之间的分隔：至少两个空格 */
     private static final Pattern OPTION_DESC_SPLIT = Pattern.compile(
             "^\\s*(.+?)\\s{2,}([^\\s].*)$");
+
+    /** help 命令最大长度（防注入滥用） */
+    private static final int MAX_HELP_COMMAND_LEN = 4000;
+    private static final long HELP_COMMAND_TIMEOUT_SEC = 60L;
 
     private CliHelpParser() {
     }
@@ -37,15 +44,88 @@ public final class CliHelpParser {
     }
 
     /**
-     * @param helpText   命令行执行 {@code --help} 的输出全文
-     * @param executable 可执行文件或子命令前缀（写入 command 模板字面量部分，可含空格）
-     * @param name       组件显示名
-     * @param key        组件 key；为空则从 name 推导
-     * @param group      分组
-     * @param description 组件说明
-     * @param shellParentId shell 父组件在库中的 id（如 classpath_shell）
+     * 唯一入口：执行 {@code helpCommand}（如 {@code docker --help}）获取 help 文本，再生成组件草稿；
+     * 名称、key、分组、描述、command 模板前缀等均由后端根据命令推导默认值。
+     *
+     * @param helpCommand  完整命令行字符串（Windows 下经 {@code cmd.exe /c}，其它平台经 {@code sh -c} 执行）
+     * @param shellParentId shell 父组件在库中的 id
      */
-    public static BpmComponent buildComponent(
+    public static BpmComponent buildComponent(String helpCommand, String shellParentId) {
+        if (StringUtils.isBlank(helpCommand)) {
+            throw new IllegalArgumentException("helpCommand 不能为空");
+        }
+        String trimmed = helpCommand.trim();
+        if (trimmed.length() > MAX_HELP_COMMAND_LEN) {
+            throw new IllegalArgumentException("helpCommand 过长（最大 " + MAX_HELP_COMMAND_LEN + " 字符）");
+        }
+        final String helpText;
+        try {
+            helpText = runHelpCommand(trimmed);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CliHelpExecutionException("执行 help 命令被中断", e);
+        } catch (IOException e) {
+            throw new CliHelpExecutionException("执行 help 命令失败: " + e.getMessage(), e);
+        }
+        if (StringUtils.isBlank(helpText)) {
+            throw new CliHelpExecutionException("help 命令无输出");
+        }
+        String executable = defaultExecutablePrefix(trimmed);
+        if (StringUtils.isBlank(executable)) {
+            executable = "command";
+        }
+        String compName = executable + " CLI";
+        String compKey = slugKey(executable);
+        String description = "从 help 命令生成: " + trimmed;
+        String group = "命令行";
+        return buildFromHelpText(helpText, executable, compName, compKey, group, description, shellParentId);
+    }
+
+    /**
+     * Windows：{@code cmd.exe /c &lt;整行&gt;}；其它：{@code sh -c &lt;整行&gt;}。合并 stderr 到 stdout，超时 60s。
+     */
+    static String runHelpCommand(String helpCommand) throws IOException, InterruptedException {
+        ProcessBuilder pb = isWindows()
+                ? new ProcessBuilder("cmd.exe", "/c", helpCommand)
+                : new ProcessBuilder("sh", "-c", helpCommand);
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        boolean finished = process.waitFor(HELP_COMMAND_TIMEOUT_SEC, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new CliHelpExecutionException("执行 help 命令超时（" + HELP_COMMAND_TIMEOUT_SEC + "s）");
+        }
+        byte[] raw = process.getInputStream().readAllBytes();
+        Charset charset = Charset.defaultCharset();
+        String text = new String(raw, charset);
+        int exit = process.exitValue();
+        if (StringUtils.isBlank(text) && exit != 0) {
+            throw new CliHelpExecutionException("help 命令失败，退出码 " + exit);
+        }
+        return text;
+    }
+
+    private static boolean isWindows() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        return os.contains("win");
+    }
+
+    /**
+     * 去掉末尾的 {@code --help}、{@code -h} 等，得到写入 command 模板的字面量前缀（可含空格，如 {@code docker compose}）。
+     */
+    static String defaultExecutablePrefix(String helpCommand) {
+        String s = helpCommand.trim();
+        while (true) {
+            String t = s.replaceAll("(?i)\\s+(--help-all|--help|-help|-h|/\\?|/help)\\s*$", "").trim();
+            if (t.equals(s)) {
+                break;
+            }
+            s = t;
+        }
+        return s;
+    }
+
+    private static BpmComponent buildFromHelpText(
             String helpText,
             String executable,
             String name,
@@ -55,14 +135,12 @@ public final class CliHelpParser {
             String shellParentId
     ) {
         List<ParsedOption> options = parseOptions(helpText);
-        String compName = StringUtils.isNotBlank(name) ? name : executable;
-        String compKey = StringUtils.isNotBlank(key) ? key : slugKey(compName);
         BpmComponent c = new BpmComponent();
         c.setParentId(shellParentId);
-        c.setKey(compKey);
-        c.setName(compName);
-        c.setDescription(StringUtils.isNotBlank(description) ? description : ("CLI: " + executable));
-        c.setGroup(StringUtils.isNotBlank(group) ? group : "common");
+        c.setKey(key);
+        c.setName(name);
+        c.setDescription(description);
+        c.setGroup(group);
         c.setType(BpmComponent.Type.SpringBean);
         List<BpmComponentParameter> inputs = new ArrayList<>();
         Set<String> usedKeys = new LinkedHashSet<>();
@@ -167,13 +245,9 @@ public final class CliHelpParser {
         if (optPart.contains("<") && optPart.contains(">")) {
             return true;
         }
-        // 行尾为 FILE、PATH 等大写占位
         return optPart.matches(".*\\s[A-Z][A-Z0-9_]{1,24}$");
     }
 
-    /**
-     * 生成 Camunda/JUEL 表达式字符串：字面量可执行段 + 各选项段。
-     */
     record NamedOption(ParsedOption option, String paramKey) {
     }
 

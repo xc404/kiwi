@@ -3,6 +3,7 @@ package com.kiwi.project.bpm.ctl;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.service.BpmComponentService;
+import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
@@ -95,38 +96,29 @@ public class BpmComponentCtl
     }
 
     /**
-     * 根据命令行 {@code --help} 文本生成继承 shell（命令行）的 {@link BpmComponent} 草稿：
-     * 每个解析到的选项对应 {@code cli_*} 输入参数，并包含隐藏的 {@code command} 以覆盖父组件的 command。
+     * 在后端执行 {@code helpCommand}（如 {@code docker --help}）获取 help 输出，生成继承 shell 的 {@link BpmComponent} 草稿；
+     * 名称、key、分组、描述等均由后端默认推导。
      */
     @PostMapping("from-cli-help")
     @ResponseBody
     public BpmComponent generateFromCliHelp(@RequestBody CliHelpGenerateRequest request) {
-        if (request == null || StringUtils.isBlank(request.getHelpText())
-                || StringUtils.isBlank(request.getExecutable())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "helpText 与 executable 不能为空");
+        if (request == null || StringUtils.isBlank(request.getHelpCommand())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "helpCommand 不能为空");
         }
         String shellParentId = bpmComponentService.resolveShellParentComponentId();
-        return CliHelpParser.buildComponent(
-                request.getHelpText(),
-                request.getExecutable(),
-                request.getName(),
-                request.getKey(),
-                request.getGroup(),
-                request.getDescription(),
-                shellParentId
-        );
+        try {
+            return CliHelpParser.buildComponent(request.getHelpCommand().trim(), shellParentId);
+        } catch (CliHelpExecutionException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
     }
 
     @Data
     public static class CliHelpGenerateRequest {
-        /** 命令行 --help 全文 */
-        private String helpText;
-        /** 可执行文件或子命令前缀，写入 command 模板字面量部分 */
-        private String executable;
-        private String name;
-        private String key;
-        private String group;
-        private String description;
+        /** 用于获取 help 的完整命令行（由服务端通过 cmd/sh 执行） */
+        private String helpCommand;
     }
 
 }
