@@ -1,6 +1,8 @@
 package com.kiwi.bpmn.component.activity;
 
-import org.bson.Document;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.kiwi.common.utils.JsonUtils;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
@@ -92,14 +94,17 @@ public class AssignmentActivity extends AbstractBpmnActivityBehavior {
                 throw new IllegalArgumentException("流程变量 assignments 不能为空");
             }
             try {
-                Document wrapper = Document.parse("{\"items\":" + t + "}");
-                Object items = wrapper.get("items");
-                if (!(items instanceof List<?> parsed)) {
+                JsonNode root = JsonUtils.readTree("{\"items\":" + t + "}");
+                JsonNode items = root.get("items");
+                if (items == null || !items.isArray()) {
                     throw new IllegalArgumentException("assignments 字符串须解析为 JSON 数组");
                 }
-                List<Assignment> out = new ArrayList<>(parsed.size());
-                for (Object item : parsed) {
-                    out.add(toAssignment(item));
+                List<Assignment> out = new ArrayList<>(items.size());
+                for (JsonNode item : items) {
+                    out.add(
+                            toAssignment(
+                                    JsonUtils.convertValue(
+                                            item, new TypeReference<Map<String, Object>>() {})));
                 }
                 return out;
             } catch (IllegalArgumentException e) {
