@@ -1,5 +1,6 @@
 package com.kiwi.bpmn.component.slurm;
 
+import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.external.ExternalTaskExecution;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,6 @@ import org.apache.commons.io.monitor.FileAlterationMonitor;
 import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.camunda.commons.utils.IoUtil;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Slurm 任务提交（sbatch）与作业目录下 .flag 文件监听（驱动 External Task 完成）。
@@ -147,10 +148,11 @@ public class SlurmTaskManager implements InitializingBean {
         ProcessBuilder processBuilder = new ProcessBuilder("sbatch", batchFile.getAbsolutePath());
         try {
             Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-            String message = IoUtil.inputStreamAsString(process.getInputStream());
+            ProcessHelper.StreamResult drained = ProcessHelper.waitForDrain(process, false, 0, TimeUnit.SECONDS);
+            int exitCode = drained.exitCode();
+            String message = new String(drained.stdout(), StandardCharsets.UTF_8);
             if (exitCode != 0) {
-                String errorMessage = IoUtil.inputStreamAsString(process.getErrorStream());
+                String errorMessage = new String(drained.stderr(), StandardCharsets.UTF_8);
                 throw new RuntimeException("sbatch command failed with exit code " + exitCode + ": " + errorMessage);
             }
             String[] parts = message.trim().split("\\s+");
