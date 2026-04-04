@@ -4,9 +4,13 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
+import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
+import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmProcess;
+import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
+import com.kiwi.project.bpm.service.BpmProcessIoAnalysisService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.engine.ProcessEngine;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,6 +47,9 @@ public class BpmProcessDefinitionCtl extends BaseCtl
 
     private final BpmProcessDefinitionService bpmProcessDefinitionService;
     private final BpmProcessDefinitionDao bpmProcessDefinitionDao;
+    private final BpmProcessIoAnalysisService bpmProcessIoAnalysisService;
+    private final BpmComponentDao bpmComponentDao;
+    private final BpmComponentService bpmComponentService;
     private final ProcessEngine processEngine;
 
 
@@ -72,6 +80,24 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         private String bpmnXml;
     }
 
+    /** 未保存的 BPMN 预览：包装为逻辑组件 */
+    @Data
+    public static class AnalyzeAsComponentInput
+    {
+        private String bpmnXml;
+    }
+
+    /** 将流程（及可选当前编辑中的 BPMN）另存为组件库条目 */
+    @Data
+    public static class SaveAsComponentInput
+    {
+//        private String key;
+        private String name;
+        private String description;
+        private String version;
+//        private String group;
+    }
+
 
 
     @GetMapping()
@@ -85,6 +111,53 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @ResponseBody
     public BpmProcess getProcessDefinition(@PathVariable String id) {
         return this.bpmProcessDefinitionDao.findById(id).orElseThrow();
+    }
+
+    /**
+     * 将已保存流程的 BPMN 分析结果包装为 {@link BpmComponent}（输入/输出契约视图）。
+     */
+    @GetMapping("{id}/as-component")
+    @ResponseBody
+    public BpmComponent getProcessAsComponent(@PathVariable String id) {
+        BpmProcess process = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
+        return this.bpmProcessIoAnalysisService.wrapProcessAsComponent(process);
+    }
+
+//    /**
+//     * 根据请求体中的 BPMN 预览包装为 {@link BpmComponent}（无需已保存流程）。
+//     */
+//    @PostMapping("analyze-as-component")
+//    @ResponseBody
+//    public BpmComponent analyzeProcessAsComponent(@RequestBody AnalyzeAsComponentInput body) {
+//        if (body == null || StringUtils.isBlank(body.getBpmnXml())) {
+//            throw new IllegalArgumentException("bpmnXml 不能为空");
+//        }
+//        BpmProcess stub = new BpmProcess();
+//        stub.setId("preview");
+//        stub.setName("预览");
+//        stub.setBpmnXml(body.getBpmnXml());
+//        return this.bpmProcessIoAnalysisService.wrapProcessAsComponent(stub);
+//    }
+
+    /**
+     * 另存为组件：分析 BPMN 推导输入/输出并写入组件库（一次请求完成）。
+     * 请求体可带 {@code bpmnXml} 以使用画布当前未保存内容；否则使用库中已保存的 BPMN。
+     */
+    @PostMapping("{id}/save-as-component")
+    @ResponseBody
+    public BpmComponent saveAsComponent(@PathVariable String id, @RequestBody SaveAsComponentInput body) {
+//        if (body == null || StringUtils.isBlank(body.getKey()) || StringUtils.isBlank(body.getName())) {
+//            throw new IllegalArgumentException("key 与 name 不能为空");
+//        }
+        BpmProcess process = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
+        BpmComponent toSave = this.bpmProcessIoAnalysisService.wrapProcessAsComponent(process);
+        toSave.setName(body.getName());
+        toSave.setId(process.getId());
+        toSave.setVersion(body.getVersion());
+        toSave.setDescription(body.getDescription());
+        BpmComponent saved = this.bpmComponentDao.save(toSave);
+        this.bpmComponentService.refresh();
+        return saved;
     }
 
 

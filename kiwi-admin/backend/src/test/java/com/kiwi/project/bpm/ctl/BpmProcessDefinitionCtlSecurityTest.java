@@ -3,8 +3,11 @@ package com.kiwi.project.bpm.ctl;
 import com.kiwi.framework.error.ExceptionHandler;
 import com.kiwi.framework.security.SaTokenConfigure;
 import com.kiwi.framework.session.SessionService;
+import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
+import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
+import com.kiwi.project.bpm.service.BpmProcessIoAnalysisService;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,12 @@ class BpmProcessDefinitionCtlSecurityTest {
     private BpmProcessDefinitionDao bpmProcessDefinitionDao;
     @MockBean
     private BpmProcessDefinitionService bpmProcessDefinitionService;
+    @MockBean
+    private BpmProcessIoAnalysisService bpmProcessIoAnalysisService;
+    @MockBean
+    private BpmComponentDao bpmComponentDao;
+    @MockBean
+    private BpmComponentService bpmComponentService;
     @MockBean
     private ProcessEngine processEngine;
     @MockBean

@@ -153,6 +153,19 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return this.CachedComponents.get(parentId);
     }
 
+    /**
+     * 从缓存按 id 解析组件定义，并合并父级参数（与列表接口一致）。
+     *
+     * @return 不存在时返回 null
+     */
+    public BpmComponent resolveComponentById(String componentId) {
+        BpmComponent c = this.CachedComponents.get(componentId);
+        if (c == null) {
+            return null;
+        }
+        return fillComponentProperties(c);
+    }
+
 
     @Override
     public void afterPropertiesSet() throws Exception {

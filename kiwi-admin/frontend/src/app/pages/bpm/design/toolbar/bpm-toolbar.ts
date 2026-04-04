@@ -76,6 +76,10 @@ export class BpmToolbar {
     this.bpmnEditor.save();
   }
 
+  onSaveAsComponent(): void {
+    this.bpmnEditor.saveAsComponent();
+  }
+
   onDeploy(): void {
     void this.bpmnEditor.deploy();
   }

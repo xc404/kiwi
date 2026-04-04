@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
@@ -24,6 +23,7 @@ public class BpmProcessDefinitionService implements InitializingBean
     private String processDefinitionTemplate;
     public static final String XBPM = "xbpm";
     private final SessionService sessionService;
+
     public String getInitProcessDefinitionXml(String id, String processDefinitionName) {
         if( processDefinitionTemplate != null ) {
             return processDefinitionTemplate.replace("${definition_id}", id).replace("${definition_name}", processDefinitionName);
@@ -53,12 +53,7 @@ public class BpmProcessDefinitionService implements InitializingBean
         return bpmProcess;
     }
 
-//    public  static String updateId(String sourceId,String targetId, String bpmnXml) {
-//        return bpmnXml.replace(sourceId, targetId);
-//    }
-
     public static void updateIdAndName(BpmProcess bpmProcess) {
-//        return bpmnXml.replace("name=\""+sourceName+"\"", "name=\""+targetName+"\"");
         String processReplace = "<bpmn:process id=\"${definition_id}\" isExecutable=\"true\" name=\"${definition_name}\">"
                 .replace("${definition_id}", bpmProcess.getId()).replace("${definition_name}", bpmProcess.getName());
         String xml = bpmProcess.getBpmnXml().replaceAll("<bpmn:process.*\">", processReplace);

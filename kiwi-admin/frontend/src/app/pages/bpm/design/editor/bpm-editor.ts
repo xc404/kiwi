@@ -4,7 +4,6 @@ import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, V
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from "@angular/material/expansion";
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
@@ -18,6 +17,8 @@ import gridModule from 'diagram-js-grid';
 import Create from 'diagram-js/lib/features/create/Create';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule, NzIconService } from 'ng-zorro-antd/icon';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -26,6 +27,7 @@ import kiwiDescriptor from '../../component/kiwi.json';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from "../palette/pallete";
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
+import { ComponentProvider } from '../../component/component-provider';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";
 
@@ -35,6 +37,9 @@ export abstract class BpmEditorToken {
   abstract save(): void;
 
   abstract clearSelection(): void;
+
+  /** 将当前图另存为组件库中的组件（输入/输出由服务端分析 BPMN 推导） */
+  abstract saveAsComponent(): void;
 
   bpmnModeler!: BpmnModeler
 }
@@ -55,7 +60,8 @@ export abstract class BpmEditorToken {
     MatIconModule,
     MatExpansionModule,
     MatDialogModule,
-    MatFormFieldModule,
+    NzModalModule,
+    NzInputModule,
     FormsModule,
     BpmPallete,
     NzLayoutComponent,
@@ -75,6 +81,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   http = inject(HttpClient);
   processDefinitionService = inject(ProcessDesignService)
   matDialog = inject(MatDialog);
+  componentProvider = inject(ComponentProvider);
 
   elementModel = inject(ElementModel);
 
@@ -96,6 +103,14 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   processNameDialog!: TemplateRef<any>;
 
   processName: any;
+
+  /** 另存为组件：nz-modal 可见性 */
+  saveAsComponentModalVisible = signal(false);
+
+  /** 另存为组件：与后端 SaveAsComponentInput 一致（name / description / version） */
+  saveAsComponentName = '';
+  saveAsComponentDescription = '';
+  saveAsComponentVersion = '1.0';
   autoSave = false;
 
   /** 后端 BaseEntity 为 updatedTime；兼容旧字段 updatedAt */
@@ -268,10 +283,49 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     });
   }
 
-  toSaveAsComponentPage() {
-    this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
-      console.log(bpmn.xml);
+  saveAsComponent(): void {
+    const p = this.bpmProcess();
+    const baseName = (p?.name as string) || '流程';
+    this.saveAsComponentName = `${baseName}`;
+    this.saveAsComponentDescription = p?.description as string || '';
+    this.saveAsComponentVersion = '1.0';
+    this.saveAsComponentModalVisible.set(true);
+  }
+
+  /** nz-modal 确定：校验通过后关闭弹窗并提交；返回 false 可阻止关闭（校验失败时） */
+  onSaveAsComponentOk(): boolean {
+    const name = this.saveAsComponentName?.trim();
+    const description = this.saveAsComponentDescription?.trim();
+    const version = this.saveAsComponentVersion?.trim();
+    if (!name) {
+      this.message.warning('请填写 name（组件名称）');
+      return false;
+    }
+
+    void this.deploy().then(() => {
+      const processId = this.bpmProcess()?.id as string;
+      if (!processId) {
+        this.message.error('流程未加载');
+        return;
+      }
+      this.processDefinitionService
+        .saveAsComponent(processId, {
+          name,
+          description: description || undefined,
+          version: version || undefined,
+        })
+        .subscribe({
+          next: () => {
+            this.message.success('已保存到组件库');
+            this.saveAsComponentModalVisible.set(false);
+          },
+          error: (err) => {
+            const msg = err?.error?.message || err?.message || '保存失败';
+            this.message.error(msg);
+          },
+        });
     });
+    return true;
   }
 
   onDrop(event: any) {
