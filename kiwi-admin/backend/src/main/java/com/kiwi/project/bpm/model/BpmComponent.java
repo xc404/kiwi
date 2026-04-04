@@ -17,7 +17,8 @@ public class BpmComponent extends BaseEntity<String>
         JavaClass,
         SpringBean,
         RestApi,
-        SpringExternalTask
+        SpringExternalTask,
+        CallActivity
     }
     private String parentId;
     private String key;

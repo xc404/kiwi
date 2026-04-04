@@ -60,9 +60,17 @@
 .bpm-editor-main-content,
 .bpm-editor-workspace,
 .bpm-editor-canvas-content,
+.bpm-editor-palette-sider,
 .bpm-editor-properties-sider {
   height: 100%;
   min-height: 0;
+}
+
+/* 与全局 mix-sider-height（基于 100vh）解耦：在流程元信息条之下占满布局行，避免侧栏高于可视区域 */
+.bpm-editor-layout .bpm-editor-palette-sider.mix-sider-height,
+.bpm-editor-layout .bpm-editor-properties-sider.mix-sider-height {
+  height: 100% !important;
+  max-height: 100%;
 }
 
 .bpm-editor-workspace {
@@ -185,6 +193,18 @@
 .bpm-editor-canvas {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.bpm-editor-palette-sider {
+  overflow: hidden;
+  border-right: 1px solid #f0f0f0;
+}
+
+.bpm-editor-palette-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .bpm-editor-properties-sider {

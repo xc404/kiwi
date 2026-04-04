@@ -1,6 +1,20 @@
 <div class="bpm-pallete">
+    <div class="bpm-pallete__search">
+        <nz-input-group nzPrefixIcon="search" nzSize="small">
+            <input
+                type="text"
+                nz-input
+                placeholder="搜索"
+                [ngModel]="searchQuery()"
+                (ngModelChange)="searchQuery.set($event)"
+            />
+        </nz-input-group>
+    </div>
+    @if (filteredPalleteTabs().length === 0 && searchQuery().trim()) {
+    <div class="bpm-pallete__empty">无匹配项</div>
+    } @else {
     <nz-tabs>
-        @for (item of palleteTabs();let tabIndex = $index; track $index) {
+        @for (item of filteredPalleteTabs(); track item.providerIndex) {
         <nz-tab [nzTitle]="item.name">
             <nz-collapse>
                 @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
@@ -16,8 +30,8 @@
                             draggable="true"
                             nz-tooltip
                             [nzTooltipTitle]="paletteItem.title"
-                            (dragstart)="onDragStart($event, tabIndex, paletteItem)"
-                            (click)="onPaletteItemClick($event, tabIndex, paletteItem)"
+                            (dragstart)="onDragStart($event, item.providerIndex, paletteItem)"
+                            (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
                         >
                             <span class="palette-item__icon" aria-hidden="true">
                                 <nz-icon [nzIconfont]="paletteItem.icon" />
@@ -33,5 +47,6 @@
         </nz-tab>
         }
     </nz-tabs>
+    }
 
 </div>

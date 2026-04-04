@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-@ComponentDescription(name = "Shell", description = "Execute a shell command"
+@ComponentDescription(name = "命令行", description = "Execute a shell command"
 
             , inputs = {
             @ComponentParameter(key = "command", htmlType = "#text", description = "The shell command to execute"),
@@ -51,7 +51,7 @@ import java.util.Map;
     }
 
 )
-@Component("shellActivityBehavior")
+@Component("shell")
 public class ShellActivityBehavior implements JavaDelegate
 {
 

@@ -1,7 +1,7 @@
 import { inject, Injectable } from "@angular/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { ComponentService } from "../../component/component-service";
-import { PropertyDescription, PropertyNamespace, PropertyProvider, PropertyTab } from "./types";
+import { ComponentService } from "./component-service";
+import { PropertyDescription, PropertyNamespace, PropertyProvider, PropertyTab } from "../design/property-panel/types";
 
 @Injectable({ providedIn: 'root' })
 export class ComponentPropertyProvider implements PropertyProvider {
@@ -11,10 +11,22 @@ export class ComponentPropertyProvider implements PropertyProvider {
     getProperties(element: Element): PropertyTab[] {
         console.log(element);
         
-        if (element.type !== "bpmn:ServiceTask") {
+        if (element.type !== "bpmn:ServiceTask" && element.type !== "bpmn:CallActivity") {
             return [];
         }
-        const mainGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [
+        let mainGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [];
+        if(element.type === "bpmn:CallActivity") {
+            mainGroups = [
+                {
+                    name: "流程",
+                    properties: [
+                        { key: "componentId", name: "流程", htmlType: "component-selector", readonly: true, namespace: PropertyNamespace.element, defaultValue: "", example: "", required: true },
+                    ],
+                }
+            ];
+        }
+      if(element.type === "bpmn:ServiceTask") {
+        mainGroups = [
             {
                 name: "组件类型",
                 properties: [
@@ -23,6 +35,7 @@ export class ComponentPropertyProvider implements PropertyProvider {
                 important: true
             },
         ];
+    }
 
         const component = this.componentService.getComponentForElement(element);
         if (!component) {

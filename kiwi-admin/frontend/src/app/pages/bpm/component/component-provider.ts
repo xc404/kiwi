@@ -8,7 +8,7 @@ export declare interface ComponentDescription {
     key: string
     name: string;
     descrition?: string;
-    type: "SpringBean" |"SpringExternalTask";
+    type: "SpringBean" |"SpringExternalTask" | "CallActivity";
     inputParameters?: PropertyDescription[];
     outputParameters?: PropertyDescription[];
 }

@@ -1,9 +1,10 @@
 package com.kiwi.project.bpm.ctl;
 
-import com.kiwi.bpmn.component.activity.ShellActivityBehavior;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.service.BpmComponentService;
+import com.kiwi.project.bpm.utils.CliHelpParser;
+import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -33,7 +36,6 @@ public class BpmComponentCtl
 
     private final BpmComponentDao bpmComponentDao;
     private final BpmComponentService bpmComponentService;
-    private final ShellActivityBehavior shellActivityBehavior;
 
     // 查询所有组件分组（已实现）
     @ResponseBody
@@ -90,6 +92,41 @@ public class BpmComponentCtl
     public static class ComponentGroup {
         private String group;
         private List<BpmComponent> components;
+    }
+
+    /**
+     * 根据命令行 {@code --help} 文本生成继承 shell（命令行）的 {@link BpmComponent} 草稿：
+     * 每个解析到的选项对应 {@code cli_*} 输入参数，并包含隐藏的 {@code command} 以覆盖父组件的 command。
+     */
+    @PostMapping("from-cli-help")
+    @ResponseBody
+    public BpmComponent generateFromCliHelp(@RequestBody CliHelpGenerateRequest request) {
+        if (request == null || StringUtils.isBlank(request.getHelpText())
+                || StringUtils.isBlank(request.getExecutable())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "helpText 与 executable 不能为空");
+        }
+        String shellParentId = bpmComponentService.resolveShellParentComponentId();
+        return CliHelpParser.buildComponent(
+                request.getHelpText(),
+                request.getExecutable(),
+                request.getName(),
+                request.getKey(),
+                request.getGroup(),
+                request.getDescription(),
+                shellParentId
+        );
+    }
+
+    @Data
+    public static class CliHelpGenerateRequest {
+        /** 命令行 --help 全文 */
+        private String helpText;
+        /** 可执行文件或子命令前缀，写入 command 模板字面量部分 */
+        private String executable;
+        private String name;
+        private String key;
+        private String group;
+        private String description;
     }
 
 }

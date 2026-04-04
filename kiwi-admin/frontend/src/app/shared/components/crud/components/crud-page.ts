@@ -382,7 +382,7 @@ export class CrudPage implements OnInit, CrudPageToken {
       nzContent: '确定要删除所选记录吗？',
       nzOkText: '确定',
       nzCancelText: '取消',
-      nzOnOk: () =>
+      nzOnOk: () =>{
         forkJoin(items.map(item => this.crudHttp().delete(item.id))).pipe(
           take(1),
           tap(() => {
@@ -393,7 +393,8 @@ export class CrudPage implements OnInit, CrudPageToken {
             this.messageService.error('删除失败');
             return throwError(() => err);
           })
-        )
+        ).subscribe();
+      }
     });
   }
 
