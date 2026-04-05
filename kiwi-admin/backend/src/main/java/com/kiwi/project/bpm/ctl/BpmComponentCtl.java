@@ -6,6 +6,7 @@ import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
 import com.kiwi.project.bpm.utils.OpenApiComponentGenerator;
+import com.kiwi.project.bpm.utils.OpenApiSpecFetcher;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
@@ -130,22 +131,48 @@ public class BpmComponentCtl
     @PostMapping("from-openapi")
     @ResponseBody
     public List<BpmComponent> generateFromOpenApi(@RequestBody OpenApiGenerateRequest request) {
-        if (request == null || StringUtils.isBlank(request.getSpec())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spec 不能为空");
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求体不能为空");
         }
+        String specContent = resolveOpenApiSpecContent(request);
         String parentId = bpmComponentService.resolveHttpRequestParentComponentId();
         try {
-            return OpenApiComponentGenerator.buildComponents(
-                    request.getSpec(), request.getBaseUrl(), parentId);
+            return OpenApiComponentGenerator.buildComponents(specContent, request.getBaseUrl(), parentId);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         }
     }
 
+    /**
+     * 优先使用 {@code specUrl} 在服务端 GET 拉取正文；否则使用请求体中的 {@code spec} 全文。
+     */
+    private static String resolveOpenApiSpecContent(OpenApiGenerateRequest request) {
+        if (StringUtils.isNotBlank(request.getSpecUrl())) {
+            try {
+                return OpenApiSpecFetcher.fetch(request.getSpecUrl().trim());
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+            } catch (IllegalStateException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, e.getMessage(), e);
+            }
+        }
+        if (StringUtils.isNotBlank(request.getSpec())) {
+            return request.getSpec();
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spec 与 specUrl 至少填写一项");
+    }
+
     @Data
     public static class OpenApiGenerateRequest {
-        /** OpenAPI / Swagger 文档全文（JSON 或 YAML） */
+        /**
+         * OpenAPI / Swagger 文档全文（JSON 或 YAML）；与 {@link #specUrl} 二选一即可（若同时提供则优先拉取
+         * URL）。
+         */
         private String spec;
+        /**
+         * 文档的 http(s) 地址，由服务端 GET 拉取后再解析；与 {@link #spec} 二选一即可。
+         */
+        private String specUrl;
         /**
          * 可选；非空时作为根 URL（当文档中 servers 为空或为相对路径时尤其有用）。
          * 与 path 拼接为默认 {@code url} 参数。

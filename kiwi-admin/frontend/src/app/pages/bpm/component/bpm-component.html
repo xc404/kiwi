@@ -1,5 +1,34 @@
 <app-page-header></app-page-header>
 <section class="page-content">
+      <ng-template #generateDropdownTpl>
+            <button
+                  type="button"
+                  class="m-l-10"
+                  nz-button
+                  nz-dropdown
+                  [nzDropdownMenu]="generateMenu"
+                  nzTrigger="click"
+                  nzPlacement="bottomRight"
+                  nz-tooltip
+                  nzTooltipTitle="从命令行或 OpenAPI / Swagger 文档生成"
+            >
+                  <nz-icon nzType="down" nzTheme="outline"></nz-icon>
+                  生成组件
+            </button>
+            <nz-dropdown-menu #generateMenu="nzDropdownMenu">
+                  <ul nz-menu>
+                        <li nz-menu-item (click)="openGenerateFromCli()">
+                              <nz-icon class="m-r-8" nzType="console-sql" nzTheme="outline"></nz-icon>
+                              从命令行生成
+                        </li>
+                        <li nz-menu-item (click)="openGenerateFromOpenApi()">
+                              <nz-icon class="m-r-8" nzType="import" nzTheme="outline"></nz-icon>
+                              从 HTTP 文档生成
+                        </li>
+                  </ul>
+            </nz-dropdown-menu>
+      </ng-template>
+
       <crud-page [pageConfig]="pageConfig">
       </crud-page>
 
@@ -10,12 +39,40 @@
             nzOkText="生成"
             nzCancelText="取消"
             nzWidth="560px"
+            (nzOnCancel)="generateModalVisible.set(false)"
             (nzVisibleChange)="generateModalVisible.set($event)"
             (nzOnOk)="confirmGenerateFromCli()">
             <div *nzModalContent>
                   <p class="cli-help-hint">将在服务端执行该命令以获取 help 输出，并生成继承「命令行」父组件的组件元数据。</p>
                   <textarea nz-input rows="4" name="helpCommand" [(ngModel)]="helpCommandInput"
                         placeholder="例如：docker --help 或 mvn -help"></textarea>
+            </div>
+      </nz-modal>
+
+      <nz-modal
+            nzxModalDrag
+            [nzVisible]="openApiModalVisible()"
+            nzTitle="从 HTTP 文档生成组件"
+            nzOkText="生成并保存"
+            nzCancelText="取消"
+            nzWidth="720px"
+            (nzOnCancel)="openApiModalVisible.set(false)"
+            (nzVisibleChange)="openApiModalVisible.set($event)"
+            (nzOnOk)="confirmGenerateFromOpenApi()">
+            <div *nzModalContent>
+                  <p class="cli-help-hint">二选一即可：填写下方「文档链接」由服务端拉取；或在最下方粘贴 OpenAPI 3.x / Swagger 2.0 全文（JSON 或 YAML）。若同时填写，优先使用链接。服务端按接口拆分为多条继承「HTTP 请求」父组件的组件，并逐条保存到本表。</p>
+                  <div style="margin-bottom: 12px;">
+                        <span style="display:inline-block;width:88px;color:rgba(0,0,0,.65);">文档链接</span>
+                        <input nz-input name="openApiSpecUrl" [(ngModel)]="openApiSpecUrlInput"
+                              placeholder="可选，https://... 指向 openapi.json / swagger.yaml 等" style="width:calc(100% - 92px);" />
+                  </div>
+                  <div style="margin-bottom: 12px;">
+                        <span style="display:inline-block;width:88px;color:rgba(0,0,0,.65);">根 URL</span>
+                        <input nz-input name="openApiBaseUrl" [(ngModel)]="openApiBaseUrlInput"
+                              placeholder="可选，servers 为空或相对路径时填写，如 https://api.example.com" style="width:calc(100% - 92px);" />
+                  </div>
+                  <textarea nz-input name="openApiSpec" [(ngModel)]="openApiSpecInput" rows="14"
+                        placeholder="或直接粘贴全文（与文档链接二选一）"></textarea>
             </div>
       </nz-modal>
 
