@@ -166,6 +166,18 @@ public class BpmComponentService implements InitializingBean, Refreshable
     }
 
     /**
+     * 解析继承「HTTP 请求」({@code httpRequest}) 父组件时使用的 {@code parentId}，一般为 {@code classpath_httpRequest}。
+     */
+    public String resolveHttpRequestParentComponentId() {
+        for (BpmComponent c : CachedComponents.values()) {
+            if ("httpRequest".equals(c.getKey())) {
+                return c.getId();
+            }
+        }
+        return "classpath_httpRequest";
+    }
+
+    /**
      * 从缓存按 id 解析组件定义，并合并父级参数（与列表接口一致）。
      *
      * @return 不存在时返回 null

@@ -5,6 +5,7 @@ import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
+import com.kiwi.project.bpm.utils.OpenApiComponentGenerator;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
@@ -119,6 +120,37 @@ public class BpmComponentCtl
     public static class CliHelpGenerateRequest {
         /** 用于获取 help 的完整命令行（由服务端通过 cmd/sh 执行） */
         private String helpCommand;
+    }
+
+    /**
+     * 根据 OpenAPI 3.x 或 Swagger 2.0 文档（JSON/YAML）为每个 HTTP 操作生成一个 {@link BpmComponent} 草稿；
+     * 组件继承 {@code httpRequest}（{@link com.kiwi.bpmn.component.activity.HttpRequestActivity}）父定义，仅覆盖
+     * url、method、headers、body 等默认值。
+     */
+    @PostMapping("from-openapi")
+    @ResponseBody
+    public List<BpmComponent> generateFromOpenApi(@RequestBody OpenApiGenerateRequest request) {
+        if (request == null || StringUtils.isBlank(request.getSpec())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spec 不能为空");
+        }
+        String parentId = bpmComponentService.resolveHttpRequestParentComponentId();
+        try {
+            return OpenApiComponentGenerator.buildComponents(
+                    request.getSpec(), request.getBaseUrl(), parentId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
+    @Data
+    public static class OpenApiGenerateRequest {
+        /** OpenAPI / Swagger 文档全文（JSON 或 YAML） */
+        private String spec;
+        /**
+         * 可选；非空时作为根 URL（当文档中 servers 为空或为相对路径时尤其有用）。
+         * 与 path 拼接为默认 {@code url} 参数。
+         */
+        private String baseUrl;
     }
 
 }
