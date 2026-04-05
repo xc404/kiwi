@@ -2,6 +2,7 @@ package com.kiwi.project.bpm.utils;
 
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
+import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.parser.OpenAPIParser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import org.apache.commons.lang3.StringUtils;
@@ -282,7 +282,9 @@ public final class OpenApiComponentGenerator {
         if (jsonBodySchema != null
                 && jsonBodySchema.getProperties() != null
                 && !jsonBodySchema.getProperties().isEmpty()) {
-            for (Map.Entry<String, Schema> e : jsonBodySchema.getProperties().entrySet()) {
+            for (Object entry : jsonBodySchema.getProperties().entrySet()) {
+
+                Map.Entry<String, Schema> e = (Map.Entry<String, Schema>) entry;
                 String prop = e.getKey();
                 if (StringUtils.isBlank(prop)) {
                     continue;
@@ -513,7 +515,8 @@ public final class OpenApiComponentGenerator {
                             : List.of();
             StringBuilder sb = new StringBuilder("{");
             boolean first = true;
-            for (Map.Entry<String, Schema> e : jsonBodySchema.getProperties().entrySet()) {
+            for (Object entry : jsonBodySchema.getProperties().entrySet()) {
+                Map.Entry<String, Schema> e = (Map.Entry<String, Schema>) entry;
                 String prop = e.getKey();
                 if (StringUtils.isBlank(prop)) {
                     continue;
