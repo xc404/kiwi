@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from "@angular/core";
 import { PropertyDescription, PropertyNamespace } from "../design/property-panel/types";
 import { BaseHttpService } from "@app/core/services/http/base-http.service";
+import { isCallActivity } from "./utils";
 
 export declare interface ComponentDescription {
     id: string;
@@ -49,12 +50,11 @@ export class ComponentProvider {
                     c.inputParameters = c.inputParameters || [];
                     c.outputParameters = c.outputParameters || [];
                     c.inputParameters.forEach(p => {
-                        p.htmlType = p.htmlType || '#text';
-                        p.namespace = PropertyNamespace.inputParameter;
+                        
+                        p.namespace = isCallActivity(c.type) ? PropertyNamespace.In : PropertyNamespace.inputParameter;
                     });
                     c.outputParameters.forEach(p => {
-                        p.htmlType = p.htmlType || '#text';
-                        p.namespace = PropertyNamespace.inputParameter;
+                        p.namespace = isCallActivity(c.type) ? PropertyNamespace.Out : PropertyNamespace.outputParameter;
                     });
                 })
 

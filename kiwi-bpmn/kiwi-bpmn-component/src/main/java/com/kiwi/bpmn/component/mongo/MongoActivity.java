@@ -3,6 +3,7 @@ package com.kiwi.bpmn.component.mongo;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -56,7 +57,8 @@ import java.util.Objects;
                         key = "result",
                         htmlType = "#text",
                         name = "结果变量名",
-                        description = "写入查询结果、删除/更新影响条数等"),
+                        description = "写入查询结果、删除/更新影响条数等",
+                        schema = @Schema(defaultValue = "result")),
         })
 public class MongoActivity extends AbstractBpmnActivityBehavior {
 

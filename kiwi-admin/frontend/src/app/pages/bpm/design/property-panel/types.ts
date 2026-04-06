@@ -1,3 +1,4 @@
+import { P } from "@antv/g2plot";
 import { FieldEditorConfig } from "@app/shared/components/field/field-editor";
 import { Element } from "bpmn-js/lib/model/Types";
 
@@ -6,7 +7,9 @@ enum PropertyNamespace {
 
     element = "element",
     inputParameter = "inputParameter",
-    outputParameter = "outputParameter"
+    outputParameter = "outputParameter",
+    In = "In",
+    Out = "Out"
 }
 
 
@@ -40,13 +43,30 @@ export interface PropertyProvider {
     getProperties(element: Element): PropertyTab[];
 }
 
-export function toEditFieldConfig(property: PropertyDescription): FieldEditorConfig {
-    return {
 
+
+export function toEditFieldConfig(property: PropertyDescription): FieldEditorConfig {
+    let editor = property.htmlType;
+    if(property.namespace === PropertyNamespace.inputParameter || property.namespace === PropertyNamespace.In) {
+        editor =  editor || 'spel-expression';
+    }else if (property.namespace === PropertyNamespace.outputParameter || property.namespace === PropertyNamespace.Out) {
+        editor = '#text';
+    }
+    return {
         ...property,
         dataIndex: property.key,
         name: property.name || property.key,
-        editor: property.htmlType || '#text',
+        editor:editor,
+    } as FieldEditorConfig;
+}
+
+export function toViewFieldConfig(property: PropertyDescription): FieldEditorConfig {
+    return {
+        ...property,
+        dataIndex: property.key,
+        name: property.name || property.key,
+        readonly: true,
+        editor: property.htmlType ?? '#text',
     } as FieldEditorConfig;
 }
 

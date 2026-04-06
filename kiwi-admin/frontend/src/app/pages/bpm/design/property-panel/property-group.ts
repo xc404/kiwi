@@ -7,7 +7,7 @@ import { ComponentService } from "../../component/component-service";
 import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
-import { PropertyDescription, toEditFieldConfig } from "./types";
+import { PropertyDescription, PropertyNamespace, toEditFieldConfig, toViewFieldConfig } from "./types";
 import BaseViewer from "bpmn-js/lib/BaseViewer";
 @Component({
     selector: 'property-group',
@@ -34,9 +34,9 @@ export class PropertyGroup {
     });
 
     model = computed(() => {
-        return new Proxy({}, new ElementModelProxyHandler(this.bpmnModeler(), 
-        this.elementModel, this.element(),
-         this.properties(), this.viewMode(), this.variables()));
+        return new Proxy({}, new ElementModelProxyHandler(this.bpmnModeler(),
+            this.elementModel, this.element(),
+            this.properties(), this.viewMode(), this.variables()));
     });
 
     /** SpEL 编辑器：`$` 补全用的变量（图中引用 + 上游输出） */
@@ -57,41 +57,29 @@ export class PropertyGroup {
         return this.properties().map(p => {
             let config: FieldEditorConfig;
             if (this.viewMode()) {
-                config = this.toViewFieldConfig(p);
+                config = toViewFieldConfig(p);
             } else {
 
-                config = this.toEditFieldConfig(p);
+                config = toEditFieldConfig(p);
             }
 
             const baseProps: Record<string, unknown> = { variables: this.variables() };
-            if (p.htmlType === 'spel-expression') {
+            if (config.editor === 'spel-expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
             }
             return toFormlyConfig(config, "horizontal", baseProps);
         });
     });
 
-    toEditFieldConfig(property: PropertyDescription): FieldEditorConfig {
-        return {
 
-            ...property,
-            dataIndex: property.key,
-            name: property.name || property.key,
-            editor: property.htmlType || '#text',
-        } as FieldEditorConfig;
+
+    private isInputParameter(p: PropertyDescription): boolean {
+        const ns = p.namespace as string | undefined;
+        return ns === PropertyNamespace.inputParameter || ns === 'In';
     }
 
-    toViewFieldConfig(property: PropertyDescription): FieldEditorConfig {
-        let editor = '#text';
-        if (property.htmlType) {
-            editor = property.htmlType;
-        }
-        return {
-            ...property,
-            dataIndex: property.key,
-            name: property.name || property.key,
-            readonly: true,
-            editor: editor,
-        } as FieldEditorConfig;
+    private isOutputParameter(p: PropertyDescription): boolean {
+        const ns = p.namespace as string | undefined;
+        return ns === PropertyNamespace.outputParameter || ns === 'Out';
     }
 }

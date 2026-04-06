@@ -26,5 +26,16 @@ public @interface ComponentDescription
 
     ComponentParameter[] inputs() default {};
 
-    ComponentParameter[] outputs() default  {};
+    /**
+     * 输出变量映射：每项 {@link ComponentParameter} 的 {@code key} 为输出在流程上下文中的变量名（或映射键）。
+     * <p>
+     * 与 {@code defaultValue} 的约定（属性面板 / Schema 等）：
+     * <ul>
+     *   <li><strong>非空</strong>：该输出在组件实现中无论用户如何配置都会被写入时，{@code defaultValue} 应为该输出项的
+     *   {@code key}；否则表示设计器为该映射提供了显式默认值。</li>
+     *   <li><strong>为空</strong>：无固定默认映射名，由用户在配置中指定目标变量；或运行时是否写入取决于配置 /
+     *   分支，不提供与 {@code key} 绑定的默认映射。</li>
+     * </ul>
+     */
+    ComponentParameter[] outputs() default {};
 }

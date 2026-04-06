@@ -213,31 +213,36 @@ import java.util.concurrent.CompletableFuture;
             key = "slurmJobId",
             name = "Slurm Job ID",
             type = "String",
-            description = "Successfully submitted Slurm batch job ID (from sbatch stdout)."
+            description = "Successfully submitted Slurm batch job ID (from sbatch stdout).",
+            schema = @Schema(defaultValue = "slurmJobId")
         ),
         @ComponentParameter(
             key = "slurmJobName",
             name = "Slurm Job Name",
             type = "String",
-            description = "Resolved job name (--job-name), same as SBATCH job name."
+            description = "Resolved job name (--job-name), same as SBATCH job name.",
+            schema = @Schema(defaultValue = "slurmJobName")
         ),
         @ComponentParameter(
             key = "sbatchFilePath",
             name = "Sbatch Script Path",
             type = "String",
-            description = "Absolute path of the generated .sbatch file under the Slurm work directory."
+            description = "Absolute path of the generated .sbatch file under the Slurm work directory.",
+            schema = @Schema(defaultValue = "sbatchFilePath")
         ),
         @ComponentParameter(
             key = "outputFilePath",
             name = "Stdout Log Path",
             type = "String",
-            description = "Resolved Slurm stdout file path (--output)."
+            description = "Resolved Slurm stdout file path (--output).",
+            schema = @Schema(defaultValue = "outputFilePath")
         ),
         @ComponentParameter(
             key = "errorFilePath",
             name = "Stderr Log Path",
             type = "String",
-            description = "Resolved Slurm stderr file path (--error)."
+            description = "Resolved Slurm stderr file path (--error).",
+            schema = @Schema(defaultValue = "errorFilePath")
         )
     }
 )

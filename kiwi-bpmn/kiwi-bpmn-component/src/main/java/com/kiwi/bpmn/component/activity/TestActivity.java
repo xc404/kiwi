@@ -2,6 +2,7 @@ package com.kiwi.bpmn.component.activity;
 
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
@@ -19,8 +20,16 @@ import static com.kiwi.bpmn.component.utils.ExecutionUtils.getOutputVariableName
                 @ComponentParameter(key = "input2", htmlType = "#text", name = "输入参数2")
         },
         outputs = {
-                @ComponentParameter(key = "output1", htmlType = "#text", name = "输出1" ),
-                @ComponentParameter(key = "output2", htmlType = "#text", name = "输出2")
+                @ComponentParameter(
+                        key = "output1",
+                        htmlType = "#text",
+                        name = "输出1",
+                        schema = @Schema(defaultValue = "output1")),
+                @ComponentParameter(
+                        key = "output2",
+                        htmlType = "#text",
+                        name = "输出2",
+                        schema = @Schema(defaultValue = "output2"))
         }
 )
 @Component
