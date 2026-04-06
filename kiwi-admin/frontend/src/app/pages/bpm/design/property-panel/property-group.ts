@@ -3,7 +3,8 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { FieldEditorConfig, toFormlyConfig } from "@app/shared/components/field/field-editor";
 import { FormlyModule } from "@ngx-formly/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import BpmnModeler from 'bpmn-js/lib/Modeler';
+import { ComponentService } from "../../component/component-service";
+import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
 import { PropertyDescription, toEditFieldConfig } from "./types";
@@ -21,6 +22,7 @@ import BaseViewer from "bpmn-js/lib/BaseViewer";
 export class PropertyGroup {
 
     elementModel = inject(ElementModel);
+    private readonly componentService = inject(ComponentService);
     properties = input([] as PropertyDescription[]);
     bpmnModeler = input.required<BaseViewer>();
     element = input.required<Element>();
@@ -37,8 +39,19 @@ export class PropertyGroup {
          this.properties(), this.viewMode(), this.variables()));
     });
 
-
-
+    /** SpEL 编辑器：`$` 补全用的变量（图中引用 + 上游输出） */
+    private spelVariableSuggestions = computed(() => {
+        try {
+            return buildSpelVariableSuggestions(
+                this.bpmnModeler(),
+                this.elementModel,
+                this.componentService,
+                this.element()
+            );
+        } catch {
+            return [];
+        }
+    });
 
     fields = computed(() => {
         return this.properties().map(p => {
@@ -50,7 +63,11 @@ export class PropertyGroup {
                 config = this.toEditFieldConfig(p);
             }
 
-            return toFormlyConfig(config, "horizontal", { variables: this.variables() });
+            const baseProps: Record<string, unknown> = { variables: this.variables() };
+            if (p.htmlType === 'spel-expression') {
+                baseProps['spelVariables'] = this.spelVariableSuggestions();
+            }
+            return toFormlyConfig(config, "horizontal", baseProps);
         });
     });
 

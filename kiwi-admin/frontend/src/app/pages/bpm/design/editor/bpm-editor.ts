@@ -31,6 +31,9 @@ import { ComponentProvider } from '../../component/component-provider';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";
 
+/** SpEL 表达式编辑器用到的变量推导（属性面板已接入，可按需复用） */
+export { buildSpelVariableSuggestions, type SpelVariableSuggestion } from '../expression/bpm-spel-variable-context';
+
 export abstract class BpmEditorToken {
   abstract deploy(): void;
   abstract start(): void;
