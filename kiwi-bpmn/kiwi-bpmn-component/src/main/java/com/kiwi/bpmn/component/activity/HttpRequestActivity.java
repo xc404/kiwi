@@ -71,15 +71,18 @@ import java.util.Set;
                 @ComponentParameter(
                         key = "statusCode",
                         htmlType = "#text",
-                        description = "写入 HTTP 状态码的流程变量名"),
+                        description = "写入 HTTP 状态码的流程变量名",
+                        schema = @Schema(defaultValue = "statusCode")),
                 @ComponentParameter(
                         key = "responseBody",
                         htmlType = "#text",
-                        description = "写入响应体（UTF-8 字符串）的流程变量名"),
+                        description = "写入响应体（UTF-8 字符串）的流程变量名",
+                        schema = @Schema(defaultValue = "responseBody")),
                 @ComponentParameter(
                         key = "responseHeaders",
                         htmlType = "#text",
-                        description = "写入响应头 JSON 字符串的流程变量名（多值头为 JSON 数组）")
+                        description = "写入响应头 JSON 字符串的流程变量名（多值头为 JSON 数组）",
+                        schema = @Schema(defaultValue = "responseHeaders"))
         })
 @Component("httpRequest")
 public class HttpRequestActivity extends AbstractBpmnActivityBehavior {
