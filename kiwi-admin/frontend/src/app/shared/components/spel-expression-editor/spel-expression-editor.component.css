@@ -1,0 +1,45 @@
+.spel-expression-editor {
+  width: 100%;
+}
+
+.spel-expression-editor__inline {
+  width: 100%;
+}
+
+.spel-expression-editor__suffix-btn {
+  margin: -4px -8px -4px 0;
+}
+
+.spel-expression-editor__modal-body {
+  min-height: 200px;
+}
+
+.spel-expression-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.spel-expression-editor__hint {
+  margin-left: 8px;
+  opacity: 0.65;
+  font-size: 12px;
+}
+
+.spel-expression-editor__cm {
+  border: 1px solid var(--ng-zorro-border-color, #d9d9d9);
+  border-radius: 4px;
+  min-height: 200px;
+}
+
+.spel-expression-editor__readonly-fallback {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  padding: 8px;
+  border: 1px solid var(--ng-zorro-border-color, #d9d9d9);
+  border-radius: 4px;
+  min-height: 32px;
+  background: rgba(0, 0, 0, 0.02);
+}
