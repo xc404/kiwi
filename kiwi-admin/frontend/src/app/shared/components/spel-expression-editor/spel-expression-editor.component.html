@@ -1,0 +1,57 @@
+<div class="spel-expression-editor">
+  @if (!readonly()) {
+  <nz-input-group class="spel-expression-editor__inline" [nzSuffix]="suffixBtn">
+    <input nz-input type="text" [ngModel]="inlineText()" (ngModelChange)="onInlineChange($event)"
+      [placeholder]="placeholder()" autocomplete="off" spellcheck="false" />
+  </nz-input-group>
+  <ng-template #suffixBtn>
+    <button nz-button nzType="text" class="spel-expression-editor__suffix-btn" type="button" (click)="openModal()"
+      [attr.aria-label]="'打开 SpEL 编辑器'" title="编辑表达式">
+      <nz-icon nzType="code" nzTheme="outline" />
+    </button>
+  </ng-template>
+
+  <nz-modal [nzVisible]="modalVisible()" nzTitle="编辑 SpEL 表达式" [nzWidth]="720" nzOkText="确定" nzCancelText="取消"
+    [nzMaskClosable]="false" (nzOnCancel)="this.modalVisible.set(false)"
+    (nzVisibleChange)="onModalVisibleChange($event)" (nzAfterOpen)="onModalAfterOpen()" (nzOnOk)="onModalOk()">
+    <ng-container *nzModalContent>
+      <div class="spel-expression-editor__modal-body">
+        <div class="spel-expression-editor__toolbar">
+          <button nz-button nzType="dashed" nzSize="small" type="button" nz-dropdown [nzDropdownMenu]="varMenu">
+            <nz-icon nzType="apartment" nzTheme="outline" />
+            插入变量
+          </button>
+          <nz-dropdown-menu #varMenu="nzDropdownMenu">
+            <ul nz-menu>
+              @for (v of variables(); track v.key) {
+              <li nz-menu-item (click)="insertVariableRef(v)">
+                <code>{{ v.key }}</code>
+                <span class="spel-expression-editor__hint">{{ v.source === 'upstream' ? '上游' : '引用' }}</span>
+              </li>
+              }
+              @if (variables().length === 0) {
+              <li nz-menu-item nzDisabled>暂无可用变量</li>
+              }
+            </ul>
+          </nz-dropdown-menu>
+
+          <button nz-button nzType="dashed" nzSize="small" type="button" nz-dropdown [nzDropdownMenu]="spelMenu">
+            <nz-icon nzType="function" nzTheme="outline" />
+            插入 SpEL
+          </button>
+          <nz-dropdown-menu #spelMenu="nzDropdownMenu">
+            <ul nz-menu>
+              @for (s of snippets; track s.label) {
+              <li nz-menu-item (click)="insertText(s.insert)">{{ s.label }}</li>
+              }
+            </ul>
+          </nz-dropdown-menu>
+        </div>
+        <div #modalHost class="spel-expression-editor__cm"></div>
+      </div>
+    </ng-container>
+  </nz-modal>
+  } @else {
+  <div class="spel-expression-editor__readonly-fallback">{{ displayReadonlyValue() }}</div>
+  }
+</div>
