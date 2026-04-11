@@ -10,8 +10,6 @@ import {
     OnInit,
     signal
 } from '@angular/core';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatTabsModule } from '@angular/material/tabs';
 import { environment } from '@env/environment';
 import { Element } from 'bpmn-js/lib/model/Types';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
@@ -33,7 +31,7 @@ export type BpmnDiagramHost = BpmnModeler | NavigatedViewer;
     selector: 'bpm-properties-panel',
     templateUrl: 'properties-panel.html',
     styleUrls: ['properties-panel.css'],
-    imports: [CommonModule, MatTabsModule, MatExpansionModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup],
+    imports: [CommonModule,  NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup],
     standalone: true,
 })
 export class BpmPropertiesPanel implements OnInit {

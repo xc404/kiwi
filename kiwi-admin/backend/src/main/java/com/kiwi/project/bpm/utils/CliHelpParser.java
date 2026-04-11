@@ -31,6 +31,8 @@ public final class CliHelpParser {
 
     /** help 命令最大长度（防注入滥用） */
     private static final int MAX_HELP_COMMAND_LEN = 4000;
+    /** 前端直接传入的 help 全文最大长度 */
+    private static final int MAX_HELP_TEXT_LEN = 2_000_000;
     private static final long HELP_COMMAND_TIMEOUT_SEC = 60L;
 
     private CliHelpParser() {
@@ -53,6 +55,16 @@ public final class CliHelpParser {
      * @param shellParentId shell 父组件在库中的 id
      */
     public static BpmComponent buildComponent(String helpCommand, String shellParentId) {
+        return buildComponent(helpCommand, shellParentId, null);
+    }
+
+    /**
+     * 与 {@link #buildComponent(String, String)} 相同，但若 {@code helpTextOverride} 非空则不再执行命令，
+     * 直接使用其中内容作为 help 输出解析（适用于前端粘贴 help 全文）。
+     *
+     * @param helpTextOverride 可选；非空时作为 help 正文，忽略对 {@code helpCommand} 的执行
+     */
+    public static BpmComponent buildComponent(String helpCommand, String shellParentId, String helpTextOverride) {
         if (StringUtils.isBlank(helpCommand)) {
             throw new IllegalArgumentException("helpCommand 不能为空");
         }
@@ -61,15 +73,23 @@ public final class CliHelpParser {
             throw new IllegalArgumentException("helpCommand 过长（最大 " + MAX_HELP_COMMAND_LEN + " 字符）");
         }
         final String helpText;
-        try {
-            helpText = runHelpCommand(trimmed);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new CliHelpExecutionException("执行 help 命令被中断", e);
-        } catch (IOException e) {
-            throw new CliHelpExecutionException("执行 help 命令失败: " + e.getMessage(), e);
-        } catch (TimeoutException e) {
-            throw new CliHelpExecutionException("执行 help 命令超时（" + HELP_COMMAND_TIMEOUT_SEC + "s）", e);
+        String pastedHelp = StringUtils.trimToNull(helpTextOverride);
+        if (pastedHelp != null) {
+            if (pastedHelp.length() > MAX_HELP_TEXT_LEN) {
+                throw new IllegalArgumentException("helpText 过长（最大 " + MAX_HELP_TEXT_LEN + " 字符）");
+            }
+            helpText = pastedHelp;
+        } else {
+            try {
+                helpText = runHelpCommand(trimmed);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new CliHelpExecutionException("执行 help 命令被中断", e);
+            } catch (IOException e) {
+                throw new CliHelpExecutionException("执行 help 命令失败: " + e.getMessage(), e);
+            } catch (TimeoutException e) {
+                throw new CliHelpExecutionException("执行 help 命令超时（" + HELP_COMMAND_TIMEOUT_SEC + "s）", e);
+            }
         }
         if (StringUtils.isBlank(helpText)) {
             throw new CliHelpExecutionException("help 命令无输出");

@@ -1,19 +1,14 @@
 <div class="spel-expression-editor">
   @if (!readonly()) {
-  <nz-input-group class="spel-expression-editor__inline" [nzSuffix]="suffixBtn">
-    <input nz-input type="text" [ngModel]="inlineText()" (ngModelChange)="onInlineChange($event)"
-      [placeholder]="placeholder()" autocomplete="off" spellcheck="false" />
-  </nz-input-group>
-  <ng-template #suffixBtn>
-    <button nz-button nzType="text" class="spel-expression-editor__suffix-btn" type="button" (click)="openModal()"
-      [attr.aria-label]="'打开 SpEL 编辑器'" title="编辑表达式">
-      <nz-icon nzType="code" nzTheme="outline" />
-    </button>
-  </ng-template>
+  <nz-input-wrapper class="spel-expression-editor__inline">
+    <input nz-input type="text" [ngModel]="inlineText()" (ngModelChange)="onInlineChange($event)" autocomplete="off"
+      spellcheck="false" />
+    <nz-icon nzType="code" nzInputAddonAfter nzTheme="outline" (click)="openModal()" />
+  </nz-input-wrapper>
 
   <nz-modal [nzVisible]="modalVisible()" nzTitle="编辑 SpEL 表达式" [nzWidth]="720" nzOkText="确定" nzCancelText="取消"
-    [nzMaskClosable]="false" (nzOnCancel)="this.modalVisible.set(false)"
-    (nzVisibleChange)="onModalVisibleChange($event)" (nzAfterOpen)="onModalAfterOpen()" (nzOnOk)="onModalOk()">
+    [nzMaskClosable]="false" (nzOnCancel)="modalVisible.set(false)" (nzVisibleChange)="onModalVisibleChange($event)"
+    (nzAfterOpen)="onModalAfterOpen()" (nzOnOk)="onModalOk()">
     <ng-container *nzModalContent>
       <div class="spel-expression-editor__modal-body">
         <div class="spel-expression-editor__toolbar">

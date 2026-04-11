@@ -1,6 +1,5 @@
 import { Component, computed, inject, InjectionToken, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { MatExpansionModule } from "@angular/material/expansion";
 import BpmnFactory from "bpmn-js/lib/features/modeling/BpmnFactory";
 import ElementFactory from "bpmn-js/lib/features/modeling/ElementFactory";
 import { ModdleElement } from "bpmn-js/lib/model/Types";
@@ -73,7 +72,6 @@ function filterPaletteTabs(tabs: PalleteTab[], query: string): PalleteTab[] {
   imports: [NzDropdownModule,
     NzIconModule,
     NzLayoutModule,
-    MatExpansionModule,
     NzTabsModule,
     NzCollapseModule,
     NzButtonModule,

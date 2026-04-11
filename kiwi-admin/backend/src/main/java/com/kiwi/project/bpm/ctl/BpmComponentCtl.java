@@ -109,7 +109,10 @@ public class BpmComponentCtl
         }
         String shellParentId = bpmComponentService.resolveShellParentComponentId();
         try {
-            return CliHelpParser.buildComponent(request.getHelpCommand().trim(), shellParentId);
+            return CliHelpParser.buildComponent(
+                    request.getHelpCommand().trim(),
+                    shellParentId,
+                    request.getHelpText());
         } catch (CliHelpExecutionException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, e.getMessage(), e);
         } catch (IllegalArgumentException e) {
@@ -119,8 +122,10 @@ public class BpmComponentCtl
 
     @Data
     public static class CliHelpGenerateRequest {
-        /** 用于获取 help 的完整命令行（由服务端通过 cmd/sh 执行） */
+        /** 用于获取 help 的完整命令行（由服务端通过 cmd/sh 执行；非空 {@link #helpText} 时不执行，仅用于推导命令前缀等） */
         private String helpCommand;
+        /** 可选；非空时直接使用该文本作为 help 输出解析，不再执行 {@link #helpCommand} */
+        private String helpText;
     }
 
     /**

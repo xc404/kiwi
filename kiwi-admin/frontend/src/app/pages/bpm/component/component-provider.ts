@@ -70,12 +70,5 @@ export class ComponentProvider {
         });
     }
 
-    //     getComponentGroups(){
-    //         return this.componentGroups;
-    //     }
-
-    //    getComponents(){
-    //         return this.components
-    //    };
 
 }

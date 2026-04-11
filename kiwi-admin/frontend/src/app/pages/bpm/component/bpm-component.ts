@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, inject, signal, TemplateRef, viewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { CrudPage, PageConfig } from "@app/shared/components/crud/components/crud-page";
@@ -46,6 +46,8 @@ export class BpmComponent implements AfterViewInit {
 
     generateModalVisible = signal(false);
     helpCommandInput = '';
+    /** 可选；对应 CliHelpGenerateRequest.helpText，非空时服务端不再执行命令，仅用 helpCommand 推导前缀 */
+    helpTextInput = '';
 
     openApiModalVisible = signal(false);
     /** 对应 OpenApiGenerateRequest.specUrl，与 openApiSpecInput 二选一（同时填时以后端优先拉取 URL） */
@@ -60,14 +62,20 @@ export class BpmComponent implements AfterViewInit {
     http = inject(BaseHttpService);
     message = inject(NzMessageService);
 
-    pageConfig: PageConfig;
+    pageConfig = computed(() => {
 
-    constructor() {
-        this.pageConfig = {
+        return {
             title: '组件管理',
             initializeData: true,
             crud: '/bpm/component',
-            toolbarActions: [AddAction],
+            toolbarActions: [AddAction,
+                toolbarAction({
+                    name: '生成组件',
+                    icon: 'down',
+                    tooltip: '从命令行或 OpenAPI / Swagger 文档生成',
+                    template: this.generateDropdownTpl(),
+                })
+            ],
             columnActions: [
                 {
                     name: '参数设置', handler: () => {
@@ -86,6 +94,12 @@ export class BpmComponent implements AfterViewInit {
                 { name: '类型', dataIndex: 'type' },
             ]
         };
+
+
+    });
+
+    constructor() {
+
     }
 
     ngAfterViewInit(): void {
@@ -93,22 +107,23 @@ export class BpmComponent implements AfterViewInit {
         if (!tpl) {
             return;
         }
-        this.pageConfig = {
-            ...this.pageConfig,
-            toolbarActions: [
-                AddAction,
-                toolbarAction({
-                    name: '生成组件',
-                    icon: 'down',
-                    tooltip: '从命令行或 OpenAPI / Swagger 文档生成',
-                    template: tpl,
-                }),
-            ],
-        };
+        // this.pageConfig = {
+        //     ...this.pageConfig,
+        //     toolbarActions: [
+        //         AddAction,
+        //         toolbarAction({
+        //             name: '生成组件',
+        //             icon: 'down',
+        //             tooltip: '从命令行或 OpenAPI / Swagger 文档生成',
+        //             template: tpl,
+        //         }),
+        //     ],
+        // };
     }
 
     openGenerateFromCli(): void {
         this.helpCommandInput = '';
+        this.helpTextInput = '';
         this.generateModalVisible.set(true);
     }
 
@@ -128,10 +143,16 @@ export class BpmComponent implements AfterViewInit {
             this.message.warning('请输入要执行的 help 命令（如 docker --help）');
             return;
         }
-        this.http.post<any>('/bpm/component/from-cli-help', { helpCommand: cmd }).pipe(
+        const body: { helpCommand: string; helpText?: string } = { helpCommand: cmd };
+        const pasted = this.helpTextInput?.trim();
+        if (pasted) {
+            body.helpText = pasted;
+        }
+        this.http.post<any>('/bpm/component/from-cli-help', body).pipe(
             tap((comp) => {
                 this.generateModalVisible.set(false);
                 this.helpCommandInput = '';
+                this.helpTextInput = '';
                 this.crudPage()?.popupAdd(comp);
                 this.message.success('已生成组件草稿，请确认后保存');
             }),
