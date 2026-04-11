@@ -1,6 +1,5 @@
 import { Component, computed, effect, inject, input, OnInit, output, signal } from "@angular/core";
 import { FormGroup } from "@angular/forms";
-import { MatExpansionModule } from "@angular/material/expansion";
 import { BaseHttpService } from "@app/core/services/http/base-http.service";
 import { AppButton } from "@app/shared/components/button/app.button";
 import { CrudEditForm } from "@app/shared/components/crud/components/crud-edit-form";
@@ -46,7 +45,7 @@ import { ComponentDescription } from "./component-provider";
     </ng-template>
      `,
     standalone: true,
-    imports: [NzCollapseModule, AppTableComponent, NzModalModule, CrudEditForm, MatExpansionModule, AppButton]
+    imports: [NzCollapseModule, AppTableComponent, NzModalModule, CrudEditForm, AppButton]
 })
 export class BpmParameters implements OnInit {
     http: any = inject(BaseHttpService);

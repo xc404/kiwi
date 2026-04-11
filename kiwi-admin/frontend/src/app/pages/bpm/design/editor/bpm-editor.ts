@@ -2,9 +2,6 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatExpansionModule } from "@angular/material/expansion";
-import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
@@ -18,7 +15,7 @@ import Create from 'diagram-js/lib/features/create/Create';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule, NzIconService } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -60,9 +57,6 @@ export abstract class BpmEditorToken {
   imports: [
     DatePipe,
     BpmPropertiesPanel,
-    MatIconModule,
-    MatExpansionModule,
-    MatDialogModule,
     NzModalModule,
     NzInputModule,
     FormsModule,
@@ -83,7 +77,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
 
   http = inject(HttpClient);
   processDefinitionService = inject(ProcessDesignService)
-  matDialog = inject(MatDialog);
+  matDialog = inject(NzModalService);
   componentProvider = inject(ComponentProvider);
 
   elementModel = inject(ElementModel);
@@ -226,17 +220,19 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   }
   saveAsDefinition() {
 
-    this.matDialog.open(this.processNameDialog).afterClosed().subscribe(result => {
-      if (result) {
-        this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
-          this.processDefinitionService.saveAsProcess(this.bpmProcess().id, this.processName, bpmn.xml).subscribe(
-            (data: any) => {
-              this.bpmProcess.set(data)
-            }
-          );
-        });
-      }
-    });
+    // this.matDialog.create({
+    //   nzContent: this.processNameDialog
+    // }).afterClosed().subscribe((result: any) => {
+    //   if (result) {
+    //     this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
+    //       this.processDefinitionService.saveAsProcess(this.bpmProcess().id, this.processName, bpmn.xml).subscribe(
+    //         (data: any) => {
+    //           this.bpmProcess.set(data)
+    //         }
+    //       );
+    //     });
+    //   }
+    // });
   }
 
   deploy() {

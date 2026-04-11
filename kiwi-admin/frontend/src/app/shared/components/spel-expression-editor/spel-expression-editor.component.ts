@@ -1,14 +1,3 @@
-import { autocompletion, closeBrackets, completionKeymap, CompletionContext } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { javascript } from '@codemirror/lang-javascript';
-import { EditorState, Extension } from '@codemirror/state';
-import {
-  EditorView,
-  highlightActiveLine,
-  keymap,
-  lineNumbers,
-  placeholder as cmPlaceholder,
-} from '@codemirror/view';
 import { CommonModule } from '@angular/common';
 import {
   Component,
@@ -21,13 +10,24 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import { autocompletion, closeBrackets, CompletionContext, completionKeymap } from '@codemirror/autocomplete';
+import { defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { javascript } from '@codemirror/lang-javascript';
+import { EditorState, Extension } from '@codemirror/state';
+import {
+  placeholder as cmPlaceholder,
+  EditorView,
+  highlightActiveLine,
+  keymap,
+  lineNumbers,
+} from '@codemirror/view';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
 
 export const SPEL_EXPRESSION_SNIPPETS: { label: string; insert: string }[] = [
   { label: '#root', insert: '#root' },
@@ -104,7 +104,7 @@ export function buildSpelVariableCompletion(getVariables: () => SpelVariableSugg
     NzButtonModule,
     NzIconModule,
     NzInputModule,
-    NzDropDownModule,
+    NzDropdownModule,
     NzMenuModule,
     NzModalModule,
   ],
