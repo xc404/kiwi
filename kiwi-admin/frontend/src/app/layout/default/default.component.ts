@@ -97,7 +97,7 @@ export class DefaultComponent implements AfterViewInit, OnInit {
     this.contentMarginTop = this.judgeMarginTop();
   });
 
-  showChats = false; // 是否显示聊天窗口
+  showChats = true; // 是否显示聊天窗口
   isMixinMode = false; // 是否是混合模式
   isNightTheme = computed(() => this.themesService.$isNightTheme()); // 是否是暗黑主题
   isCompactTheme = computed(() => this.themesService.$isCompactTheme()); // 是否是紧凑主题
