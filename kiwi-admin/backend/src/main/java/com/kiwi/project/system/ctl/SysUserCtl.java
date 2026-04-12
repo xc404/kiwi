@@ -1,6 +1,7 @@
 package com.kiwi.project.system.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.system.dao.SysUserDao;
 import com.kiwi.project.system.entity.SysUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ public class SysUserCtl {
     /**
      * 创建用户
      */
+    @Tool(name = "user_create", description = "创建用户。")
     @PostMapping
     @Operation(summary = "创建用户")
     @SaCheckPermission("sa:user:add")
@@ -32,6 +34,7 @@ public class SysUserCtl {
     /**
      * 获取用户列表
      */
+    @Tool(name = "user_list", description = "获取全部用户列表。")
     @GetMapping
     @Operation(summary = "获取用户列表")
     @SaCheckPermission("sa:user:list")
@@ -42,6 +45,7 @@ public class SysUserCtl {
     /**
      * 获取用户详情
      */
+    @Tool(name = "user_get", description = "按 id 获取用户详情。")
     @GetMapping("/{id}")
     @Operation(summary = "获取用户详情")
     @SaCheckPermission("sa:user:view")
@@ -52,6 +56,7 @@ public class SysUserCtl {
     /**
      * 更新用户
      */
+    @Tool(name = "user_update", description = "按 id 更新用户。")
     @PutMapping("/{id}")
     @Operation(summary = "更新用户")
     @SaCheckPermission("sa:user:update")
@@ -63,6 +68,7 @@ public class SysUserCtl {
     /**
      * 删除用户
      */
+    @Tool(name = "user_delete", description = "按 id 删除用户。")
     @DeleteMapping("/{id}")
     @Operation(summary = "删除用户")
     @SaCheckPermission("sa:user:delete")

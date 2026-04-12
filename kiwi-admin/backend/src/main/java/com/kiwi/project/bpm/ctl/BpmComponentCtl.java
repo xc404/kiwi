@@ -1,5 +1,6 @@
 package com.kiwi.project.bpm.ctl;
 
+import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.service.BpmComponentService;
@@ -13,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,14 +43,23 @@ public class BpmComponentCtl
     private final BpmComponentService bpmComponentService;
 
     // 查询所有组件分组（已实现）
+    @Tool(name = "bpmComp_page", description = "分页查询 BPM 组件定义。")
     @ResponseBody
     @GetMapping
     public Page<BpmComponent> getComponents(Pageable pageable) {
         return bpmComponentDao.findAll(pageable);
     }
 
+    @Tool(name = "bpmComp_aiPage", description = "分页查询 BPM 组件。page 从 0 开始，size 默认 20、最大 100。")
+    public Page<BpmComponent> aiPageComponents(Integer page, Integer size) {
+        int p = page != null && page >= 0 ? page : 0;
+        int s = size != null && size > 0 ? Math.min(size, 100) : 20;
+        return getComponents(PageRequest.of(p, s));
+    }
+
 
     // 新增组件
+    @Tool(name = "bpmComp_add", description = "新增 BPM 组件。")
     @PostMapping("")
     @ResponseBody
     public BpmComponent addComponent(@RequestBody BpmComponent bpmComponent) {
@@ -59,6 +70,7 @@ public class BpmComponentCtl
 
 
     // 修改组件
+    @Tool(name = "bpmComp_update", description = "按 id 更新 BPM 组件。")
     @PutMapping("{id}")
     @ResponseBody
     public BpmComponent updateComponent(@PathVariable String id, @RequestBody BpmComponent bpmComponent) {
@@ -69,6 +81,7 @@ public class BpmComponentCtl
     }
 
     // 删除组件
+    @Tool(name = "bpmComp_delete", description = "按 id 删除 BPM 组件。")
     @DeleteMapping("{id}")
     @ResponseBody
     public void deleteComponent(@PathVariable String id) {
@@ -77,9 +90,10 @@ public class BpmComponentCtl
 
 
 
+    @Tool(name = "bpmComp_listGrouped", description = "按分组返回全部 BPM 组件列表。")
     @GetMapping("list")
     @ResponseBody
-    public List<ComponentGroup> getComponents() {
+    public List<ComponentGroup> getComponentsGrouped() {
         Map<String, List<BpmComponent>> map = bpmComponentDao.findAll().stream()
                 .map(c -> {
                     return this.bpmComponentService.fillComponentProperties(c);
@@ -101,6 +115,7 @@ public class BpmComponentCtl
      * 在后端执行 {@code helpCommand}（如 {@code docker --help}）获取 help 输出，生成继承 shell 的 {@link BpmComponent} 草稿；
      * 名称、key、分组、描述等均由后端默认推导。
      */
+    @Tool(name = "bpmComp_fromCliHelp", description = "根据 CLI help 命令输出生成 BPM 组件草稿。")
     @PostMapping("from-cli-help")
     @ResponseBody
     public BpmComponent generateFromCliHelp(@RequestBody CliHelpGenerateRequest request) {
@@ -133,6 +148,7 @@ public class BpmComponentCtl
      * 组件继承 {@code httpRequest}（{@link com.kiwi.bpmn.component.activity.HttpRequestActivity}）父定义，仅覆盖
      * url、method、headers、body 等默认值。
      */
+    @Tool(name = "bpmComp_fromOpenApi", description = "根据 OpenAPI/Swagger 文档生成 HTTP 类 BPM 组件草稿列表。")
     @PostMapping("from-openapi")
     @ResponseBody
     public List<BpmComponent> generateFromOpenApi(@RequestBody OpenApiGenerateRequest request) {

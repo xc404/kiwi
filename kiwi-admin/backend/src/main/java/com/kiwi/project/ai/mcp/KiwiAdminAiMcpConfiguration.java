@@ -23,10 +23,13 @@ public class KiwiAdminAiMcpConfiguration {
     }
 
     @Bean
-    public ChatClient kiwiAssistantChatClient(ChatModel chatModel, ToolCallbackProvider kiwiAdminToolCallbackProvider) {
+    public ChatClient kiwiAssistantChatClient(
+            ChatModel chatModel,
+            ToolCallbackProvider kiwiAdminToolCallbackProvider,
+            ToolCallbackProvider kiwiControllerToolCallbackProvider) {
         return ChatClient.builder(chatModel)
                 .defaultSystem(KiwiAdminAiTools.SYSTEM_PROMPT)
-                .defaultToolCallbacks(kiwiAdminToolCallbackProvider)
+                .defaultToolCallbacks(kiwiAdminToolCallbackProvider, kiwiControllerToolCallbackProvider)
                 .build();
     }
 }

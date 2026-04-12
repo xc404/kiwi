@@ -9,6 +9,7 @@ import com.kiwi.framework.session.SessionService;
 import com.kiwi.framework.session.SessionUser;
 import com.kiwi.project.system.dao.SysMenuDao;
 import com.kiwi.project.system.entity.SysMenu;
+import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.system.service.MenuService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -61,6 +62,7 @@ public class AuthCtl
         this.sessionService.logout();
     }
 
+    @Tool(name = "auth_userInfo", description = "获取当前登录用户信息。")
     @GetMapping("/auth/userinfo")
     @SaCheckLogin
     @ResponseBody
@@ -70,6 +72,7 @@ public class AuthCtl
     }
 
 
+    @Tool(name = "auth_menus", description = "获取当前用户可见菜单树。")
     @GetMapping("/auth/menus")
     @SaCheckLogin
     @ResponseBody
@@ -87,6 +90,7 @@ public class AuthCtl
         return Tree.build(visibleMenus).getByParentId(SysMenu.Root);
     }
 
+    @Tool(name = "auth_permissions", description = "获取当前登录用户权限码列表。")
     @GetMapping("/auth/permissions")
     @SaCheckLogin
     @ResponseBody

@@ -1,6 +1,7 @@
 package com.kiwi.project.tools.codegen.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
 import com.kiwi.project.tools.codegen.dao.GenEntityDao;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,9 +50,9 @@ public class CodeGenEntityCtl
     public static class GenTableQuery
     {
         @QueryField(value = "tableName", condition = QueryField.Type.LIKE)
-        private String tableName;
+        public String tableName;
         @QueryField(value = "tableComment", condition = QueryField.Type.LIKE)
-        private String tableComment;
+        public String tableComment;
     }
 
     @Operation(summary = "List GenTables")
@@ -60,6 +62,20 @@ public class CodeGenEntityCtl
         return this.genTabledao.findBy(QueryParams.of(query), pageable);
     }
 
+    @Tool(
+            name = "codeEnt_aiSearch",
+            description = "分页查询代码生成实体表配置。tableName、tableComment 模糊；page 从 0 开始，size 默认 20、最大 100。")
+    @SaCheckPermission("gen:entity:list")
+    public Page<GenEntity> aiTables(String tableName, String tableComment, Integer page, Integer size) {
+        GenTableQuery q = new GenTableQuery();
+        q.tableName = tableName;
+        q.tableComment = tableComment;
+        int p = page != null && page >= 0 ? page : 0;
+        int s = size != null && size > 0 ? Math.min(size, 100) : 20;
+        return tables(q, PageRequest.of(p, s));
+    }
+
+    @Tool(name = "codeEnt_get", description = "按 id 获取代码生成实体配置。")
     @Operation(summary = "Get GenTable by ID")
     @SaCheckPermission("gen:entity:view")
     @GetMapping("/{id}")
@@ -67,6 +83,7 @@ public class CodeGenEntityCtl
         return genTabledao.findById(id).orElseThrow();
     }
 
+    @Tool(name = "codeEnt_create", description = "新增代码生成实体配置。")
     @Operation(summary = "Create a new GenTable")
     @SaCheckPermission("gen:entity:add")
     @PostMapping("")
@@ -76,6 +93,7 @@ public class CodeGenEntityCtl
         return genEntity;
     }
 
+    @Tool(name = "codeEnt_update", description = "按 id 更新代码生成实体配置。")
     @Operation(summary = "Update a GenTable by ID")
     @SaCheckPermission("gen:entity:edit")
     @PutMapping("/{id}")
@@ -87,6 +105,7 @@ public class CodeGenEntityCtl
         return genEntity;
     }
 
+    @Tool(name = "codeEnt_delete", description = "按 id 删除代码生成实体配置。")
     @Operation(summary = "Delete a GenTable by ID")
     @SaCheckPermission("gen:entity:delete")
     @DeleteMapping("/{id}")
@@ -122,6 +141,7 @@ public class CodeGenEntityCtl
      *
      * @param input 包含连接 ID 和表名列表的输入对象
      */
+    @Tool(name = "codeEnt_importDatabase", description = "从数据库连接导入表结构到代码生成（connectionId + 表名列表）。")
     @Operation(summary = "Import tables from database")
     @SaCheckPermission("gen:entity:import")
     @PostMapping("/import/database")
@@ -142,6 +162,7 @@ public class CodeGenEntityCtl
      *
      * @return 生成的代码预览
      */
+    @Tool(name = "codeEnt_preview", description = "预览某实体 id 的生成代码。")
     @Operation(summary = "Preview generated code")
     @SaCheckPermission("gen:entity:preview")
     @GetMapping("/{id}/preview")
