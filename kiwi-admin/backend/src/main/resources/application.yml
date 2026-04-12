@@ -6,13 +6,10 @@ server:
       enabled: true
 
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
-# AI 对话：OpenAI 兼容 /v1/chat/completions；密钥务必用环境变量，勿写入仓库
+# AI 对话：Spring AI OpenAI；密钥用环境变量 KIWI_AI_API_KEY 或 OPENAI_API_KEY
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
-    api-key: ${KIWI_AI_API_KEY:}
-    base-url: ${KIWI_AI_BASE_URL:https://api.openai.com/v1}
-    model: ${KIWI_AI_MODEL:gpt-4o-mini}
 
 app:
   cors:
@@ -27,6 +24,13 @@ app:
     allowOverwrite: false
 
 spring:
+  ai:
+    openai:
+      api-key: ${KIWI_AI_API_KEY:${OPENAI_API_KEY:}}
+      base-url: ${KIWI_AI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${KIWI_AI_MODEL:gpt-4o-mini}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true}

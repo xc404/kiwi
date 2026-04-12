@@ -5,57 +5,6 @@
     <nz-breadcrumb-item>AI 对话</nz-breadcrumb-item>
   </nz-breadcrumb>
 </nz-card>
-<nz-card nzBordered="false" class="ai-chat-card">
-  <div class="ai-chat-toolbar">
-    <button nz-button nzType="default" (click)="clear()" [disabled]="sending()">
-      <i nz-icon nzTheme="outline" nzType="clear"></i>
-      清空
-    </button>
-  </div>
-  <div class="ai-chat-messages" #scrollAnchor>
-    @if (messages().length === 0) {
-      <nz-empty nzNotFoundContent="在下方输入问题，开始与模型对话（需后端配置 kiwi.ai.api-key）"></nz-empty>
-    } @else {
-      @for (m of messages(); track $index) {
-        <div class="msg-row" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
-          <div class="msg-bubble">
-            <div class="msg-role">
-              @if (m.role === 'user') {
-                <i nz-icon nzTheme="outline" nzType="user"></i>
-                我
-              } @else {
-                <i nz-icon nzTheme="outline" nzType="robot"></i>
-                助手
-              }
-            </div>
-            <div class="msg-content">{{ m.content }}</div>
-          </div>
-        </div>
-      }
-    }
-    @if (sending()) {
-      <div class="msg-row assistant">
-        <div class="msg-bubble loading">
-          <nz-spin nzSimple [nzSize]="'small'"></nz-spin>
-          <span class="loading-text">正在生成…</span>
-        </div>
-      </div>
-    }
-  </div>
-  <div class="ai-chat-input">
-    <textarea
-      nz-input
-      [(ngModel)]="input"
-      [nzAutosize]="{ minRows: 2, maxRows: 6 }"
-      placeholder="输入消息，Enter 发送（Shift+Enter 换行）"
-      [disabled]="sending()"
-      (keydown)="onInputKeydown($event)"
-    ></textarea>
-    <div class="send-wrap">
-      <button nz-button nzType="primary" (click)="send()" [nzLoading]="sending()" [disabled]="!input.trim()">
-        <i nz-icon nzTheme="outline" nzType="send"></i>
-        发送
-      </button>
-    </div>
-  </div>
-</nz-card>
+<div class="ai-chat-page-body">
+  <app-chat [embed]="true" />
+</div>
