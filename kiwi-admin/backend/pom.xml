@@ -16,7 +16,8 @@
         <jakarta.persistence.version>3.2.0</jakarta.persistence.version>
         <velocity.version>2.3</velocity.version>
         <spring-boot.version>3.4.2</spring-boot.version>
-        <spring-ai.version>1.0.0-M6</spring-ai.version>
+        <!-- Spring AI Alibaba（DashScope / 通义），BOM 与 starter 版本对齐 -->
+        <spring-ai-alibaba.version>1.0.0.4</spring-ai-alibaba.version>
     </properties>
     <parent>
         <groupId>com.kiwi</groupId>
@@ -185,16 +186,22 @@
             <version>4.0.3</version>
         </dependency>
         <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        </dependency>
+        <!-- Spring AI MCP Server（WebMVC + SSE）：与 ChatClient 共用 ToolCallback；外部 MCP 客户端可连接（需登录态）。 -->
+        <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>${spring-ai.version}</version>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -229,6 +236,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
+                <configuration>
+                    <!-- @Tool 方法参数名需保留，供模型按 JSON 字段映射 -->
+                    <parameters>true</parameters>
+                </configuration>
             </plugin>
         </plugins>
     </build>

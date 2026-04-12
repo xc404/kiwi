@@ -15,6 +15,17 @@ export interface AiChatResponse {
   content: string;
 }
 
+export interface AiAssistantClientAction {
+  type: string;
+  path?: string;
+  queryParams?: Record<string, string>;
+}
+
+export interface AiAssistantResponse {
+  content: string;
+  actions?: AiAssistantClientAction[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -23,5 +34,10 @@ export class AiChatService {
 
   chat(body: AiChatRequest) {
     return this.http.post<AiChatResponse>('/ai/chat', body, { showLoading: false });
+  }
+
+  /** 可返回 navigate 等动作（如创建字典后跳转） */
+  assistant(body: AiChatRequest) {
+    return this.http.post<AiAssistantResponse>('/ai/assistant', body, { showLoading: false });
   }
 }

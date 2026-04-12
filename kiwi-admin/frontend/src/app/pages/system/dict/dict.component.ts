@@ -1,7 +1,10 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { Editor } from '@app/shared/components/field/field-editor';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -26,11 +29,15 @@ import { columnAction } from '@app/shared/components/crud/actions';
   ],
   standalone: true
 })
-export class DictComponent {
+export class DictComponent implements OnInit {
 
   crudPage = viewChild(CrudPage);
 
   dictItemsVisible = signal(false);
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly http = inject(BaseHttpService);
+  private readonly destroyRef = inject(DestroyRef);
 
   selectItem = signal<any>(undefined);
 
@@ -102,6 +109,34 @@ export class DictComponent {
     this.dictItemsVisible.set(false);
   }
 
+  ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const groupCode = params.get('groupCode');
+      if (groupCode) {
+        this.openGroupByCodeFromRoute(groupCode);
+      }
+    });
+  }
+
+  /** AI 跳转或带 query 进入时，根据 groupCode 打开右侧字典项面板 */
+  private openGroupByCodeFromRoute(groupCode: string): void {
+    this.http
+      .get<{ content?: Array<{ id?: string; groupCode?: string; groupName?: string }> }>('system/dict/group', {
+        page: 0,
+        size: 20,
+        groupCode
+      }, { showLoading: false })
+      .subscribe({
+        next: page => {
+          const rows = page?.content ?? [];
+          const row = rows.find(r => r.groupCode === groupCode || r.id === groupCode);
+          if (row) {
+            this.viewDict(row);
+          }
+        },
+        error: () => {}
+      });
+  }
 
 }
 
