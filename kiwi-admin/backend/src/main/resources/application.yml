@@ -6,6 +6,14 @@ server:
       enabled: true
 
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
+# AI 对话：OpenAI 兼容 /v1/chat/completions；密钥务必用环境变量，勿写入仓库
+kiwi:
+  ai:
+    enabled: ${KIWI_AI_ENABLED:true}
+    api-key: ${KIWI_AI_API_KEY:}
+    base-url: ${KIWI_AI_BASE_URL:https://api.openai.com/v1}
+    model: ${KIWI_AI_MODEL:gpt-4o-mini}
+
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4201,http://localhost:8088}

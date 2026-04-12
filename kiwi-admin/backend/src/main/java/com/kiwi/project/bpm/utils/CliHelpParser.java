@@ -24,10 +24,23 @@ import java.util.regex.Pattern;
 public final class CliHelpParser {
 
     private static final Pattern LONG_OPT = Pattern.compile("--([a-zA-Z][-a-zA-Z0-9]*)");
+    /**
+     * 单横线后「单词」形选项（如 {@code -FlipGain}、{@code -Dname=value}）。{@link #SHORT_OPT} 使用 {@code \\b}，
+     * 只能匹配 {@code -x} 单字符，无法覆盖整段 {@code -FlipGain}。
+     * 单字符 {@code -v} 仍走 SHORT_OPT，故此处要求选项名至少两个字符（首字母 + 至少一字）。
+     */
+    private static final Pattern SINGLE_DASH_WORD_OPT = Pattern.compile(
+            "^-([a-zA-Z][-a-zA-Z0-9_]{1,})(?:=\\S+)?$");
     private static final Pattern SHORT_OPT = Pattern.compile("(^|[\\s,])-([a-zA-Z0-9])\\b");
     /** 行内描述列与选项列之间的分隔：至少两个空格 */
     private static final Pattern OPTION_DESC_SPLIT = Pattern.compile(
             "^\\s*(.+?)\\s{2,}([^\\s].*)$");
+    /**
+     * 仅含逗号分隔的若干短/长选项片段（不含尾随逗号），用于判断「第一个空格」是否在标志列与描述之间。
+     * 注意 {@code -\S+} 会把 {@code -h,} 整块吃掉，故不用。
+     */
+    private static final Pattern FLAGS_ONLY_LINE = Pattern.compile(
+            "^(?:(?:-[a-zA-Z0-9#][-a-zA-Z0-9_.]*|--[a-zA-Z][-a-zA-Z0-9]*)(?:\\s*,\\s*(?:-[a-zA-Z0-9#][-a-zA-Z0-9_.]*|--[a-zA-Z][-a-zA-Z0-9]*))*)$");
 
     /** help 命令最大长度（防注入滥用） */
     private static final int MAX_HELP_COMMAND_LEN = 4000;
@@ -171,12 +184,11 @@ public final class CliHelpParser {
         usedKeys.add("cleanEnv");
         List<NamedOption> named = new ArrayList<>();
         for (ParsedOption o : options) {
-            String base = "cli_" + o.longId().replace('-', '_');
-            String paramKey = uniquifyKey(base, usedKeys);
+            String paramKey = o.longId().replace('-', '_');
             named.add(new NamedOption(o, paramKey));
             BpmComponentParameter p = new BpmComponentParameter();
             p.setKey(paramKey);
-            p.setName(o.primaryLongFlag() + (StringUtils.isNotBlank(o.shortFlag()) ? " (-" + o.shortFlag() + ")" : ""));
+            p.setName(paramKey);
             p.setDescription(o.description());
             p.setGroup("CLI");
             p.setImportant(true);
@@ -191,7 +203,7 @@ public final class CliHelpParser {
         command.setKey("command");
         command.setName("command");
         command.setDescription("由 CLI 选项拼装的完整命令（覆盖父组件 command；Camunda 输入中可使用 JUEL 表达式）");
-        command.setGroup("CLI");
+        command.setGroup("命令行");
         command.setHidden(true);
         command.setImportant(false);
         command.setHtmlType("#text");
@@ -223,12 +235,12 @@ public final class CliHelpParser {
             if (!stripped.startsWith("-")) {
                 continue;
             }
-            Matcher splitM = OPTION_DESC_SPLIT.matcher(line);
-            if (!splitM.matches()) {
+            String[] optDesc = splitOptDescParts(line);
+            if (optDesc == null) {
                 continue;
             }
-            String optPart = splitM.group(1).trim();
-            String descPart = splitM.group(2).trim();
+            String optPart = optDesc[0];
+            String descPart = optDesc[1];
             Matcher longM = LONG_OPT.matcher(optPart);
             String longId = null;
             String primaryLong = null;
@@ -236,26 +248,105 @@ public final class CliHelpParser {
                 longId = longM.group(1);
                 primaryLong = longM.group(0);
             }
-            if (longId == null) {
-                Matcher sm = SHORT_OPT.matcher(optPart);
-                if (!sm.find()) {
-                    continue;
+            String shortFlag = null;
+            if (longId != null) {
+                Matcher smShort = SHORT_OPT.matcher(optPart);
+                while (smShort.find()) {
+                    shortFlag = smShort.group(2);
                 }
-                longId = "opt_" + sm.group(2);
-                primaryLong = "-" + sm.group(2);
+            } else {
+                Matcher multi = SINGLE_DASH_WORD_OPT.matcher(optPart);
+                if (multi.matches()) {
+                    longId = multi.group(1);
+                    primaryLong = multi.group(0);
+                } else {
+                    Matcher sm = SHORT_OPT.matcher(optPart);
+                    if (!sm.find()) {
+                        continue;
+                    }
+                    longId = "opt_" + sm.group(2);
+                    primaryLong = "-" + sm.group(2);
+                    Matcher sm2 = SHORT_OPT.matcher(optPart);
+                    while (sm2.find()) {
+                        shortFlag = sm2.group(2);
+                    }
+                }
             }
             if (!seenLong.add(longId)) {
                 continue;
-            }
-            String shortFlag = null;
-            Matcher sm = SHORT_OPT.matcher(optPart);
-            while (sm.find()) {
-                shortFlag = sm.group(2);
             }
             boolean expects = optionExpectsValue(optPart);
             out.add(new ParsedOption(longId, primaryLong, shortFlag, expects, descPart));
         }
         return out;
+    }
+
+    /**
+     * 拆出「选项片段」与描述。优先匹配 GNU 风格两列（至少两空格）；否则尝试制表符、行内双空格、
+     * 仅标志位后的单空格、可选一个 metavar 词等，使不符合 {@link #OPTION_DESC_SPLIT} 的行仍能解析。
+     *
+     * @return {@code [optPart, descPart]}，无法识别为选项行时返回 {@code null}
+     */
+    static String[] splitOptDescParts(String line) {
+        String stripped = line.stripLeading();
+        if (!stripped.startsWith("-")) {
+            return null;
+        }
+        Matcher splitM = OPTION_DESC_SPLIT.matcher(line);
+        if (splitM.matches()) {
+            return new String[]{splitM.group(1).trim(), splitM.group(2).trim()};
+        }
+        int tab = line.indexOf('\t');
+        if (tab > 0) {
+            String left = line.substring(0, tab).trim();
+            String right = line.substring(tab + 1).trim();
+            if (left.startsWith("-")) {
+                return new String[]{left, right};
+            }
+        }
+        for (int i = 0; i < line.length() - 1; i++) {
+            if (line.charAt(i) == ' ' && line.charAt(i + 1) == ' ') {
+                String left = line.substring(0, i).trim();
+                String right = line.substring(i).trim();
+                if (left.startsWith("-")) {
+                    return new String[]{left, right};
+                }
+            }
+        }
+        int sp = stripped.indexOf(' ');
+        if (sp > 0) {
+            String left = stripped.substring(0, sp);
+            String right = stripped.substring(sp + 1).trim();
+            if (FLAGS_ONLY_LINE.matcher(left).matches()) {
+                int sp2 = right.indexOf(' ');
+                String firstW = sp2 > 0 ? right.substring(0, sp2) : right;
+                String afterW = sp2 > 0 ? right.substring(sp2 + 1).trim() : "";
+                if (isLikelyMetavar(firstW) && !afterW.isEmpty()) {
+                    return new String[]{left + " " + firstW, afterW};
+                }
+                if (isLikelyMetavar(firstW) && afterW.isEmpty()) {
+                    return new String[]{left + " " + firstW, ""};
+                }
+                return new String[]{left, right};
+            }
+            if (left.startsWith("-")) {
+                return new String[]{left, right};
+            }
+        }
+        return new String[]{stripped, ""};
+    }
+
+    private static boolean isLikelyMetavar(String w) {
+        if (StringUtils.isBlank(w)) {
+            return false;
+        }
+        if (w.startsWith("<") && w.endsWith(">")) {
+            return true;
+        }
+        if (w.length() <= 32 && w.equals(w.toUpperCase(Locale.ROOT)) && w.matches("[A-Z0-9_]+")) {
+            return true;
+        }
+        return false;
     }
 
     private static boolean optionExpectsValue(String optPart) {
