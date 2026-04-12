@@ -24,6 +24,13 @@ app:
   password:
     secret: your-long-random-secret-for-password-hashing
 
+# AI 对话（可选）：复制为 application-local.yml 后填写，或使用环境变量 KIWI_AI_API_KEY
+# kiwi:
+#   ai:
+#     api-key: sk-...
+#     base-url: https://api.openai.com/v1
+#     model: gpt-4o-mini
+
 # 可选：外部任务 / Slurm 等扩展
 # kiwi:
 #   bpm:
