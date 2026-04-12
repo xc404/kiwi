@@ -1,5 +1,6 @@
 package com.kiwi.project.tools.jdbc.connection.ctl;
 
+import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.tools.jdbc.connection.dao.ConnectionSettingsDao;
 import com.kiwi.project.tools.jdbc.connection.service.ConnectionService;
 import lombok.AllArgsConstructor;
@@ -37,6 +38,7 @@ public class TableCtl
      *
      * @return 表名列表
      */
+    @Tool(name = "jdbc_listTables", description = "列出某 JDBC 连接下的数据库表名及注释。")
     @GetMapping("connection/{connectionId}/tables")
     public List<TableInfo> getTables(@PathVariable String connectionId) {
         List<TableInfo> tables = new ArrayList<>();
