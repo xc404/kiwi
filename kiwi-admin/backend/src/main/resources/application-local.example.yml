@@ -24,15 +24,14 @@ app:
   password:
     secret: your-long-random-secret-for-password-hashing
 
-# AI 对话（Spring AI OpenAI，可选）：环境变量 KIWI_AI_API_KEY / OPENAI_API_KEY，或取消注释：
+# AI 对话（Spring AI 阿里云 DashScope / 通义，可选）：环境变量 KIWI_AI_API_KEY / DASHSCOPE_API_KEY，或取消注释：
 # spring:
 #   ai:
-#     openai:
+#     dashscope:
 #       api-key: sk-...
-#       base-url: https://api.openai.com
 #       chat:
 #         options:
-#           model: gpt-4o-mini
+#           model: qwen-plus
 
 # 可选：外部任务 / Slurm 等扩展
 # kiwi:

@@ -17,6 +17,7 @@ import java.util.List;
 public class AiChatCtl {
 
     private final AiChatService aiChatService;
+    private final AiAssistantService aiAssistantService;
 
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) {
@@ -24,6 +25,14 @@ public class AiChatCtl {
         ChatResponse out = new ChatResponse();
         out.setContent(text);
         return out;
+    }
+
+    /**
+     * 带服务端动作（如创建字典后返回跳转指令）的助手对话，供前端执行导航等。
+     */
+    @PostMapping("/assistant")
+    public AiAssistantResponse assistant(@RequestBody ChatRequest request) {
+        return aiAssistantService.run(request.getMessages());
     }
 
     @Data

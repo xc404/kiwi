@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 业务开关；模型连接参数见 {@code spring.ai.openai.*}。
+ * 业务开关；模型连接参数见 {@code spring.ai.dashscope.*}（阿里云 DashScope / 通义）。
  */
 @Data
 @ConfigurationProperties(prefix = "kiwi.ai")

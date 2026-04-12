@@ -17,6 +17,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
 
+import { Router } from '@angular/router';
 import { ThemeService } from '@store/common-store/theme.service';
 import { AiChatMessage, AiChatService } from '@services/ai-chat/ai-chat.service';
 
@@ -61,6 +62,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   show = false;
   themeService = inject(ThemeService);
   private aiChat = inject(AiChatService);
+  private router = inject(Router);
   private nzMessage = inject(NzMessageService);
   private destroyRef = inject(DestroyRef);
 
@@ -122,7 +124,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     this.aiChat
-      .chat({ messages: this.buildAiMessages() })
+      .assistant({ messages: this.buildAiMessages() })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
@@ -138,6 +140,7 @@ export class ChatComponent implements OnInit, OnDestroy {
             }
           });
           this.messageArray.push({ msg: res.content ?? '', dir: 'left', isReaded: false });
+          this.applyAssistantActions(res.actions);
           this.scrollToBottom();
           this.cdr.markForCheck();
         },
@@ -154,5 +157,21 @@ export class ChatComponent implements OnInit, OnDestroy {
       question: [null]
     });
     this.scrollToBottom();
+  }
+
+  private applyAssistantActions(actions: { type: string; path?: string; queryParams?: Record<string, string> }[] | undefined): void {
+    if (!actions?.length) {
+      return;
+    }
+    for (const a of actions) {
+      if (a.type === 'navigate' && a.path) {
+        const raw = a.path.replace(/^\/+/, '');
+        const segments = raw.split('/').filter(Boolean);
+        this.router.navigate(segments, { queryParams: a.queryParams ?? {} }).catch(() => {
+          this.nzMessage.warning('无法打开目标页面');
+        });
+        break;
+      }
+    }
   }
 }
