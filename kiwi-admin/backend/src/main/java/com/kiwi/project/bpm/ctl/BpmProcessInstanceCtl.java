@@ -1,7 +1,6 @@
 package com.kiwi.project.bpm.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.framework.ctl.BaseCtl;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,6 @@ import org.camunda.bpm.engine.history.HistoricProcessInstance;
 import org.camunda.bpm.engine.history.HistoricProcessInstanceQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -69,26 +67,8 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         return new PageImpl<>(content, pageable, total);
     }
 
-    @Tool(
-            name = "bpmPi_aiPage",
-            description = "分页查询流程实例历史。processDefinitionKey、businessKey、processInstanceId 可选；instanceState 为 running|completed|all；page 从 0 开始，size 默认 20、最大 100。")
-    public Page<BpmProcessInstanceRow> aiPage(
-            String processDefinitionKey,
-            String businessKey,
-            String processInstanceId,
-            String instanceState,
-            Integer page,
-            Integer size) {
-        int p = page != null && page >= 0 ? page : 0;
-        int s = size != null && size > 0 ? Math.min(size, 100) : 20;
-        return page(
-                processDefinitionKey,
-                businessKey,
-                processInstanceId,
-                null,
-                instanceState != null ? instanceState : "running",
-                PageRequest.of(p, s));
-    }
+
+
 
     private static InstanceState resolveInstanceState(Boolean unfinishedLegacy, String instanceStateParam) {
         if (unfinishedLegacy != null) {
