@@ -25,7 +25,10 @@ import kiwiDescriptor from '../../component/kiwi.json';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from "../palette/pallete";
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
-import { ComponentDescription, ComponentProvider } from '../../component/component-provider';
+import {
+  ComponentDescription,
+  ComponentProvider,
+} from '../../component/component-provider';
 import { ComponentService } from '../../component/component-service';
 import appendComponentModule from '../context-pad/append-component-module';
 import { ProcessDesignService } from '../service/process-degisn.service';
@@ -86,6 +89,8 @@ export class BpmEditor implements OnInit, BpmEditorToken {
 
   elementModel = inject(ElementModel);
 
+  /** 从已保存流程解析的最近使用组件（GET /bpm/component/recent-usage），结构与组件库一致 */
+  recentComponentUsages = signal<ComponentDescription[]>([]);
 
   bpmnModeler!: BpmnModeler<null>;
 
@@ -175,6 +180,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       ],
       kiwiAppendComponent: {
         getComponentGroups: () => this.componentProvider.componentGroups(),
+        getRecentUsages: () => this.recentComponentUsages(),
         append: (sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined) => {
           this.appendComponentFromContextPad(sourceElement, component, event);
         },
@@ -191,7 +197,16 @@ export class BpmEditor implements OnInit, BpmEditorToken {
 
     this.loadDefinition();
 
-
+    this.processDefinitionService.getRecentComponentUsages().subscribe({
+      next: (list) =>
+        this.recentComponentUsages.set(
+          (list ?? []).map((c) => ({
+            ...c,
+            icon: c.icon || 'bpmn-icon-service-task',
+          })),
+        ),
+      error: () => this.recentComponentUsages.set([]),
+    });
   }
 
   dirty() {
@@ -213,10 +228,11 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
         this.processDefinitionService.updateProcess(this.bpmProcess().id, {
           bpmnXml: bpmn.xml
-        }).subscribe(
+        }        ).subscribe(
           (data: any) => {
             this.bpmProcess.set(data)
             this.stackIdx = stackIdx;
+            this.refreshRecentComponentUsages();
             resolve(data)
           }
         );
@@ -341,6 +357,20 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   /**
    * 上下文菜单「追加业务组件」：与左侧组件面板相同的创建与 initElement 逻辑，并作为后继节点连接。
    */
+  /** 保存成功后刷新「最近使用」列表（服务端从已保存 BPMN 解析） */
+  private refreshRecentComponentUsages(): void {
+    this.processDefinitionService.getRecentComponentUsages().subscribe({
+      next: (list) =>
+        this.recentComponentUsages.set(
+          (list ?? []).map((c) => ({
+            ...c,
+            icon: c.icon || 'bpmn-icon-service-task',
+          })),
+        ),
+      error: () => {},
+    });
+  }
+
   appendComponentFromContextPad(
     sourceElement: Element,
     component: ComponentDescription,

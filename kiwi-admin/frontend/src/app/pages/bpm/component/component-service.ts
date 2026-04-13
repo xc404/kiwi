@@ -77,7 +77,6 @@ export class ComponentService {
         this.elementModel.setValue(bpmnModeler, element, "element", "componentId", component.id);
     }
 
-
     getComponentForElement(element: Element): ComponentDescription | undefined {
         const componentId = this.elementModel.getValue(undefined as any, element, "element", "componentId");
         if (!componentId) {

@@ -34,7 +34,6 @@ export abstract class ElementModel {
                 case "name":
                 case "id":
                 case "componentId":
-                    console.log("setValue", key, value);
                     this.updateProperties(bpmnModeler, element, {
                         [key]: value
                     });

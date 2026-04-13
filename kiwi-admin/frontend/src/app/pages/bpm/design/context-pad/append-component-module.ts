@@ -7,6 +7,8 @@ import type { ComponentDescription, ComponentsGroup } from '../../component/comp
 /** 与 BpmnModeler 顶层 options 一并传入 diagram-js `config` */
 export interface KiwiAppendComponentConfig {
   getComponentGroups: () => ComponentsGroup[];
+  /** 从已保存流程解析的最近使用（与组件库同为 ComponentDescription；快照已合并进参数 defaultValue） */
+  getRecentUsages: () => ComponentDescription[];
   append: (sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined) => void;
 }
 
@@ -48,13 +50,25 @@ function canAppendComponent(element: Element): boolean {
   return true;
 }
 
+function hasAnyAppendEntry(kiwi: KiwiAppendComponentConfig | undefined): boolean {
+  if (!kiwi) {
+    return false;
+  }
+  const groups = kiwi.getComponentGroups?.() ?? [];
+  if (groups.some((g) => (g.components?.length ?? 0) > 0)) {
+    return true;
+  }
+  const recent = kiwi.getRecentUsages?.() ?? [];
+  return recent.some((c) => !!c?.id);
+}
+
 interface PopupProviderThis {
   _kiwi?: KiwiAppendComponentConfig;
   _translate: (s: string) => string;
 }
 
 /**
- * 弹出菜单：列出业务组件，选中后由 config.kiwiAppendComponent.append 完成追加。
+ * 弹出菜单：最近使用 + 组件库分组；选中后由 config.kiwiAppendComponent.append 完成追加。
  */
 export function KiwiAppendComponentPopupProvider(
   this: PopupProviderThis,
@@ -71,10 +85,29 @@ KiwiAppendComponentPopupProvider.$inject = ['config', 'popupMenu', 'translate'];
 
 KiwiAppendComponentPopupProvider.prototype.getPopupMenuEntries = function (this: PopupProviderThis, element: Element) {
   const kiwi = this._kiwi;
+  const t = this._translate;
   const entries: Record<string, any> = {};
-  if (!kiwi?.getComponentGroups) {
+  if (!kiwi?.getComponentGroups || !kiwi.getRecentUsages) {
     return entries;
   }
+
+  const recent = kiwi.getRecentUsages() ?? [];
+  for (const c of recent) {
+    if (!c?.id) {
+      continue;
+    }
+    const id = 'kiwi-recent-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+    entries[id] = {
+      label: c.name,
+      description: t('最近使用'),
+      className: c.icon || 'bpmn-icon-service-task',
+      group: { id: '__recent__', name: t('最近使用') },
+      action: (event: MouseEvent) => {
+        kiwi.append(element, c, event);
+      },
+    };
+  }
+
   const groups = kiwi.getComponentGroups() || [];
   for (const g of groups) {
     for (const c of g.components || []) {
@@ -130,6 +163,10 @@ KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function 
   const actions: Record<string, any> = {};
 
   if (!kiwi || !canAppendComponent(element)) {
+    return actions;
+  }
+
+  if (!hasAnyAppendEntry(kiwi)) {
     return actions;
   }
 

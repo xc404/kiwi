@@ -12,6 +12,8 @@ export declare interface ComponentDescription {
     type: "SpringBean" |"SpringExternalTask" | "CallActivity";
     inputParameters?: PropertyDescription[];
     outputParameters?: PropertyDescription[];
+    /** 与后端 RecentBpmComponent.lastUsedFromProcessAt 一致（仅 recent-usage 返回） */
+    lastUsedFromProcessAt?: string;
 }
 
 export declare interface ComponentsGroup {
