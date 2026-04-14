@@ -1,0 +1,4 @@
+# 本地私密配置，勿提交
+remote.yaml
+remote.local.yaml
+*.local.yaml

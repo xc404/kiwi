@@ -1,4 +1,0 @@
-# 本地 SSH/YAML（含主机、密码），勿提交
-remote.yaml
-remote.local.yaml
-*.local.yaml

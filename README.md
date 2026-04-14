@@ -36,6 +36,16 @@ kiwi/
     └── kiwi-bpmn-external-task/
 ```
 
+## IntelliJ IDEA 与 Maven 多模块
+
+- **导入方式**：在 IntelliJ IDEA 中**优先以仓库根目录**（例如 `d:\Projects\kiwi`）作为项目根导入，按 **Maven 多模块** 识别，便于与 Reactor 构建顺序、模块依赖保持一致。
+
+- **单独编 backend**：`kiwi-admin/backend` 的 POM 已包含指向根父 POM 的 `<relativePath>`；在此前提下，若只关心 backend，仍建议：
+  - 在仓库根对父 POM 先执行一次 **`mvn install`**，或
+  - 始终在根目录使用 **`mvn -pl kiwi-admin/backend -am`**（`-am` 会顺带按顺序构建 **kiwi-common**、**kiwi-bpmn-*** 等 backend 所依赖的模块）。
+
+- **本地仓库缓存**：若此前因父 POM 解析失败在 `~/.m2/repository` 中留下不完整产物，在 **relativePath 已正确** 时一般**不必**清空整个本地仓库；若仍异常，可对根 **`pom.xml`** 执行 **`mvn -U`** 强制更新元数据，或删除本地目录 **`~/.m2/repository/com/kiwi/kiwi-parent`**（对应 `com.kiwi:kiwi-parent:1.0.0`）后重试。
+
 ## 环境要求
 
 - **JDK 17**
@@ -90,7 +100,7 @@ npm start
 
 ### 3. 构建
 
-- 后端：`mvn -pl kiwi-admin/backend -am clean package`  
+- 后端：在仓库根执行 `mvn -pl kiwi-admin/backend -am clean package`（与上文「Maven 多模块」一致，`-am` 会构建依赖模块）。  
 - 前端：`cd kiwi-admin/frontend && npm run build`（生产环境会替换为 `environment.prod.ts`）
 
 ## 其他说明

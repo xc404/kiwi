@@ -2,7 +2,8 @@
 """
 远程部署 / 启停 / JDWP 调试（经 SSH，调用本机 OpenSSH 客户端与 Maven）。
 
-连接信息来自单主机 YAML（--config），见 script/ssh/remote.example.yaml。
+在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
+连接信息来自结构化 YAML（--config），见 script/conf/remote.example.yaml（`ssh` + `spring`）。
 auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
 stdin 用于远程脚本，不支持交互式键盘输密。
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -34,6 +36,10 @@ KIWI_ADMIN_ROOT = SCRIPT_DIR.parent
 BACKEND_ROOT = KIWI_ADMIN_ROOT / "backend"
 BACKEND_POM = BACKEND_ROOT / "pom.xml"
 BACKEND_SRC_MAIN = BACKEND_ROOT / "src" / "main"
+# 仓库根（kiwi/）：与根 README 一致，在此执行 mvn -pl kiwi-admin/backend -am 以编依赖模块
+REPO_ROOT = KIWI_ADMIN_ROOT.parent
+ROOT_POM = REPO_ROOT / "pom.xml"
+MAVEN_PL_BACKEND = "kiwi-admin/backend"
 DEFAULT_LOCAL_JAR = BACKEND_ROOT / "target" / "kiwi-admin-1.0.0.jar"
 
 
@@ -61,7 +67,8 @@ class Conn:
     remote_jar_name: str
     jdwp_port: str
     jdwp_bind: str
-    local_debug_port: str
+    # 远端 java -jar 的 --spring.profiles.active（逗号分隔）；None 表示不传
+    spring_profiles_active: str | None
 
 
 def _ssh_prefix_and_env(t: SshTarget) -> tuple[list[str], dict[str, str]]:
@@ -300,10 +307,25 @@ def resolve_mvn_executable(override: str | None) -> str:
 
 
 def run_mvn_package(mvn_override: str | None) -> None:
+    """在仓库根执行 reactor 构建，与根 README 中 mvn -pl kiwi-admin/backend -am 一致。"""
     exe = resolve_mvn_executable(mvn_override)
+    if not ROOT_POM.is_file():
+        print(
+            f"未找到仓库根 POM：{ROOT_POM}。remote_run.py 需放在 kiwi-admin/script/ 下，"
+            "且应在完整克隆的 kiwi 仓库中使用。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     subprocess.run(
-        [exe, "-f", str(BACKEND_POM), "package", "-DskipTests"],
-        cwd=str(KIWI_ADMIN_ROOT),
+        [
+            exe,
+            "-pl",
+            MAVEN_PL_BACKEND,
+            "-am",
+            "package",
+            "-DskipTests",
+        ],
+        cwd=str(REPO_ROOT),
         check=True,
     )
 
@@ -316,19 +338,58 @@ def _local_file_sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _backend_inputs_newest_mtime() -> float:
-    mt = BACKEND_POM.stat().st_mtime
-    if BACKEND_SRC_MAIN.is_dir():
-        for p in BACKEND_SRC_MAIN.rglob("*"):
-            if p.is_file():
-                mt = max(mt, p.stat().st_mtime)
+def _reactor_pom_mtimes() -> float:
+    """参与 backend 反应堆的各 POM 最新修改时间。"""
+    mt = 0.0
+    for p in (ROOT_POM, BACKEND_POM):
+        if p.is_file():
+            mt = max(mt, p.stat().st_mtime)
+    for rel in ("kiwi-common/pom.xml", "kiwi-bpmn/pom.xml"):
+        pp = REPO_ROOT / rel
+        if pp.is_file():
+            mt = max(mt, pp.stat().st_mtime)
+    bpmn = REPO_ROOT / "kiwi-bpmn"
+    if bpmn.is_dir():
+        for child in bpmn.iterdir():
+            if child.is_dir():
+                sub = child / "pom.xml"
+                if sub.is_file():
+                    mt = max(mt, sub.stat().st_mtime)
     return mt
 
 
+def _reactor_src_newest_mtime() -> float:
+    """kiwi-common / kiwi-bpmn* / backend 的 src/main 下最新修改时间。"""
+    mt = 0.0
+    roots: list[Path] = []
+    cm = REPO_ROOT / "kiwi-common" / "src" / "main"
+    if cm.is_dir():
+        roots.append(cm)
+    if BACKEND_SRC_MAIN.is_dir():
+        roots.append(BACKEND_SRC_MAIN)
+    bpmn = REPO_ROOT / "kiwi-bpmn"
+    if bpmn.is_dir():
+        for child in bpmn.iterdir():
+            if child.is_dir():
+                sm = child / "src" / "main"
+                if sm.is_dir():
+                    roots.append(sm)
+    for root in roots:
+        for f in root.rglob("*"):
+            if f.is_file():
+                mt = max(mt, f.stat().st_mtime)
+    return mt
+
+
+def _reactor_inputs_newest_mtime() -> float:
+    return max(_reactor_pom_mtimes(), _reactor_src_newest_mtime())
+
+
 def should_skip_mvn(local_jar: Path) -> bool:
+    """本地 JAR 不早于反应堆相关 POM/源码 → 跳过 mvn。"""
     if not local_jar.is_file():
         return False
-    return local_jar.stat().st_mtime >= _backend_inputs_newest_mtime()
+    return local_jar.stat().st_mtime >= _reactor_inputs_newest_mtime()
 
 
 def remote_jar_sha256(c: Conn, remote_jar_path: str) -> str | None:
@@ -387,31 +448,96 @@ done < <(pgrep -f "$JAR" 2>/dev/null || true)
     run_remote_bash(c, script)
 
 
+def _bash_single_quote(s: str) -> str:
+    """用于嵌入远端 bash 的单引号安全字符串。"""
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
 def remote_start(
     c: Conn,
     remote_dir: str,
     remote_jar_name: str,
     debug: bool,
+    *,
+    follow_log: bool = True,
 ) -> None:
+    """启动远端 JAR；轮询检测 PID 是否仍存活，成功后可 tail -f app.log。"""
     dbg = "1" if debug else "0"
+    sp = (c.spring_profiles_active or "").strip()
+    sp_line = _bash_single_quote(sp) if sp else "''"
+    # 使用 -Dspring.profiles.active=… 且放在 -jar 之前，便于在 Spring 最早日志前生效；
+    # 仅依赖 jar 后的 --spring.profiles.active 时，偶发出现 “No active profile set”。
     script = f"""set -euo pipefail
 cd '{remote_dir}'
 JAR='{remote_dir}/{remote_jar_name}'
 JDWP_PORT='{c.jdwp_port}'
 JDWP_BIND='{c.jdwp_bind}'
 DEBUG='{dbg}'
+SPRING_PROFILES={sp_line}
+JVM_PROFILE=()
+if [[ -n "$SPRING_PROFILES" ]]; then
+  JVM_PROFILE=(-Dspring.profiles.active="$SPRING_PROFILES")
+fi
 if [[ ! -f "$JAR" ]]; then
   echo "Remote JAR not found: $JAR" >&2
   exit 1
 fi
 if [[ "$DEBUG" == "1" ]]; then
-  nohup java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${{JDWP_BIND}}:${{JDWP_PORT}} -jar "$JAR" >> app.log 2>&1 & echo $! > app.pid
+  nohup java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${{JDWP_BIND}}:${{JDWP_PORT}} "${{JVM_PROFILE[@]}}" -jar "$JAR" >> app.log 2>&1 & echo $! > app.pid
 else
-  nohup java -jar "$JAR" >> app.log 2>&1 & echo $! > app.pid
+  nohup java "${{JVM_PROFILE[@]}}" -jar "$JAR" >> app.log 2>&1 & echo $! > app.pid
 fi
-echo "Started PID $(cat app.pid) (logs: {remote_dir}/app.log)"
+PID=$(cat app.pid)
+for _ in {{1..20}}; do
+  if kill -0 "$PID" 2>/dev/null; then
+    echo "启动成功，PID=$PID，日志: {remote_dir}/app.log"
+    exit 0
+  fi
+  sleep 1
+done
+echo "启动失败：进程已退出（20s 内未保持运行）。app.log 末尾：" >&2
+tail -n 120 app.log >&2 || true
+exit 1
 """
     run_remote_bash(c, script)
+    if follow_log:
+        remote_follow_log(c, remote_dir)
+
+
+def remote_follow_log(c: Conn, remote_dir: str) -> None:
+    """SSH 到远端跟踪 app.log（Ctrl+C 结束）。password+paramiko 时用 Paramiko 流式输出。"""
+    log_path = f"{remote_dir.rstrip('/')}/app.log"
+    print(f"\n跟踪远端日志（Ctrl+C 退出 tail）：{log_path}\n", file=sys.stderr)
+    if _password_uses_paramiko(c):
+        _remote_follow_log_paramiko(c, log_path)
+        return
+    cmd, env = ssh_cmd(c)
+    rq = shlex.quote(log_path)
+    subprocess.run(
+        cmd + ["bash", "-lc", f"tail -n 80 -f {rq}"],
+        env=env,
+    )
+
+
+def _remote_follow_log_paramiko(c: Conn, log_path: str) -> None:
+    import paramiko
+
+    rq = shlex.quote(log_path)
+    with _paramiko_client(c) as client:
+        _, stdout, _ = client.exec_command(
+            f"tail -n 80 -f {rq}",
+            get_pty=True,
+        )
+        ch = stdout.channel
+        try:
+            while True:
+                data = ch.recv(4096)
+                if not data:
+                    break
+                sys.stdout.write(data.decode("utf-8", errors="replace"))
+                sys.stdout.flush()
+        except KeyboardInterrupt:
+            ch.close()
 
 
 def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
@@ -437,7 +563,10 @@ def cmd_deploy(
 
     if not skip_build:
         if incremental and should_skip_mvn(local_jar):
-            print("增量：本地 JAR 不早于 pom / 源码树修改时间，跳过 mvn package。")
+            print(
+                "增量：本地 JAR 不早于反应堆相关 POM（含根父 POM、kiwi-common/kiwi-bpmn 等）"
+                "与 src/main 修改时间，跳过 mvn package。",
+            )
         else:
             if not incremental:
                 print("全量：执行 mvn package …")
@@ -463,41 +592,64 @@ def cmd_deploy(
     return True
 
 
-def load_ssh_target(
-    path: Path,
+def _ssh_dict_from_raw(raw: dict) -> dict:
+    """支持 `ssh:` 嵌套；兼容旧版平铺（仅 ssh 相关键）。"""
+    if "ssh" in raw and isinstance(raw["ssh"], dict):
+        return dict(raw["ssh"])
+    reserved = {"spring"}
+    return {k: v for k, v in raw.items() if k not in reserved}
+
+
+def _parse_spring_profiles(raw: dict) -> str | None:
+    """解析 spring.profiles_active / spring.profiles。"""
+    sp = raw.get("spring")
+    if not isinstance(sp, dict):
+        return None
+    pa = sp.get("profiles_active")
+    if pa is not None:
+        if isinstance(pa, list):
+            joined = ",".join(str(x).strip() for x in pa if str(x).strip())
+            return joined or None
+        s = str(pa).strip()
+        return s or None
+    pl = sp.get("profiles")
+    if pl is not None:
+        if isinstance(pl, list):
+            joined = ",".join(str(x).strip() for x in pl if str(x).strip())
+            return joined or None
+        s = str(pl).strip()
+        return s or None
+    return None
+
+
+def _build_ssh_target_from_dict(
+    ssh: dict,
     *,
     override_hostname: str | None,
     override_user: str | None,
     override_port: int | None,
 ) -> SshTarget:
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        print("YAML 根节点必须是映射（单主机一份配置）。", file=sys.stderr)
-        sys.exit(1)
-
-    hostname = override_hostname or raw.get("hostname")
-    user = override_user or raw.get("user")
-    port = override_port if override_port is not None else raw.get("port", 22)
-    auth = (raw.get("auth") or "key").strip().lower()
+    hostname = override_hostname or ssh.get("hostname")
+    user = override_user or ssh.get("user")
+    port = override_port if override_port is not None else ssh.get("port", 22)
+    auth = (ssh.get("auth") or "key").strip().lower()
     if auth not in ("key", "password"):
-        print("auth 必须是 key 或 password。", file=sys.stderr)
+        print("ssh.auth 必须是 key 或 password。", file=sys.stderr)
         sys.exit(1)
     if not hostname or not user:
-        print("YAML 中 hostname、user 为必填（或通过命令行覆盖）。", file=sys.stderr)
+        print("YAML 中 ssh.hostname、ssh.user 为必填（或通过命令行覆盖）。", file=sys.stderr)
         sys.exit(1)
     if not isinstance(port, int):
         port = int(port)
 
-    label = str(raw.get("host") or f"{user}@{hostname}")
-    identity = raw.get("identity_file")
-    password_raw = raw.get("password")
+    label = str(ssh.get("host") or f"{user}@{hostname}")
+    identity = ssh.get("identity_file")
+    password_raw = ssh.get("password")
     password = str(password_raw) if password_raw is not None else None
-    password_env = raw.get("password_env")
-    strict_ = str(raw.get("strict_host_key_checking") or "accept-new")
+    password_env = ssh.get("password_env")
+    strict_ = str(ssh.get("strict_host_key_checking") or "accept-new")
 
-    if auth == "key":
-        pass
-    else:
+    if auth != "key":
         identity = None
 
     return SshTarget(
@@ -513,13 +665,35 @@ def load_ssh_target(
     )
 
 
+def load_remote_config(
+    path: Path,
+    *,
+    override_hostname: str | None,
+    override_user: str | None,
+    override_port: int | None,
+) -> tuple[SshTarget, str | None]:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        print("YAML 根节点必须是映射。", file=sys.stderr)
+        sys.exit(1)
+    spring = _parse_spring_profiles(raw)
+    ssh = _ssh_dict_from_raw(raw)
+    target = _build_ssh_target_from_dict(
+        ssh,
+        override_hostname=override_hostname,
+        override_user=override_user,
+        override_port=override_port,
+    )
+    return target, spring
+
+
 def add_connection_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--config",
         type=Path,
         required=True,
         metavar="PATH",
-        help="单主机连接 YAML（见 script/ssh/remote.example.yaml）",
+        help="结构化 YAML（见 script/conf/remote.example.yaml：ssh + spring）",
     )
     p.add_argument(
         "--hostname",
@@ -560,13 +734,8 @@ def add_connection_args(p: argparse.ArgumentParser) -> None:
     )
     p.add_argument(
         "--jdwp-bind",
-        default="127.0.0.1",
-        help="JDWP 绑定地址（默认：127.0.0.1）",
-    )
-    p.add_argument(
-        "--local-debug-port",
-        default="5005",
-        help="文档/提示用：本机 SSH -L 转发时建议的本地端口（默认：5005）",
+        default="0.0.0.0",
+        help="JDWP 绑定地址（默认：0.0.0.0 监听所有网卡，便于 IDE 直连 ssh.hostname:jdwp-port；仅本机调试用 127.0.0.1）",
     )
     p.add_argument(
         "--mvn",
@@ -574,17 +743,24 @@ def add_connection_args(p: argparse.ArgumentParser) -> None:
         metavar="PATH",
         help="Maven 可执行文件（默认：从 PATH 查找 mvn / mvn.cmd，或 MAVEN_HOME、环境变量 MVN）",
     )
+    p.add_argument(
+        "--spring-profiles",
+        default=None,
+        metavar="PROFILES",
+        help="覆盖 YAML 中 spring.profiles_active（逗号分隔，如 local,dev）；传空字符串可清除",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ex_yaml = SCRIPT_DIR / "ssh" / "remote.example.yaml"
+    ex_yaml = SCRIPT_DIR / "conf" / "remote.example.yaml"
     p = argparse.ArgumentParser(
         description="Kiwi-admin 远程部署、启停与 JDWP 调试（SSH + scp + mvn）。",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 增量更新（默认开启）：
-  · 未指定 --skip-build 时：若本地 JAR 已存在且不早于 backend/pom.xml 与 backend/src/main 下
-    最新修改时间，则跳过 mvn package。
+  · 未指定 --skip-build 时：若本地 JAR 已存在且不早于根 POM、backend 与各依赖模块 POM
+    及 kiwi-common / kiwi-bpmn* / backend 下 src/main 的最新修改时间，则跳过 mvn package。
+  · 构建命令与仓库根 README 一致：在仓库根执行 mvn -pl kiwi-admin/backend -am package -DskipTests。
   · 上传前：比较本地与远端 JAR 的 SHA256；一致则跳过备份与 scp。
 
 全量：使用 --no-incremental 将始终执行 mvn（在未 --skip-build 时）并始终上传。
@@ -593,8 +769,8 @@ def build_parser() -> argparse.ArgumentParser:
   优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
   stdin 用于远程脚本，不支持交互式键盘输密。
 
-本地端口转发示例（IDE 连接 localhost 的 LOCAL_DEBUG_PORT）：
-  ssh -p <port> -L <local_debug_port>:127.0.0.1:<jdwp_port> <user>@<hostname> -N
+远程调试：默认 JDWP 绑定 0.0.0.0，在 IDE 中使用「主机 = YAML 中 ssh.hostname、端口 = --jdwp-port」直连，
+  无需本机 ssh -L 转发（请确保防火墙与安全组放行该端口）。
 
 配置示例：{ex_yaml}
 """.strip(),
@@ -631,12 +807,17 @@ def build_parser() -> argparse.ArgumentParser:
     start_p = sub.add_parser(
         "start",
         parents=[parent],
-        help="启动远端 JAR（nohup，app.log / app.pid）",
+        help="启动远端 JAR；检测 PID 存活后默认 tail -f app.log",
     )
     start_p.add_argument(
         "--debug",
         action="store_true",
         help="附加 JDWP 后启动",
+    )
+    start_p.add_argument(
+        "--no-tail",
+        action="store_true",
+        help="启动成功检测通过后不执行 tail -f app.log",
     )
 
     restart_p = sub.add_parser(
@@ -645,6 +826,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="stop 再 start",
     )
     restart_p.add_argument("--debug", action="store_true", help="启动时附加 JDWP")
+    restart_p.add_argument(
+        "--no-tail",
+        action="store_true",
+        help="启动成功检测通过后不执行 tail -f app.log",
+    )
 
     dd_p = sub.add_parser(
         "debug-deploy",
@@ -652,6 +838,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="deploy 后以 JDWP 启动",
     )
     add_deploy_flags(dd_p)
+    dd_p.add_argument(
+        "--no-tail",
+        action="store_true",
+        help="启动成功检测通过后不执行 tail -f app.log",
+    )
 
     return p
 
@@ -671,12 +862,17 @@ def _conn_from_ns(ns: argparse.Namespace) -> Conn:
     if not cfg_path.is_file():
         print(f"配置文件不存在: {cfg_path}", file=sys.stderr)
         sys.exit(1)
-    target = load_ssh_target(
+    target, spring_yaml = load_remote_config(
         cfg_path,
         override_hostname=ns.hostname,
         override_user=ns.user,
         override_port=ns.port,
     )
+    spring = spring_yaml
+    if getattr(ns, "spring_profiles", None) is not None:
+        s = str(ns.spring_profiles).strip()
+        spring = s if s else None
+
     return Conn(
         target=target,
         ssh_label=target.label,
@@ -685,7 +881,7 @@ def _conn_from_ns(ns: argparse.Namespace) -> Conn:
         remote_jar_name=ns.remote_jar_name,
         jdwp_port=ns.jdwp_port,
         jdwp_bind=ns.jdwp_bind,
-        local_debug_port=ns.local_debug_port,
+        spring_profiles_active=spring,
     )
 
 
@@ -699,6 +895,7 @@ def main(argv: list[str] | None = None) -> None:
     incremental = not getattr(args, "no_incremental", False)
     skip_build = getattr(args, "skip_build", False)
     debug = getattr(args, "debug", False)
+    no_tail = getattr(args, "no_tail", False)
 
     mvn_override: str | None = getattr(args, "mvn", None)
 
@@ -714,11 +911,23 @@ def main(argv: list[str] | None = None) -> None:
         remote_stop(c, c.remote_dir, c.remote_jar_name)
         return
     if args.command == "start":
-        remote_start(c, c.remote_dir, c.remote_jar_name, debug=debug)
+        remote_start(
+            c,
+            c.remote_dir,
+            c.remote_jar_name,
+            debug=debug,
+            follow_log=not no_tail,
+        )
         return
     if args.command == "restart":
         remote_stop(c, c.remote_dir, c.remote_jar_name)
-        remote_start(c, c.remote_dir, c.remote_jar_name, debug=debug)
+        remote_start(
+            c,
+            c.remote_dir,
+            c.remote_jar_name,
+            debug=debug,
+            follow_log=not no_tail,
+        )
         return
     if args.command == "debug-deploy":
         cmd_deploy(
@@ -728,7 +937,13 @@ def main(argv: list[str] | None = None) -> None:
             mvn_override=mvn_override,
         )
         remote_stop(c, c.remote_dir, c.remote_jar_name)
-        remote_start(c, c.remote_dir, c.remote_jar_name, debug=True)
+        remote_start(
+            c,
+            c.remote_dir,
+            c.remote_jar_name,
+            debug=True,
+            follow_log=not no_tail,
+        )
         return
 
     raise AssertionError(f"unhandled command: {args.command}")
