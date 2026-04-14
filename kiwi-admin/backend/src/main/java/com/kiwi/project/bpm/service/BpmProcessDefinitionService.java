@@ -4,13 +4,13 @@ import cn.hutool.core.lang.UUID;
 import com.kiwi.framework.session.SessionService;
 import com.kiwi.project.bpm.model.BpmProcess;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
+import org.springframework.util.StreamUtils;
 
-import java.io.File;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
@@ -23,6 +23,7 @@ public class BpmProcessDefinitionService implements InitializingBean
     private String processDefinitionTemplate;
     public static final String XBPM = "xbpm";
     private final SessionService sessionService;
+    private final ResourceLoader resourceLoader;
 
     public String getInitProcessDefinitionXml(String id, String processDefinitionName) {
         if( processDefinitionTemplate != null ) {
@@ -35,8 +36,10 @@ public class BpmProcessDefinitionService implements InitializingBean
     @Override
     public void afterPropertiesSet() throws Exception {
 
-        File file = ResourceUtils.getFile(processDefinitionTemplatePath);
-        this.processDefinitionTemplate = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+        var resource = resourceLoader.getResource(processDefinitionTemplatePath);
+        try (InputStream in = resource.getInputStream()) {
+            this.processDefinitionTemplate = StreamUtils.copyToString(in, StandardCharsets.UTF_8);
+        }
 
     }
 

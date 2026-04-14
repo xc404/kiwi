@@ -12,12 +12,12 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
+import org.springframework.core.io.Resource;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +37,8 @@ public class PermissionService implements InitializingBean, ApplicationContextAw
     public void afterPropertiesSet() throws Exception {
 
 
-        File file = ResourceUtils.getFile(permissionFile);
-        try( var inputStream = file.toURI().toURL().openStream() ) {
+        Resource resource = context.getResource(permissionFile);
+        try (InputStream inputStream = resource.getInputStream()) {
             JsonNode jsonNode = JsonUtil.readTree(inputStream);
             JsonNode permissionsNode = jsonNode.path("permissions");
             List<Permission> permissions = JsonUtil.treeToValue(permissionsNode, JsonUtil.getParametricType(List.class, Permission.class));
