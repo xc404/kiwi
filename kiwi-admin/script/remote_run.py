@@ -3,7 +3,8 @@
 远程部署 / 启停 / JDWP 调试（经 SSH，调用本机 OpenSSH 客户端与 Maven）。
 
 连接信息来自单主机 YAML（--config），见 script/ssh/remote.example.yaml。
-密码模式依赖 sshpass（通过 SSHPASS 传参，stdin 用于远程脚本故不支持交互式输密）。
+auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
+stdin 用于远程脚本，不支持交互式键盘输密。
 
 依赖：pip install -r requirements-remote.txt
 """
@@ -15,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,7 +65,7 @@ class Conn:
 
 
 def _ssh_prefix_and_env(t: SshTarget) -> tuple[list[str], dict[str, str]]:
-    """password 模式前置 sshpass，并把密码写入本次子进程环境。"""
+    """password 且使用系统 ssh 时前置 sshpass，并把密码写入本次子进程环境。"""
     env = dict(os.environ)
     if t.auth != "password":
         return [], env
@@ -75,14 +77,10 @@ def _ssh_prefix_and_env(t: SshTarget) -> tuple[list[str], dict[str, str]]:
             file=sys.stderr,
         )
         sys.exit(1)
-    if not shutil.which("sshpass"):
-        print(
-            "auth: password 需要本机已安装 sshpass（stdin 用于远程脚本，无法交互输入密码）。",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    env["SSHPASS"] = pw
-    return ["sshpass", "-e"], env
+    if shutil.which("sshpass"):
+        env["SSHPASS"] = pw
+        return ["sshpass", "-e"], env
+    return [], env
 
 
 def _resolve_password(t: SshTarget) -> str | None:
@@ -116,6 +114,98 @@ def _remote_user_host(t: SshTarget) -> str:
     return f"{t.user}@{t.hostname}"
 
 
+def _password_uses_paramiko(c: Conn) -> bool:
+    """password 且无 sshpass 时用 paramiko（不占用 stdin 传脚本）。"""
+    return c.target.auth == "password" and not shutil.which("sshpass")
+
+
+def _ensure_password_backend(c: Conn) -> None:
+    if c.target.auth != "password":
+        return
+    if not _resolve_password(c.target):
+        print(
+            "auth: password 时需配置 YAML 的 password、"
+            "或 password_env 指向的环境变量、或设置 KIWI_SSH_PASSWORD。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if shutil.which("sshpass"):
+        return
+    try:
+        import paramiko  # noqa: F401
+    except ImportError:
+        print(
+            "auth: password 时：可在 PATH 中安装 sshpass，"
+            "或执行 pip install paramiko（已列入 requirements-remote.txt）。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+@contextmanager
+def _paramiko_client(c: Conn):
+    import paramiko
+
+    t = c.target
+    pw = _resolve_password(t)
+    assert pw is not None
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(
+        hostname=t.hostname,
+        port=t.port,
+        username=t.user,
+        password=pw,
+        timeout=60,
+        allow_agent=False,
+        look_for_keys=False,
+    )
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+def _run_remote_bash_paramiko(c: Conn, script: str) -> None:
+    with _paramiko_client(c) as client:
+        stdin, stdout, stderr = client.exec_command("bash -s", get_pty=False)
+        stdin.write(script.encode("utf-8"))
+        stdin.channel.shutdown_write()
+        err_b = stderr.read()
+        out_b = stdout.read()
+        rc = stdout.channel.recv_exit_status()
+    if rc != 0:
+        msg = (err_b.decode("utf-8", errors="replace") or out_b.decode("utf-8", errors="replace")).strip()
+        if msg:
+            print(msg, file=sys.stderr)
+        sys.exit(rc)
+
+
+def _run_remote_capture_paramiko(c: Conn, script: str) -> tuple[int, str, str]:
+    with _paramiko_client(c) as client:
+        stdin, stdout, stderr = client.exec_command("bash -s", get_pty=False)
+        stdin.write(script.encode("utf-8"))
+        stdin.channel.shutdown_write()
+        out_b = stdout.read()
+        err_b = stderr.read()
+        rc = stdout.channel.recv_exit_status()
+    return (
+        rc,
+        out_b.decode("utf-8", errors="replace"),
+        err_b.decode("utf-8", errors="replace"),
+    )
+
+
+def _scp_upload_paramiko(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
+    remote_path = f"{remote_dir.rstrip('/')}/{remote_jar_name}"
+    with _paramiko_client(c) as client:
+        sftp = client.open_sftp()
+        try:
+            sftp.put(str(local_jar), remote_path)
+        finally:
+            sftp.close()
+
+
 def ssh_cmd(c: Conn) -> tuple[list[str], dict[str, str]]:
     t = c.target
     prefix, env = _ssh_prefix_and_env(t)
@@ -131,12 +221,17 @@ def scp_cmd(c: Conn) -> tuple[list[str], str, dict[str, str]]:
 
 
 def run_remote_bash(c: Conn, script: str) -> None:
+    if _password_uses_paramiko(c):
+        _run_remote_bash_paramiko(c, script)
+        return
     cmd, env = ssh_cmd(c)
     cmd = cmd + ["bash", "-s"]
     subprocess.run(cmd, input=script, text=True, check=True, env=env)
 
 
 def run_remote_capture(c: Conn, script: str) -> tuple[int, str, str]:
+    if _password_uses_paramiko(c):
+        return _run_remote_capture_paramiko(c, script)
     cmd, env = ssh_cmd(c)
     cmd = cmd + ["bash", "-s"]
     p = subprocess.run(
@@ -149,9 +244,65 @@ def run_remote_capture(c: Conn, script: str) -> tuple[int, str, str]:
     return p.returncode, p.stdout, p.stderr
 
 
-def run_mvn_package() -> None:
+def resolve_mvn_executable(override: str | None) -> str:
+    """
+    解析 Maven 可执行路径。Windows 会尝试 mvn.cmd；支持 MVN / MAVEN_CMD / MAVEN_HOME。
+    仅在需要执行 package 时调用，避免 stop/start 等子命令依赖 mvn。
+    """
+    if override:
+        o = override.strip()
+        p = Path(o)
+        if p.is_file():
+            return str(p.resolve())
+        w = shutil.which(o)
+        if w:
+            return w
+        print(f"无法解析 Maven 可执行文件: {override}", file=sys.stderr)
+        sys.exit(1)
+
+    for env_key in ("MVN", "MAVEN_CMD"):
+        v = os.environ.get(env_key)
+        if not v:
+            continue
+        v = v.strip().strip('"')
+        p = Path(v)
+        if p.is_file():
+            return str(p.resolve())
+        w = shutil.which(v)
+        if w:
+            return w
+
+    mh = (os.environ.get("MAVEN_HOME") or "").strip().strip('"')
+    if mh:
+        bin_dir = Path(mh) / "bin"
+        if sys.platform == "win32":
+            for n in ("mvn.cmd", "mvn.exe", "mvn"):
+                cand = bin_dir / n
+                if cand.is_file():
+                    return str(cand.resolve())
+        else:
+            cand = bin_dir / "mvn"
+            if cand.is_file():
+                return str(cand.resolve())
+
+    search = ("mvn.cmd", "mvn") if sys.platform == "win32" else ("mvn", "mvn.cmd")
+    for name in search:
+        w = shutil.which(name)
+        if w:
+            return w
+
+    print(
+        "未找到 Maven（mvn）。请安装 Maven 并加入 PATH，或设置环境变量 MAVEN_HOME / MVN，"
+        "或使用 --mvn 指定 mvn.cmd（Windows）或 mvn 的完整路径。",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def run_mvn_package(mvn_override: str | None) -> None:
+    exe = resolve_mvn_executable(mvn_override)
     subprocess.run(
-        ["mvn", "-f", str(BACKEND_POM), "package", "-DskipTests"],
+        [exe, "-f", str(BACKEND_POM), "package", "-DskipTests"],
         cwd=str(KIWI_ADMIN_ROOT),
         check=True,
     )
@@ -264,6 +415,9 @@ echo "Started PID $(cat app.pid) (logs: {remote_dir}/app.log)"
 
 
 def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
+    if _password_uses_paramiko(c):
+        _scp_upload_paramiko(c, local_jar, remote_dir, remote_jar_name)
+        return
     cmd, host, env = scp_cmd(c)
     dest = f"{host}:{remote_dir}/{remote_jar_name}"
     subprocess.run(cmd + [str(local_jar), dest], check=True, env=env)
@@ -274,6 +428,7 @@ def cmd_deploy(
     *,
     skip_build: bool,
     incremental: bool,
+    mvn_override: str | None,
 ) -> bool:
     local_jar = c.local_jar
     remote_dir = c.remote_dir
@@ -286,7 +441,7 @@ def cmd_deploy(
         else:
             if not incremental:
                 print("全量：执行 mvn package …")
-            run_mvn_package()
+            run_mvn_package(mvn_override)
 
     if not local_jar.is_file():
         print(f"本地 JAR 不存在: {local_jar}", file=sys.stderr)
@@ -413,6 +568,12 @@ def add_connection_args(p: argparse.ArgumentParser) -> None:
         default="5005",
         help="文档/提示用：本机 SSH -L 转发时建议的本地端口（默认：5005）",
     )
+    p.add_argument(
+        "--mvn",
+        default=None,
+        metavar="PATH",
+        help="Maven 可执行文件（默认：从 PATH 查找 mvn / mvn.cmd，或 MAVEN_HOME、环境变量 MVN）",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -428,8 +589,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 全量：使用 --no-incremental 将始终执行 mvn（在未 --skip-build 时）并始终上传。
 
-密码认证：YAML 中 auth: password，并配置 password 或 password_env / KIWI_SSH_PASSWORD；
-  需安装 sshpass（通过 SSHPASS 传密码）。stdin 用于远程脚本，不支持交互式输密。
+密码认证：YAML 中 auth: password，并配置 password 或 password_env / KIWI_SSH_PASSWORD。
+  优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
+  stdin 用于远程脚本，不支持交互式键盘输密。
 
 本地端口转发示例（IDE 连接 localhost 的 LOCAL_DEBUG_PORT）：
   ssh -p <port> -L <local_debug_port>:127.0.0.1:<jdwp_port> <user>@<hostname> -N
@@ -533,12 +695,20 @@ def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     c = _conn_from_ns(args)
+    _ensure_password_backend(c)
     incremental = not getattr(args, "no_incremental", False)
     skip_build = getattr(args, "skip_build", False)
     debug = getattr(args, "debug", False)
 
+    mvn_override: str | None = getattr(args, "mvn", None)
+
     if args.command == "deploy":
-        cmd_deploy(c, skip_build=skip_build, incremental=incremental)
+        cmd_deploy(
+            c,
+            skip_build=skip_build,
+            incremental=incremental,
+            mvn_override=mvn_override,
+        )
         return
     if args.command == "stop":
         remote_stop(c, c.remote_dir, c.remote_jar_name)
@@ -551,7 +721,12 @@ def main(argv: list[str] | None = None) -> None:
         remote_start(c, c.remote_dir, c.remote_jar_name, debug=debug)
         return
     if args.command == "debug-deploy":
-        cmd_deploy(c, skip_build=skip_build, incremental=incremental)
+        cmd_deploy(
+            c,
+            skip_build=skip_build,
+            incremental=incremental,
+            mvn_override=mvn_override,
+        )
         remote_stop(c, c.remote_dir, c.remote_jar_name)
         remote_start(c, c.remote_dir, c.remote_jar_name, debug=True)
         return
