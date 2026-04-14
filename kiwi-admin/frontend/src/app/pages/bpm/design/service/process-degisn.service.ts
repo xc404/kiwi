@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import type { ComponentDescription } from '../../component/component-provider';
 
 @Injectable({
     providedIn: 'root'
@@ -13,7 +13,7 @@ export class ProcessDesignService {
 
     constructor(private http: BaseHttpService) {
 
-     }
+    }
 
     getProcessList(): Observable<any> {
         return this.http.get(`${this.apiUrl}/list`);
@@ -29,12 +29,12 @@ export class ProcessDesignService {
     }
 
 
-       create(parentId: string, processName: string): Observable<any> {
-       return this.http.post(`${this.apiUrl}`, { name:processName, folderId: parentId});
+    create(parentId: string, processName: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}`, { name: processName, folderId: parentId });
     }
-       
+
     saveAsProcess(id: any, processName: any, xml: any): Observable<any> {
-       return this.http.post(`${this.apiUrl}/${id}`, { name:processName, bpmnXml: xml });
+        return this.http.post(`${this.apiUrl}/${id}`, { name: processName, bpmnXml: xml });
     }
 
     deleteProcess(id: string): Observable<any> {
@@ -49,8 +49,8 @@ export class ProcessDesignService {
         return this.http.post(`${this.apiUrl}/validate`, processData);
     }
 
-        startProcess(id: string) {
-       return this.http.post(`${this.apiUrl}/${id}/start`, {});
+    startProcess(id: string) {
+        return this.http.post(`${this.apiUrl}/${id}/start`, {});
     }
 
     /** 未保存 BPMN 预览：包装为逻辑组件契约（只读分析） */
@@ -71,5 +71,16 @@ export class ProcessDesignService {
         body: { name: string; description?: string; version?: string },
     ) {
         return this.http.post<any>(`${this.apiUrl}/${processId}/save-as-component`, body);
+    }
+
+    /**
+     * 从当前用户已保存流程 BPMN 按需解析的「最近使用组件」（不落库）。
+     * 与组件库一致为 ComponentDescription / 后端 BpmComponent，快照已合并进参数的 defaultValue；另含 lastUsedFromProcessAt（RecentBpmComponent）。
+     */
+    getRecentComponentUsages(): Observable<ComponentDescription[]> {
+        return this.http.get<any>('/bpm/component/recent-usage')
+            .pipe(map(res => {
+                return res.content as ComponentDescription[];
+            }));
     }
 }
