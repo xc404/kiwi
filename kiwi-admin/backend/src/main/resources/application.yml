@@ -30,7 +30,7 @@ spring:
       chat:
         options:
           model: ${KIWI_AI_MODEL:qwen-plus}
-    # MCP Server：与助手共用 KiwiAdminAiTools（ToolCallback）；默认路径见 Spring AI 文档（如 /sse）。
+    # MCP Server：与助手共用 MenuAssistantTools（ToolCallback）；默认路径见 Spring AI 文档（如 /sse）。
     # 关闭可设环境变量 SPRING_AI_MCP_SERVER_ENABLED=false
     mcp:
       server:

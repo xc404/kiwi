@@ -1,6 +1,6 @@
 package com.kiwi.project.ai;
 
-import com.kiwi.project.ai.mcp.AiAssistantToolContext;
+import com.kiwi.project.system.ai.MenuAssistantActionContext;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 助手对话：基于 {@link ChatClient} 与 Spring AI 原生 tool-calling；工具由 {@link com.kiwi.project.ai.mcp.KiwiAdminAiTools} 提供，
+ * 助手对话：基于 {@link ChatClient} 与 Spring AI 原生 tool-calling；菜单相关工具由 {@link com.kiwi.project.system.ai.MenuAssistantTools} 提供，
  * 并通过 MCP Server（WebMVC/SSE）对外暴露同一套 {@link org.springframework.ai.tool.ToolCallback}。
  */
 @Service
@@ -21,15 +21,15 @@ public class AiAssistantService {
 
     private final ChatClient kiwiAssistantChatClient;
     private final AiChatProperties properties;
-    private final AiAssistantToolContext toolContext;
+    private final MenuAssistantActionContext menuAssistantActionContext;
 
     public AiAssistantService(
             @Qualifier("kiwiAssistantChatClient") ChatClient kiwiAssistantChatClient,
             AiChatProperties properties,
-            AiAssistantToolContext toolContext) {
+            MenuAssistantActionContext menuAssistantActionContext) {
         this.kiwiAssistantChatClient = kiwiAssistantChatClient;
         this.properties = properties;
-        this.toolContext = toolContext;
+        this.menuAssistantActionContext = menuAssistantActionContext;
     }
 
     public AiAssistantResponse run(List<AiChatMessage> messages) {
@@ -51,7 +51,7 @@ public class AiAssistantService {
             throw new IllegalArgumentException("没有有效的对话内容");
         }
 
-        toolContext.beginRequest();
+        menuAssistantActionContext.beginRequest();
 
         String content;
         List<AiAssistantResponse.ClientAction> actions;
@@ -62,7 +62,7 @@ public class AiAssistantService {
                     .call()
                     .content();
         } finally {
-            actions = toolContext.drainActions();
+            actions = menuAssistantActionContext.drainActions();
         }
 
         if (content == null || content.isBlank()) {
