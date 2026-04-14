@@ -4,7 +4,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import com.kiwi.project.system.ai.MenuAssistantTools;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,10 +25,10 @@ public class KiwiAdminAiMcpConfiguration {
     @Bean
     public ChatClient kiwiAssistantChatClient(
             ChatModel chatModel,
-            ToolCallbackProvider kiwiControllerToolCallbackProvider) {
+            ToolCallbackProvider kiwiToolCallbackProvider) {
         return ChatClient.builder(chatModel)
                 .defaultSystem(SYSTEM_PROMPT)
-                .defaultToolCallbacks(kiwiAdminToolCallbackProvider, kiwiControllerToolCallbackProvider)
+                .defaultToolCallbacks(kiwiToolCallbackProvider)
                 .build();
     }
 }
