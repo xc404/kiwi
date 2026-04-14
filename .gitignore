@@ -50,3 +50,4 @@ frontend/node_modules/
 # Local Spring overrides (secrets); copy from application-local.example.yml
 **/application-local.yml
 kiwi-admin/frontend/dist/
+kiwi-admin/script/__pycache__/
