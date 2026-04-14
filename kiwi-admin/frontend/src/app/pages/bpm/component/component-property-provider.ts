@@ -9,7 +9,6 @@ export class ComponentPropertyProvider implements PropertyProvider {
     private componentService = inject(ComponentService);
 
     getProperties(element: Element): PropertyTab[] {
-        console.log(element);
         
         if (element.type !== "bpmn:ServiceTask" && element.type !== "bpmn:CallActivity") {
             return [];

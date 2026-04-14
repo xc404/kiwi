@@ -1,8 +1,10 @@
 package com.kiwi.project.bpm.ctl;
 
 import org.springframework.ai.tool.annotation.Tool;
+import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
+import com.kiwi.project.bpm.service.BpmComponentRecentUsageService;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
@@ -36,11 +38,27 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("bpm/component")
 @RequiredArgsConstructor
-public class BpmComponentCtl
+public class BpmComponentCtl extends BaseCtl
 {
 
     private final BpmComponentDao bpmComponentDao;
     private final BpmComponentService bpmComponentService;
+    private final BpmComponentRecentUsageService bpmComponentRecentUsageService;
+
+    /**
+     * 不落库：从当前用户已保存流程的 BPMN 中按需解析「最近使用的组件」；
+     * 快照值已合并进 {@link BpmComponent#getInputParameters()}/{@link BpmComponent#getOutputParameters()} 的默认值；
+     * 响应为 {@link BpmComponentRecentUsageService.RecentBpmComponent}（含 {@code lastUsedFromProcessAt}）。
+     */
+    @GetMapping("recent-usage")
+    @ResponseBody
+    public List<BpmComponentRecentUsageService.RecentBpmComponent> getRecentComponentUsage() {
+        String uid = getCurrentUserId();
+        if (StringUtils.isBlank(uid)) {
+            return List.of();
+        }
+        return bpmComponentRecentUsageService.listForCurrentUser(uid);
+    }
 
     // 查询所有组件分组（已实现）
     @Tool(name = "bpmComp_page", description = "分页查询 BPM 组件定义。")
