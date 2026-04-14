@@ -5,10 +5,10 @@
 ## 前置条件
 
 - **Python 3**（建议 3.10+）
-- 依赖：`pip install -r requirements-remote.txt`（当前为 **PyYAML**）
-- 本机 **PATH** 中可用：`ssh`、`scp`、`mvn`
+- 依赖：`pip install -r requirements-remote.txt`（**PyYAML**、**paramiko**）
+- 本机 **PATH** 中可用：`ssh`、`scp`；**构建** 时需要 **Maven**（脚本会查找 `mvn` / `mvn.cmd` 或 `MAVEN_HOME`、`MVN`；Windows 若仍报错可用 `--mvn "C:\\path\\to\\mvn.cmd"`）
 - 远端可 SSH 登录，且已具备运行 JAR 的 Java 环境
-- **`auth: password` 时**：需安装 [**sshpass**](https://linux.die.net/man/1/sshpass)（脚本通过 `SSHPASS` 传密；stdin 用于远程脚本，**不支持**交互式键盘输密）
+- **`auth: password` 时**：优先使用 [**sshpass**](https://linux.die.net/man/1/sshpass) + 系统 `ssh`/`scp`；若未安装 sshpass，则自动使用 **paramiko**（已随 requirements 安装）。远程脚本通过 stdin 传递，**不支持**交互式键盘输密。
 
 ## 快速开始
 

@@ -23,6 +23,7 @@
         <groupId>com.kiwi</groupId>
         <artifactId>kiwi-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
     <dependencies>
         <dependency>
@@ -173,12 +174,6 @@
             <artifactId>lombok</artifactId>
             <version>1.18.32</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.kiwi</groupId>
-            <artifactId>kiwi-bpmn-core</artifactId>
-            <version>1.0.0</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.sun.xml.bind</groupId>

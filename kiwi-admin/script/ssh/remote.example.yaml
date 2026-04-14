@@ -13,7 +13,7 @@ port: 22
 
 # 认证：key | password
 #   key        — 使用公钥，可配 identity_file
-#   password   — 使用密码，需安装 sshpass（Linux/macOS/Git Bash 常见可用包管理器安装）
+#   password   — 使用密码；优先 sshpass + 系统 ssh，若无 sshpass 则用 Python paramiko（pip install -r ../requirements-remote.txt）
 #                密码来源（优先级）：YAML 字段 password > 环境变量（见 password_env）> KIWI_SSH_PASSWORD
 auth: key
 identity_file: ~/.ssh/id_ed25519
