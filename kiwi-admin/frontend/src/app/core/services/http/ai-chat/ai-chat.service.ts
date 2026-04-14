@@ -36,7 +36,7 @@ export class AiChatService {
     return this.http.post<AiChatResponse>('/ai/chat', body, { showLoading: false });
   }
 
-  /** 可返回 navigate 等动作（如创建字典后跳转） */
+  /** 可返回 navigate 等动作（path 与菜单路由一致） */
   assistant(body: AiChatRequest) {
     return this.http.post<AiAssistantResponse>('/ai/assistant', body, { showLoading: false });
   }
