@@ -275,7 +275,7 @@ public final class CliHelpParser {
             if (!seenLong.add(longId)) {
                 continue;
             }
-            boolean expects = optionExpectsValue(optPart);
+            boolean expects = true;//optionExpectsValue(optPart);
             out.add(new ParsedOption(longId, primaryLong, shortFlag, expects, descPart));
         }
         return out;

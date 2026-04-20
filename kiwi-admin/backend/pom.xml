@@ -8,14 +8,12 @@
     <version>1.0.0</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
         <poi.version>5.4.0</poi.version>
         <mica.version>3.4.1</mica.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jakarta.persistence.version>3.2.0</jakarta.persistence.version>
         <velocity.version>2.3</velocity.version>
-        <spring-boot.version>3.4.2</spring-boot.version>
+        <spring-boot.version>3.5.8</spring-boot.version>
         <!-- Spring AI Alibaba（DashScope / 通义），BOM 与 starter 版本对齐 -->
         <spring-ai-alibaba.version>1.0.0.4</spring-ai-alibaba.version>
     </properties>
@@ -172,7 +170,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
+            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -193,6 +191,14 @@
     </dependencies>
     <dependencyManagement>
         <dependencies>
+            <!-- 必须置于本模块 BOM 导入首位：Maven 对 import BOM 为「先声明者优先」，若 spring-ai-alibaba-bom / mica-bom 在前会锁死 spring-core 6.2.1，ASM 无法解析 JDK 25 字节码 -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-framework-bom</artifactId>
+                <version>${spring-framework.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>com.alibaba.cloud.ai</groupId>
                 <artifactId>spring-ai-alibaba-bom</artifactId>
@@ -234,6 +240,14 @@
                 <configuration>
                     <!-- @Tool 方法参数名需保留，供模型按 JSON 字段映射 -->
                     <parameters>true</parameters>
+                    <!-- JDK 多模块下确保 Lombok 参与编译，避免 @Data 等未生成 getter/setter -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

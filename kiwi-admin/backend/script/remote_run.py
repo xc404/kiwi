@@ -3,11 +3,11 @@
 远程部署 / 启停 / JDWP 调试（经 SSH，调用本机 OpenSSH 客户端与 Maven）。
 
 在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
-连接信息来自结构化 YAML（--config），见 script/conf/remote.example.yaml（`ssh` + `spring`）。
-auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
+连接信息来自结构化 YAML（--config），见本脚本同目录下 conf/remote.example.yaml（`ssh` + `spring`）。
+auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见同目录 requirements-remote.txt）。
 stdin 用于远程脚本，不支持交互式键盘输密。
 
-依赖：pip install -r requirements-remote.txt
+依赖：在本脚本目录执行 pip install -r requirements-remote.txt
 """
 from __future__ import annotations
 
@@ -18,22 +18,27 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+# 本脚本位于 kiwi-admin/backend/script/：向上两级为 kiwi-admin
+KIWI_ADMIN_ROOT = SCRIPT_DIR.parent.parent
+BACKEND_ROOT = KIWI_ADMIN_ROOT / "backend"
+REQUIREMENTS_REMOTE_TXT = SCRIPT_DIR / "requirements-remote.txt"
 
 try:
     import yaml
 except ImportError:
     print(
-        "缺少 PyYAML，请执行: pip install -r requirements-remote.txt",
+        f"缺少 PyYAML，请执行: pip install -r {REQUIREMENTS_REMOTE_TXT}",
         file=sys.stderr,
     )
     sys.exit(1)
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-KIWI_ADMIN_ROOT = SCRIPT_DIR.parent
-BACKEND_ROOT = KIWI_ADMIN_ROOT / "backend"
 BACKEND_POM = BACKEND_ROOT / "pom.xml"
 BACKEND_SRC_MAIN = BACKEND_ROOT / "src" / "main"
 # 仓库根（kiwi/）：与根 README 一致，在此执行 mvn -pl kiwi-admin/backend -am 以编依赖模块
@@ -143,7 +148,7 @@ def _ensure_password_backend(c: Conn) -> None:
     except ImportError:
         print(
             "auth: password 时：可在 PATH 中安装 sshpass，"
-            "或执行 pip install paramiko（已列入 requirements-remote.txt）。",
+            f"或执行 pip install paramiko（已列入 {REQUIREMENTS_REMOTE_TXT}）。",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -203,14 +208,82 @@ def _run_remote_capture_paramiko(c: Conn, script: str) -> tuple[int, str, str]:
     )
 
 
+def _human_bytes(n: int) -> str:
+    if n < 0:
+        return "?"
+    for unit, label in ((1 << 30, "GiB"), (1 << 20, "MiB"), (1 << 10, "KiB")):
+        if n >= unit:
+            return f"{n / unit:.2f} {label}"
+    return f"{n} B"
+
+
+def _sftp_put_progress_cb():
+    """Paramiko sftp.put(callback=…) 每块调用；在 stderr 打进度（约每 5% 刷新一行）。"""
+    last_bucket = [-1]
+
+    def cb(transferred: int, total: int) -> None:
+        if total <= 0:
+            return
+        pct = min(100, int(100 * transferred / total))
+        bucket = pct // 5
+        if bucket > last_bucket[0] or transferred >= total:
+            last_bucket[0] = bucket
+            line = (
+                f"\r  上传进度: {pct}%  "
+                f"({_human_bytes(transferred)} / {_human_bytes(total)})"
+            )
+            print(line, end="", file=sys.stderr, flush=True)
+
+    return cb
+
+
 def _scp_upload_paramiko(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
     remote_path = f"{remote_dir.rstrip('/')}/{remote_jar_name}"
+    total = local_jar.stat().st_size
+    print(
+        f"正在通过 SFTP 上传 {local_jar.name}（{_human_bytes(total)}）→ "
+        f"{c.target.user}@{c.target.hostname}:{remote_path} …",
+        file=sys.stderr,
+    )
+    cb = _sftp_put_progress_cb()
     with _paramiko_client(c) as client:
         sftp = client.open_sftp()
         try:
-            sftp.put(str(local_jar), remote_path)
+            sftp.put(str(local_jar), remote_path, callback=cb)
         finally:
             sftp.close()
+    print(file=sys.stderr)
+
+
+def _run_scp_subprocess_with_progress(
+    cmd: list[str],
+    env: dict[str, str],
+    *,
+    label: str,
+    dest_display: str,
+) -> None:
+    """OpenSSH scp 无原生进度：打印体积并周期性提示已等待时间。"""
+    stop = threading.Event()
+
+    def heartbeat() -> None:
+        waited = 0
+        while not stop.wait(2.0):
+            waited += 2
+            print(
+                f"\r  scp 进行中… {waited}s  ({label} → {dest_display})",
+                end="",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    t = threading.Thread(target=heartbeat, daemon=True)
+    t.start()
+    try:
+        subprocess.run(cmd, check=True, env=env)
+    finally:
+        stop.set()
+        time.sleep(0.05)
+    print(file=sys.stderr)
 
 
 def ssh_cmd(c: Conn) -> tuple[list[str], dict[str, str]]:
@@ -311,7 +384,7 @@ def run_mvn_package(mvn_override: str | None) -> None:
     exe = resolve_mvn_executable(mvn_override)
     if not ROOT_POM.is_file():
         print(
-            f"未找到仓库根 POM：{ROOT_POM}。remote_run.py 需放在 kiwi-admin/script/ 下，"
+            f"未找到仓库根 POM：{ROOT_POM}。remote_run.py 需放在 kiwi-admin/backend/script/ 下，"
             "且应在完整克隆的 kiwi 仓库中使用。",
             file=sys.stderr,
         )
@@ -546,7 +619,19 @@ def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) 
         return
     cmd, host, env = scp_cmd(c)
     dest = f"{host}:{remote_dir}/{remote_jar_name}"
-    subprocess.run(cmd + [str(local_jar), dest], check=True, env=env)
+    full_cmd = cmd + [str(local_jar), dest]
+    size = local_jar.stat().st_size
+    print(
+        f"正在通过 scp 上传 {local_jar.name}（{_human_bytes(size)}）→ {dest} …",
+        file=sys.stderr,
+    )
+    _run_scp_subprocess_with_progress(
+        full_cmd,
+        env,
+        label=local_jar.name,
+        dest_display=dest,
+    )
+    print("  scp 上传完成。", file=sys.stderr)
 
 
 def cmd_deploy(
@@ -693,7 +778,7 @@ def add_connection_args(p: argparse.ArgumentParser) -> None:
         type=Path,
         required=True,
         metavar="PATH",
-        help="结构化 YAML（见 script/conf/remote.example.yaml：ssh + spring）",
+        help="结构化 YAML（见 kiwi-admin/backend/script/conf/remote.example.yaml：ssh + spring）",
     )
     p.add_argument(
         "--hostname",
@@ -766,7 +851,7 @@ def build_parser() -> argparse.ArgumentParser:
 全量：使用 --no-incremental 将始终执行 mvn（在未 --skip-build 时）并始终上传。
 
 密码认证：YAML 中 auth: password，并配置 password 或 password_env / KIWI_SSH_PASSWORD。
-  优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 requirements-remote.txt）。
+  优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 {REQUIREMENTS_REMOTE_TXT}）。
   stdin 用于远程脚本，不支持交互式键盘输密。
 
 远程调试：默认 JDWP 绑定 0.0.0.0，在 IDE 中使用「主机 = YAML 中 ssh.hostname、端口 = --jdwp-port」直连，

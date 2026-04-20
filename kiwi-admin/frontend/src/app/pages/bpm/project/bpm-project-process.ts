@@ -140,7 +140,16 @@ export class BpmProjectProcess implements OnInit {
         return;
       }
       page.defaultEditRecord['projectId'] = id;
-      page.load({ projectId: id });
+      // CrudPage 使用 input.required(pageConfig)；effect 与 viewChild 就绪时子组件输入可能尚未绑定，
+      // 立即 load() 会触发 NG0950。推迟到微任务后再访问子组件的 pageConfig signal。
+      queueMicrotask(() => {
+        const p = this.crudPage();
+        const current = this.projectId();
+        if (!current || !p || current !== id) {
+          return;
+        }
+        p.load({ projectId: current });
+      });
     });
 
     this.activatedRoute.queryParamMap.subscribe(qm => {
@@ -211,7 +220,7 @@ export class BpmProjectProcess implements OnInit {
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
-            this.router.navigate(['/default/bpm/process-instances'], {
+            this.router.navigate(['/default/bpm/processinstances'], {
               queryParams: { processDefinitionKey: record.id },
             });
           }

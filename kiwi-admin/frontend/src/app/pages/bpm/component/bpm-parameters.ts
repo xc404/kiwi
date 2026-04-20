@@ -18,10 +18,10 @@ import { ComponentDescription } from "./component-provider";
     template: ` 
      <nz-collapse>
               <nz-collapse-panel [nzHeader]="name()" [nzActive]="true" [nzExtra]="toolbar">
+            <div class="bpm-parameters-table-wrap">
             <app-table [tableConfig]="tableConfig" [tableData]="_parameters()" >
-
-
              </app-table>
+            </div>
 
             </nz-collapse-panel>
             </nz-collapse>
@@ -45,7 +45,13 @@ import { ComponentDescription } from "./component-provider";
     </ng-template>
      `,
     standalone: true,
-    imports: [NzCollapseModule, AppTableComponent, NzModalModule, CrudEditForm, AppButton]
+    imports: [NzCollapseModule, AppTableComponent, NzModalModule, CrudEditForm, AppButton],
+    styles: [`
+      .bpm-parameters-table-wrap {
+        max-height: 400px;
+        overflow: auto;
+      }
+    `]
 })
 export class BpmParameters implements OnInit {
     http: any = inject(BaseHttpService);
@@ -71,6 +77,7 @@ export class BpmParameters implements OnInit {
         }
     ]
     tableConfig: AppTableConfig = {
+        needNoScroll: true,
 
         columns: [
             { name: '键', dataIndex: 'key' },
