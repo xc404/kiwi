@@ -154,7 +154,7 @@ sudo ufw allow OpenSSH
 
 sudo ufw allow 8088/tcp comment 'kiwi-admin HTTP'
 # JDWP：仅允许你的开发机 IP（示例）
-sudo ufw allow from 198.51.100.50 to any port 5005 proto tcp comment 'JDWP'
+sudo ufw allow 5005/tcp comment 'JDWP'
 
 sudo ufw enable
 sudo ufw status numbered
