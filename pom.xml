@@ -11,7 +11,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.2</version>
+        <version>3.5.8</version>
     </parent>
     <modules>
         <module>kiwi-common</module>
@@ -21,10 +21,16 @@
         <module>kiwi-bpmn/kiwi-bpmn-component</module>
     </modules>
     <properties>
-        <lombok.version>1.18.32</lombok.version>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <!-- 1.18.38+ 适配 JDK 24+ javac；若用 JDK 25 作为 IDE 编译器需保持较新 -->
+        <lombok.version>1.18.42</lombok.version>
         <camunda.version>7.24.0</camunda.version>
         <swagger-annotations.version>2.2.41</swagger-annotations.version>
-        <spring-boot.version>3.4.2</spring-boot.version>
+        <spring-boot.version>3.5.8</spring-boot.version>
+        <!-- 与 spring-boot-dependencies 对齐；勿被传递依赖降到 6.2.12 以下，否则 spring-core 6.2.1 无法解析 JDK 25 编译的 .class（组件扫描 ClassReader 报错） -->
+        <spring-framework.version>6.2.14</spring-framework.version>
     </properties>
     <dependencies>
         <dependency>
@@ -57,4 +63,43 @@
             <version>${camunda.version}</version>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 强制全仓库使用同一 Spring Framework，避免 Camunda 等将 spring-core 锁在 6.2.1。子模块若再 import 其他 BOM（如 spring-ai-alibaba-bom），须在该模块 dependencyManagement 内把 spring-framework-bom 写在最前（Maven import BOM 为先声明者优先）。 -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-framework-bom</artifactId>
+                <version>${spring-framework.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-jdk-25</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,26)</version>
+                                    <message>本仓库要求整条构建链使用 JDK 25：请将 JAVA_HOME 与 PATH 指向 JDK 25 后再执行 mvn（与 javac、spring-boot:repackage 使用同一 JVM）。</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

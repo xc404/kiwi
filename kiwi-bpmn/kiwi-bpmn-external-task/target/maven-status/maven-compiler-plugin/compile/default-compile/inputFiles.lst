@@ -1,9 +1,0 @@
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\AbstractExternalTaskHandler.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\config\ClientAutoConfiguration.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\config\ClientProperties.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\config\PropertiesAwareClientFactory.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\config\PropertiesAwareSpringTopicSubscription.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\ExternalTaskExecution.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\LocalEngineClient.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\LocalExternalTaskClientBuild.java
-D:\Projects\kiwi\kiwi-bpmn\kiwi-bpmn-external-task\src\main\java\com\kiwi\bpmn\external\utils\DtoUtils.java

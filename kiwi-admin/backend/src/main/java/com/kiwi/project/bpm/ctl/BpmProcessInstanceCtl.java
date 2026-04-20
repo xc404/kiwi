@@ -44,7 +44,6 @@ public class BpmProcessInstanceCtl extends BaseCtl {
             @RequestParam(required = false) String processDefinitionKey,
             @RequestParam(required = false) String businessKey,
             @RequestParam(required = false) String processInstanceId,
-            @Deprecated
             @RequestParam(required = false) Boolean unfinished,
             @RequestParam(defaultValue = "running") String instanceState,
             Pageable pageable) {
