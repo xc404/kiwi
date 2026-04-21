@@ -1,6 +1,9 @@
 package com.kiwi.project.ai;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import com.kiwi.project.ai.bpm.BpmDesignerAssistantRequest;
+import com.kiwi.project.ai.bpm.BpmDesignerAssistantResponse;
+import com.kiwi.project.ai.bpm.BpmDesignerAssistantService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +21,7 @@ public class AiChatCtl {
 
     private final AiChatService aiChatService;
     private final AiAssistantService aiAssistantService;
+    private final BpmDesignerAssistantService bpmDesignerAssistantService;
 
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) {
@@ -33,6 +37,14 @@ public class AiChatCtl {
     @PostMapping("/assistant")
     public AiAssistantResponse assistant(@RequestBody ChatRequest request) {
         return aiAssistantService.run(request.getMessages());
+    }
+
+    /**
+     * BPM 设计器专用：返回自然语言 + 结构化动作（工具栏、导入 XML、追加组件、跳转等）。
+     */
+    @PostMapping("/bpm-designer")
+    public BpmDesignerAssistantResponse bpmDesigner(@RequestBody BpmDesignerAssistantRequest request) {
+        return bpmDesignerAssistantService.run(request);
     }
 
     @Data

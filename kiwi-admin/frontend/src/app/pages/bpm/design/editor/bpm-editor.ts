@@ -20,6 +20,7 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { finalize } from 'rxjs/operators';
 import kiwiDescriptor from '../../component/kiwi.json';
 import { ElementModel } from '../extension/element-model';
@@ -33,22 +34,13 @@ import { ComponentService } from '../../component/component-service';
 import appendComponentModule from '../context-pad/append-component-module';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";
+import { BpmDesignerChatComponent } from './bpm-designer-chat.component';
+import { BpmEditorToken } from './bpm-editor-token';
 
 /** SpEL 表达式编辑器用到的变量推导（属性面板已接入，可按需复用） */
 export { buildSpelVariableSuggestions, type SpelVariableSuggestion } from '../expression/bpm-spel-variable-context';
 
-export abstract class BpmEditorToken {
-  abstract deploy(): void;
-  abstract start(): void;
-  abstract save(): void;
-
-  abstract clearSelection(): void;
-
-  /** 将当前图另存为组件库中的组件（输入/输出由服务端分析 BPMN 推导） */
-  abstract saveAsComponent(): void;
-
-  bpmnModeler!: BpmnModeler
-}
+export { BpmEditorToken };
 
 
 @Component({
@@ -70,6 +62,8 @@ export abstract class BpmEditorToken {
     NzLayoutComponent,
     NzLayoutModule,
     BpmToolbar,
+    BpmDesignerChatComponent,
+    NzTabsModule,
     NzSpinModule,
     NzButtonModule,
     NzIconModule,
@@ -369,6 +363,28 @@ export class BpmEditor implements OnInit, BpmEditorToken {
         ),
       error: () => {},
     });
+  }
+
+  appendComponentForAi(componentId: string, sourceElementId?: string | null): void {
+    const component = this.componentProvider.getComponent(componentId);
+    if (!component) {
+      this.message.error('组件库中不存在该组件，请刷新组件列表后重试');
+      return;
+    }
+    const registry = this.bpmnModeler.get('elementRegistry') as {
+      get: (id: string) => Element | undefined;
+    };
+    const selection = this.bpmnModeler.get('selection') as { get: () => Element[] };
+    const canvas = this.bpmnModeler.get('canvas') as { getRootElement: () => Element };
+    let source: Element | undefined;
+    if (sourceElementId) {
+      source = registry.get(sourceElementId);
+    }
+    if (!source) {
+      const sel = selection.get();
+      source = sel?.[0] ?? canvas.getRootElement();
+    }
+    this.appendComponentFromContextPad(source, component, undefined);
   }
 
   appendComponentFromContextPad(

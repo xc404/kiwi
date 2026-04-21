@@ -40,16 +40,9 @@
     }
   </div>
 
-  <nz-modal
-    nzTitle="另存为组件"
-    [nzVisible]="saveAsComponentModalVisible()"
-    (nzVisibleChange)="saveAsComponentModalVisible.set($event)"
-    nzOkText="保存到组件库"
-    nzCancelText="取消"
-    (nzOnCancel)="saveAsComponentModalVisible.set(false)"
-    [nzWidth]="520"
-    (nzOnOk)="onSaveAsComponentOk()"
-  >
+  <nz-modal nzTitle="另存为组件" [nzVisible]="saveAsComponentModalVisible()"
+    (nzVisibleChange)="saveAsComponentModalVisible.set($event)" nzOkText="保存到组件库" nzCancelText="取消"
+    (nzOnCancel)="saveAsComponentModalVisible.set(false)" [nzWidth]="520" (nzOnOk)="onSaveAsComponentOk()">
     <ng-container *nzModalContent>
       <div class="bpm-save-as-component-dialog">
         <p class="bpm-save-as-component-dialog__hint">
@@ -89,9 +82,18 @@
         </nz-content>
         <nz-sider class="mix-sider-height side-explorer bpm-editor-properties-sider" nzWidth="500px" nzTheme="light"
           nzNoAnimation>
-          <div class="bpm-editor-properties-scroll">
-            <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
-          </div>
+          <nz-tabs class="bpm-editor-right-tabs" nzSize="small">
+            <nz-tab nzTitle="属性">
+              <div class="bpm-editor-properties-scroll">
+                <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
+              </div>
+            </nz-tab>
+            <nz-tab nzTitle="AI">
+              <div class="bpm-editor-ai-scroll">
+                <bpm-designer-chat [bpmnModeler]="bpmnModeler" [processId]="bpmnId()"></bpm-designer-chat>
+              </div>
+            </nz-tab>
+          </nz-tabs>
         </nz-sider>
       </nz-layout>
     </nz-content>

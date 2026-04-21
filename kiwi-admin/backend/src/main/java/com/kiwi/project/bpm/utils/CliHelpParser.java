@@ -170,11 +170,9 @@ public final class CliHelpParser {
         List<ParsedOption> options = parseOptions(helpText);
         BpmComponent c = new BpmComponent();
         c.setParentId(shellParentId);
-        c.setKey(key);
         c.setName(name);
         c.setDescription(description);
-        c.setGroup(group);
-        c.setType(BpmComponent.Type.SpringBean);
+        // c.setType(BpmComponent.Type.SpringBean);
         List<BpmComponentParameter> inputs = new ArrayList<>();
         Set<String> usedKeys = new LinkedHashSet<>();
         usedKeys.add("command");
@@ -190,7 +188,7 @@ public final class CliHelpParser {
             p.setKey(paramKey);
             p.setName(paramKey);
             p.setDescription(o.description());
-            p.setGroup("CLI");
+            // p.setGroup("CLI");
             p.setImportant(true);
             p.setHtmlType(o.expectsValue() ? "#text" : "CheckBox");
             p.setRequired(false);
@@ -377,9 +375,10 @@ public final class CliHelpParser {
                 if (flagPrefix.contains("=")) {
                     int eq = flagPrefix.indexOf('=');
                     String left = flagPrefix.substring(0, eq);
-                    sb.append(" ").append(left).append("=${").append(param).append("}");
+                    // Camunda JUEL 将 + 视为算术运算，字符串拼接需用 concat，否则会报 Cannot coerce ... to Double
+                    sb.append(" ${not empty ").append(param).append(" ? ' ").append(left).append("='.concat(").append(param).append(") : ''}");
                 } else {
-                    sb.append(" ").append(flagPrefix).append(" ${").append(param).append("}");
+                    sb.append(" ${not empty ").append(param).append(" ? ' ").append(flagPrefix).append(" '.concat(").append(param).append(") : ''}");
                 }
             } else {
                 String flag = o.primaryLongFlag().strip();
