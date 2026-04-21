@@ -1,0 +1,3 @@
+com\kiwi\bpmn\component\activity\AssignmentActivityTest.class
+com\kiwi\bpmn\component\activity\HttpRequestActivityTest.class
+com\kiwi\bpmn\component\slurm\SlurmWorkdirCleanupTest.class

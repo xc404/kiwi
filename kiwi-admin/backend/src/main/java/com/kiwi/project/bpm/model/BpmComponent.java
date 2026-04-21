@@ -25,8 +25,8 @@ public class BpmComponent extends BaseEntity<String>
     private String source;
     private String name;
     private String description;
-    private String group = "common";
-    private Type type = Type.SpringBean;
+    private String group ;
+    private Type type;
     private String version;
     /** 元数据 SHA-256 指纹，用于自动部署时跳过未变更写库 */
     private String deploymentSignature;

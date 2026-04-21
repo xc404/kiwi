@@ -26,6 +26,29 @@ export interface AiAssistantResponse {
   actions?: AiAssistantClientAction[];
 }
 
+export interface BpmDesignerActionDto {
+  type: string;
+  toolbarCommand?: string;
+  toolbarOptions?: Record<string, unknown>;
+  xml?: string;
+  componentId?: string;
+  sourceElementId?: string;
+  path?: string;
+  queryParams?: Record<string, string>;
+}
+
+export interface BpmDesignerAssistantRequest {
+  messages: AiChatMessage[];
+  processId: string;
+  /** 画布当前 BPMN（含未保存修改）；不传则后端用库中版本拼上下文 */
+  bpmnXml?: string;
+}
+
+export interface BpmDesignerAssistantResponse {
+  content: string;
+  actions?: BpmDesignerActionDto[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -39,5 +62,10 @@ export class AiChatService {
   /** 可返回 navigate 等动作（path 与菜单路由一致） */
   assistant(body: AiChatRequest) {
     return this.http.post<AiAssistantResponse>('/ai/assistant', body, { showLoading: false });
+  }
+
+  /** BPM 设计器专用：工具栏 / 导入 XML / 追加组件 / 跳转 */
+  bpmDesigner(body: BpmDesignerAssistantRequest) {
+    return this.http.post<BpmDesignerAssistantResponse>('/ai/bpm-designer', body, { showLoading: false });
   }
 }
