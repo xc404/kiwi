@@ -32,6 +32,24 @@ npm start
 - 开发服务器默认：**http://localhost:4201**（`package.json` 中 `ng serve --o --port 4201`）。
 - 请先启动后端（默认 API 见下文），并保证 CORS 中已包含该 Origin（根 `README` 说明 `http://localhost:4201`）。
 
+## AI 辅助（Kiwi · AI）
+
+登录管理后台后可使用内置大模型对话（需后端已配置 DashScope / 通义 API Key，见 **[backend README](../backend/README.md)**）。
+
+### 使用方式
+
+| 入口 | 说明 |
+|------|------|
+| 右下角浮窗 | 默认布局下显示「Kiwi · AI」对话卡片，可一句话描述问题。 |
+| 仪表盘「AI 对话」 | 路由一般为 `.../dashboard/ai-chat`（侧栏需在「系统管理 → 菜单」中配置对应菜单项，path 与 `dashboard-routing` 中注释一致）。该页为嵌入模式，对话区占满内容区，适合长文本阅读。 |
+
+交互说明：界面提示用**一句话**描述问题；回复由后端 Spring AI 调用通义模型生成。助手接口除文本外，还可能触发 **前端路由跳转**（例如打开某字典页），路径须与系统菜单路由一致。
+
+### 开发与联调
+
+- 前端通过 `AiChatService` 调用 **`POST /ai/assistant`**（助手，含工具与导航动作）或 **`POST /ai/chat`**（纯对话补全）。
+- `environment.ts` 中 **`api.baseUrl`** 应为主站 API 根地址（如 `http://localhost:8088`），**不要**写成以 `/ai` 结尾，否则与 `/ai/chat` 等路径拼接可能异常；`BaseHttpService.getUrl` 对部分误配做了兜底，仍建议配置正确根地址。
+
 ## 配置说明
 
 ### API 基地址（`src/environments/`）
