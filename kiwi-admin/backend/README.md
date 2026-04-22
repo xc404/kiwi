@@ -13,7 +13,7 @@
 | 鉴权 | Sa-Token（Redis） |
 | 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；Redis |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE，与助手工具共用） |
+| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE，与 `MenuAssistantTools` 等工具共用） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
 
 模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
@@ -52,6 +52,24 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 | 敏感项 | 数据库密码、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD`、AI 密钥（如 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`）等建议用环境变量 |
 
 `dev` profile 常用于本地将 MyBatis SQL 输出到控制台（见 `application-dev.yml`），仅调试使用。
+
+### AI 对话与助手
+
+实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；带工具调用的助手由 `AiAssistantService` 提供（可导航字典页等，工具定义见 `com.kiwi.project.system.ai`）。
+
+| 配置 / 环境变量 | 说明 |
+|-----------------|------|
+| `kiwi.ai.enabled` | 是否启用 AI 接口，默认 `true`；可用 **`KIWI_AI_ENABLED`** 覆盖。关闭后相关请求会失败并提示。 |
+| `spring.ai.dashscope.api-key` | 阿里云 DashScope API Key；通常使用 **`KIWI_AI_API_KEY`** 或 **`DASHSCOPE_API_KEY`**。 |
+| `spring.ai.dashscope.chat.options.model` | 模型名，默认 **`qwen-plus`**；可用 **`KIWI_AI_MODEL`** 覆盖。 |
+| `spring.ai.mcp.server` | 内置 MCP Server（SSE），与助手共用工具回调；可用 **`SPRING_AI_MCP_SERVER_ENABLED=false`** 关闭。外部 HTTP 调用需携带与业务 API 相同的 **`Authorization: Bearer`** 加登录 Token（见 `application.yml` 中 `instructions` 说明）。 |
+
+| HTTP 接口 | 说明 |
+|-----------|------|
+| `POST /ai/chat` | 请求体 `{ "messages": [ { "role": "user"\|"assistant"\|"system", "content": "..." } ] }`，返回 `{ "content": "..." }`。需登录（`@SaCheckLogin`）。 |
+| `POST /ai/assistant` | 同上消息格式；返回文本 `content`，以及可选的 **`actions`**（如 `{ "type": "navigate", "path": "/default/system/dict", "queryParams": { ... } }`），由前端路由消费。 |
+
+本地示例密钥占位见 **`application-local.example.yml`**。前端使用说明见 **[kiwi-admin/frontend/README.md](../frontend/README.md)** 中「AI 辅助」一节。
 
 ## 构建产物
 

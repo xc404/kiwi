@@ -103,6 +103,20 @@ npm start
 - 后端：在仓库根执行 `mvn -pl kiwi-admin/backend -am clean package`（与上文「Maven 多模块」一致，`-am` 会构建依赖模块）。  
 - 前端：`cd kiwi-admin/frontend && npm run build`（生产环境会替换为 `environment.prod.ts`）
 
+## AI 辅助功能
+
+管理后台内置 **AI 对话与助手**（基于后端 **Spring AI Alibaba** 对接阿里云 **DashScope / 通义**）。登录后可在界面中使用：
+
+- **右下角浮窗「Kiwi · AI」**：在默认布局中常驻，可折叠对话；适合边操作后台边提问。
+- **仪表盘「AI 对话」页**：嵌入同一套对话组件，适合全屏查看长回复。
+
+对话走 **`/ai/assistant`** 接口：除文本回复外，助手还可通过服务端工具执行 **页面导航**（例如跳转到字典等管理页，路由需与侧栏菜单 path 一致）。纯补全接口为 **`/ai/chat`**（一般供集成或调试）。
+
+使用前请在后端配置 **API Key** 并视需要开启或关闭总开关；可选开启 **MCP Server**（SSE），供外部客户端以与 REST API 相同方式携带登录 Token 调用工具。详细环境变量、接口说明与前端联调注意见：
+
+- **[kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)**（密钥、`kiwi.ai.enabled`、模型名、MCP）
+- **[kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)**（入口位置、`api.baseUrl` 配置）
+
 ## 其他说明
 
 - **kiwi-bpmn** 子模块为流程扩展与外部任务等能力，随父工程一并构建。  
