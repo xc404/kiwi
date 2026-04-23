@@ -12,6 +12,7 @@ import com.kiwi.project.bpm.model.BpmProcess;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
 import com.kiwi.project.bpm.service.BpmProcessIoAnalysisService;
+import com.kiwi.project.bpm.service.BpmProcessStartService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.engine.ProcessEngine;
@@ -19,7 +20,6 @@ import org.camunda.bpm.engine.repository.DeploymentBuilder;
 import org.camunda.bpm.engine.repository.DeploymentWithDefinitions;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.camunda.bpm.engine.rest.dto.runtime.ProcessInstanceDto;
-import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Date;
+import java.util.Map;
 
 import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.getNewProcessId;
 import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.updateIdAndName;
@@ -53,6 +54,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     private final BpmComponentDao bpmComponentDao;
     private final BpmComponentService bpmComponentService;
     private final ProcessEngine processEngine;
+    private final BpmProcessStartService bpmProcessStartService;
 
 
     @Data
@@ -80,6 +82,14 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     {
         private String name;
         private String bpmnXml;
+        /** 运行中实例数量上限；0 表示不限制；不传则不修改原值 */
+        private Integer maxProcessInstances;
+    }
+
+    /** 启动流程实例时传入的流程变量（可选）。 */
+    @Data
+    public static class StartProcessInput {
+        private Map<String, Object> variables;
     }
 
     /** 未保存的 BPMN 预览：包装为逻辑组件 */
@@ -204,6 +214,12 @@ public class BpmProcessDefinitionCtl extends BaseCtl
                 bpmProcess.setVersion(bpmProcess.getDeployedVersion() + 1);
             }
         }
+        if( saveInput.maxProcessInstances != null ) {
+            if( saveInput.maxProcessInstances < 0 ) {
+                throw new IllegalArgumentException("maxProcessInstances 不能为负数");
+            }
+            bpmProcess.setMaxProcessInstances(saveInput.maxProcessInstances);
+        }
 
         this.bpmProcessDefinitionDao.updateSelective(bpmProcess);
         return bpmProcess;
@@ -265,19 +281,9 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @Tool(name = "bpmPd_start", description = "启动已部署流程的最新实例。")
     @PostMapping("{id}/start")
     @ResponseBody
-    public ProcessInstanceDto startProcessDefinition(@PathVariable String id) {
-        BpmProcess bpmProcess = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
-
-        String deployedProcessDefinitionId = bpmProcess.getDeployedProcessDefinitionId();
-
-        if( deployedProcessDefinitionId == null ) {
-            throw new RuntimeException("流程未部署");
-        }
-
-        ProcessInstance processInstance = processEngine.getRuntimeService().startProcessInstanceById(deployedProcessDefinitionId);
-        return new ProcessInstanceDto(processInstance);
-
-
+    public ProcessInstanceDto startProcessDefinition(@PathVariable String id, @RequestBody(required = false) StartProcessInput body) {
+        Map<String, Object> variables = body != null ? body.getVariables() : null;
+        return this.bpmProcessStartService.start(id, variables);
     }
 
 

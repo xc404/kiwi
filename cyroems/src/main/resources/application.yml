@@ -70,3 +70,13 @@ app:
     permission:
       enabled: false
 
+  # Kiwi-admin Camunda：movie 调度仅负责启动流程（详见 openspec/changes/cyroems-kiwi-workflow-integration/）
+  # integration-secret 须与 Kiwi application.yml 中 kiwi.integration.machine.secret 一致
+  kiwi:
+    workflow:
+      enabled: false
+      base-url: ""
+      movie-process-definition-id: ""
+      integration-secret: ""
+      movie-batch-size: 20
+
