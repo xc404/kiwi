@@ -1,0 +1,6 @@
+﻿{
+  "permissions": {
+    "allow": ["Shell(openspec)", "Shell(mkdir)", "Shell(mv)"],
+    "deny": []
+  }
+}

@@ -38,6 +38,8 @@ public class Instance extends DataEntity
     private boolean forceReset;
 
     private TaskStep current_step;
+    /** Kiwi/Camunda 流程实例 id（启用远程编排时写入）。 */
+    private String external_workflow_instance_id;
     private ErrorStatus error;
     private ProcessStatus process_status;
     private boolean waiting;

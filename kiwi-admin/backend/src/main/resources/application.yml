@@ -10,6 +10,10 @@ server:
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
+  # cryoEMS → Kiwi 机机启动流程（密钥为空时不建议暴露公网）
+  integration:
+    machine:
+      secret: ${KIWI_MACHINE_SECRET:}
 
 app:
   cors:

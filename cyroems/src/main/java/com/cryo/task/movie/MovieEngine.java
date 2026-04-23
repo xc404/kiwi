@@ -1,21 +1,13 @@
 package com.cryo.task.movie;
 
-import com.cryo.common.error.FatalException;
 import com.cryo.dao.InstanceRepository;
 import com.cryo.dao.MovieRepository;
-import com.cryo.dao.dataset.TaskDataSetRepository;
 import com.cryo.model.Movie;
-import com.cryo.model.MovieResult;
 import com.cryo.model.Task;
 import com.cryo.model.dataset.TaskDataset;
-import com.cryo.service.GainService;
 import com.cryo.service.MovieService;
-import com.cryo.task.engine.BaseEngine;
-import com.cryo.task.engine.InstanceProcessor;
-import com.cryo.task.engine.flow.FlowManager;
-import com.cryo.task.engine.flow.IFlow;
+import com.cryo.integration.workflow.KiwiWorkflowStarter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.Lifecycle;
 import org.springframework.data.domain.Sort;
@@ -30,53 +22,48 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 
+/**
+ * 单颗粒 movie 任务调度：已废弃在本 JVM 内通过 {@code InstanceProcessor} + {@code IFlow}/{@code ListFlow}
+ * 顺序推进；仅负责按批选取 movie 并调用 {@link KiwiWorkflowStarter} 在 Kiwi 中启动 Camunda 实例。
+ */
 @Slf4j
-public class MovieEngine  implements Lifecycle
-{
-    private final ApplicationContext applicationContext;
+public class MovieEngine implements Lifecycle {
+
     private boolean running = false;
-    private final InstanceProcessor instanceProcessor;
     private final TaskScheduler taskScheduler;
     private final Task task;
     private ScheduledFuture<?> scheduledFuture;
-    private final TaskDataSetRepository taskDataSetRepository;
     private final MovieRepository movieRepository;
-    private final FlowManager flowManager;
     private final Duration movieTaskDuration = Duration.ofMinutes(30);
     private final TaskStatistic movieStatisticTask;
     private final MovieService movieService;
     private final MovieSelector movieSelector;
-    private final GainService gainTask;
-//    private TaskDataset dataset;
-    private IFlow flow;
+    private final KiwiWorkflowStarter kiwiWorkflowStarter;
 
     public MovieEngine(Task task, ApplicationContext applicationContext) {
         this.task = task;
-        this.applicationContext = applicationContext;
-        this.instanceProcessor = applicationContext.getBean(MovieProcessor.class);
         this.taskScheduler = applicationContext.getBean(TaskScheduler.class);
         this.movieRepository = applicationContext.getBean(MovieRepository.class);
-        this.flowManager = applicationContext.getBean(FlowManager.class);
         this.movieStatisticTask = applicationContext.getBean(TaskStatistic.class);
         this.movieService = applicationContext.getBean(MovieService.class);
         this.movieSelector = applicationContext.getBean(MovieSelector.class);
-        this.gainTask = applicationContext.getBean(GainService.class);
-        this.taskDataSetRepository = applicationContext.getBean(TaskDataSetRepository.class);
+        this.kiwiWorkflowStarter = applicationContext.getBean(KiwiWorkflowStarter.class);
     }
 
     @Override
     public void start() {
+        if (!kiwiWorkflowStarter.isEnabled()) {
+            throw new IllegalStateException(
+                    "Movie 处理已改为仅由 Kiwi Camunda 编排：请配置 app.kiwi.workflow.enabled=true，"
+                            + "以及 base-url、movie-process-definition-id、integration-secret（与 Kiwi kiwi.integration.machine.secret 一致）。");
+        }
         this.running = true;
-//        this.dataset = this.taskDataSetRepository.findById(task.getTaskSettings().getDataset_id()).orElseThrow(() -> {
-//            return new FatalException("task dataset not found");
-//        });
-        this.flow =this.flowManager.getMovieFlow(task);
         this.resetProcessingMovies();
         this.scheduledFuture = this.taskScheduler.scheduleWithFixedDelay(() -> {
             try {
                 handle();
-            } catch( Exception e ) {
-                log.error(e.getMessage());
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
             }
         }, Duration.ofSeconds(10));
     }
@@ -94,71 +81,51 @@ public class MovieEngine  implements Lifecycle
     }
 
     public void handle() {
-        if( !this.running ) {
+        if (!this.running) {
             log.info("Not running");
             return;
         }
-        if( Thread.currentThread().isInterrupted() ) {
-            return;
-        }
-        int idleCount = this.instanceProcessor.getIdleCount();
-        if( idleCount == 0 ) {
-            log.warn("No idle processor, skipping");
+        if (Thread.currentThread().isInterrupted()) {
             return;
         }
 
-        TaskDataset dataset = this.taskDataSetRepository.findById(task.getTaskSettings().getDataset_id()).orElseThrow();
+        int batch = kiwiWorkflowStarter.getMovieBatchSize();
 
         this.movieService.sortMovie(task.getId());
         this.updateProcessingStatus();
 
-        List<Movie> unprocessedMovies = movieSelector.getHighPriorityMovies(task.getId(), idleCount);
-        if( unprocessedMovies.isEmpty() ) {
-            if( movieSelector.existOtherHighPriorityMovies(task.getId()) ) {
+        List<Movie> unprocessedMovies = movieSelector.getHighPriorityMovies(task.getId(), batch);
+        if (unprocessedMovies.isEmpty()) {
+            if (movieSelector.existOtherHighPriorityMovies(task.getId())) {
                 log.info("Other high priority movies exist, skipping");
                 return;
             }
 
-            unprocessedMovies = movieSelector.getMidPriorityMovies(task.getId(), idleCount);
+            unprocessedMovies = movieSelector.getMidPriorityMovies(task.getId(), batch);
 
-            if( unprocessedMovies.isEmpty() ) {
+            if (unprocessedMovies.isEmpty()) {
 
-                if( movieSelector.existOtherMidPriorityMovies(task.getId()) ) {
+                if (movieSelector.existOtherMidPriorityMovies(task.getId())) {
                     log.info("Other mid priority movies exist, skipping");
                     return;
                 }
 
-                unprocessedMovies = this.getUnprocessedMovies(idleCount);
+                unprocessedMovies = this.getUnprocessedMovies(batch);
             }
         }
 
-        for( Movie movie : unprocessedMovies ) {
-            MovieContext movieContext = new MovieContext(applicationContext,dataset,flow,task,movie);
-            while( this.running ) {
-                try {
-                    this.instanceProcessor.submit(movieContext);
-                    break;
-                } catch( Exception e ) {
-                    try {
-                        Thread.sleep(5000);
-                    } catch( InterruptedException ex ) {
-                        throw new FatalException(ex);
-//                        throw new RuntimeException(ex);
-                    }
-                }
+        for (Movie movie : unprocessedMovies) {
+            try {
+                kiwiWorkflowStarter.ensureStarted(movie);
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
             }
         }
         movieStatisticTask.statisticMovies(task);
-
-    }
-
-    private long countUnprocessedMovies() {
-        Query query = Query.query(Criteria.where("task_id").is(task.getId())).addCriteria(InstanceRepository.unprocessed());
-        return this.movieRepository.countByQuery(query);
     }
 
     private List<Movie> getUnprocessedMovies(int idleCount) {
-        if( idleCount == 0 ) {
+        if (idleCount == 0) {
             return List.of();
         }
         Query query = Query.query(Criteria.where("task_id").is(task.getId())).addCriteria(InstanceRepository.unprocessed());
@@ -189,10 +156,7 @@ public class MovieEngine  implements Lifecycle
 
         Update update = new Update();
         update.set("process_status.processing", false);
-//        update.set("current_step", "INIT");
         this.movieRepository.update(update, query);
         movieStatisticTask.statisticMovies(task);
     }
-
-
 }

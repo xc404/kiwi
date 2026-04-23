@@ -9,7 +9,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 内置 {@link ListFlow} 顺序表：单颗粒 <b>movie</b> 的调度编排已迁至 Kiwi BPM（见 {@link com.cryo.task.movie.MovieEngine}），
+ * 本类返回的 {@link IFlow} 仍用于 Handler 上下文及导出/MDoc 等在本进程内推进的流程。
+ */
 @Service
+@SuppressWarnings("deprecation")
 public class FlowManager implements InitializingBean
 {
 
