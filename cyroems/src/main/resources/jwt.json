@@ -1,0 +1,20 @@
+{
+  "register": {
+    "ttl": 604800,
+    "key": "8ZH9AGsxEqefvcHfP4QcOPHlvfzdc05b"
+  },
+  "password_reset": {
+    "ttl": 86400,
+    "key": "vGch48gJdJtz0TuxToGjr6MONBvjoSeh"
+  },
+
+  "oauth_bind_user": {
+    "ttl": 900,
+    "key": "yIJw4w3qXlPI43d8nypvKvbuyqKDWYA4"
+  },
+
+  "oauth_login_token": {
+    "ttl": 86400,
+    "key": "PBTrPhxjbYdYcTqjQYqbgYsAiImxqRlM"
+  }
+}

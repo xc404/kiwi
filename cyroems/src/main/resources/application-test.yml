@@ -1,0 +1,35 @@
+spring:
+  # MONGODB (MongoProperties)
+  data:
+    mongodb:
+      uri: mongodb://admin:BioEM%402025db%23@10.15.80.48:36987/test?authSource=admin&replicaSet=cryoems
+      database: test
+      auto-index-creation: true
+dataset:
+  mongodb:
+    uri: mongodb://admin:BioEM%402025db%23@10.15.80.48:36987/test?authSource=admin&replicaSet=cryoems
+    database: test
+    auto-index-creation: true
+app:
+  frontend:
+    url: http://10.15.56.172:3001
+  test:
+    enabled: true
+    token_check: true
+  oauth:
+    config_path: "classpath:oauth/oauth_dev_platform.json"
+  task:
+    dataset:
+      enabled: true
+    movie:
+      maxPoolSize: 300
+      max_error_limit: 4
+    file:
+      work_dir: /home/cryoems/data/test
+    slurm:
+      concurrentLimit: 100
+    vfm:
+      mode: "shell"
+      endpoint: "http://r-d01:8008/tasks"
+  dataset:
+    config: "classpath:dataset-test-config.json"

@@ -1,0 +1,60 @@
+{
+  "MotionCor2": {
+    "path": "mc2.sh"
+  },
+  "ctffind5": {
+    "path": "ctffind5.sh"
+  },
+  "vfm": {
+    "path": "python /home/cryoems/vfm/draco_platform/denoise.py"
+  },
+  "subtarction": {
+    "path": "python /home/cryoems/vfm/draco_platform/background_subtraction.py"
+  },
+  "cryosparc_motion_job": {
+    "path": "run_with_cryoems.sh  cryosparc_motion_job.sh",
+    "concurrentLimit": 3
+  },
+  "cryosparc_construct": {
+    "path": "run_with_cryoems.sh /home/cryoems/bin/cs_part2_1construct.py",
+    "timeout": 7200
+  },
+  "cp": {
+    "path": "cp",
+    "timeout": 7200
+  },
+  "Titan1Mean": {
+    "path": "/home/peiyuan/script/Titan1/contrast_mean"
+  },
+  "Titan2Mean": {
+    "path": "/home/peiyuan/script/Titan2/contrast_mean"
+  },
+  "Titan3Mean": {
+    "path": "/home/peiyuan/script/Titan3/contrast_mean"
+  },
+  "squeue": {
+    "path": "squeue -u cryoems"
+  },
+  "slurm": {
+    "path": " ",
+    "slurmArgs": "run_with_cryoems.sh sbatch -p pp",
+    "concurrentLimit": 100
+  },
+  "vfm_slurm": {
+    "path": " ",
+    "slurmArgs": "run_with_cryoems.sh sbatch -p pp --gres=gpu:1",
+    "concurrentLimit": 50
+  },
+  "slurm_export": {
+    "path": " ",
+    "slurmArgs": "run_with_cryoems.sh sbatch -p pp",
+    "concurrentLimit": 30,
+    "startime": 10
+  },
+  "et_slurm": {
+    "path": " ",
+    "slurmArgs": "run_with_cryoems.sh sbatch -p pp --gres=gpu:1",
+    "concurrentLimit": 30,
+    "startime": 10
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "import_job_uid": "J1",
+  "motioncor_job_uid": "J2",
+  "ctf_job_uid": "J3",
+  "status": "success",
+  "error": null,
+  "results": {
+    "motioncor": {
+      "movie_blob/psize_A": 0.41600000858306885,
+      "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-10/CS-2025-10/J2/motioncorrected/002987989696994443083_20250213_wwj_0039_patch_aligned.mrc"
+    },
+    "ctf": {
+      "ctf/df1_A": 11567.146484375,
+      "ctf/df2_A": 10842.66796875,
+      "ctf/phase_shift_rad": 0.0,
+      "ctf/cross_corr_ctffind4": 0.0,
+      "ctf/ctf_fit_to_A": 3.2947373390197754,
+      "ctf/df_angle_rad": -1.352522611618042,
+      "ctf/accel_kv": 300.0,
+      "ctf/cs_mm": 2.700000047683716,
+      "ctf/amp_contrast": 0.10000000149011612
+    }
+  }
+}

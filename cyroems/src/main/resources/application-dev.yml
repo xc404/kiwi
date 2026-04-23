@@ -1,0 +1,30 @@
+spring:
+  # MONGODB (MongoProperties)
+  data:
+    mongodb:
+      host: 10.15.56.173
+      port: 27017
+      database: test_2603
+      auto-index-creation: true
+app:
+
+  frontend:
+    url: http://10.15.56.172:3001
+  test:
+    enabled: true
+    token_check: true
+  oauth:
+    config_path: "classpath:oauth/oauth_dev_platform.json"
+  file:
+    work_dir: /home/cryoems/data/dev
+  task:
+
+    movie:
+      maxPoolSize: 300
+      max_error_limit: 4
+    slurm:
+      concurrentLimit: 100
+    vfm:
+      mode: "shell"
+      endpoint: "http://r-d01:8008/tasks"
+

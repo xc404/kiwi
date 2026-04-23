@@ -1,0 +1,72 @@
+spring:
+  # MONGODB (MongoProperties)
+  mail:
+    host: backup02
+    port: 25
+    protocol: smtp
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
+      mail.smtp.ssl.enable: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: true
+sa-token:
+  token-name: Authorization
+  # 指定 token 提交时的前缀
+  token-prefix: Bearer
+  token-style: tik
+dataset:
+  mongodb:
+    uri: mongodb://admin:BioEM%402025db%23@10.15.80.48:36987,s02:36987,10.15.21.192:36987/admin?replicaSet=cryoems&authSource=admin
+    database: prod
+    auto-index-creation: true
+app:
+  test:
+    enabled: false
+  frontend:
+    url: http://10.15.56.172:3000
+  password:
+    salt: 66a27b7c363fa5fd54a7bf47dd785da4d39a6a645fdc0c5fa31191174ed5c507
+  mailer:
+    sender: Bio-EM@shanghaitech.edu.cn
+    cc: contact@cellverse.tech
+
+  oauth:
+    config_path: "classpath:oauth/oauth_platform.json"
+  file:
+    copy_with_shell: false
+    user: cryoems
+    service:
+      api: http://app01:8111
+  task:
+    slurm_log_dir: /home/cryoems/logs
+    movie:
+      maxPoolSize: 150
+      max_error_limit: 20
+    mdoc:
+      maxPoolSize: 30
+    default:
+      maxPoolSize: 500
+  software_config: "classpath:software_config.json"
+  microscope_config: "classpath:microscope_config.json"
+  slurm_config: "classpath:slurm_config.json"
+  vfm:
+    mode: "shell"
+    endpoint: "http://r-d01:8008/tasks"
+  motion:
+    version: 1.5.4
+    defect:
+      path: /home/cryoems/bin/eer_defect/defect.txt
+  cryosparc:
+    baseUrl: http://10.15.56.173:8002
+    pool_size: 50
+    pollingInterval: 60
+    output_dir: /home/cryosparc-data
+    healthUrl: http://10.15.56.173:8003
+  dataset:
+    config: "classpath:dataset-config.json"
+    permission:
+      enabled: false
+
