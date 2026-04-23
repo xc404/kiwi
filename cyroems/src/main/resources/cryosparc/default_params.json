@@ -1,0 +1,57 @@
+{
+  "import_config":{
+    "accel_kv": null,  //现有 Accelration kv
+    "blob_paths": null,  // 现有 原始movie 路径
+    "cs_mm": null,    // 现有spherical_aberration
+    "defect_path": null,   固定null
+    "eer_num_fractions": 40, //现有eer_fraction 根据现有值变换
+    "eer_upsamp_factor": 2, //现有 eer sampling 根据现有值变换
+    "gainref_flip_x": false, // 需要新添加      
+    "gainref_flip_y": false, // 需要新添加      
+    "gainref_path": null, // usealbe gain path 现有
+    "gainref_rotate_num": 0, //需要新添加       
+    "negative_stain_data": false, 固定false
+    "output_constant_ctf": false,  固定false
+    "override_exp_group_id": null, 固定null
+    "parse_xml_files": false,   固定false
+    "phase_plate_data": false,   需要新添加
+    "psize_A": null,// 现有 pixel size
+    "skip_header_check": true,  固定true
+    "total_dose_e_per_A2": null//现有Total Dose
+  },
+  "motioncor_config":{
+    "bfactor": 500, // 需要新添加 
+    "compute_num_gpus": 1, 固定是1 
+    "do_plots": true,  固定true
+    "frame_end": null, // 需要新添加
+    "frame_start": 0, // 需要新添加
+    "memoryfix2": false,  固定false
+    "num_plots": 10, 固定10
+    "output_f16": false,  // 需要新添加，默认为true
+    "output_fcrop_factor": "1",   //现有 1/binning_factor
+    "output_half_mics": true,  固定true
+    "override_K_X": null, 固定null
+    "override_K_Y": null, 固定null
+    "override_K_Z": null, 固定null
+    "override_total_exp": null, 固定null
+
+    "res_max_align": 5, // 需要新添加
+    "smooth_lambda_cal": 0.5, // 需要新添加
+    "variable_dose": false // 需要新添加
+  },
+  "ctf_config":{
+    "amp_contrast": 0.1,  // 现有amplitude_contract
+    "classic_mode": false, //固定
+    "df_search_max": 40000, //现有maxinum defocus
+    "df_search_min": 1000, //现有
+    "do_phase_shift_refine_only": false, //固定
+    "num_plots": 10, //固定
+    "override_K_X": null, //固定
+    "override_K_Y": null, //固定
+    "phase_shift_max": 3.141592653589793, //需要新添加
+    "phase_shift_min": 0, //需要新添加
+    "random_num": null,//固定
+    "res_max_align": 4, //需要新添加
+    "res_min_align": 25 //需要新添加
+  }
+}

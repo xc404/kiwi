@@ -1,0 +1,18 @@
+{
+  "Slurm": {
+    "templateFile": "classpath:slurm-template/cryoems-slurm.sh",
+    "softwareExe": "slurm"
+  },
+  "VFM_SLURM": {
+    "templateFile": "classpath:slurm-template/cryoems-vfm.sh",
+    "softwareExe": "vfm_slurm"
+  },
+  "MDOC_SLURM": {
+    "templateFile": "classpath:slurm-template/cryoems-et.sh",
+    "softwareExe": "et_slurm"
+  },
+  "DefaultSlurm": {
+    "templateFile": "classpath:slurm-template/cryoems-default-slurm.sh",
+    "softwareExe": "slurm"
+  }
+}

@@ -1,0 +1,48 @@
+spring:
+  # MONGODB (MongoProperties)
+  data:
+    mongodb:
+      host: 127.0.0.1
+      port: 27017
+      database: cryo-stu
+      auto-index-creation: true
+dataset:
+  mongodb:
+    host: 127.0.0.1
+    port: 27017
+    database: cryo-stu
+    auto-index-creation: true
+app:
+  frontend:
+    url: http://10.15.56.172:3001
+  test:
+    enabled: true
+    token_check: true
+  oauth:
+    config_path: "classpath:oauth/oauth_dev_platform.json"
+  task:
+    slurm_log_dir: /home/stu/logs
+    dataset:
+      enabled: true
+    movie:
+      maxPoolSize: 20
+      max_error_limit: 4
+    file:
+      user: stu
+      work_dir: /home/stu/data/dev
+    slurm:
+      concurrentLimit: 100
+  software_config: "classpath:software_stu_config.json"
+  slurm:
+    enabled: false
+  vfm:
+    mode: "shell"
+    endpoint: "http://r-d01:8008/tasks"
+  motion:
+    version: 1.6.4
+    predict-dose:
+      enabled: false
+    defect:
+      path: /home/stu/bin/eer_defect/defect.txt
+      ruijinEnabled: false
+

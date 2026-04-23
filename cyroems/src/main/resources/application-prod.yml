@@ -1,0 +1,25 @@
+spring:
+  # MONGODB (MongoProperties)
+  data:
+    mongodb:
+      uri: mongodb://admin:BioEM%402025db%23@10.15.80.48:36987,s02:36987,10.15.21.192:36987/admin?replicaSet=cryoems&authSource=admin
+      database: prod
+      auto-index-creation: true
+app:
+  file:
+    copy_with_shell: false
+    work_dir: /home/cryoems/data/prod
+  task:
+    movie:
+      maxPoolSize: 150
+      max_error_limit: 1
+    slurm:
+      concurrentLimit: 300
+  software_config: "classpath:software_prod_config.json"
+  vfm:
+    mode: "shell"
+    endpoint: "http://r-d01:8008/tasks"
+  dataset:
+    permission:
+      enabled: true
+
