@@ -21,6 +21,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzMenuModeType, NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
+import { AccessTokensComponent } from './access-tokens/access-tokens.component';
 import { BaseComponent } from './base/base.component';
 import { BindComponent } from './bind/bind.component';
 import { NoticeComponent } from './notice/notice.component';
@@ -47,6 +48,10 @@ export class PersonalSettingComponent implements OnInit, AfterViewInit {
       component: new DynamicComponent(BaseComponent, { label: '基本设置' })
     },
     {
+      key: 'access-tokens',
+      component: new DynamicComponent(AccessTokensComponent, { label: '长期访问令牌' })
+    },
+    {
       key: 'safe',
       component: new DynamicComponent(SafeComponent, { label: '安全设置' })
     },
@@ -67,20 +72,25 @@ export class PersonalSettingComponent implements OnInit, AfterViewInit {
       selected: true
     },
     {
-      key: 'safe',
-      title: '安全设置',
+      key: 'access-tokens',
+      title: '长期访问令牌',
       selected: false
     },
-    {
-      selected: false,
-      key: 'bind',
-      title: '账号绑定'
-    },
-    {
-      selected: false,
-      key: 'notice',
-      title: '新消息通知'
-    }
+    // {
+    //   key: 'safe',
+    //   title: '安全设置',
+    //   selected: false
+    // },
+    // {
+    //   selected: false,
+    //   key: 'bind',
+    //   title: '账号绑定'
+    // },
+    // {
+    //   selected: false,
+    //   key: 'notice',
+    //   title: '新消息通知'
+    // }
   ];
   currentTitle: string = this.menus[0].title;
 

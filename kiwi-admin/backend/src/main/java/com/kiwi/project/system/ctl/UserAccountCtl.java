@@ -2,26 +2,23 @@ package com.kiwi.project.system.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
-import cn.dev33.satoken.stp.parameter.SaLoginParameter;
 import com.kiwi.framework.security.PasswordService;
-import com.kiwi.project.bpm.integration.IntegrationDevice;
-import com.kiwi.project.bpm.integration.KiwiIntegrationProperties;
 import com.kiwi.project.system.dao.SysUserDao;
 import com.kiwi.project.system.entity.SysUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
+
 /**
- * 与前端 {@code AccountService} 中 {@code PUT /user/psd} 对齐：当前登录用户修改自己的密码。
+ * 与前端 {@code AccountService} 对齐：{@code PUT /user/psd} 修改密码；{@code PUT /user/update} 更新基本资料。
  */
 @Tag(name = "账户")
 @RestController
@@ -31,28 +28,6 @@ public class UserAccountCtl {
 
     private final SysUserDao sysUserDao;
     private final PasswordService passwordService;
-    private final KiwiIntegrationProperties integrationProperties;
-
-    /**
-     * 为当前用户创建（并轮换）机机集成用长期 Token，写入 Sa-Token 独立终端 {@link IntegrationDevice#TYPE}。
-     */
-    @PostMapping("/integration-api-token")
-    @SaCheckLogin
-    @Operation(summary = "签发机机集成长期访问令牌（cryoEMS 等使用 Authorization: Bearer）")
-    public IntegrationApiTokenVo issueIntegrationApiToken() {
-        Object loginId = StpUtil.getLoginId();
-        long ttl = integrationProperties.getApiTokenTimeoutSeconds();
-        if (ttl <= 0) {
-            ttl = 60L * 60 * 24 * 365;
-        }
-        StpUtil.logout(loginId, IntegrationDevice.TYPE);
-        SaLoginParameter param = SaLoginParameter.create()
-                .setDevice(IntegrationDevice.TYPE)
-                .setTimeout(ttl)
-                .setIsWriteHeader(false);
-        String token = StpUtil.createLoginSession(loginId, param);
-        return IntegrationApiTokenVo.of(token, ttl);
-    }
 
     @PutMapping("/psd")
     @SaCheckLogin
@@ -77,6 +52,30 @@ public class UserAccountCtl {
         sysUserDao.updateSelective(user);
     }
 
+    @PutMapping("/update")
+    @SaCheckLogin
+    @Operation(summary = "更新基本资料（仅允许修改当前登录用户，字段与 SysUser 一致）")
+    public void updateProfile(@RequestBody UpdateProfileRequest body) {
+        if (body == null) {
+            throw new RuntimeException("请求体不能为空");
+        }
+        String loginId = StpUtil.getLoginId().toString();
+        SysUser user = sysUserDao.findById(loginId).orElseThrow(() -> new RuntimeException("用户不存在"));
+        if (StringUtils.isBlank(body.getEmail())) {
+            throw new RuntimeException("邮箱不能为空");
+        }
+        String sex = StringUtils.trimToNull(body.getSex());
+        if (sex != null && !Set.of("0", "1", "2").contains(sex)) {
+            throw new RuntimeException("性别取值无效");
+        }
+        user.setNickName(StringUtils.trimToNull(body.getNickName()));
+        user.setEmail(StringUtils.trimToNull(body.getEmail()));
+        user.setPhonenumber(StringUtils.trimToNull(body.getPhonenumber()));
+        user.setSex(sex);
+        user.setAvatar(StringUtils.trimToNull(body.getAvatar()));
+        sysUserDao.updateSelective(user);
+    }
+
     @Data
     public static class ChangePasswordRequest {
         private String id;
@@ -85,17 +84,16 @@ public class UserAccountCtl {
     }
 
     @Data
-    @AllArgsConstructor
-    public static class IntegrationApiTokenVo {
-        /** Sa-Token 原始 token 值（请求头格式为 {@code Authorization: Bearer <token>}） */
-        private String token;
-        /** 与全局 sa-token 配置一致，固定为 Bearer */
-        private String tokenType;
-        /** 与本次签发一致的过期时间（秒） */
-        private long expiresInSeconds;
-
-        static IntegrationApiTokenVo of(String token, long expiresInSeconds) {
-            return new IntegrationApiTokenVo(token, "Bearer", expiresInSeconds);
-        }
+    public static class UpdateProfileRequest {
+        /** 用户昵称 */
+        private String nickName;
+        /** 用户邮箱 */
+        private String email;
+        /** 手机号码，与实体字段 phonenumber 一致 */
+        private String phonenumber;
+        /** 0 男 1 女 2 未知 */
+        private String sex;
+        /** 头像地址或 URL */
+        private String avatar;
     }
 }
