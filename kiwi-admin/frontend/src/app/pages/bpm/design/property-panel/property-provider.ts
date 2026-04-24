@@ -1,7 +1,7 @@
 import { inject, Injectable, InjectionToken } from "@angular/core";
 import { Element } from "bpmn-js/lib/model/Types";
 import { BasePropertyProvider } from "./base-property-provider";
-import { ComponentPropertyProvider } from "../../component/component-property-provider";
+import { ComponentPropertyProvider } from "../../flow-elements/component-property-provider";
 import { PropertyProvider, PropertyTab } from "./types";
 
 export type { PropertyTab, PropertyProvider } from "./types";

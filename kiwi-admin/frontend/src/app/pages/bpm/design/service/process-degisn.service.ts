@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
-import type { ComponentDescription } from '../../component/component-provider';
+import type { ComponentDescription } from '../../flow-elements/component-provider';
 
 @Injectable({
     providedIn: 'root'

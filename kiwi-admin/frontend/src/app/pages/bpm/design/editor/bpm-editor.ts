@@ -22,15 +22,15 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { finalize } from 'rxjs/operators';
-import kiwiDescriptor from '../../component/kiwi.json';
+import kiwiDescriptor from '../../flow-elements/kiwi.json';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from "../palette/pallete";
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
 import {
   ComponentDescription,
   ComponentProvider,
-} from '../../component/component-provider';
-import { ComponentService } from '../../component/component-service';
+} from '../../flow-elements/component-provider';
+import { ComponentService } from '../../flow-elements/component-service';
 import appendComponentModule from '../context-pad/append-component-module';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";

@@ -27,7 +27,7 @@ import {
 } from '../service/process-instance.service';
 import { BpmPropertiesPanel } from "../property-panel/properties-panel";
 import { ElementModel } from '../extension/element-model';
-import kiwiDescriptor from '../../component/kiwi.json';
+import kiwiDescriptor from '../../flow-elements/kiwi.json';
 @Component({
   selector: 'bpm-viewer',
   templateUrl: './bpm-viewer.html',

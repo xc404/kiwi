@@ -1,6 +1,6 @@
 // import { BpmnModeler } from 'bpmn-js/lib/Modeler';
 import { inject } from '@angular/core';
-import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/component/component-provider';
+import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/flow-elements/component-provider';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';

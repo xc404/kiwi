@@ -16,7 +16,7 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { ComponentDescription } from '../../component/component-provider';
+import { ComponentDescription } from '../../flow-elements/component-provider';
 import { ProcessInstance } from '../service/process-instance.service';
 import { PanelHeader } from './panel-header';
 import { PropertyGroup } from './property-group';
