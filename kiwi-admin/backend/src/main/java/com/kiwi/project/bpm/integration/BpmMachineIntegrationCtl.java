@@ -25,6 +25,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BpmMachineIntegrationCtl {
 
+    public static final String INTEGRATION_SECRET_HEADER = "X-Kiwi-Integration-Secret";
+
     private final BpmProcessStartService bpmProcessStartService;
     private final KiwiIntegrationProperties integrationProperties;
 
@@ -38,12 +40,16 @@ public class BpmMachineIntegrationCtl {
     public ProcessInstanceDto startForMachine(
             @PathVariable String id,
             @RequestBody(required = false) MachineStartBody body,
-            @RequestHeader(value = "X-Kiwi-Integration-Secret", required = false) String secret) {
+            @RequestHeader(value = INTEGRATION_SECRET_HEADER, required = false) String secret) {
+        validateSecret(secret);
+        Map<String, Object> variables = body != null ? body.getVariables() : null;
+        return bpmProcessStartService.start(id, variables);
+    }
+
+    private void validateSecret(String secret) {
         String expected = integrationProperties.getMachine().getSecret();
         if (!StringUtils.hasText(expected) || !expected.equals(secret)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "integration secret mismatch");
         }
-        Map<String, Object> variables = body != null ? body.getVariables() : null;
-        return bpmProcessStartService.start(id, variables);
     }
 }

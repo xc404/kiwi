@@ -72,6 +72,7 @@ app:
 
   # Kiwi-admin Camunda：movie 调度仅负责启动流程（详见 openspec/changes/cyroems-kiwi-workflow-integration/）
   # integration-secret 须与 Kiwi application.yml 中 kiwi.integration.machine.secret 一致
+  # 流程 BpmProcess.id 请配置在 Task.movieProcessDefinitionId；下方 movie-process-definition-id 仅迁移期回退
   kiwi:
     workflow:
       enabled: false
@@ -79,4 +80,11 @@ app:
       movie-process-definition-id: ""
       integration-secret: ""
       movie-batch-size: 20
+      client:
+        http-connect-timeout-seconds: 30
+        http-request-timeout-seconds: 120
+        rate-limit-retry-interval-millis: 1000
+        max-start-attempts: 5
+        min-interval-millis-between-starts: 0
+        default-poll-interval-millis: 5000
 
