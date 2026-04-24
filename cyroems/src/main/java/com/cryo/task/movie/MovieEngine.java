@@ -2,14 +2,16 @@ package com.cryo.task.movie;
 
 import com.cryo.dao.InstanceRepository;
 import com.cryo.dao.MovieRepository;
+import com.cryo.dao.dataset.TaskDataSetRepository;
 import com.cryo.model.Movie;
 import com.cryo.model.Task;
 import com.cryo.model.dataset.TaskDataset;
 import com.cryo.service.MovieService;
-import com.cryo.integration.workflow.KiwiWorkflowStarter;
+import com.cryo.integration.workflow.MovieKiwiWorkflowService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.Lifecycle;
+import org.springframework.util.StringUtils;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -24,7 +26,7 @@ import java.util.concurrent.ScheduledFuture;
 
 /**
  * 单颗粒 movie 任务调度：已废弃在本 JVM 内通过 {@code InstanceProcessor} + {@code IFlow}/{@code ListFlow}
- * 顺序推进；仅负责按批选取 movie 并调用 {@link KiwiWorkflowStarter} 在 Kiwi 中启动 Camunda 实例。
+ * 顺序推进；仅负责按批选取 movie 并调用 {@link MovieKiwiWorkflowService} 在 Kiwi 中启动 Camunda 实例。
  */
 @Slf4j
 public class MovieEngine implements Lifecycle {
@@ -38,7 +40,8 @@ public class MovieEngine implements Lifecycle {
     private final TaskStatistic movieStatisticTask;
     private final MovieService movieService;
     private final MovieSelector movieSelector;
-    private final KiwiWorkflowStarter kiwiWorkflowStarter;
+    private final MovieKiwiWorkflowService movieKiwiWorkflowService;
+    private final TaskDataSetRepository taskDataSetRepository;
 
     public MovieEngine(Task task, ApplicationContext applicationContext) {
         this.task = task;
@@ -47,15 +50,17 @@ public class MovieEngine implements Lifecycle {
         this.movieStatisticTask = applicationContext.getBean(TaskStatistic.class);
         this.movieService = applicationContext.getBean(MovieService.class);
         this.movieSelector = applicationContext.getBean(MovieSelector.class);
-        this.kiwiWorkflowStarter = applicationContext.getBean(KiwiWorkflowStarter.class);
+        this.movieKiwiWorkflowService = applicationContext.getBean(MovieKiwiWorkflowService.class);
+        this.taskDataSetRepository = applicationContext.getBean(TaskDataSetRepository.class);
     }
 
     @Override
     public void start() {
-        if (!kiwiWorkflowStarter.isEnabled()) {
+        if (!movieKiwiWorkflowService.isMoviePipelineReady(task)) {
             throw new IllegalStateException(
-                    "Movie 处理已改为仅由 Kiwi Camunda 编排：请配置 app.kiwi.workflow.enabled=true，"
-                            + "以及 base-url、movie-process-definition-id、integration-secret（与 Kiwi kiwi.integration.machine.secret 一致）。");
+                    "Movie 处理已改为仅由 Kiwi Camunda 编排：请配置 app.kiwi.workflow.enabled=true、base-url、"
+                            + "integration-secret（与 Kiwi kiwi.integration.machine.secret 一致），并在本 Task 上设置 movieProcessDefinitionId"
+                            + "（Kiwi BpmProcess.id），或使用全局 movie-process-definition-id 作为迁移回退。");
         }
         this.running = true;
         this.resetProcessingMovies();
@@ -89,10 +94,12 @@ public class MovieEngine implements Lifecycle {
             return;
         }
 
-        int batch = kiwiWorkflowStarter.getMovieBatchSize();
+        int batch = movieKiwiWorkflowService.getMovieBatchSize();
 
         this.movieService.sortMovie(task.getId());
         this.updateProcessingStatus();
+
+        TaskDataset taskDataset = resolveTaskDataset(this.task);
 
         List<Movie> unprocessedMovies = movieSelector.getHighPriorityMovies(task.getId(), batch);
         if (unprocessedMovies.isEmpty()) {
@@ -116,12 +123,19 @@ public class MovieEngine implements Lifecycle {
 
         for (Movie movie : unprocessedMovies) {
             try {
-                kiwiWorkflowStarter.ensureStarted(movie);
+                movieKiwiWorkflowService.ensureStarted(movie, this.task, taskDataset);
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             }
         }
         movieStatisticTask.statisticMovies(task);
+    }
+
+    private TaskDataset resolveTaskDataset(Task t) {
+        if (t.getTaskSettings() == null || !StringUtils.hasText(t.getTaskSettings().getDataset_id())) {
+            return null;
+        }
+        return taskDataSetRepository.findById(t.getTaskSettings().getDataset_id()).orElse(null);
     }
 
     private List<Movie> getUnprocessedMovies(int idleCount) {

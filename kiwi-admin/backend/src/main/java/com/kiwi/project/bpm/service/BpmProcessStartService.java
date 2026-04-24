@@ -43,20 +43,14 @@ public class BpmProcessStartService {
 
     /**
      * 若 {@link BpmProcess#getMaxProcessInstances()} 大于 0，则统计当前 Camunda 运行中实例数（按流程定义 key），
-     * 达到上限则拒绝启动。
+     * 达到上限则拒绝启动（HTTP 429）。始终走引擎实时统计。
      */
     private void enforceMaxRunningInstances(BpmProcess bpmProcess, String deployedProcessDefinitionId) {
         Integer max = bpmProcess.getMaxProcessInstances();
         if (max == null || max <= 0) {
             return;
         }
-        ProcessDefinition processDefinition = processEngine.getRepositoryService()
-                .getProcessDefinition(deployedProcessDefinitionId);
-        String key = processDefinition.getKey();
-        long running = processEngine.getRuntimeService()
-                .createProcessInstanceQuery()
-                .processDefinitionKey(key)
-                .count();
+        long running = countRunningForDeployedDefinitionId(deployedProcessDefinitionId);
         if (running >= max) {
             throw new ResponseStatusException(
                     HttpStatus.TOO_MANY_REQUESTS,
@@ -66,5 +60,15 @@ public class BpmProcessStartService {
                             running,
                             max));
         }
+    }
+
+    private long countRunningForDeployedDefinitionId(String deployedProcessDefinitionId) {
+        ProcessDefinition processDefinition = processEngine.getRepositoryService()
+                .getProcessDefinition(deployedProcessDefinitionId);
+        String key = processDefinition.getKey();
+        return processEngine.getRuntimeService()
+                .createProcessInstanceQuery()
+                .processDefinitionKey(key)
+                .count();
     }
 }

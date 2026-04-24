@@ -73,6 +73,12 @@ public class Task extends DataEntity
     private Statistic mdoc_statistic;
     @Hidden
     private String work_dir;
+    /**
+     * Kiwi-admin 中已部署的 {@code BpmProcess} 主键，用于本 Task 的 movie 等流程启动；优先于全局
+     * {@code app.kiwi.workflow.movie-process-definition-id} 回退配置。
+     */
+    @Hidden
+    private String movieProcessDefinitionId;
     @Hidden
     private Boolean gainExported;
     @Hidden
