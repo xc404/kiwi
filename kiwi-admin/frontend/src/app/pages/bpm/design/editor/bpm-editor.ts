@@ -34,7 +34,6 @@ import { ComponentService } from '../../component/component-service';
 import appendComponentModule from '../context-pad/append-component-module';
 import { ProcessDesignService } from '../service/process-degisn.service';
 import { BpmToolbar } from "../toolbar/bpm-toolbar";
-import { BpmDesignerChatComponent } from './bpm-designer-chat.component';
 import { BpmEditorToken } from './bpm-editor-token';
 
 /** SpEL 表达式编辑器用到的变量推导（属性面板已接入，可按需复用） */
@@ -62,7 +61,6 @@ export { BpmEditorToken };
     NzLayoutComponent,
     NzLayoutModule,
     BpmToolbar,
-    BpmDesignerChatComponent,
     NzTabsModule,
     NzSpinModule,
     NzButtonModule,
@@ -222,7 +220,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
         this.processDefinitionService.updateProcess(this.bpmProcess().id, {
           bpmnXml: bpmn.xml
-        }        ).subscribe(
+        }).subscribe(
           (data: any) => {
             this.bpmProcess.set(data)
             this.stackIdx = stackIdx;
@@ -361,7 +359,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
             icon: c.icon || 'bpmn-icon-service-task',
           })),
         ),
-      error: () => {},
+      error: () => { },
     });
   }
 

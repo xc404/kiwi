@@ -59,7 +59,7 @@ public class MovieEngine implements Lifecycle {
         if (!movieKiwiWorkflowService.isMoviePipelineReady(task)) {
             throw new IllegalStateException(
                     "Movie 处理已改为仅由 Kiwi Camunda 编排：请配置 app.kiwi.workflow.enabled=true、base-url、"
-                            + "integration-secret（与 Kiwi kiwi.integration.machine.secret 一致），并在本 Task 上设置 movieProcessDefinitionId"
+                            + "access-token（在 Kiwi 个人设置 → 基本设置签发的长期 Bearer Token），并在本 Task 上设置 movieProcessDefinitionId"
                             + "（Kiwi BpmProcess.id），或使用全局 movie-process-definition-id 作为迁移回退。");
         }
         this.running = true;

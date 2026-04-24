@@ -43,11 +43,11 @@ public class KiwiWorkflowClient {
                 .build();
     }
 
-    /** 客户端已启用且具备 base-url、密钥（不含业务侧的 processDefinitionId）。 */
+    /** 客户端已启用且具备 base-url、访问令牌（不含业务侧的 processDefinitionId）。 */
     public boolean isClientConfigured() {
         return properties.isEnabled()
                 && StringUtils.hasText(properties.getBaseUrl())
-                && StringUtils.hasText(properties.getIntegrationSecret());
+                && StringUtils.hasText(properties.getAccessToken());
     }
 
     /**
@@ -57,7 +57,7 @@ public class KiwiWorkflowClient {
      */
     public String startProcess(String bpmProcessId, Map<String, Object> variables) throws Exception {
         if (!isClientConfigured()) {
-            throw new IllegalStateException("Kiwi workflow client is not configured (enabled/baseUrl/secret)");
+            throw new IllegalStateException("Kiwi workflow client is not configured (enabled/baseUrl/accessToken)");
         }
         waitMinStartInterval();
 
@@ -76,7 +76,7 @@ public class KiwiWorkflowClient {
             HttpRequest req = HttpRequest.newBuilder(uri)
                     .timeout(Duration.ofSeconds(c.getHttpRequestTimeoutSeconds()))
                     .header("Content-Type", "application/json")
-                    .header("X-Kiwi-Integration-Secret", properties.getIntegrationSecret())
+                    .header("Authorization", authorizationHeader())
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
                     .build();
 
@@ -124,7 +124,7 @@ public class KiwiWorkflowClient {
         URI uri = URI.create(base + "/bpm/integration/process-instances/" + instanceId + "/state");
         HttpRequest req = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(properties.getClient().getHttpRequestTimeoutSeconds()))
-                .header("X-Kiwi-Integration-Secret", properties.getIntegrationSecret())
+                .header("Authorization", authorizationHeader())
                 .GET()
                 .build();
         HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -157,5 +157,13 @@ public class KiwiWorkflowClient {
             u = u.substring(0, u.length() - 1);
         }
         return u;
+    }
+
+    private String authorizationHeader() {
+        String raw = properties.getAccessToken().trim();
+        if (raw.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            return raw;
+        }
+        return "Bearer " + raw;
     }
 }

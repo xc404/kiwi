@@ -1,5 +1,20 @@
 <div nz-row>
   <div nz-col [nzLg]="24" [nzMd]="24" [nzOrder]="formOrder" [nzSm]="24" [nzXl]="12" [nzXs]="24" [nzXXl]="12">
+    <nz-card nzBordered="true" nzTitle="机机集成访问令牌" class="integration-token-card m-b-16">
+      <p class="integration-token-desc">
+        供 cryoEMS 等服务调用 Kiwi 流程接口时使用，请在对方配置中填写为请求头 Authorization 的值（或仅填写裸 Token，由对方自行加 Bearer
+        前缀）。每次签发会轮换令牌，旧值立即失效；切勿将令牌提交到版本库。
+      </p>
+      <button nz-button nzType="primary" type="button" (click)="issueIntegrationToken()" [nzLoading]="issuingIntegrationToken()">
+        签发长期 Token
+      </button>
+      @if (issuedAuthorization(); as auth) {
+        <div class="issued-token-row m-t-16">
+          <input class="issued-token-input" nz-input readonly type="text" [value]="auth" />
+          <button nz-button type="button" (click)="copyAuthorization(auth)">复制</button>
+        </div>
+      }
+    </nz-card>
     <form nz-form [formGroup]="validateForm" [nzLayout]="'vertical'" (ngSubmit)="submitForm()">
       <nz-form-item>
         <nz-form-label nzFor="email" nzRequired nzSpan="24">邮箱</nz-form-label>
