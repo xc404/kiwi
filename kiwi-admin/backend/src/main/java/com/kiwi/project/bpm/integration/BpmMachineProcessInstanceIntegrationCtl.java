@@ -1,6 +1,5 @@
 package com.kiwi.project.bpm.integration;
 
-import cn.dev33.satoken.annotation.SaIgnore;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.RuntimeService;
@@ -10,13 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 供 cryoEMS 等以共享密钥查询流程实例状态（不经用户登录态）。
+ * 供 cryoEMS 等查询流程实例状态；鉴权与全局 API 一致（Bearer Token）。
  */
 @RestController
 @RequestMapping("/bpm/integration/process-instances")
@@ -25,14 +23,10 @@ public class BpmMachineProcessInstanceIntegrationCtl {
 
     private final RuntimeService runtimeService;
     private final HistoryService historyService;
-    private final KiwiIntegrationProperties integrationProperties;
 
-    @SaIgnore
     @GetMapping("{instanceId}/state")
     public ProcessInstanceIntegrationDto stateForMachine(
-            @PathVariable String instanceId,
-            @RequestHeader(value = "X-Kiwi-Integration-Secret", required = false) String secret) {
-        validateSecret(secret);
+            @PathVariable String instanceId) {
 
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(instanceId)
@@ -66,12 +60,5 @@ public class BpmMachineProcessInstanceIntegrationCtl {
         boolean canceled = StringUtils.hasText(hip.getDeleteReason());
         dto.setState(canceled ? "CANCELED" : "COMPLETED");
         return dto;
-    }
-
-    private void validateSecret(String secret) {
-        String expected = integrationProperties.getMachine().getSecret();
-        if (!StringUtils.hasText(expected) || !expected.equals(secret)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "integration secret mismatch");
-        }
     }
 }

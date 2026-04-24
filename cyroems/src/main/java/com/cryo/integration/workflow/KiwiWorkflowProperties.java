@@ -18,8 +18,11 @@ public class KiwiWorkflowProperties {
      * 正式用法为 Task 级 movie-process-definition-id。
      */
     private String movieProcessDefinitionId = "";
-    /** 与 Kiwi {@code kiwi.integration.machine.secret} 一致 */
-    private String integrationSecret = "";
+    /**
+     * Kiwi-admin 用户在「个人设置 → 基本设置」签发的长期 Token；请求头 {@code Authorization: Bearer …}。
+     * 可填裸 token 或以 {@code Bearer } 开头的完整值。
+     */
+    private String accessToken = "";
     /** {@link com.cryo.task.movie.MovieEngine} 每轮最多尝试拉起 Kiwi 实例的条数（替代原线程池 idle 上限） */
     private int movieBatchSize = 20;
     /** {@link KiwiWorkflowClient} / {@link KiwiWorkflowInstanceWatcher} 共用 */

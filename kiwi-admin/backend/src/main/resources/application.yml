@@ -10,10 +10,9 @@ server:
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
-  # cryoEMS → Kiwi 机机启动流程（密钥为空时不建议暴露公网）
+  # cryoEMS → Kiwi：机机调用使用用户在「个人设置 → 基本设置」签发的长期 Token（Authorization: Bearer）
   integration:
-    machine:
-      secret: ${KIWI_MACHINE_SECRET:}
+    api-token-timeout-seconds: ${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}
 
 app:
   cors:

@@ -71,14 +71,14 @@ app:
       enabled: false
 
   # Kiwi-admin Camunda：movie 调度仅负责启动流程（详见 openspec/changes/cyroems-kiwi-workflow-integration/）
-  # integration-secret 须与 Kiwi application.yml 中 kiwi.integration.machine.secret 一致
+  # access-token：在 Kiwi 「个人设置 → 基本设置」签发的长期 Token（Authorization: Bearer）
   # 流程 BpmProcess.id 请配置在 Task.movieProcessDefinitionId；下方 movie-process-definition-id 仅迁移期回退
   kiwi:
     workflow:
       enabled: false
       base-url: ""
       movie-process-definition-id: ""
-      integration-secret: ""
+      access-token: ""
       movie-batch-size: 20
       client:
         http-connect-timeout-seconds: 30

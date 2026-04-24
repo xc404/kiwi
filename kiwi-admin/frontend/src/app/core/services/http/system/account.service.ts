@@ -32,6 +32,13 @@ export interface UserPsd {
   newPassword: string;
 }
 
+/** 与后端 {@code UserAccountCtl.IntegrationApiTokenVo} 对齐 */
+export interface IntegrationApiToken {
+  token: string;
+  tokenType: string;
+  expiresInSeconds: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -44,5 +51,10 @@ export class AccountService {
 
   public editAccountPsd(param: UserPsd): Observable<void> {
     return this.http.put('/user/psd', param);
+  }
+
+  /** 签发 cryoEMS 等使用的长期 Bearer Token（会轮换同终端旧令牌） */
+  public issueIntegrationApiToken(): Observable<IntegrationApiToken> {
+    return this.http.post<IntegrationApiToken>('/user/integration-api-token', {}, { showLoading: true });
   }
 }
