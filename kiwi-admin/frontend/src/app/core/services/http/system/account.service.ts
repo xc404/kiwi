@@ -1,12 +1,19 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { PageInfo, SearchCommonVO } from '../../types';
 import { BaseHttpService } from '../base-http.service';
 
-/*
- * 用户管理
- * */
+/** 与后端 SysUser / PUT /user/update 请求体一致（可编辑的基本资料） */
+export interface UserProfileUpdate {
+  nickName?: string | null;
+  email?: string | null;
+  phonenumber?: string | null;
+  /** 0 男 1 女 2 未知 */
+  sex?: string | null;
+  avatar?: string | null;
+}
+
+/** 系统用户管理弹窗等场景使用的用户模型（与 SysUser 不必逐字段一致） */
 export interface User {
   id: number;
   password: string;
@@ -32,29 +39,17 @@ export interface UserPsd {
   newPassword: string;
 }
 
-/** 与后端 {@code UserAccountCtl.IntegrationApiTokenVo} 对齐 */
-export interface IntegrationApiToken {
-  token: string;
-  tokenType: string;
-  expiresInSeconds: number;
-}
-
 @Injectable({
   providedIn: 'root'
 })
 export class AccountService {
   http = inject(BaseHttpService);
 
-  public editAccount(param: User): Observable<void> {
+  public editAccount(param: UserProfileUpdate): Observable<void> {
     return this.http.put('/user/update', param, { needSuccessInfo: true });
   }
 
   public editAccountPsd(param: UserPsd): Observable<void> {
     return this.http.put('/user/psd', param);
-  }
-
-  /** 签发 cryoEMS 等使用的长期 Bearer Token（会轮换同终端旧令牌） */
-  public issueIntegrationApiToken(): Observable<IntegrationApiToken> {
-    return this.http.post<IntegrationApiToken>('/user/integration-api-token', {}, { showLoading: true });
   }
 }

@@ -13,6 +13,7 @@ kiwi:
   # cryoEMS → Kiwi：机机调用使用用户在「个人设置 → 基本设置」签发的长期 Token（Authorization: Bearer）
   integration:
     api-token-timeout-seconds: ${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}
+    personal-access-token-max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
 
 app:
   cors:
