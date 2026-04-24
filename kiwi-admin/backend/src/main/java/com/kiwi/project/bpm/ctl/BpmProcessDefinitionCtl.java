@@ -1,7 +1,6 @@
 package com.kiwi.project.bpm.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
@@ -28,9 +27,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.apache.commons.lang3.StringUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Date;
@@ -44,6 +46,7 @@ import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.updateIdA
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/bpm/process")
+@Tag(name = "BPM 流程定义", description = "流程 CRUD、部署与启动")
 public class BpmProcessDefinitionCtl extends BaseCtl
 {
 
@@ -118,10 +121,16 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         return this.bpmProcessDefinitionDao.findBy(QueryParams.of(queryInput), pageable);
     }
 
-    @Tool(
-            name = "bpmPd_aiPage",
-            description = "分页查询流程定义。projectId 可选；page 从 0 开始，size 默认 20、最大 100。")
-    public Page<BpmProcess> aiPage(String projectId, Integer page, Integer size) {
+    @Operation(
+            operationId = "bpmPd_aiPage",
+            summary = "分页查询流程定义",
+            description = "projectId 可选；page 从 0 开始，size 默认 20、最大 100。")
+    @GetMapping("/search/ai-page")
+    @ResponseBody
+    public Page<BpmProcess> aiPage(
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         QueryInput q = new QueryInput();
         q.setProjectId(projectId);
         int p = page != null && page >= 0 ? page : 0;
@@ -129,8 +138,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         return page(q, PageRequest.of(p, s));
     }
 
-
-    @Tool(name = "bpmPd_get", description = "按 id 获取流程定义。")
+    @Operation(operationId = "bpmPd_get", summary = "按 id 获取流程定义")
     @GetMapping("{id}")
     @ResponseBody
     public BpmProcess getProcessDefinition(@PathVariable String id) {
@@ -140,7 +148,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     /**
      * 将已保存流程的 BPMN 分析结果包装为 {@link BpmComponent}（输入/输出契约视图）。
      */
-    @Tool(name = "bpmPd_getAsComponent", description = "将已保存流程的分析结果包装为组件契约视图。")
+    @Operation(operationId = "bpmPd_getAsComponent", summary = "将已保存流程的分析结果包装为组件契约视图")
     @GetMapping("{id}/as-component")
     @ResponseBody
     public BpmComponent getProcessAsComponent(@PathVariable String id) {
@@ -168,7 +176,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
      * 另存为组件：分析 BPMN 推导输入/输出并写入组件库（一次请求完成）。
      * 请求体可带 {@code bpmnXml} 以使用画布当前未保存内容；否则使用库中已保存的 BPMN。
      */
-    @Tool(name = "bpmPd_saveAsComponent", description = "将流程另存为组件库条目（可带名称、版本、描述）。")
+    @Operation(operationId = "bpmPd_saveAsComponent", summary = "将流程另存为组件库条目（可带名称、版本、描述）")
     @PostMapping("{id}/save-as-component")
     @ResponseBody
     public BpmComponent saveAsComponent(@PathVariable String id, @RequestBody SaveAsComponentInput body) {
@@ -187,7 +195,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     }
 
 
-    @Tool(name = "bpmPd_create", description = "新建流程定义（名称、所属 projectId）。")
+    @Operation(operationId = "bpmPd_create", summary = "新建流程定义（名称、所属 projectId）")
     @PostMapping()
     @ResponseBody
     public BpmProcess createProcessDefinition(@RequestBody CreateInput createInput) {
@@ -198,7 +206,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     }
 
 
-    @Tool(name = "bpmPd_save", description = "保存流程名称与 BPMN XML。")
+    @Operation(operationId = "bpmPd_save", summary = "保存流程名称与 BPMN XML")
     @PutMapping("{id}")
     @ResponseBody
     public BpmProcess saveProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
@@ -225,7 +233,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         return bpmProcess;
     }
 
-    @Tool(name = "bpmPd_saveAs", description = "将流程另存为新 id 的流程。")
+    @Operation(operationId = "bpmPd_saveAs", summary = "将流程另存为新 id 的流程")
     @PostMapping("{id}/saveAs")
     @ResponseBody
     public BpmProcess saveAsProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
@@ -241,7 +249,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     }
 
 
-    @Tool(name = "bpmPd_clone", description = "克隆流程为新流程。")
+    @Operation(operationId = "bpmPd_clone", summary = "克隆流程为新流程")
     @PostMapping("{id}/clone")
     @ResponseBody
     public BpmProcess cloneProcessDefinition(@PathVariable String id, @RequestBody CloneInput cloneInput) {
@@ -258,7 +266,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         return this.bpmProcessDefinitionDao.save(bpmProcess);
     }
 
-    @Tool(name = "bpmPd_deploy", description = "部署流程到 Camunda 引擎。")
+    @Operation(operationId = "bpmPd_deploy", summary = "部署流程到 Camunda 引擎")
     @PostMapping("{id}/deploy")
     @ResponseBody
     public BpmProcess deployProcessDefinition(@PathVariable String id) {
@@ -278,7 +286,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
 
     }
 
-    @Tool(name = "bpmPd_start", description = "启动已部署流程的最新实例。")
+    @Operation(operationId = "bpmPd_start", summary = "启动已部署流程的最新实例")
     @PostMapping("{id}/start")
     @ResponseBody
     public ProcessInstanceDto startProcessDefinition(@PathVariable String id, @RequestBody(required = false) StartProcessInput body) {

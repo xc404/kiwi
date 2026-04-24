@@ -1,8 +1,9 @@
 package com.kiwi.project.tools.jdbc.connection.ctl;
 
-import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.tools.jdbc.connection.dao.ConnectionSettingsDao;
 import com.kiwi.project.tools.jdbc.connection.service.ConnectionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -21,48 +22,39 @@ import java.util.List;
 @RestController
 @RequestMapping("/tools")
 @RequiredArgsConstructor
-public class TableCtl
-{
+@Tag(name = "JDBC 工具", description = "连接与表元数据")
+public class TableCtl {
 
     private final ConnectionSettingsDao connectionSettingsDao;
     private final ConnectionService connectionService;
 
-    // 假设这里有一个获取数据库连接的方法
     private Connection getConnection(String connectionId) throws SQLException {
-        // 实现获取数据库连接的逻辑
         return this.connectionService.getConnection(connectionId);
     }
 
-    /**
-     * 获取数据库中的所有表名
-     *
-     * @return 表名列表
-     */
-    @Tool(name = "jdbc_listTables", description = "列出某 JDBC 连接下的数据库表名及注释。")
+    @Operation(operationId = "jdbc_listTables", summary = "列出某 JDBC 连接下的数据库表名及注释")
     @GetMapping("connection/{connectionId}/tables")
     public List<TableInfo> getTables(@PathVariable String connectionId) {
         List<TableInfo> tables = new ArrayList<>();
-        try( Connection connection = getConnection(connectionId) ) {
+        try (Connection connection = getConnection(connectionId)) {
             DatabaseMetaData metaData = connection.getMetaData();
             String schema = connection.getSchema();
             ResultSet resultSet = metaData.getTables(connection.getCatalog(), schema, "%", new String[]{"TABLE"});
-            while( resultSet.next() ) {
+            while (resultSet.next()) {
                 String tableName = resultSet.getString("TABLE_NAME");
                 String remarks = resultSet.getString("REMARKS");
                 tables.add(new TableInfo(tableName, remarks));
             }
             resultSet.close();
-        } catch( SQLException e ) {
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
         return tables;
     }
 
-
     @Data
     @AllArgsConstructor
-    public static class TableInfo
-    {
+    public static class TableInfo {
         private String id;
         private String name;
         private String comment;

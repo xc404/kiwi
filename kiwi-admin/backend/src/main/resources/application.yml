@@ -10,10 +10,23 @@ server:
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
+    # 助手 ChatClient 回环 MCP 的 HTTP 基址；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
+    mcp:
+      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8088}}
   # cryoEMS → Kiwi：机机调用使用用户在「个人设置 → 基本设置」签发的长期 Token（Authorization: Bearer）
   integration:
     api-token-timeout-seconds: ${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}
     personal-access-token-max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
+
+# Server2MCP：https://theeterna.github.io/server2mcp-docs/guide/quickstart.html
+# 对外 MCP 传输路径由 Spring AI MCP Server 配置 spring.ai.mcp.server.*（Server2MCP 共用此前缀）
+plugin:
+  mcp:
+    enabled: ${PLUGIN_MCP_ENABLED:true}
+    parser:
+      param: JAVADOC, TOOL, SPRINGMVC, JACKSON, SWAGGER2, SWAGGER3
+      des: JAVADOC, TOOL, JACKSON, SWAGGER3, SWAGGER2
+    scope: interface
 
 app:
   cors:
@@ -34,14 +47,16 @@ spring:
       chat:
         options:
           model: ${KIWI_AI_MODEL:qwen-plus}
-    # MCP Server：与助手共用 MenuAssistantTools（ToolCallback）；默认路径见 Spring AI 文档（如 /sse）。
-    # 关闭可设环境变量 SPRING_AI_MCP_SERVER_ENABLED=false
+    # MCP Server（WebMVC + SSE）：与 Server2MCP 共用；端点见官方 spring.ai.mcp.server.*
     mcp:
       server:
         enabled: ${SPRING_AI_MCP_SERVER_ENABLED:true}
-        name: kiwi-admin
-        version: 1.0.0
+        name: ${SPRING_AI_MCP_SERVER_NAME:kiwi-admin}
+        version: ${SPRING_AI_MCP_SERVER_VERSION:1.0.0}
         instructions: "Kiwi 管理后台 MCP：字典与页面导航等工具。HTTP 调用请携带与 API 相同的登录 Token（Authorization: Bearer ...）。"
+        # SSE：事件流路径 + JSON-RPC POST 路径（与 Spring AI WebMvc SSE 约定一致；若与运行版本不符请用环境变量覆盖）
+        sse-endpoint: ${SPRING_AI_MCP_SERVER_SSE_ENDPOINT:/sse}
+        sse-message-endpoint: ${SPRING_AI_MCP_SERVER_SSE_MESSAGE_ENDPOINT:/message}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true}
