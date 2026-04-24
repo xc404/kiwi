@@ -186,11 +186,10 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
         </dependency>
-        <!-- Spring AI MCP Server（WebMVC + SSE）：与 ChatClient 共用 ToolCallback；外部 MCP 客户端可连接（需登录态）。 -->
+        <!-- MCP：由 server2mcp 传递引入 Spring AI MCP Server（WebMVC + SSE），不在此模块直接声明 spring-ai-starter-mcp-server-webmvc -->
         <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
-            <version>1.0.1</version>
+            <groupId>com.ai.plug</groupId>
+            <artifactId>server2mcp-starter-webmvc</artifactId>
         </dependency>
     </dependencies>
     <dependencyManagement>
@@ -217,6 +216,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.ai.plug</groupId>
+                <artifactId>server2mcp-starter-webmvc</artifactId>
+                <version>1.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -242,7 +246,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <!-- @Tool 方法参数名需保留，供模型按 JSON 字段映射 -->
+                    <!-- OpenAPI/MCP 工具入参按方法参数名反序列化，需保留参数名 -->
                     <parameters>true</parameters>
                     <!-- JDK 多模块下确保 Lombok 参与编译，避免 @Data 等未生成 getter/setter -->
                     <annotationProcessorPaths>

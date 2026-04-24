@@ -13,7 +13,7 @@
 | 鉴权 | Sa-Token（Redis） |
 | 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；Redis |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE，与助手工具共用） |
+| AI（可选） | Spring AI Alibaba（DashScope / 通义）、`com.ai.plug:server2mcp-starter-webmvc`（MCP + `plugin.mcp.*`，传递依赖含 Spring AI MCP Server） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
 
 模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
@@ -47,6 +47,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 | 项 | 说明 |
 |----|------|
 | 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、Redis、Camunda、`app.cors`、AI/MCP 等） |
+| MCP 端点 | `spring.ai.mcp.server.sse-endpoint`、`spring.ai.mcp.server.sse-message-endpoint`（及 `SPRING_AI_MCP_SERVER_*` 环境变量）；助手回环基址 `kiwi.ai.mcp.loopback-base-url` |
 | 本地覆盖 | 复制 `application-local.example.yml` 为 `application-local.yml` 填写真实连接信息；**勿提交** `application-local.yml`（已在 `.gitignore`） |
 | CORS | `app.cors.allowed-origins`，生产环境用环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置实际前端 Origin |
 | 敏感项 | 数据库密码、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD`、AI 密钥（如 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`）等建议用环境变量 |
@@ -76,6 +77,11 @@ mvn -pl kiwi-admin/backend -am clean package
 | `src/main/java/com/kiwi/framework/` | 框架层（启动类、安全、Web、Swagger 等） |
 | `src/main/java/com/kiwi/project/` | 业务：`bpm`、`system`、`tools`（代码生成 / JDBC）、`ai`、`monitor`、`notification` 等 |
 | `src/main/resources/` | `application*.yml`、MyBatis XML、Velocity 模板、权限与 BPM 资源等 |
+
+## MCP 与 AI 工具
+
+- **`server2mcp-starter-webmvc`**：在 `pom.xml` 中引入；**不再**单独声明 `spring-ai-starter-mcp-server-webmvc`，也不再使用 `KiwiOpenApiSyncMcpToolsConfiguration`。MCP 对外能力与工具列表由 **`plugin.mcp.*`**（及可选 `spring.ai.mcp.server.*`，见 Server2MCP 文档）与 starter 自动配置提供。
+- **助手**：`ChatClient` 通过本机 `McpSyncClient`（`kiwi.ai.mcp.loopback-base-url` + `spring.ai.mcp.server.sse-endpoint`）与 MCP 对齐工具；须与 `spring.ai.mcp.server` 下 SSE 端点配置一致。
 
 ## 相关文档
 

@@ -9,8 +9,9 @@ import com.kiwi.framework.session.SessionService;
 import com.kiwi.framework.session.SessionUser;
 import com.kiwi.project.system.dao.SysMenuDao;
 import com.kiwi.project.system.entity.SysMenu;
-import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.project.system.service.MenuService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -27,18 +28,16 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
-public class AuthCtl
-{
-    public static class LoginInput
-    {
+@Tag(name = "认证与当前用户", description = "登录、用户信息、菜单与权限")
+public class AuthCtl {
+    public static class LoginInput {
         public String userName;
         public String password;
     }
 
     @Data
     @AllArgsConstructor
-    public static class LoginOutput
-    {
+    public static class LoginOutput {
         public final String token;
     }
 
@@ -62,7 +61,7 @@ public class AuthCtl
         this.sessionService.logout();
     }
 
-    @Tool(name = "auth_userInfo", description = "获取当前登录用户信息。")
+    @Operation(operationId = "auth_userInfo", summary = "获取当前登录用户信息")
     @GetMapping("/auth/userinfo")
     @SaCheckLogin
     @ResponseBody
@@ -71,8 +70,7 @@ public class AuthCtl
         return this.sessionService.getCurrentUser();
     }
 
-
-    @Tool(name = "auth_menus", description = "获取当前用户可见菜单树。")
+    @Operation(operationId = "auth_menus", summary = "获取当前用户可见菜单树")
     @GetMapping("/auth/menus")
     @SaCheckLogin
     @ResponseBody
@@ -80,7 +78,7 @@ public class AuthCtl
         SessionUser sessionUser = this.sessionService.getCurrentUser();
 
         List<SysMenu> visibleMenus = this.menuService.getVisibleMenus();
-        if( sessionUser.isSuperUser() ) {
+        if (sessionUser.isSuperUser()) {
             return Tree.build(visibleMenus).getByParentId(SysMenu.Root);
         }
 
@@ -90,7 +88,7 @@ public class AuthCtl
         return Tree.build(visibleMenus).getByParentId(SysMenu.Root);
     }
 
-    @Tool(name = "auth_permissions", description = "获取当前登录用户权限码列表。")
+    @Operation(operationId = "auth_permissions", summary = "获取当前登录用户权限码列表")
     @GetMapping("/auth/permissions")
     @SaCheckLogin
     @ResponseBody

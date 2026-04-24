@@ -3,7 +3,6 @@ package com.kiwi.project.system.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -11,8 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 助手侧与菜单路由相关的 Spring AI 工具（如登记前端跳转）；业务 CRUD 优先通过 {@link org.springframework.ai.tool.annotation.Tool}
- * 标注在 {@link org.springframework.web.bind.annotation.RestController} 上暴露。
+ * 助手侧与菜单路由相关的逻辑；对外 MCP/ChatClient 通过 {@link AssistantActionsCtl} 与 OpenAPI 暴露。
  */
 @Service
 @RequiredArgsConstructor
@@ -23,9 +21,6 @@ public class MenuAssistantTools {
     private final MenuAssistantActionContext menuAssistantActionContext;
     private final ObjectMapper objectMapper;
 
-    @Tool(
-            name = "assistant_navigate",
-            description = "登记前端跳转到应用内页面。routePath 必须与 auth_menus 返回的菜单 path 一致（可先查菜单再跳转）。queryParamsJson 可选，为 JSON 对象字符串，例如 {\"groupCode\":\"sys_user_sex\"}。")
     public String navigate(String routePath, String queryParamsJson) {
         Map<String, String> query;
         try {
