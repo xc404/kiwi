@@ -1,6 +1,6 @@
 import { effect, Injectable, signal } from '@angular/core';
 
-import { Theme, ThemeMode } from '@app/layout/default/setting-drawer/setting-drawer.component';
+import { Theme, ThemeMode } from '@app/layout/setting-drawer/setting-drawer.component';
 
 export interface SettingInterface {
   theme: Theme['key']; // 主题模式（暗黑模式，明亮模式）

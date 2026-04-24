@@ -2,7 +2,7 @@ import { NgClass, NgStyle, NgTemplateOutlet } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
-import { SettingDrawerComponent, Theme } from '@app/layout/default/setting-drawer/setting-drawer.component';
+import { SettingDrawerComponent, Theme } from '@app/layout/setting-drawer/setting-drawer.component';
 import { CollapsedNavWidth, IsFirstLogin, SideNavWidth } from '@config/constant';
 import { DriverService } from '@core/services/common/driver.service';
 import { WindowService } from '@core/services/common/window.service';
