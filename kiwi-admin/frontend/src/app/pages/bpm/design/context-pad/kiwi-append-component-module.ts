@@ -2,7 +2,7 @@ import { assign } from 'min-dash';
 import { is } from 'bpmn-js/lib/util/ModelUtil';
 import { isEventSubProcess } from 'bpmn-js/lib/util/DiUtil';
 import type { Element } from 'bpmn-js/lib/model/Types';
-import type { ComponentDescription, ComponentsGroup } from '../../component/component-provider';
+import type { ComponentDescription, ComponentsGroup } from '../../flow-elements/component-provider';
 
 /** 与 BpmnModeler 顶层 options 一并传入 diagram-js `config` */
 export interface KiwiAppendComponentConfig {

@@ -1,6 +1,6 @@
 import BaseViewer from 'bpmn-js/lib/BaseViewer';
 import { Element } from 'bpmn-js/lib/model/Types';
-import { ComponentService } from '../../component/component-service';
+import { ComponentService } from '../../flow-elements/component-service';
 import { ElementModel } from '../extension/element-model';
 /** 与后端 BpmProcessIoAnalysisService.INPUT_VAR_REF 一致 */
 export const BPM_INPUT_VAR_REF = /\$\{([a-zA-Z0-9_]+)\}/g;

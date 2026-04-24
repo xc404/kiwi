@@ -3,7 +3,7 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { FieldEditorConfig, toFormlyConfig } from "@app/shared/components/field/field-editor";
 import { FormlyModule } from "@ngx-formly/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { ComponentService } from "../../component/component-service";
+import { ComponentService } from "../../flow-elements/component-service";
 import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';

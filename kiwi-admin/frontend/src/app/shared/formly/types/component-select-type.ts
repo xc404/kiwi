@@ -1,5 +1,5 @@
 import { Component } from "@angular/core";
-import { ComponentSelector } from "@app/pages/bpm/component/component-selector";
+import { ComponentSelector } from "@app/pages/bpm/flow-elements/component-selector";
 import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
 import { NzInputModule } from "ng-zorro-antd/input";
 

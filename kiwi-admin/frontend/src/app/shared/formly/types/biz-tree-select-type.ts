@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { BizTreeSelect, NzTreeSelectorOptions } from "@app/widget/common-widget/common-tree-selector/biz-tree-seletor";
+import { BizTreeSelect, NzTreeSelectorOptions } from "@shared/components/common-tree-selector/biz-tree-seletor";
 import { FieldType, FieldTypeConfig, FormlyFieldProps } from '@ngx-formly/core';
 import { FormlyFieldSelectProps } from '@ngx-formly/core/select';
 import { NzInputModule } from 'ng-zorro-antd/input';

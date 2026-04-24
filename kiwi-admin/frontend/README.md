@@ -4,6 +4,8 @@
 
 更完整的平台说明、仓库结构与后端启动方式见仓库根 [README.md](../../README.md)。
 
+`src/app` 下各顶层目录的职责与新增代码放置规则见 **[docs/app-structure.md](docs/app-structure.md)**。
+
 ## 技术栈
 
 | 类别 | 说明 |
