@@ -220,7 +220,7 @@ export class BpmProjectProcess implements OnInit {
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
-            this.router.navigate(['/default/bpm/processinstances'], {
+            this.router.navigate(['/bpm/processinstances'], {
               queryParams: { processDefinitionKey: record.id },
             });
           }

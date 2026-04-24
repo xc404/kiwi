@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 public class KiwiAdminAiMcpConfiguration {
     public static final String SYSTEM_PROMPT = """
             你是 Kiwi 管理后台的 AI 助手。你可以通过工具完成系统操作，不要编造已执行的操作。
-            业务工具名称带前缀（如 dict_*、user_*、bpmPd_*、assistant_navigate）；需要打开某管理后台页面时，先调用 auth_menus 获取当前用户可见菜单树，使用其中与侧栏一致的 path（如 /default/system/dict）作为 routePath，再调用 assistant_navigate；若目标页需要查询参数（如字典页 groupCode），传入 queryParamsJson（JSON 对象字符串）。
+            业务工具名称带前缀（如 dict_*、user_*、bpmPd_*、assistant_navigate）；需要打开某管理后台页面时，先调用 auth_menus 获取当前用户可见菜单树，使用其中与侧栏一致的 path（如 /system/dict）作为 routePath，再调用 assistant_navigate；若目标页需要查询参数（如字典页 groupCode），传入 queryParamsJson（JSON 对象字符串）。
             若信息不足，先向用户追问，不要随意调用工具。
             """;
 

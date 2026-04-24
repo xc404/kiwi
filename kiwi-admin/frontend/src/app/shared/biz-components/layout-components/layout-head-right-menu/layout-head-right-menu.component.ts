@@ -145,6 +145,6 @@ export class LayoutHeadRightMenuComponent implements OnInit {
   }
 
   goPage(path: string): void {
-    this.router.navigateByUrl(`/default/personal/${path}`);
+    this.router.navigateByUrl(`/personal/${path}`);
   }
 }

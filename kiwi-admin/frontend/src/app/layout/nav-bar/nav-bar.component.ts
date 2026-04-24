@@ -5,7 +5,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/rout
 import { Observable } from 'rxjs';
 import { filter, map, mergeMap, switchMap, tap } from 'rxjs/operators';
 
-import { ThemeMode } from '@app/layout/default/setting-drawer/setting-drawer.component';
+import { ThemeMode } from '@app/layout/setting-drawer/setting-drawer.component';
 import { TabService } from '@core/services/common/tab.service';
 import { Menu } from '@core/services/types';
 import { AuthDirective } from '@shared/directives/auth.directive';
@@ -87,7 +87,7 @@ export class NavBarComponent implements OnInit {
         filter(event => event instanceof NavigationEnd),
         filter((event: NavigationEnd) => {
           // 忽略刷新tab时的占用路由跳转
-          return event.url !== '/default/refresh-empty';
+          return event.url !== '/refresh-empty';
         }),
         tap(() => {
           this.subTheme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {

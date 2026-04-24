@@ -1,11 +1,11 @@
 import { Route } from '@angular/router';
 
-import { DefaultComponent } from './default.component';
+import { MainComponent } from './main.component';
 
 export default [
   {
     path: '',
-    component: DefaultComponent,
+    component: MainComponent,
     data: { shouldDetach: 'no', preload: true },
     // canActivateChild: [JudgeLoginGuard],
     children: [
@@ -13,23 +13,23 @@ export default [
       {
         path: 'dashboard',
         data: { preload: true },
-        loadChildren: () => import('../../pages/dashboard/dashboard-routing')
+        loadChildren: () => import('../pages/dashboard/dashboard-routing')
       },
       {
         path: 'personal',
-        loadChildren: () => import('../../pages/personal/personal-routing')
+        loadChildren: () => import('../pages/personal/personal-routing')
       },
       {
         path: 'system',
-        loadChildren: () => import('../../pages/system/system-routing')
+        loadChildren: () => import('../pages/system/system-routing')
       },
       {
         path: 'tools',
-        loadChildren: () => import('../../pages/tools/tools-routing')
+        loadChildren: () => import('../pages/tools/tools-routing')
       },
       {
         path: 'bpm',
-        loadChildren: () => import('../../pages/bpm/bpm-routing')
+        loadChildren: () => import('../pages/bpm/bpm-routing')
       },
       // 此路由用于tab刷新时占位组件
       {
