@@ -186,10 +186,11 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
         </dependency>
-        <!-- MCP：由 server2mcp 传递引入 Spring AI MCP Server（WebMVC + SSE），不在此模块直接声明 spring-ai-starter-mcp-server-webmvc -->
+        <!-- Spring AI MCP Server（WebMVC + SSE）；工具由 KiwiOpenApiSyncMcpToolsConfiguration 提供 -->
         <dependency>
-            <groupId>com.ai.plug</groupId>
-            <artifactId>server2mcp-starter-webmvc</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
     <dependencyManagement>
@@ -216,11 +217,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>com.ai.plug</groupId>
-                <artifactId>server2mcp-starter-webmvc</artifactId>
-                <version>1.0.0</version>
-            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

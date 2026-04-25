@@ -13,7 +13,7 @@
 | 鉴权 | Sa-Token（Redis） |
 | 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；Redis |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、`com.ai.plug:server2mcp-starter-webmvc`（MCP + `plugin.mcp.*`，传递依赖含 Spring AI MCP Server） |
+| AI（可选） | Spring AI Alibaba（DashScope / 通义）、`spring-ai-starter-mcp-server-webmvc`（MCP SSE） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
 
 模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
@@ -80,8 +80,8 @@ mvn -pl kiwi-admin/backend -am clean package
 
 ## MCP 与 AI 工具
 
-- **`server2mcp-starter-webmvc`**：在 `pom.xml` 中引入；**不再**单独声明 `spring-ai-starter-mcp-server-webmvc`，也不再使用 `KiwiOpenApiSyncMcpToolsConfiguration`。MCP 对外能力与工具列表由 **`plugin.mcp.*`**（及可选 `spring.ai.mcp.server.*`，见 Server2MCP 文档）与 starter 自动配置提供。
-- **助手**：`ChatClient` 通过本机 `McpSyncClient`（`kiwi.ai.mcp.loopback-base-url` + `spring.ai.mcp.server.sse-endpoint`）与 MCP 对齐工具；须与 `spring.ai.mcp.server` 下 SSE 端点配置一致。
+- **MCP Server**：`spring-ai-starter-mcp-server-webmvc`；工具由 **`KiwiOpenApiSyncMcpToolsConfiguration`** 根据控制器 **`@Operation(operationId, summary)`** 经 `McpToolUtils` 转为 `SyncToolSpecification`。
+- **助手**：`ChatClient` 通过本机 `McpSyncClient`（`kiwi.ai.mcp.loopback-base-url` + `spring.ai.mcp.server.sse-endpoint`）与 MCP 对齐工具。
 
 ## 相关文档
 

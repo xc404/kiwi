@@ -9,8 +9,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
 /**
- * Kiwi 后台 AI 助手 {@link ChatClient}：工具经本机 MCP（{@link McpSyncClient}）与 Server2MCP 暴露的 MCP Server
- * 对齐，不在此注册全局 {@link org.springframework.ai.tool.ToolCallbackProvider}。
+ * Kiwi 后台 AI 助手 {@link ChatClient}：工具经本机 MCP（{@link McpSyncClient}）与
+ * {@link KiwiOpenApiSyncMcpToolsConfiguration} 暴露的 MCP Server 对齐，不在此注册全局
+ * {@link org.springframework.ai.tool.ToolCallbackProvider}。
  */
 @Configuration
 public class KiwiAdminAiMcpConfiguration {
