@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                 xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
                 xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                 xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                 id="Definitions_cryo_movie_minimal"
                 targetNamespace="http://cryoems.kiwi/samples">
-  <bpmn:process id="cryo_movie_minimal" name="cryo movie placeholder" isExecutable="true">
+  <bpmn:process id="cryo_movie_minimal" name="cryo movie minimal pipeline" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="start"/>
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="EndEvent_1"/>
+    <bpmn:serviceTask id="Task_Header" name="movie header" camunda:delegateExpression="${movieHeaderJavaDelegate}"/>
+    <bpmn:serviceTask id="Task_Motion" name="movie motion correction" camunda:delegateExpression="${movieMotionCorrectionJavaDelegate}"/>
+    <bpmn:serviceTask id="Task_Ctf" name="movie ctf estimation" camunda:delegateExpression="${movieCtfEstimationJavaDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Header"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Header" targetRef="Task_Motion"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Motion" targetRef="Task_Ctf"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Ctf" targetRef="EndEvent_1"/>
     <bpmn:endEvent id="EndEvent_1" name="end"/>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
@@ -15,12 +22,33 @@
       <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
         <dc:Bounds x="179" y="159" width="36" height="36"/>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Header" bpmnElement="Task_Header">
+        <dc:Bounds x="270" y="137" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Motion" bpmnElement="Task_Motion">
+        <dc:Bounds x="430" y="137" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Ctf" bpmnElement="Task_Ctf">
+        <dc:Bounds x="630" y="137" width="140" height="80"/>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
-        <dc:Bounds x="432" y="159" width="36" height="36"/>
+        <dc:Bounds x="830" y="159" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
         <di:waypoint x="215" y="177"/>
-        <di:waypoint x="432" y="177"/>
+        <di:waypoint x="270" y="177"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="390" y="177"/>
+        <di:waypoint x="430" y="177"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_3" bpmnElement="Flow_3">
+        <di:waypoint x="590" y="177"/>
+        <di:waypoint x="630" y="177"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_4" bpmnElement="Flow_4">
+        <di:waypoint x="770" y="177"/>
+        <di:waypoint x="830" y="177"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
