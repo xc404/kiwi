@@ -1,5 +1,7 @@
 package com.kiwi.bpmn.component.activity;
 
+import org.camunda.bpm.engine.delegate.Expression;
+import org.camunda.bpm.engine.impl.el.ExpressionManager;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +12,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,7 +20,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AssignmentActivityTest {
 
-    private final AssignmentActivity activity = new AssignmentActivity();
+    private static AssignmentActivity activity(ExpressionManager expressionManager) {
+        return new AssignmentActivity(expressionManager);
+    }
 
     @Test
     void applyAssignments_literals() {
@@ -26,7 +31,7 @@ class AssignmentActivityTest {
                 new Assignment("x", 1),
                 new Assignment("flag", true),
                 new Assignment("msg", "hi"));
-        activity.applyAssignments(execution, items);
+        activity(mock(ExpressionManager.class)).applyAssignments(execution, items);
         verify(execution).setVariable("x", 1);
         verify(execution).setVariable("flag", true);
         verify(execution).setVariable("msg", "hi");
@@ -34,20 +39,25 @@ class AssignmentActivityTest {
 
     @Test
     void applyAssignments_variableRef() {
+        ExpressionManager em = mock(ExpressionManager.class);
+        Expression expr = mock(Expression.class);
+        when(em.createExpression("${a}")).thenReturn(expr);
+        when(expr.getValue(any())).thenReturn(5);
         ActivityExecution execution = mock(ActivityExecution.class);
-        when(execution.hasVariable("a")).thenReturn(true);
-        when(execution.getVariable("a")).thenReturn(5);
-        activity.applyAssignments(execution, List.of(new Assignment("b", "${a}")));
+        activity(em).applyAssignments(execution, List.of(new Assignment("b", "${a}")));
         verify(execution).setVariable("b", 5);
     }
 
     @Test
     void applyAssignments_variableRef_missingSource() {
+        ExpressionManager em = mock(ExpressionManager.class);
+        Expression expr = mock(Expression.class);
+        when(em.createExpression("${nope}")).thenReturn(expr);
+        when(expr.getValue(any())).thenThrow(new IllegalArgumentException("missing"));
         ActivityExecution execution = mock(ActivityExecution.class);
-        when(execution.hasVariable("nope")).thenReturn(false);
         assertThrows(
                 IllegalArgumentException.class,
-                () -> activity.applyAssignments(execution, List.of(new Assignment("b", "${nope}"))));
+                () -> activity(em).applyAssignments(execution, List.of(new Assignment("b", "${nope}"))));
     }
 
     @Test
@@ -97,8 +107,9 @@ class AssignmentActivityTest {
     @Test
     void applyAssignments_stringLiteral_notTreatedAsRef() {
         ActivityExecution execution = mock(ActivityExecution.class);
-        activity.applyAssignments(
-                execution, List.of(new Assignment("hint", "prefix_${a}_suffix")));
+        activity(mock(ExpressionManager.class))
+                .applyAssignments(
+                        execution, List.of(new Assignment("hint", "prefix_${a}_suffix")));
         verify(execution).setVariable("hint", "prefix_${a}_suffix");
     }
 

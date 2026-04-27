@@ -403,7 +403,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
                 "    </bpmndi:BPMNDiagram>\n" +
                 "</bpmn:definitions>\n";
         if( saveInput.bpmnXml != null ) {
-            bpmProcess.setBpmnXml(xml);
+            bpmProcess.setBpmnXml(saveInput.bpmnXml);
             if( bpmProcess.getDeployedVersion() >= 0 ) {
                 bpmProcess.setVersion(bpmProcess.getDeployedVersion() + 1);
             }

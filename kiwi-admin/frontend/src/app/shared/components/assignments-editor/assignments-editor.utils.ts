@@ -49,7 +49,8 @@ export function parseValueText(text: string): unknown {
   if (t === '') {
     return '';
   }
-  if (/^\$\{[a-zA-Z0-9_]+\}$/.test(t)) {
+  // 任意 ${...} 均按 JUEL 字面保留（含 task.p_size、三元等），且须早于 JSON.parse，避免误解析
+  if (/^\$\{[\s\S]*\}$/.test(t)) {
     return t;
   }
   if (t === 'true') {
