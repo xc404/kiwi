@@ -1,9 +1,12 @@
 package com.kiwi.cryoems.bpm.activity;
 
+import com.kiwi.bpmn.core.annotation.ComponentDescription;
+import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.cryoems.bpm.model.ClosetScale;
 import com.kiwi.cryoems.bpm.model.MrcMetadata;
 import com.kiwi.cryoems.bpm.support.MrcHeaderParser;
 import com.kiwi.cryoems.bpm.support.MicroscopeScaleRegistry;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
@@ -22,6 +25,47 @@ import java.util.concurrent.TimeUnit;
  * cryoems 预处理：对电影文件执行 IMOD {@code header}，解析为 {@link MrcMetadata}；根据流程变量 {@code microscope}
  * 与 {@code p_size} 选取最近 {@link ClosetScale}。
  */
+@ComponentDescription(
+        name = "CryoEMS 预处理",
+        group = "CryoEM",
+        version = "1.0",
+        description = "对电影文件执行 IMOD header，解析 MRC 元数据；根据 microscope 与 p_size 从标尺注册表选取最近的 ClosetScale。"
+                + "电影路径来自 movieFile，或流程变量 movie 中的 file_path / filePath。",
+        inputs = {
+                @ComponentParameter(
+                        key = "movieFile",
+                        htmlType = "#text",
+                        name = "movieFile",
+                        description = "电影文件路径（字符串）；可与 movie.file_path 二选一",
+                        required = true
+                ),
+                @ComponentParameter(
+                        key = "microscope",
+                        htmlType = "#text",
+                        name = "microscope",
+                        description = "显微镜标识，用于标尺匹配",
+                        required = true),
+                @ComponentParameter(
+                        key = "p_size",
+                        htmlType = "#text",
+                        name = "p_size",
+                        description = "像素尺寸，用于选取最近标尺",
+                        required = true)
+        },
+        outputs = {
+                @ComponentParameter(
+                        key = "mrcMetadata",
+                        htmlType = "#text",
+                        name = "mrcMetadata",
+                        description = "MRC 头解析结果（MrcMetadata）写入的流程变量名",
+                        schema = @Schema(defaultValue = "mrcMetadata")),
+                @ComponentParameter(
+                        key = "closetScale",
+                        htmlType = "#text",
+                        name = "closetScale",
+                        description = "匹配的标尺档位（ClosetScale）写入的流程变量名",
+                        schema = @Schema(defaultValue = "closetScale"))
+        })
 @Component("cyroemsPrepareActivity")
 @RequiredArgsConstructor
 public class CyroemsPrepareActivity implements JavaDelegate {

@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
+@ConditionalOnProperty(prefix = "kiwi.bpm.slurm", name = "enabled", havingValue = "true", matchIfMissing = true)
 @ConditionalOnProperty(prefix = "kiwi.bpm.slurm", name = "workDirectory")
 @EnableConfigurationProperties({SlurmProperties.class})
 @EnableScheduling

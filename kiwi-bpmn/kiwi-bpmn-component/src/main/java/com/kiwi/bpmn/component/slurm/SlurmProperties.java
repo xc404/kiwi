@@ -10,6 +10,14 @@ import java.util.List;
 @Data
 public class SlurmProperties {
 
+    /**
+     * 是否启用 Slurm 集成（sbatch、外部任务监听、工作目录清理等）。
+     * 为唯一总开关：仅当为 true 且配置了 {@link #workDirectory} 时加载 Slurm 相关 Bean。
+     * 若不在配置文件中设置该项，默认为 true，与历史上仅配置 {@code work-directory} 的行为一致；
+     * 显式设为 {@code false} 可关闭 Slurm。
+     */
+    private boolean enabled = true;
+
     private String workDirectory;
     private int threadPoolSize = 5;
 

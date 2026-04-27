@@ -3,7 +3,6 @@ package com.kiwi.project.bpm.service;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
-import com.kiwi.project.bpm.utils.BpmComponentDeploymentSignature;
 import com.kiwi.project.system.spi.Refreshable;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -11,15 +10,12 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,54 +26,20 @@ public class BpmComponentService implements InitializingBean, Refreshable
 {
 
     private final BpmComponentDao bpmComponentDao;
+    private final BpmComponentDeploymentService bpmComponentDeploymentService;
     @Value("${bpm.component.auto-deploy:true}")
     private boolean autoDeploy;
-    @Value("${bpm.component.delete-not-exist:true}")
-    private boolean deleteNotExist;
     @Autowired(required = false)
     private List<BpmComponentProvider> bpmComponentProviderList;
 
     private final Map<String, BpmComponent> CachedComponents = new HashMap<String, BpmComponent>();
 
     public void deployComponent(BpmComponent bpmComponent) {
-//        component.setId(component.getSource() + ""+component.getId());
-        if( StringUtils.isBlank(bpmComponent.getId()) ) {
-            bpmComponent.setId(bpmComponent.getSource() + "_" + bpmComponent.getKey());
-        }
-        bpmComponent.setDeploymentSignature(BpmComponentDeploymentSignature.compute(bpmComponent));
-        this.bpmComponentDao.save(bpmComponent);
+        this.bpmComponentDeploymentService.deployComponent(bpmComponent);
     }
 
     public void deploy(BpmComponentProvider bpmComponentProvider) {
-        List<BpmComponent> bpmComponents = bpmComponentProvider.getComponents();
-        bpmComponents.forEach(component -> {
-            if( StringUtils.isBlank(component.getId()) ) {
-                component.setId(component.getSource() + "_" + component.getKey());
-            }
-        });
-        List<BpmComponent> current = this.bpmComponentDao.findBy(Query.query(Criteria.where("source").is(bpmComponentProvider.getSource())));
-        Map<String, BpmComponent> byId = current.stream().collect(Collectors.toMap(BpmComponent::getId, c -> c, (a, b) -> a));
-        if( deleteNotExist ) {
-            List<BpmComponent> toDelete = current.stream().filter(component -> bpmComponents.stream().noneMatch(c -> Objects.equals(component.getKey(), c.getKey()))).toList();
-            this.bpmComponentDao.deleteAll(toDelete);
-            for (BpmComponent removed : toDelete) {
-                byId.remove(removed.getId());
-            }
-        }
-        List<BpmComponent> toSave = new ArrayList<>();
-        for (BpmComponent inc : bpmComponents) {
-            String sig = BpmComponentDeploymentSignature.compute(inc);
-            BpmComponent existing = byId.get(inc.getId());
-            if (existing != null && Objects.equals(sig, existing.getDeploymentSignature())) {
-                continue;
-            }
-            inc.setDeploymentSignature(sig);
-            toSave.add(inc);
-        }
-        if (!toSave.isEmpty()) {
-            this.bpmComponentDao.saveAll(toSave);
-        }
-
+        this.bpmComponentDeploymentService.deploy(bpmComponentProvider);
     }
 
     public BpmComponent fillComponentProperties(BpmComponent bpmComponent) {
@@ -195,9 +157,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     public void afterPropertiesSet() throws Exception {
 
         if( this.autoDeploy && this.bpmComponentProviderList != null ) {
-            this.bpmComponentProviderList.forEach(bpmComponentProvider -> {
-                deploy(bpmComponentProvider);
-            });
+            this.bpmComponentProviderList.forEach(this.bpmComponentDeploymentService::deploy);
         }
         refresh();
     }

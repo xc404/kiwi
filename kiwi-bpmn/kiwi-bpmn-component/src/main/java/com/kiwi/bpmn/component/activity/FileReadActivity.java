@@ -98,8 +98,8 @@ public class FileReadActivity extends AbstractBpmnActivityBehavior {
     }
 
     static void rejectUnsafePath(String pathStr) {
-        for (String segment : Path.of(pathStr).normalize()) {
-            if ("..".equals(segment)) {
+        for (Path segment : Path.of(pathStr).normalize()) {
+            if ("..".equals(segment.toString())) {
                 throw new IllegalArgumentException("path 不允许包含 .. 路径段");
             }
         }
