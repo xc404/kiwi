@@ -72,14 +72,22 @@ export class JuelExpressionEditorComponent implements OnDestroy {
 
   private modalEditorView?: EditorView;
   private syncingFromExternal = false;
+  private endExternalSyncTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     effect(() => {
       const next = this.value();
       const str = next == null ? '' : String(next);
+      if (this.endExternalSyncTimer != null) {
+        clearTimeout(this.endExternalSyncTimer);
+      }
       this.syncingFromExternal = true;
       this.inlineText.set(str);
-      this.syncingFromExternal = false;
+      // nz-input/ngModelChange 可能在微任务或下一 tick 才发出；若此处立即清标志，会用空串等脏值覆盖父级行数据
+      this.endExternalSyncTimer = setTimeout(() => {
+        this.syncingFromExternal = false;
+        this.endExternalSyncTimer = undefined;
+      }, 0);
     });
   }
 
@@ -89,6 +97,9 @@ export class JuelExpressionEditorComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.endExternalSyncTimer != null) {
+      clearTimeout(this.endExternalSyncTimer);
+    }
     this.destroyModalEditor();
   }
 
@@ -127,6 +138,7 @@ export class JuelExpressionEditorComponent implements OnDestroy {
     const text = this.modalEditorView.state.doc.toString();
     this.inlineText.set(text);
     this.valueChange.emit(text);
+    this.modalVisible.set(false);
   }
 
   insertVariableRef(v: SpelVariableSuggestion): void {

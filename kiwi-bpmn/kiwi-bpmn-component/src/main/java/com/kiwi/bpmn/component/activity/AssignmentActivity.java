@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kiwi.common.utils.JsonUtils;
+import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.camunda.bpm.engine.impl.ProcessEngineImpl;
 import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.camunda.bpm.engine.impl.el.ExpressionManager;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +20,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -28,14 +30,14 @@ import java.util.regex.Pattern;
         name = "赋值组件",
         group = "流程控制",
         version = "1.0",
-        description = "assignments 为 Assignment 列表（key 目标变量名，value 字面量或 ${变量名} 引用）；可与 Map 列表或 JSON 数组字符串互操作",
+        description = "assignments 为 Assignment 列表（key 目标变量名，value 字面量或整段 ${...} JUEL 表达式）；可与 Map 列表或 JSON 数组字符串互操作",
         inputs = {
                 @ComponentParameter(
                         key = "assignments",
                         htmlType = "assignments-editor",
                         type = "array",
                         name = "assignments",
-                        description = "Assignment 列表（key 目标变量名，value 字面量或 ${变量名} 引用）；设计器为列表编辑器，存储为 JSON 数组字符串",
+                        description = "Assignment 列表（key 目标变量名，value 字面量或整段 ${...} JUEL）；设计器为列表编辑器，存储为 JSON 数组字符串",
                         required = true,
                         schema = @Schema(defaultValue = "[]"))
         },
@@ -43,7 +45,9 @@ import java.util.regex.Pattern;
 @Component("assignmentActivity")
 public class AssignmentActivity extends AbstractBpmnActivityBehavior {
 
-    private static final Pattern VAR_REF = Pattern.compile("^\\$\\{([a-zA-Z0-9_]+)}$");
+    /** 与前端 {@code assignments-editor} 一致：整段为 {@code ${...}} 时按 JUEL 求值；否则为字面量字符串。 */
+    private static final Pattern JUEL_WRAPPED = Pattern.compile("^\\$\\{[\\s\\S]*}$");
+
 
     @Override
     public void execute(ActivityExecution execution) throws Exception {
@@ -63,18 +67,25 @@ public class AssignmentActivity extends AbstractBpmnActivityBehavior {
             }
             Object valObj = a.getValue();
             if (valObj instanceof String s) {
-                Matcher mat = VAR_REF.matcher(s);
-                if (mat.matches()) {
-                    String sourceName = mat.group(1);
-                    if (!execution.hasVariable(sourceName)) {
-                        throw new IllegalArgumentException("赋值引用变量不存在: " + sourceName);
-                    }
-                    execution.setVariable(targetKey, execution.getVariable(sourceName));
-                    continue;
-                }
+                execution.setVariable(targetKey, resolveStringValue(s, execution));
+            } else {
+                execution.setVariable(targetKey, valObj);
             }
-            execution.setVariable(targetKey, valObj);
         }
+    }
+
+    /**
+     * 否则视为字面量（含普通文本、数字形式的字符串等）。
+     */
+    Object resolveStringValue(String s, DelegateExecution execution) {
+        if (s != null && JUEL_WRAPPED.matcher(s).matches()) {
+            ProcessEngine processEngine = execution.getProcessEngine();
+            ExpressionManager expressionManager = ((ProcessEngineImpl) processEngine)
+                    .getProcessEngineConfiguration()
+                    .getExpressionManager();
+            return expressionManager.createExpression(s).getValue(execution);
+        }
+        return s;
     }
 
     static List<Assignment> resolveAssignmentsListImpl(ActivityExecution execution) {

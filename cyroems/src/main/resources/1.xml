@@ -10,7 +10,7 @@
                     <camunda:property name="componentId" value="classpath_assignmentActivity" />
                 </camunda:properties>
                 <camunda:inputOutput>
-                    <camunda:inputParameter name="assignments">[{"key":"work_dir","value":"/home/chaox/cryoems/tasks/${task.work_dir}"},{"key":"p_size","value":"${task.p_size}"},{"key":"total_dose_per_movie","value":"${task.total_dose_per_movie}"},{"key":"movie_id","value":"${movie.id}"},{"key":"movie_file_name","value":"${movie.file_name}"},{"key":"movie_file_path","value":"${movie.file_path}"},{"key":"microscope","value":"${task.microscope}"},{"key":"gain_file","value":"${task.gain_file}"},{"key":"partition","value":"DF"},{"key":"motion_result_file","value":"${work_dir}/${movie_file_name}.mrc"},{"key":"patch","value":5},{"key":"eer_sampling","value":2},{"key":"eer_fraction","value":40},{"key":"binning_factor","value":2},{"key":"acceleration_kv","value":300},{"key":"spherical_aberration","value":2.7},{"key":"amplitude_contrast","value":0.07},{"key":"spectrum_size","value":1024},{"key":"min_res","value":30},{"key":"max_res","value":5},{"key":"min_defocus","value":5000},{"key":"max_defocus","value":50000},{"key":"defocus_step","value":100}]</camunda:inputParameter>
+                    <camunda:inputParameter name="assignments">${'[{"key":"work_dir","value":"/home/chaox/cryoems/tasks/${task.work_dir}"},{"key":"p_size","value":"${task.p_size}"},{"key":"total_dose_per_movie","value":"${task.total_dose_per_movie}"},{"key":"movie_id","value":"${movie.id}"},{"key":"movie_file_name","value":"${movie.file_name}"},{"key":"movie_file_path","value":"${movie.file_path}"},{"key":"microscope","value":"${task.microscope}"},{"key":"gain_file","value":"${task.gain_file}"},{"key":"partition","value":"DF"},{"key":"motion_result_file","value":"${work_dir}/${movie_file_name}.mrc"},{"key":"patch","value":5},{"key":"eer_sampling","value":2},{"key":"eer_fraction","value":40},{"key":"binning_factor","value":2},{"key":"acceleration_kv","value":300},{"key":"spherical_aberration","value":2.7},{"key":"amplitude_contrast","value":0.07},{"key":"spectrum_size","value":1024},{"key":"min_res","value":30},{"key":"max_res","value":5},{"key":"min_defocus","value":5000},{"key":"max_defocus","value":50000},{"key":"defocus_step","value":100}]'}</camunda:inputParameter>
                 </camunda:inputOutput>
             </bpmn:extensionElements>
             <bpmn:incoming>Flow_1whiiel</bpmn:incoming>
@@ -26,8 +26,8 @@
                     <camunda:inputParameter name="movieFile">${movie_file_path}</camunda:inputParameter>
                     <camunda:inputParameter name="microscope">${microscope}</camunda:inputParameter>
                     <camunda:inputParameter name="p_size">${p_size}</camunda:inputParameter>
-                    <camunda:outputParameter name="mrcMetadata">mrcMetadata</camunda:outputParameter>
-                    <camunda:outputParameter name="closetScale">closetScale</camunda:outputParameter>
+                    <camunda:inputParameter name="mrcMetadata"></camunda:inputParameter>
+                    <camunda:inputParameter name="closetScale"></camunda:inputParameter>
                 </camunda:inputOutput>
             </bpmn:extensionElements>
             <bpmn:incoming>Flow_1s47zxm</bpmn:incoming>
@@ -116,8 +116,8 @@
                     <camunda:inputParameter name="slurm_gpus" />
                     <camunda:inputParameter name="slurm_gpus_per_node" />
                     <camunda:inputParameter name="slurm_gpus_per_task" />
-                    <camunda:outputParameter name="result" />
-                    <camunda:outputParameter name="errorCode" />
+                    <camunda:inputParameter name="result" />
+                    <camunda:inputParameter name="errorCode" />
                 </camunda:inputOutput>
             </bpmn:extensionElements>
             <bpmn:incoming>Flow_1tsi8bo</bpmn:incoming>
@@ -125,9 +125,6 @@
         <bpmn:serviceTask id="Activity_1wxl2ny" name="赋值组件" camunda:delegateExpression="${assignmentActivity}" kiwi:componentId="classpath_assignmentActivity">
             <bpmn:extensionElements>
                 <camunda:properties>
-                    <camunda:property name="componentId" value="classpath_assignmentActivity" />
-                    <camunda:property name="componentId" value="classpath_assignmentActivity" />
-                    <camunda:property name="componentId" value="classpath_assignmentActivity" />
                     <camunda:property name="componentId" value="classpath_assignmentActivity" />
                 </camunda:properties>
                 <camunda:inputOutput>

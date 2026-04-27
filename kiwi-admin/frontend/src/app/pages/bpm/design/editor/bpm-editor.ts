@@ -415,13 +415,13 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       this.message.error('流程 ID 不存在');
       return Promise.reject(new Error('no bpmn id'));
     }
+    this.persistStartVariablesToStorage(id, variables);
     return this.deploy().then(
       () =>
         new Promise<unknown>((resolve, reject) => {
           this.processDefinitionService.startProcess(id, { variables }).subscribe({
             next: (data: unknown) => {
-              this.persistStartVariablesToStorage(id, variables);
-              console.log(data);
+             
               resolve(data);
             },
             error: (err: unknown) => reject(err),

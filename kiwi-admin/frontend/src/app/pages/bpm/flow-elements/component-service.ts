@@ -29,7 +29,7 @@ export class ComponentService {
                 icon: c.icon || 'bpmn-icon42',
                 options: {}
             };
-        }else {
+        } else {
             return {
                 ...c,
                 bpmnType: `bpmn:ServiceTask`,
@@ -58,9 +58,10 @@ export class ComponentService {
         // businessObject.componentId = item.key;
         ModelUtil.getBusinessObject(element);
         let type = item.type;
-        
-        let inputNamespace = isCallActivity(type) ? 'In' :  "InputParameter";
-        let outputNamespace = isCallActivity(type) ? 'Out' :  "OutputParameter";
+
+        let inputNamespace = isCallActivity(type) ? 'In' : "InputParameter";
+        // CallActivity的输入输出参数放在In/Out命名空间下，其他组件放在InputParameter命名空间下
+        let outputNamespace = isCallActivity(type) ? 'Out' : "InputParameter";
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {
