@@ -2,7 +2,14 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 
 export abstract class BpmEditorToken {
   abstract deploy(): void;
-  abstract start(): void;
+  /**
+   * 启动流程。可传入流程变量对象，或 JSON 字符串；不传则读取该流程在 localStorage 中的上次变量。
+   * 启动成功后会按 bpmnId 缓存 variables，供下次调用或弹窗预填。
+   */
+  abstract start(variables?: Record<string, unknown> | string): Promise<unknown>;
+
+  /** 打开「启动流程变量」编辑弹窗（预填缓存 JSON）。 */
+  abstract openStartProcessDialog(): void;
   abstract save(): void;
 
   abstract clearSelection(): void;

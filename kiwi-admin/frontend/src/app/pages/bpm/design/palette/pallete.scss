@@ -1,9 +1,36 @@
+/*
+ * 左侧元件箱：仅 nz-collapse 区域纵向滚动（与属性面板原理一致）。
+ * --bpm-palette-collapse-vh-offset：视口顶 → 滚动区顶的预留（见注释分项）。
+ */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* 48px 全局顶栏 | 64px 流程信息条 | 40px 搜索区（padding + nz-input small） | 46px 内层 nz-tabs | 8px 间隙 */
+    --bpm-palette-collapse-vh-offset: calc(128px);
+}
+
 .bpm-pallete {
     width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .bpm-pallete__search {
+    flex-shrink: 0;
     padding: 8px 8px 4px;
+}
+
+/** 包住 nz-collapse，仅此区域出现滚动条 */
+.bpm-pallete__collapse-scroll {
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height:  calc(100dvh - var(--bpm-palette-collapse-vh-offset));
+    -webkit-overflow-scrolling: touch;
 }
 
 .bpm-pallete__empty {

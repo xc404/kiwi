@@ -6,20 +6,22 @@
         <nz-tabs>
             @for (tab of tabs(); track $index) {
             <nz-tab [nzTitle]="tab.name!">
-                <nz-collapse>
-                    @for (group of tab.groups; track $index) {
-                    <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false"
-                        nzShowArrow="true">
-                        <div style="width: 100%;">
-                            <property-group [element]="element()" [bpmnModeler]="bpmnModeler()"
-                                [properties]="group.properties" [viewMode]="viewMode()"
-                                [variables]="activityVariables()"></property-group>
-                        </div>
-                    </nz-collapse-panel>
+                <div class="properties-panel-collapse-scroll">
+                    <nz-collapse>
+                        @for (group of tab.groups; track $index) {
+                        <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false"
+                            nzShowArrow="true">
+                            <div style="width: 100%;">
+                                <property-group [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                    [properties]="group.properties" [viewMode]="viewMode()"
+                                    [variables]="activityVariables()"></property-group>
+                            </div>
+                        </nz-collapse-panel>
 
-                    }
+                        }
 
-                </nz-collapse>
+                    </nz-collapse>
+                </div>
             </nz-tab>
             }
 

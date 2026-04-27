@@ -49,8 +49,13 @@ export class ProcessDesignService {
         return this.http.post(`${this.apiUrl}/validate`, processData);
     }
 
-    startProcess(id: string) {
-        return this.http.post(`${this.apiUrl}/${id}/start`, {});
+    /**
+     * 启动已部署流程；body 与后端 {@code StartProcessInput} 一致，variables 可选。
+     */
+    startProcess(id: string, body?: { variables?: Record<string, unknown> }) {
+        const payload =
+            body?.variables !== undefined ? { variables: body.variables } : {};
+        return this.http.post(`${this.apiUrl}/${id}/start`, payload);
     }
 
     /** 未保存 BPMN 预览：包装为逻辑组件契约（只读分析） */

@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
+import { JsonCodeEditorComponent } from '@app/shared/components/json-code-editor/json-code-editor.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
@@ -65,11 +66,13 @@ export { BpmEditorToken };
     NzSpinModule,
     NzButtonModule,
     NzIconModule,
+    JsonCodeEditorComponent,
   ],
   standalone: true,
 })
 export class BpmEditor implements OnInit, BpmEditorToken {
 
+  @ViewChild('startJsonEditor') private startJsonEditor?: JsonCodeEditorComponent;
 
   acvitedRoute = inject(ActivatedRoute);
 
@@ -111,6 +114,13 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   saveAsComponentVersion = '1.0';
   autoSave = false;
 
+  /** 启动流程：编辑变量 JSON（nz-modal） */
+  startProcessModalVisible = signal(false);
+  /** 与后端流程变量一致：须为 JSON 对象（非数组） */
+  startProcessVariablesJson = '{}';
+
+  private static readonly START_VARS_LS_PREFIX = 'kiwi.bpm.editor.startVariables.v1';
+
   /** 后端 BaseEntity 为 updatedTime；兼容旧字段 updatedAt */
   updatedAt = computed(() => {
     const p = this.bpmProcess();
@@ -142,11 +152,11 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   elementFactory!: ElementFactory;
 
   depolyVersionBehind = computed(() => {
-    if (!this.bpmProcess()?.version) {
-      return false;
-    }
     if (!this.bpmProcess()?.deployedVersion) {
       return true;
+    }
+    if (!this.bpmProcess()?.version) {
+      return false;
     }
     return this.bpmProcess()?.version > this.bpmProcess()?.deployedVersion;
   });
@@ -288,17 +298,136 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       });
   }
 
-  start() {
-    return this.deploy().then(() => {
-      return new Promise((resolve) => {
-        this.processDefinitionService.startProcess(this.bpmnId()).subscribe(
-          (data: any) => {
-            console.log(data);
-            resolve(data);
-          }
-        );
+  openStartProcessDialog(): void {
+    const id = this.bpmnId();
+    const cached = id ? this.loadStartVariablesFromStorage(id) : undefined;
+    this.startProcessVariablesJson =
+      cached !== undefined ? JSON.stringify(cached, null, 2) : '{}';
+    this.startProcessModalVisible.set(true);
+  }
+
+  /**
+   * 启动流程：可选传入变量对象或 JSON 字符串；不传则使用 localStorage 中该 bpmnId 的上次变量（无则 {}）。
+   * 启动成功后会把本次使用的变量写回 localStorage。
+   */
+  start(variables?: Record<string, unknown> | string): Promise<unknown> {
+    let resolved: Record<string, unknown>;
+    try {
+      resolved = this.resolveStartVariablesInput(variables);
+    } catch (e) {
+      if ((e as Error)?.message === 'INVALID_SHAPE') {
+        this.message.warning('启动变量须为 JSON 对象');
+      } else {
+        this.message.error('启动变量 JSON 无效');
+      }
+      return Promise.reject(e);
+    }
+    return this.startProcessWithVariables(resolved);
+  }
+
+  /** nz-modal 确定：解析编辑器中的 JSON 并启动 */
+  onStartProcessOk(): Promise<void> | boolean {
+    const raw =
+      this.startJsonEditor?.getDocumentText() ?? this.startProcessVariablesJson ?? '';
+    const trimmed = raw.trim();
+    let parsed: Record<string, unknown>;
+    try {
+      const raw = trimmed === '' ? {} : JSON.parse(trimmed);
+      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+        this.message.warning('须为 JSON 对象，例如 {} 或 {"key":"value"}');
+        return false;
+      }
+      parsed = raw as Record<string, unknown>;
+    } catch {
+      this.message.error('JSON 格式无效');
+      return false;
+    }
+    return this.startProcessWithVariables(parsed)
+      .then(() => {
+        this.startProcessModalVisible.set(false);
+        this.message.success('流程已启动');
+      })
+      .catch((err: unknown) => {
+        const e = err as { error?: { message?: string }; message?: string };
+        this.message.error(e?.error?.message ?? e?.message ?? '启动失败');
+        return Promise.reject(err);
       });
-    });
+  }
+
+  private startVariablesStorageKey(processId: string): string {
+    return `${BpmEditor.START_VARS_LS_PREFIX}:${processId}`;
+  }
+
+  private loadStartVariablesFromStorage(processId: string): Record<string, unknown> | undefined {
+    if (!processId || typeof localStorage === 'undefined') {
+      return undefined;
+    }
+    try {
+      const raw = localStorage.getItem(this.startVariablesStorageKey(processId));
+      if (raw == null || raw === '') {
+        return undefined;
+      }
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private persistStartVariablesToStorage(processId: string, variables: Record<string, unknown>): void {
+    if (!processId || typeof localStorage === 'undefined') {
+      return;
+    }
+    try {
+      localStorage.setItem(this.startVariablesStorageKey(processId), JSON.stringify(variables));
+    } catch {
+      /* quota or private mode */
+    }
+  }
+
+  private resolveStartVariablesInput(input?: Record<string, unknown> | string): Record<string, unknown> {
+    if (input === undefined) {
+      return this.loadStartVariablesFromStorage(this.bpmnId()) ?? {};
+    }
+    if (typeof input === 'string') {
+      const trimmed = input.trim();
+      if (trimmed === '') {
+        return {};
+      }
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('INVALID_SHAPE');
+      }
+      return parsed as Record<string, unknown>;
+    }
+    if (Array.isArray(input)) {
+      throw new Error('INVALID_SHAPE');
+    }
+    return input;
+  }
+
+  private startProcessWithVariables(variables: Record<string, unknown>): Promise<unknown> {
+    const id = this.bpmnId();
+    if (!id) {
+      this.message.error('流程 ID 不存在');
+      return Promise.reject(new Error('no bpmn id'));
+    }
+    return this.deploy().then(
+      () =>
+        new Promise<unknown>((resolve, reject) => {
+          this.processDefinitionService.startProcess(id, { variables }).subscribe({
+            next: (data: unknown) => {
+              this.persistStartVariablesToStorage(id, variables);
+              console.log(data);
+              resolve(data);
+            },
+            error: (err: unknown) => reject(err),
+          });
+        }),
+    );
   }
 
   saveAsComponent(): void {
