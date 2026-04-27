@@ -8,12 +8,12 @@ import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 
-@ConditionalOnBean(SlurmProperties.class)
 @Component
 @ExternalTaskSubscription(topicName = "slurm", lockDuration = 300000)
 @ComponentDescription(
@@ -252,8 +252,9 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
 
-    public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior, SlurmService slurmService,
-            SlurmTaskManager slurmTaskManager) {
+    public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
+                                    @Autowired(required = false) SlurmService slurmService,
+                                    @Autowired(required = false)SlurmTaskManager slurmTaskManager) {
         this.shellActivityBehavior = shellActivityBehavior;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
@@ -263,6 +264,7 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     public CompletableFuture<Void> executeAsync(DelegateExecution execution) throws Exception {
         if (!supportSlurm()) {
             shellActivityBehavior.execute(execution);
+            execution.setVariable("slurmJobId", "skipped");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -282,6 +284,6 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     }
 
     private boolean supportSlurm() {
-        return true;
+        return this.slurmTaskManager != null;
     }
 }
