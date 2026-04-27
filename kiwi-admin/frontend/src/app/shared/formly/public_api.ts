@@ -7,6 +7,7 @@ import { FormlyFieldCheckbox } from "./types/checkbox-type";
 import { AssignmentsEditorType } from "./types/assignments-editor-type";
 import { ComponentSelectorType } from "./types/component-select-type";
 import { SpelExpressionEditorType } from "./types/spel-expression-editor-type";
+import { JuelExpressionEditorType } from "./types/juel-expression-editor-type";
 import { IconSelectFieldType } from "./types/icon-select.type";
 
 
@@ -43,6 +44,11 @@ export function formlyConfig(dictService: IDictService): ConfigOption {
             {
                 name: 'spel-expression',
                 component: SpelExpressionEditorType,
+                wrappers: ['form-field'],
+            },
+            {
+                name: 'juel-expression',
+                component: JuelExpressionEditorType,
                 wrappers: ['form-field'],
             },
             {

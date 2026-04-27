@@ -60,11 +60,11 @@ export class PropertyGroup {
                 config = toViewFieldConfig(p);
             } else {
 
-                config = toEditFieldConfig(p);
+                config = toEditFieldConfig(p, this.elementModel);
             }
 
             const baseProps: Record<string, unknown> = { variables: this.variables() };
-            if (config.editor === 'spel-expression') {
+            if (config.editor === 'spel-expression' || config.editor === 'juel-expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
             }
             return toFormlyConfig(config, "horizontal", baseProps);

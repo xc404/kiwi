@@ -6,7 +6,18 @@ import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
 import { ElementModel } from "../element-model";
+import {
+    decodeCamundaInputLiteral,
+    encodeCamundaInputLiteral,
+} from "./camunda-input-literal";
+
+/** 组件赋值为 JSON 字符串，需按字面量持久化，避免 Camunda 将 body 当 JUEL 解析 */
+const INPUT_PARAMETER_LITERAL_STRING_KEYS = new Set<string>(['assignments']);
 export class CamundaElementModel extends ElementModel {
+
+    override expressionEditorFormlyType(): string {
+        return 'juel-expression';
+    }
 
     componentProvider = inject(ComponentProvider);
 
@@ -37,7 +48,14 @@ export class CamundaElementModel extends ElementModel {
         if (namespace == 'inputParameter') {
             let ele: any = this.getInputParameter(element, key);
             if (ele) {
-                return ele.get("value");
+                const raw = ele.get("value");
+                if (
+                    INPUT_PARAMETER_LITERAL_STRING_KEYS.has(key) &&
+                    typeof raw === 'string'
+                ) {
+                    return decodeCamundaInputLiteral(raw);
+                }
+                return raw;
             }
             return null;
         }
@@ -72,8 +90,16 @@ export class CamundaElementModel extends ElementModel {
         }
         if (namespace == 'inputParameter' || namespace == 'outputParameter') {
             let parameter: Element = this.getOrCreateInputOutputParameter(bpmnModeler, element, namespace, key);
+            let stored = value;
+            if (
+                namespace === 'inputParameter' &&
+                INPUT_PARAMETER_LITERAL_STRING_KEYS.has(key) &&
+                value != null
+            ) {
+                stored = encodeCamundaInputLiteral(String(value));
+            }
             this.updateModdleProperties(bpmnModeler, element, parameter, {
-                "value": value
+                "value": stored
             });
             return;
         }

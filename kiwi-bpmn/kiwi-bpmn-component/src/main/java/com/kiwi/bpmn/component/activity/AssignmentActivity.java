@@ -1,5 +1,6 @@
 package com.kiwi.bpmn.component.activity;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kiwi.common.utils.JsonUtils;
@@ -89,7 +90,7 @@ public class AssignmentActivity extends AbstractBpmnActivityBehavior {
             return out;
         }
         if (raw instanceof String s) {
-            String t = s.trim();
+            String t = unwrapOuterJsonStringIfQuoted(s.trim());
             if (t.isEmpty()) {
                 throw new IllegalArgumentException("流程变量 assignments 不能为空");
             }
@@ -114,6 +115,25 @@ public class AssignmentActivity extends AbstractBpmnActivityBehavior {
             }
         }
         throw new IllegalArgumentException("assignments 须为 List 或可解析为 JSON 数组的字符串");
+    }
+
+    /**
+     * Camunda / 序列化侧可能把 JSON 数组又包成一段 JSON 字符串（带外层引号），此时需先解析出一层文本再按数组处理。
+     * 若本身是数组文本 {@code [...]}，则 Jackson 解析为 {@link JsonNode#isArray()}，本方法原样返回。
+     */
+    static String unwrapOuterJsonStringIfQuoted(String t) {
+        if (t == null || t.isEmpty()) {
+            return t == null ? "" : t;
+        }
+        try {
+            JsonNode n = JsonUtils.readTree(t);
+            if (n != null && n.isTextual()) {
+                return n.asText().trim();
+            }
+        } catch (JsonProcessingException ignored) {
+            // 非法 JSON：交给后续拼接 items 时再报错
+        }
+        return t;
     }
 
     static Assignment toAssignment(Object item) {
