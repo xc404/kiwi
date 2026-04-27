@@ -1,5 +1,5 @@
 {
-  "Titan1_k3": {
+  "Titan1": {
     "root_path": "/home/Titan1_k3",
     "microscope_temstigma": {
       "x_temstigma_step": 38.01,
@@ -80,7 +80,7 @@
       }
     }
   },
-  "Titan2_k3": {
+  "Titan2": {
     "root_path": "/home/Titan2_k3",
     "microscope_temstigma": {
       "x_temstigma_step": 37.01,
@@ -171,7 +171,7 @@
       }
     }
   },
-  "Titan3_falcon": {
+  "Titan3": {
     "root_path": "/home/Titan3_falcon",
     "microscope_temstigma": {
       "x_temstigma_step": 37.01,

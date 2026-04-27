@@ -218,7 +218,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         }
         if( saveInput.bpmnXml != null ) {
             bpmProcess.setBpmnXml(saveInput.bpmnXml);
-            if( bpmProcess.getDeployedVersion() > 0 ) {
+            if( bpmProcess.getDeployedVersion() >= 0 ) {
                 bpmProcess.setVersion(bpmProcess.getDeployedVersion() + 1);
             }
         }

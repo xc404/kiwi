@@ -64,6 +64,22 @@
     </ng-container>
   </nz-modal>
 
+  <nz-modal nzTitle="启动流程变量" [nzVisible]="startProcessModalVisible()"
+    (nzVisibleChange)="startProcessModalVisible.set($event)" nzOkText="部署并启动" nzCancelText="取消"
+    (nzOnCancel)="startProcessModalVisible.set(false)" [nzWidth]="560" (nzOnOk)="onStartProcessOk()">
+    <ng-container *nzModalContent>
+      <div class="bpm-start-process-dialog">
+        <p class="bpm-start-process-dialog__hint">
+          须为 JSON 对象，将作为流程变量传入引擎；启动成功后会按流程 ID 缓存在本地，下次打开预填。
+        </p>
+        @if (startProcessModalVisible()) {
+        <app-json-code-editor #startJsonEditor class="bpm-start-process-dialog__editor"
+          [initialText]="startProcessVariablesJson" />
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+
   <nz-layout class="full-height bpm-editor-layout">
     <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzWidth="300px" nzTheme="light"
       nzNoAnimation>

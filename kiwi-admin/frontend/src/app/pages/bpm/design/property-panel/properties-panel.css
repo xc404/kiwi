@@ -1,3 +1,52 @@
+/**
+ * 属性面板布局原则（避免再踩坑）：
+ * - 不要对 ng-zorro 的 nz-tabs / .ant-tabs-* 写深层 flex + flex-basis:0 链。
+ * - 滚动只加在 .properties-panel-collapse-scroll；max-height 相对视口用「从视口顶到该区域顶部」的合计预留。
+ *
+ * --bpm-collapse-vh-offset 默认值供未包裹场景；流程设计器 / 实例查看在对应 scss 内覆盖。
+ */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+
+    /* 后备：与设计器同款合计（261px），避免未注入变量时塌陷 */
+    --bpm-collapse-vh-offset: calc(
+         0px 
+    );
+}
+
+.properties-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.properties-panel > bpm-panel-header {
+    flex-shrink: 0;
+}
+
+.properties-panel-tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/**
+ * 纵向滚动：nz-collapse 区域。
+ * max-height 使用 100dvh 减去「视口顶 → 本容器顶」的估算叠加；另用 75vh 兜底流程信息条换行等情况。
+ */
+.properties-panel-collapse-scroll {
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height:calc(100dvh - 200px);
+    -webkit-overflow-scrolling: touch;
+}
+
 .properties-panel .ant-tabs-nav {
     margin-bottom: 0 !important;
     margin: 0 !important;

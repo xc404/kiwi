@@ -85,7 +85,7 @@ export class BpmToolbar {
   }
 
   onStart(): void {
-    void this.bpmnEditor.start();
+    this.bpmnEditor.openStartProcessDialog();
   }
 
   onExportXml(): void {

@@ -101,7 +101,6 @@ export class CamundaElementModel extends ElementModel {
         let component: ComponentDescription = this.componentProvider.getComponent(componentId) as any;
         let id = component.id;
         let componentKey = component.key;
-        let key = "camunda:delegateExpression"
         this.setValue(bpmnModeler, element, "property", "componentId", id);
         if (component.type == "SpringBean") {
             this.updateProperties(bpmnModeler, element, {
@@ -162,7 +161,15 @@ export class CamundaElementModel extends ElementModel {
 
         // (2) ensure extensionProperties
         let extensionProperties: any = this.ensureExtensionPropertiesElements(bpmnModeler, element);
-        let parameter = this.getExtensionProperty(element, key);
+        const values: any[] = extensionProperties.get('values') || [];
+        const matching = values.filter((p: any) => p.get('name') === key);
+        let parameter = matching[0] as Element | undefined;
+        if (matching.length > 1) {
+            const deduped = values.filter((p: any) => p.get('name') !== key || p === matching[0]);
+            this.updateModdleProperties(bpmnModeler, element, extensionProperties, {
+                values: deduped
+            });
+        }
         if (!parameter) {
             const parent = extensionProperties;
             parameter = this.createElement(bpmnModeler, 'camunda:Property', {
@@ -315,7 +322,8 @@ export class CamundaElementModel extends ElementModel {
     getExtensionProperty(root: Element, key: string): Element | null {
         let propertyEles: any = this.getExtensionProperties(root);
 
-        let properties: any[] = propertyEles && propertyEles.get("property") || [];
+        // camunda:Properties stores child camunda:property elements in `values`, not `property`
+        let properties: any[] = propertyEles && propertyEles.get("values") || [];
 
 
         let e = properties.filter(i => i.get("name") === key);
