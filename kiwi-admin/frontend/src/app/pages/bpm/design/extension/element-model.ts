@@ -8,6 +8,14 @@ export abstract class ElementModel {
 
     abstract getModdleExtension(): any;
 
+    /**
+     * 属性面板里「输入 / In」命名空间且未指定 htmlType 时的默认 Formly 表达式编辑器。
+     * Flowable 等为 SpEL；Camunda 引擎表达式为 JUEL。
+     */
+    expressionEditorFormlyType(): string {
+        return 'spel-expression';
+    }
+
     public getValue(bpmnModeler: BaseViewer, element: Element, namespace: string, key: string): any {
         if (namespace == 'bpmn' || namespace == 'element' || !namespace) {
 

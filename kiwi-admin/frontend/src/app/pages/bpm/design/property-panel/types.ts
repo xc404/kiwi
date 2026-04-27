@@ -1,6 +1,7 @@
 import { P } from "@antv/g2plot";
 import { FieldEditorConfig } from "@app/shared/components/field/field-editor";
 import { Element } from "bpmn-js/lib/model/Types";
+import { ElementModel } from "../extension/element-model";
 
 
 enum PropertyNamespace {
@@ -45,10 +46,11 @@ export interface PropertyProvider {
 
 
 
-export function toEditFieldConfig(property: PropertyDescription): FieldEditorConfig {
+export function toEditFieldConfig(property: PropertyDescription, elementModel?: ElementModel): FieldEditorConfig {
     let editor = property.htmlType;
+    const defaultExprEditor = elementModel?.expressionEditorFormlyType() ?? 'spel-expression';
     if(property.namespace === PropertyNamespace.inputParameter || property.namespace === PropertyNamespace.In) {
-        editor =  editor || 'spel-expression';
+        editor =  editor || defaultExprEditor;
     }else if (property.namespace === PropertyNamespace.outputParameter || property.namespace === PropertyNamespace.Out) {
         editor = '#text';
     }

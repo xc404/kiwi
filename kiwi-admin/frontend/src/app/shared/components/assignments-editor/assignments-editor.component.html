@@ -1,0 +1,79 @@
+<div class="assignments-editor">
+  @if (readonly()) {
+    @if (payloadRows().length === 0) {
+      <span class="text-muted">—</span>
+    } @else {
+      <ul class="assignments-readonly">
+        @for (r of payloadRows(); track $index) {
+          <li>
+            <code>{{ r.key }}</code>
+            <span class="sep">←</span>
+            <code>{{ formatDisplayValue(r.value) }}</code>
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+   
+    @for (row of rows(); track $index; let i = $index) {
+      <div class="assignment-row">
+        <input
+          nz-input
+          class="key-in"
+          placeholder="目标变量名"
+          [ngModel]="row.key"
+          (ngModelChange)="onKeyChange(i, $event)"
+        />
+        <div class="val-in">
+          <app-juel-expression-editor
+            [value]="row.valueText"
+            (valueChange)="onValueChange(i, $event)"
+            [variables]="expressionVariableSuggestions()"
+            [placeholder]="juelInlinePlaceholder"
+          />
+        </div>
+        @if (varNames().length) {
+          <nz-select
+            class="var-ref"
+            nzPlaceHolder="引用变量"
+            nzAllowClear
+            [ngModel]="refSelection()[i]"
+            (ngModelChange)="onRefSelect(i, $event)"
+          >
+            @for (n of varNames(); track n) {
+              <nz-option [nzValue]="n" [nzLabel]="n"></nz-option>
+            }
+          </nz-select>
+        }
+        <!-- <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          type="button"
+          nz-tooltip
+          nzTooltipTitle="复制本行"
+          (click)="duplicateRow(i)"
+        >
+          <nz-icon nzType="copy" nzTheme="outline" />
+        </button> -->
+        <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          nzDanger
+          type="button"
+          [disabled]="rows().length <= 1"
+          (click)="removeRow(i)"
+        >
+          <nz-icon nzType="delete" nzTheme="outline" />
+        </button>
+      </div>
+    }
+    <div class="assignments-toolbar">
+      <button nz-button nzType="dashed" nzSize="small" type="button" (click)="addRow()">
+        <nz-icon nzType="plus" nzTheme="outline" />
+        添加赋值
+      </button>
+    </div>
+  }
+</div>
