@@ -1,10 +1,11 @@
 package com.kiwi.project.bpm;
 
-import com.kiwi.cryoems.bpm.movie.delegate.MovieCtfEstimationJavaDelegate;
-import com.kiwi.cryoems.bpm.movie.delegate.MovieHeaderJavaDelegate;
-import com.kiwi.cryoems.bpm.movie.delegate.MovieMotionCorrectionJavaDelegate;
+import com.kiwi.cryoems.bpm.activity.CyroemsPrepareActivity;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -23,22 +24,17 @@ class CryoMovieProcessWiringTest {
     void shouldDiscoverDelegateBeansAndBpmnBindings() throws Exception {
         Set<String> delegateNamesInBpmn = readDelegateExpressions("bpm/samples/cryo-movie-minimal.bpmn");
 
-        assertTrue(delegateNamesInBpmn.contains("movieHeaderJavaDelegate"));
-        assertTrue(delegateNamesInBpmn.contains("movieMotionCorrectionJavaDelegate"));
-        assertTrue(delegateNamesInBpmn.contains("movieCtfEstimationJavaDelegate"));
+        assertTrue(delegateNamesInBpmn.contains("cyroemsPrepareActivity"));
 
         try (AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext()) {
-            ctx.scan("com.kiwi.cryoems.bpm.movie.delegate");
+            ctx.register(PlaceholderConfig.class);
+            ctx.scan("com.kiwi.cryoems.bpm.activity", "com.kiwi.cryoems.bpm.support");
             ctx.refresh();
 
-            assertNotNull(ctx.getBean("movieHeaderJavaDelegate", MovieHeaderJavaDelegate.class));
-            assertNotNull(ctx.getBean("movieMotionCorrectionJavaDelegate", MovieMotionCorrectionJavaDelegate.class));
-            assertNotNull(ctx.getBean("movieCtfEstimationJavaDelegate", MovieCtfEstimationJavaDelegate.class));
+            assertNotNull(ctx.getBean("cyroemsPrepareActivity", CyroemsPrepareActivity.class));
         }
 
-        assertEquals("movieHeaderJavaDelegate", beanNameOf(MovieHeaderJavaDelegate.class));
-        assertEquals("movieMotionCorrectionJavaDelegate", beanNameOf(MovieMotionCorrectionJavaDelegate.class));
-        assertEquals("movieCtfEstimationJavaDelegate", beanNameOf(MovieCtfEstimationJavaDelegate.class));
+        assertEquals("cyroemsPrepareActivity", beanNameOf(CyroemsPrepareActivity.class));
     }
 
     private static String beanNameOf(Class<?> type) {
@@ -69,5 +65,13 @@ class CryoMovieProcessWiringTest {
             }
         }
         return names;
+    }
+
+    @Configuration
+    static class PlaceholderConfig {
+        @Bean
+        static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+            return new PropertySourcesPlaceholderConfigurer();
+        }
     }
 }
