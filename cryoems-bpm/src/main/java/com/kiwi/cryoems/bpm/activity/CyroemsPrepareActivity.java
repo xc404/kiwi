@@ -2,7 +2,7 @@ package com.kiwi.cryoems.bpm.activity;
 
 import com.kiwi.cryoems.bpm.model.ClosetScale;
 import com.kiwi.cryoems.bpm.model.MrcMetadata;
-import com.kiwi.cryoems.bpm.support.MrcHeaderOutputParser;
+import com.kiwi.cryoems.bpm.support.MrcHeaderParser;
 import com.kiwi.cryoems.bpm.support.MicroscopeScaleRegistry;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.engine.delegate.BpmnError;
@@ -50,7 +50,7 @@ public class CyroemsPrepareActivity implements JavaDelegate {
         try {
             runHeader(movieFile, headerOut);
             String text = Files.readString(headerOut, StandardCharsets.UTF_8);
-            MrcMetadata meta = MrcHeaderOutputParser.parse(text, movieFile);
+            MrcMetadata meta = MrcHeaderParser.parse(text, movieFile);
             execution.setVariable("mrcMetadata", meta);
 
             ClosetScale scale = microscopeScaleRegistry.closestScale(microscope, pSize);
