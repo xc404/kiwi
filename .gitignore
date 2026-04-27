@@ -54,3 +54,4 @@ kiwi-admin/script/__pycache__/
 kiwi-bpmn/kiwi-bpmn-core/target/
 kiwi-common/target/
 kiwi-bpmn/kiwi-bpmn-external-task/target/
+kiwi-bpmn/kiwi-bpmn-component/target/
