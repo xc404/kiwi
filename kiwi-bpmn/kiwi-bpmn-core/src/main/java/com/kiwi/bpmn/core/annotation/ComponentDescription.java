@@ -24,6 +24,16 @@ public @interface ComponentDescription
 
     String group() default "Common";
 
+    /**
+     * 输入变量映射：每项 {@link ComponentParameter} 的 {@code key} 为组件可读取的参数名。
+     * <p>
+     * 与 {@code defaultValue} 的约定（属性面板 / Schema 等）：
+     * <ul>
+     *   <li>当参数 {@code required=true} 且未显式声明默认值时，默认值应为
+     *   {@code ${key}}（例如 key=message 时默认值为 {@code ${message}}）。</li>
+     *   <li>当显式设置了 {@code defaultValue} 时，以显式值为准。</li>
+     * </ul>
+     */
     ComponentParameter[] inputs() default {};
 
     /**
