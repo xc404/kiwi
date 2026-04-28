@@ -96,7 +96,6 @@ export function toFormlyConfig(config: FieldEditorConfig, wrapper = 'form-field'
             readonly: props?.readonly || config.readonly,
             disabled: props?.readonly || config.readonly || props?.disabled,
             hidden: hidden,
-            expressionDialect: config.expressionDialect,
             ...(config.options?.length
                 ? { options: config.options, valueProp: 'value', labelProp: 'label' }
                 : {}),

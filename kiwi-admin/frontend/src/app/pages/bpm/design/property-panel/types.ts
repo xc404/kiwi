@@ -20,8 +20,6 @@ export declare type PropertyDescription = {
     description?: string;
     namespace?: PropertyNamespace;
     htmlType?: string;
-    /** 当 htmlType=expression 时，指定表达式方言；缺省时按 ElementModel 默认 */
-    expressionDialect?: 'spel' | 'juel';
     defaultValue?: any;
     readonly?: boolean;
     hidden?: boolean;
@@ -48,18 +46,12 @@ export interface PropertyProvider {
 
 
 export function toEditFieldConfig(property: PropertyDescription, elementModel?: ElementModel): FieldEditorConfig {
-    let editor = property.htmlType;
-    let expressionDialect = property.expressionDialect ?? elementModel?.expressionDialect() ?? 'spel';
     
-    if(property.namespace === PropertyNamespace.declaredOutputParameter) {
-        editor = "bpm-declared-output";
-    }
     return {
         ...property,
         dataIndex: property.key,
         name: property.name || property.key,
-        
-        editor:editor
+        editor:property.htmlType,
         
     } as FieldEditorConfig;
 }
