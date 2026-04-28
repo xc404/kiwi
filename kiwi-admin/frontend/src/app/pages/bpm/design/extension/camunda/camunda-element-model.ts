@@ -1,6 +1,7 @@
 // import { BpmnModeler } from 'bpmn-js/lib/Modeler';
 import { inject } from '@angular/core';
 import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/flow-elements/component-provider';
+import BaseViewer from "bpmn-js/lib/BaseViewer";
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
@@ -314,10 +315,22 @@ export class CamundaElementModel extends ElementModel {
         return inputOutput && inputOutput.get("inputParameters") || [];
     }
 
-    getOutputParameters(element: Element): Element[] {
+    override getOutputParameters(element: Element): Element[] {
         // return this.getParameters(element, 'outputParameters');
         const inputOutput = this.getInputOutput(element);
         return inputOutput && inputOutput.get("outputParameters") || [];
+    }
+
+    override removeOutputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {
+        const inputOutput = this.ensureInputOutputElements(bpmnModeler as BpmnModeler, element);
+        const existing: any[] = [...(inputOutput.get("outputParameters") || [])];
+        const next = existing.filter((p: any) => String(p.get("name")) !== key);
+        if (next.length === existing.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, inputOutput, {
+            outputParameters: next
+        });
     }
 
 
@@ -386,7 +399,5 @@ export class CamundaElementModel extends ElementModel {
         }
         return values;
     }
-
-
 
 }

@@ -60,8 +60,8 @@ export class ComponentService {
         let type = item.type;
 
         let inputNamespace = isCallActivity(type) ? 'In' : "InputParameter";
-        // CallActivity的输入输出参数放在In/Out命名空间下，其他组件放在InputParameter命名空间下
-        let outputNamespace = isCallActivity(type) ? 'Out' : "InputParameter";
+        // CallActivity 的输入输出参数放在 In/Out 命名空间；Service Task 使用 inputParameter / outputParameter
+        let outputNamespace = isCallActivity(type) ? 'Out' : "outputParameter";
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {

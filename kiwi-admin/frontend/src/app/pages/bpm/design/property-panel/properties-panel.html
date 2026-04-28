@@ -20,6 +20,16 @@
 
                         }
 
+                        @if (isOutputTab(tab) && showCustomOutputs()) {
+                        <nz-collapse-panel nzHeader="自定义输出" [nzActive]="true" nzShowArrow="true">
+                            <div style="width: 100%;">
+                                <bpm-custom-outputs-panel [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                    [viewMode]="viewMode()" [variables]="activityVariables()"
+                                    [catalogOutputKeys]="catalogOutputKeys()"></bpm-custom-outputs-panel>
+                            </div>
+                        </nz-collapse-panel>
+                        }
+
                     </nz-collapse>
                 </div>
             </nz-tab>

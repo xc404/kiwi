@@ -1,5 +1,4 @@
-import BpmnModeler from 'bpmn-js/lib/Modeler'
-import { isTextType, PropertyDescription } from "./types";
+import { CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY, isTextType, PropertyDescription } from "./types";
 import { ElementModel } from '../extension/element-model';
 import { Element } from "bpmn-js/lib/model/Types";
 import BaseViewer from 'bpmn-js/lib/BaseViewer';
@@ -14,12 +13,14 @@ export class ElementModelProxyHandler {
         private viewMode = false,
         private variables: any[] = []
     ) {
-
     }
 
     get(target: any, prop: string, receiver: any) {
         let property = this.properties.find(p => p.key == prop);
         if (property) {
+            if (property.declaredOutputParameter || property.customCamundaOutputParameterList || property.key === CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY) {
+                return '';
+            }
             let value = this.elementModel.getValue(this.bpmnModeler, this.element, property.namespace ?? 'bpmn', property.key);
             if (this.viewMode && isTextType(property)) {
                 let rawValue = this.variables.find(v => v.name === prop)?.value;
@@ -41,6 +42,9 @@ export class ElementModelProxyHandler {
         }
         let property = this.properties.find(p => p.key == prop);
         if (property) {
+            if (property.declaredOutputParameter || property.customCamundaOutputParameterList || property.key === CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY) {
+                return true;
+            }
             this.elementModel.setValue(this.bpmnModeler, this.element, property.namespace ?? 'bpmn', property.key, value);
             return true;
         }
