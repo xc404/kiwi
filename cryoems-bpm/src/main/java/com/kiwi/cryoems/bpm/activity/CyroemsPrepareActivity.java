@@ -34,20 +34,17 @@ import java.util.concurrent.TimeUnit;
         inputs = {
                 @ComponentParameter(
                         key = "movieFile",
-                        htmlType = "#text",
                         name = "movieFile",
                         description = "电影文件路径（字符串）；可与 movie.file_path 二选一",
                         required = true
                 ),
                 @ComponentParameter(
                         key = "microscope",
-                        htmlType = "#text",
                         name = "microscope",
                         description = "显微镜标识，用于标尺匹配",
                         required = true),
                 @ComponentParameter(
                         key = "p_size",
-                        htmlType = "#text",
                         name = "p_size",
                         description = "像素尺寸，用于选取最近标尺",
                         required = true)
@@ -55,13 +52,11 @@ import java.util.concurrent.TimeUnit;
         outputs = {
                 @ComponentParameter(
                         key = "mrcMetadata",
-                        htmlType = "#text",
                         name = "mrcMetadata",
                         description = "MRC 头解析结果（MrcMetadata）写入的流程变量名",
                         schema = @Schema(defaultValue = "mrcMetadata")),
                 @ComponentParameter(
                         key = "closetScale",
-                        htmlType = "#text",
                         name = "closetScale",
                         description = "匹配的标尺档位（ClosetScale）写入的流程变量名",
                         schema = @Schema(defaultValue = "closetScale"))

@@ -34,35 +34,29 @@ import java.util.Set;
         inputs = {
                 @ComponentParameter(
                         key = "url",
-                        htmlType = "#text",
                         name = "url",
                         description = "绝对地址，仅支持 http 或 https",
                         required = true),
                 @ComponentParameter(
                         key = "method",
-                        htmlType = "#text",
                         name = "method",
                         description = "HTTP 方法：GET、HEAD、POST、PUT、PATCH、DELETE（默认 GET）",
                         schema = @Schema(defaultValue = "GET")),
                 @ComponentParameter(
                         key = "headers",
-                        htmlType = "#text",
                         name = "headers",
                         description = "可选，JSON 对象字符串，例如 {\"Content-Type\":\"application/json\"}"),
                 @ComponentParameter(
                         key = "body",
-                        htmlType = "#text",
                         name = "body",
                         description = "请求体字符串；GET/HEAD 忽略"),
                 @ComponentParameter(
                         key = "connectTimeoutSeconds",
-                        htmlType = "#text",
                         name = "connectTimeoutSeconds",
                         description = "连接超时（秒）",
                         schema = @Schema(defaultValue = "10")),
                 @ComponentParameter(
                         key = "readTimeoutSeconds",
-                        htmlType = "#text",
                         name = "readTimeoutSeconds",
                         description = "请求/响应超时（秒）",
                         schema = @Schema(defaultValue = "30"))
@@ -70,17 +64,14 @@ import java.util.Set;
         outputs = {
                 @ComponentParameter(
                         key = "statusCode",
-                        htmlType = "#text",
                         description = "写入 HTTP 状态码的流程变量名",
                         schema = @Schema(defaultValue = "statusCode")),
                 @ComponentParameter(
                         key = "responseBody",
-                        htmlType = "#text",
                         description = "写入响应体（UTF-8 字符串）的流程变量名",
                         schema = @Schema(defaultValue = "responseBody")),
                 @ComponentParameter(
                         key = "responseHeaders",
-                        htmlType = "#text",
                         description = "写入响应头 JSON 字符串的流程变量名（多值头为 JSON 数组）",
                         schema = @Schema(defaultValue = "responseHeaders"))
         })

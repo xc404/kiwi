@@ -42,15 +42,15 @@ import java.util.concurrent.TimeUnit;
 @ComponentDescription(name = "命令行", description = "Execute a shell command"
 
             , inputs = {
-            @ComponentParameter(key = "command", htmlType = "#text", description = "The shell command to execute"),
-            @ComponentParameter(key = "directory", htmlType = "#text", description = "The working directory for the command"),
+            @ComponentParameter(key = "command", description = "The shell command to execute"),
+            @ComponentParameter(key = "directory", description = "The working directory for the command"),
             @ComponentParameter(key = "waitFlag", htmlType = "CheckBox", description = "Whether to wait for the command to finish before proceeding"),
             @ComponentParameter(key = "redirectError", htmlType = "CheckBox", description = "Whether to redirect error stream to output stream"),
             @ComponentParameter(key = "cleanEnv", htmlType = "CheckBox", description = "Whether to clear environment variables for the command")
     }
             , outputs = {
-            @ComponentParameter(key = "result", htmlType = "#text", description = "The output of the shell command"),
-            @ComponentParameter(key = "errorCode", htmlType = "#text", description = "The error code returned by the shell command")
+            @ComponentParameter(key = "result", description = "The output of the shell command"),
+            @ComponentParameter(key = "errorCode", description = "The error code returned by the shell command")
     }
 
 )
