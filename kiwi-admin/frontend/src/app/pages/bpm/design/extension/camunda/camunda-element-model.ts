@@ -28,6 +28,9 @@ export class CamundaElementModel extends ElementModel {
 
 
     public override getValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string): any {
+        if (element.type === 'bpmn:SequenceFlow' && key === 'condition') {
+            return element.businessObject.conditionExpression?.body ?? null;
+        }
         if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
             const binding = this.getCallActivityIns(element).find((i: any) => i.get('target') === key);
             if (binding) {
@@ -72,6 +75,22 @@ export class CamundaElementModel extends ElementModel {
     }
 
     public override setValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string, value: any): void {
+        if (element.type === 'bpmn:SequenceFlow' && key === 'condition') {
+            const str = value == null ? '' : String(value);
+            if (!str) {
+                this.updateProperties(bpmnModeler, element, {
+                    conditionExpression: undefined
+                });
+                return;
+            }
+            const conditionExpression = this.createElement(bpmnModeler, 'bpmn:FormalExpression', {
+                body: str
+            });
+            this.updateProperties(bpmnModeler, element, {
+                conditionExpression
+            });
+            return;
+        }
         if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
             const inEl = this.getOrCreateCallActivityIn(bpmnModeler, element, key);
             const str = value == null ? '' : String(value);

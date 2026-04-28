@@ -51,6 +51,9 @@ export interface PropertyProvider {
 export function toEditFieldConfig(property: PropertyDescription, elementModel?: ElementModel): FieldEditorConfig {
     let editor = property.htmlType;
     const defaultExprEditor = elementModel?.expressionEditorFormlyType() ?? 'spel-expression';
+    if (!editor && property.key === 'condition') {
+        editor = defaultExprEditor;
+    }
     if(property.namespace === PropertyNamespace.declaredOutputParameter) {
         editor = "bpm-declared-output";
     }
