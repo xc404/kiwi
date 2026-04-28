@@ -20,6 +20,8 @@ export declare type PropertyDescription = {
     description?: string;
     namespace?: PropertyNamespace;
     htmlType?: string;
+    /** 当 htmlType=expression 时，指定表达式方言；缺省时按 ElementModel 默认 */
+    expressionDialect?: 'spel' | 'juel';
     defaultValue?: any;
     readonly?: boolean;
     hidden?: boolean;
@@ -32,9 +34,6 @@ export declare type PropertyDescription = {
     important?: boolean;
 };
 
-
-/** 合成字段 key：自定义 Camunda OutputParameter 列表（见 formly `bpm-camunda-custom-outputs`） */
-export const CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY = "__camundaCustomOutputs";
 
 
 export type PropertyTab = {
@@ -50,10 +49,8 @@ export interface PropertyProvider {
 
 export function toEditFieldConfig(property: PropertyDescription, elementModel?: ElementModel): FieldEditorConfig {
     let editor = property.htmlType;
-    const defaultExprEditor = elementModel?.expressionEditorFormlyType() ?? 'spel-expression';
-    if (!editor && property.key === 'condition') {
-        editor = defaultExprEditor;
-    }
+    let expressionDialect = property.expressionDialect ?? elementModel?.expressionDialect() ?? 'spel';
+    
     if(property.namespace === PropertyNamespace.declaredOutputParameter) {
         editor = "bpm-declared-output";
     }
@@ -62,7 +59,8 @@ export function toEditFieldConfig(property: PropertyDescription, elementModel?: 
         dataIndex: property.key,
         name: property.name || property.key,
         
-        editor:editor,
+        editor:editor
+        
     } as FieldEditorConfig;
 }
 

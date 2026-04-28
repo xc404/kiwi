@@ -16,8 +16,8 @@ import {
 const INPUT_PARAMETER_LITERAL_STRING_KEYS = new Set<string>(['assignments']);
 export class CamundaElementModel extends ElementModel {
 
-    override expressionEditorFormlyType(): string {
-        return 'juel-expression';
+    override expressionDialect(): 'juel' {
+        return 'juel';
     }
 
     componentProvider = inject(ComponentProvider);
