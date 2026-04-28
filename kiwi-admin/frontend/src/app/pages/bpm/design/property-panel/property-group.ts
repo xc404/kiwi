@@ -7,7 +7,12 @@ import { ComponentService } from "../../flow-elements/component-service";
 import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
-import { PropertyDescription, PropertyNamespace, toEditFieldConfig, toViewFieldConfig } from "./types";
+import {
+    PropertyDescription,
+    PropertyNamespace,
+    toEditFieldConfig,
+    toViewFieldConfig,
+} from "./types";
 import BaseViewer from "bpmn-js/lib/BaseViewer";
 @Component({
     selector: 'property-group',
@@ -66,6 +71,14 @@ export class PropertyGroup {
             const baseProps: Record<string, unknown> = { variables: this.variables() };
             if (config.editor === 'spel-expression' || config.editor === 'juel-expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
+            }
+            if (p.declaredOutputParameter) {
+                const detail = [p.description, p.type].filter(
+                    (x) => x != null && String(x).trim().length > 0,
+                );
+                if (detail.length > 0) {
+                    baseProps['description'] = detail.join(' · ');
+                }
             }
             return toFormlyConfig(config, "horizontal", baseProps);
         });

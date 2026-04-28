@@ -1,7 +1,12 @@
 import { inject, Injectable } from "@angular/core";
 import { Element } from "bpmn-js/lib/model/Types";
 import { ComponentService } from "./component-service";
-import { PropertyDescription, PropertyNamespace, PropertyProvider, PropertyTab } from "../design/property-panel/types";
+import {
+    PropertyDescription,
+    PropertyNamespace,
+    PropertyProvider,
+    PropertyTab,
+} from "../design/property-panel/types";
 
 @Injectable({ providedIn: 'root' })
 export class ComponentPropertyProvider implements PropertyProvider {
@@ -9,56 +14,87 @@ export class ComponentPropertyProvider implements PropertyProvider {
     private componentService = inject(ComponentService);
 
     getProperties(element: Element): PropertyTab[] {
-        
+
         if (element.type !== "bpmn:ServiceTask" && element.type !== "bpmn:CallActivity") {
             return [];
         }
-        let mainGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [];
-        if(element.type === "bpmn:CallActivity") {
-            mainGroups = [
-                {
-                    name: "流程",
-                    properties: [
-                        { key: "componentId", name: "流程", htmlType: "component-selector", readonly: true, namespace: PropertyNamespace.element, defaultValue: "", example: "", required: true },
-                    ],
-                }
-            ];
+
+        const bindingGroups = this.buildBindingGroups(element);
+        const component = this.componentService.getComponentForElement(element);
+
+        const inputSplit = component
+            ? this.splitAndGroupByGroup(component.inputParameters || [], "输入")
+            : { importantGroups: [] as { name: string; properties: PropertyDescription[]; important?: boolean }[], unimportant: [] as PropertyDescription[] };
+
+        const inputTabGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [
+            ...bindingGroups,
+            ...inputSplit.importantGroups,
+        ];
+        if (inputSplit.unimportant.length > 0) {
+            inputTabGroups.push({ name: "其他", properties: inputSplit.unimportant, important: false });
         }
-      if(element.type === "bpmn:ServiceTask") {
-        mainGroups = [
-            {
-                name: "组件类型",
-                properties: [
-                    { key: "componentId", name: "组件", htmlType: "component-selector", readonly: true, namespace: PropertyNamespace.element, defaultValue: "", example: "", required: true },
-                ],
-                important: true
-            },
+
+        const markedOutputs: PropertyDescription[] = (component?.outputParameters ?? []).map((p) => ({
+            ...p,
+            declaredOutputParameter: true,
+        }));
+
+        const outputSplit = component
+            ? this.splitAndGroupByGroup(markedOutputs, "输出")
+            : { importantGroups: [] as { name: string; properties: PropertyDescription[]; important?: boolean }[], unimportant: [] as PropertyDescription[] };
+
+        const outputTabGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [
+            ...outputSplit.importantGroups,
+        ];
+        if (outputSplit.unimportant.length > 0) {
+            outputTabGroups.push({ name: "其他", properties: outputSplit.unimportant, important: false });
+        }
+
+        return [
+            { name: "输入", groups: inputTabGroups },
+            { name: "输出", groups: outputTabGroups },
         ];
     }
 
-        const component = this.componentService.getComponentForElement(element);
-        if (!component) {
-            return [{ name: "基础信息", groups: mainGroups }];
+    private buildBindingGroups(element: Element): { name: string; properties: PropertyDescription[]; important?: boolean }[] {
+        if (element.type === "bpmn:CallActivity") {
+            return [
+                {
+                    name: "流程",
+                    properties: [
+                        {
+                            key: "componentId",
+                            name: "流程",
+                            htmlType: "component-selector",
+                            readonly: true,
+                            namespace: PropertyNamespace.element,
+                            defaultValue: "",
+                            example: "",
+                            required: true,
+                        },
+                    ],
+                    important: true,
+                },
+            ];
         }
-
-        const inputSplit = this.splitAndGroupByGroup(component.inputParameters || [], "输入");
-        const outputSplit = this.splitAndGroupByGroup(component.outputParameters || [], "输出");
-        mainGroups.push(...inputSplit.importantGroups, ...outputSplit.importantGroups);
-
-        const tabs: PropertyTab[] = [{ name: "基础信息", groups: mainGroups }];
-
-        const otherGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [];
-        if (inputSplit.unimportant.length > 0) {
-            otherGroups.push({ name: "输入", properties: inputSplit.unimportant, important: false });
-        }
-        if (outputSplit.unimportant.length > 0) {
-            otherGroups.push({ name: "输出", properties: outputSplit.unimportant, important: false });
-        }
-        if (otherGroups.length > 0) {
-            tabs.push({ name: "其他", groups: otherGroups });
-        }
-
-        return tabs;
+        return [
+            {
+                name: "组件类型",
+                properties: [
+                    {
+                        key: "componentId",
+                        name: "组件",
+                        htmlType: "component-selector",
+                        readonly: true,
+                        namespace: PropertyNamespace.element,
+                        defaultValue: "",
+                        example: "",
+                        required: true,
+                    },
+                ],
+                important: true,
+            },
+        ];
     }
 
     /**

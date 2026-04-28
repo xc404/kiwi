@@ -5,6 +5,7 @@ import { ComponentPropertyProvider } from "../../flow-elements/component-propert
 import { PropertyProvider, PropertyTab } from "./types";
 
 export type { PropertyTab, PropertyProvider } from "./types";
+export { CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY } from "./types";
 
 @Injectable({ providedIn: 'root' })
 export class CompositePropertyProvider implements PropertyProvider {
@@ -18,14 +19,24 @@ export class CompositePropertyProvider implements PropertyProvider {
         if (extraTabs.length === 0) {
             return baseTabs;
         }
-        const merged = [...baseTabs];
-        const first = merged[0];
-        merged[0] = {
-            ...first,
-            groups: [...first.groups, ...extraTabs[0].groups]
-        };
-        if (extraTabs.length > 1) {
-            merged.push(...extraTabs.slice(1));
+        const merged = baseTabs.map((t) => ({
+            ...t,
+            groups: [...t.groups],
+        }));
+        for (const extra of extraTabs) {
+            const idx = merged.findIndex((t) => (t.name ?? "") === (extra.name ?? ""));
+            if (idx >= 0) {
+                const cur = merged[idx];
+                merged[idx] = {
+                    ...cur,
+                    groups: [...cur.groups, ...extra.groups],
+                };
+            } else {
+                merged.push({
+                    ...extra,
+                    groups: [...extra.groups],
+                });
+            }
         }
         return merged;
     }

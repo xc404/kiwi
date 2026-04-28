@@ -1,4 +1,5 @@
 // import { BpmnModeler } from 'bpmn-js/lib/Modeler';
+import BaseViewer from "bpmn-js/lib/BaseViewer";
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
@@ -150,8 +151,20 @@ export class FlowableElementModel extends ElementModel {
         return this.getParameters(element, 'inputParameters');
     }
 
-    getOutputParameters(element: Element): Element[] {
+    override getOutputParameters(element: Element): Element[] {
         return this.getParameters(element, 'outputParameters');
+    }
+
+    override removeOutputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {
+        const inputOutput = this.ensureInputOutputForListApply(bpmnModeler as BpmnModeler, element);
+        const existing: any[] = [...(inputOutput.get("outputParameters") || [])];
+        const next = existing.filter((p: any) => String(p.get("name")) !== key);
+        if (next.length === existing.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, inputOutput, {
+            outputParameters: next
+        });
     }
 
 
@@ -190,6 +203,26 @@ export class FlowableElementModel extends ElementModel {
         // }
         const businessObject = ModelUtil.getBusinessObject(element);
         return (this.getElements(businessObject, 'camunda:InputOutput') || [])[0];
+    }
+
+    private ensureInputOutputForListApply(bpmnModeler: BpmnModeler, element: Element): any {
+        const businessObject = ModelUtil.getBusinessObject(element);
+        let extensionElements = businessObject.get("extensionElements");
+        if (!extensionElements) {
+            extensionElements = this.createElement(bpmnModeler, "bpmn:ExtensionElements", { values: [] }, businessObject);
+            this.updateModdleProperties(bpmnModeler, element, businessObject, { extensionElements });
+        }
+        let inputOutput = this.getInputOutput(element);
+        if (!inputOutput) {
+            inputOutput = this.createElement(bpmnModeler, "camunda:InputOutput", {
+                inputParameters: [],
+                outputParameters: [],
+            }, extensionElements);
+            this.updateModdleProperties(bpmnModeler, element, extensionElements, {
+                values: [...extensionElements.get("values"), inputOutput],
+            });
+        }
+        return inputOutput;
     }
 
 }

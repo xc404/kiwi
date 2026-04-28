@@ -1,0 +1,32 @@
+@if (readonlyFlag()) {
+  @if (customRows().every((r) => !r.name.trim())) {
+    <span class="muted">—</span>
+  } @else {
+    <ul class="readonly-list">
+      @for (r of customRows(); track $index) {
+        @if (r.name.trim()) {
+          <li>
+            <code>{{ r.name }}</code>
+            <span class="sep">←</span>
+            <code>{{ r.valueText || "—" }}</code>
+          </li>
+        }
+      }
+    </ul>
+  }
+} @else {
+  @for (row of customRows(); track $index; let i = $index) {
+    <bpm-custom-output-row
+      [row]="row"
+      [variables]="variablesProp()"
+      (rowChange)="onRowChange(i, $event)"
+      (remove)="removeRow(i)"
+    />
+  }
+  <div class="toolbar">
+    <button nz-button nzType="dashed" nzSize="small" type="button" (click)="addRow()">
+      <nz-icon nzType="plus" nzTheme="outline" />
+      添加输出
+    </button>
+  </div>
+}

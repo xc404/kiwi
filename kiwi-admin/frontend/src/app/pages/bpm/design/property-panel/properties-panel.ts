@@ -17,7 +17,9 @@ import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { ComponentDescription } from '../../flow-elements/component-provider';
+import { ComponentService } from '../../flow-elements/component-service';
 import { ProcessInstance } from '../service/process-instance.service';
+import { CustomOutputsPanel } from './custom-outputs/custom-outputs-panel';
 import { PanelHeader } from './panel-header';
 import { PropertyGroup } from './property-group';
 import { PROPERTY_PROVIDER, PropertyTab } from './property-provider';
@@ -31,12 +33,13 @@ export type BpmnDiagramHost = BpmnModeler | NavigatedViewer;
     selector: 'bpm-properties-panel',
     templateUrl: 'properties-panel.html',
     styleUrls: ['properties-panel.css'],
-    imports: [CommonModule,  NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup],
+    imports: [CommonModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroup, CustomOutputsPanel],
     standalone: true,
 })
 export class BpmPropertiesPanel implements OnInit {
     private readonly http = inject(HttpClient);
     private readonly processInstanceService = inject(ProcessInstanceService);
+    private readonly componentService = inject(ComponentService);
 
     bpmnModeler = input.required<Viewer>();
     /** 流程实例查看：只展示运行时变量，不加载建模属性 */
@@ -88,6 +91,20 @@ export class BpmPropertiesPanel implements OnInit {
 
     isServiceTask = computed(() => {
         return this.element().type === 'bpmn:ServiceTask';
+    });
+
+    isOutputTab(tab: PropertyTab): boolean {
+        return (tab.name ?? '') === '输出';
+    }
+
+    showCustomOutputs = computed(() => {
+        const type = this.element()?.type;
+        return type === 'bpmn:ServiceTask' || type === 'bpmn:CallActivity';
+    });
+
+    catalogOutputKeys = computed(() => {
+        const component = this.componentService.getComponentForElement(this.element());
+        return (component?.outputParameters ?? []).map((p) => p.key);
     });
 
     loadVariables() {
