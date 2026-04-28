@@ -16,7 +16,6 @@ export class BasePropertyProvider implements PropertyProvider {
                 name: "condition",
                 htmlType: "expression",
                 defaultValue: "",
-                example: "",
             });
         }
         const groups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [

@@ -58,13 +58,12 @@ export class ComponentService {
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {
-            const fallbackValue = this.resolveInputDefaultValue(p);
             this.elementModel.setValue(
                 bpmnModeler,
                 element,
                 p.namespace || inputNamespace,
                 p.key,
-                p.defaultValue ?? fallbackValue ?? ''
+                p.defaultValue ??  ''
             );
         });
 
@@ -83,21 +82,5 @@ export class ComponentService {
         return this.componentProvider.getComponent(componentId);
     }
 
-    private resolveInputDefaultValue(property: PropertyDescription): string | undefined {
-        if (property.required !== true) {
-            return undefined;
-        }
-        if (!property.key) {
-            return undefined;
-        }
-        const defaultValue = property.defaultValue;
-        if (typeof defaultValue === "string" && defaultValue.trim().length > 0) {
-            return undefined;
-        }
-        if (defaultValue !== undefined && defaultValue !== null && typeof defaultValue !== "string") {
-            return undefined;
-        }
-        return `\${${property.key}}`;
-    }
 
 }
