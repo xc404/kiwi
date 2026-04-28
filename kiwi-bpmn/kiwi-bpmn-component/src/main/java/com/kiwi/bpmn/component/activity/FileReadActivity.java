@@ -26,19 +26,16 @@ import java.nio.file.Path;
         inputs = {
                 @ComponentParameter(
                         key = "path",
-                        htmlType = "#text",
                         name = "path",
                         description = "待读取文件的绝对或相对路径（不允许包含 .. 段）",
                         required = true),
                 @ComponentParameter(
                         key = "encoding",
-                        htmlType = "#text",
                         name = "encoding",
                         description = "字符集名称，例如 UTF-8、GBK；留空则使用 UTF-8",
                         schema = @Schema(defaultValue = "UTF-8")),
                 @ComponentParameter(
                         key = "maxBytes",
-                        htmlType = "#text",
                         name = "maxBytes",
                         description = "可选，最多读取的字节数（含）；不配置则不限制（大文件请谨慎）",
                         schema = @Schema(defaultValue = ""))
@@ -46,7 +43,6 @@ import java.nio.file.Path;
         outputs = {
                 @ComponentParameter(
                         key = "content",
-                        htmlType = "#text",
                         name = "content",
                         description = "写入文件正文（字符串）的流程变量名",
                         schema = @Schema(defaultValue = "fileContent"))

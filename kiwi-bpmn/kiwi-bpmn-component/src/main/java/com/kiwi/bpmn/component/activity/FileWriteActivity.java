@@ -28,19 +28,16 @@ import java.util.List;
         inputs = {
                 @ComponentParameter(
                         key = "path",
-                        htmlType = "#text",
                         name = "path",
                         description = "目标文件绝对或相对路径（不允许包含 .. 段）",
                         required = true),
                 @ComponentParameter(
                         key = "content",
-                        htmlType = "#text",
                         name = "content",
                         description = "要写入文件的字符串内容",
                         required = true),
                 @ComponentParameter(
                         key = "encoding",
-                        htmlType = "#text",
                         name = "encoding",
                         description = "字符集名称，例如 UTF-8、GBK；留空则使用 UTF-8",
                         schema = @Schema(defaultValue = "UTF-8")),
@@ -60,7 +57,6 @@ import java.util.List;
         outputs = {
                 @ComponentParameter(
                         key = "bytesWritten",
-                        htmlType = "#text",
                         name = "bytesWritten",
                         description = "可选，写入 UTF-8 字节长度（按实际编码统计）所写入的流程变量名",
                         schema = @Schema(defaultValue = ""))

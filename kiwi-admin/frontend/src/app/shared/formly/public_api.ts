@@ -5,7 +5,7 @@ import { ColumnEditField, HorizontalFormFieldWrapper, VerticalFormFieldWrapper }
 import { BizTreeSelectType } from "./types/biz-tree-select-type";
 import { FormlyFieldCheckbox } from "./types/checkbox-type";
 import { AssignmentsEditorType } from "./types/assignments-editor-type";
-import { DeclaredOutputCatalogType } from "./types/declared-output-catalog-type";
+import { BpmDeclaredOutputType } from "./types/bpm-declared-output-type";
 import { ComponentSelectorType } from "./types/component-select-type";
 import { SpelExpressionEditorType } from "./types/spel-expression-editor-type";
 import { JuelExpressionEditorType } from "./types/juel-expression-editor-type";
@@ -43,9 +43,14 @@ export function formlyConfig(dictService: IDictService): ConfigOption {
                 wrappers: ['form-field'],
             },
             {
-                name: 'bpm-declared-output-catalog',
-                component: DeclaredOutputCatalogType,
+                name: 'bpm-declared-output',
+                component: BpmDeclaredOutputType,
                 wrappers: ['form-field'],
+                defaultOptions: {
+                    props: {
+                        hideOuterDescription: true,
+                    },
+                },
             },
             {
                 name: 'spel-expression',

@@ -86,6 +86,7 @@ export function toFormlyConfig(config: FieldEditorConfig, wrapper = 'form-field'
 
         props: {
             ...props,
+            description: config.description,
             label: config.name,
             dictKey: config.dictKey,
             type: getInputType(config.editor),

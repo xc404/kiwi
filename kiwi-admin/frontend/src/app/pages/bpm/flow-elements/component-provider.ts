@@ -1,7 +1,6 @@
 import { inject, Injectable, signal } from "@angular/core";
-import { PropertyDescription, PropertyNamespace } from "../design/property-panel/types";
 import { BaseHttpService } from "@app/core/services/http/base-http.service";
-import { isCallActivity } from "./utils";
+import { PropertyDescription, PropertyNamespace } from "../design/property-panel/types";
 
 export declare interface ComponentDescription {
     id: string;
@@ -9,7 +8,7 @@ export declare interface ComponentDescription {
     key: string
     name: string;
     descrition?: string;
-    type: "SpringBean" |"SpringExternalTask" | "CallActivity";
+    type: "SpringBean" | "SpringExternalTask" | "CallActivity";
     inputParameters?: PropertyDescription[];
     outputParameters?: PropertyDescription[];
     /** 与后端 RecentBpmComponent.lastUsedFromProcessAt 一致（仅 recent-usage 返回） */
@@ -25,10 +24,7 @@ export declare interface ComponentsGroup {
 @Injectable({ providedIn: 'root' })
 export class ComponentProvider {
 
-    // http = inject(BaseHttpService);
 
-    // public componentGroups = signal<ComponentsGroup[]>([]);
-    // public components = signal<ComponentDescription[]>([]);
     public componentGroups = signal<ComponentsGroup[]>([]);
     public components = signal<ComponentDescription[]>([]);
     http = inject(BaseHttpService);
@@ -52,11 +48,11 @@ export class ComponentProvider {
                     c.inputParameters = c.inputParameters || [];
                     c.outputParameters = c.outputParameters || [];
                     c.inputParameters.forEach(p => {
-                        
-                        p.namespace = isCallActivity(c.type) ? PropertyNamespace.In : PropertyNamespace.inputParameter;
+
+                        p.namespace = PropertyNamespace.inputParameter;
                     });
                     c.outputParameters.forEach(p => {
-                        p.namespace = isCallActivity(c.type) ? PropertyNamespace.Out : PropertyNamespace.outputParameter;
+                        p.namespace = PropertyNamespace.declaredOutputParameter;
                     });
                 })
 

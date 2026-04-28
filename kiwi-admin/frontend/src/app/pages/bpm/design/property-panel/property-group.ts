@@ -72,27 +72,10 @@ export class PropertyGroup {
             if (config.editor === 'spel-expression' || config.editor === 'juel-expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
             }
-            if (p.declaredOutputParameter) {
-                const detail = [p.description, p.type].filter(
-                    (x) => x != null && String(x).trim().length > 0,
-                );
-                if (detail.length > 0) {
-                    baseProps['description'] = detail.join(' · ');
-                }
-            }
             return toFormlyConfig(config, "horizontal", baseProps);
         });
     });
 
 
 
-    private isInputParameter(p: PropertyDescription): boolean {
-        const ns = p.namespace as string | undefined;
-        return ns === PropertyNamespace.inputParameter || ns === 'In';
-    }
-
-    private isOutputParameter(p: PropertyDescription): boolean {
-        const ns = p.namespace as string | undefined;
-        return ns === PropertyNamespace.outputParameter || ns === 'Out';
-    }
 }
