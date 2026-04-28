@@ -45,15 +45,12 @@ export class ComponentProvider {
             groups.forEach(g => {
                 g.components.forEach(c => {
                     c.icon = c.icon || 'bpmn-icon86';
-                    c.inputParameters = c.inputParameters || [];
-                    c.outputParameters = c.outputParameters || [];
-                    c.inputParameters.forEach(p => {
-
-                        p.namespace = PropertyNamespace.inputParameter;
-                    });
-                    c.outputParameters.forEach(p => {
-                        p.namespace = PropertyNamespace.declaredOutputParameter;
-                    });
+                    c.inputParameters = (c.inputParameters || []).map((p) =>
+                        this.normalizeInputParameter(p)
+                    );
+                    c.outputParameters = (c.outputParameters || []).map((p) =>
+                        this.normalizeOutputParameter(p)
+                    );
                 })
 
             });
@@ -66,6 +63,49 @@ export class ComponentProvider {
             this.components.set(allComponents);
 
         });
+    }
+
+    private normalizeInputParameter(parameter: PropertyDescription): PropertyDescription {
+        const normalized: PropertyDescription = {
+            ...parameter,
+            namespace: PropertyNamespace.inputParameter,
+        };
+
+        if (!normalized.htmlType) {
+            normalized.htmlType = "expression";
+        }
+        if (this.shouldFillRequiredInputDefault(normalized)) {
+            normalized.defaultValue = `\${${normalized.key}}`;
+        } else if (normalized.defaultValue === undefined || normalized.defaultValue === null) {
+            normalized.defaultValue = "";
+        }
+        return normalized;
+    }
+
+    private normalizeOutputParameter(parameter: PropertyDescription): PropertyDescription {
+        const normalized: PropertyDescription = {
+            ...parameter,
+            namespace: PropertyNamespace.declaredOutputParameter,
+        };
+
+        if (!normalized.htmlType) {
+            normalized.htmlType = "bpm-declared-output";
+        }
+        if (normalized.defaultValue === undefined || normalized.defaultValue === null) {
+            normalized.defaultValue = "";
+        }
+        return normalized;
+    }
+
+    private shouldFillRequiredInputDefault(parameter: PropertyDescription): boolean {
+        if (parameter.required !== true || !parameter.key) {
+            return false;
+        }
+        const defaultValue = parameter.defaultValue;
+        if (typeof defaultValue === "string") {
+            return defaultValue.trim().length === 0;
+        }
+        return defaultValue === undefined || defaultValue === null;
     }
 
 

@@ -69,7 +69,11 @@ export class PropertyGroup {
             }
 
             const baseProps: Record<string, unknown> = { variables: this.variables() };
-            if (config.editor === 'spel-expression' || config.editor === 'juel-expression') {
+            if (
+                config.editor === 'expression' ||
+                config.editor === 'spel-expression' ||
+                config.editor === 'juel-expression'
+            ) {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
             }
             return toFormlyConfig(config, "horizontal", baseProps);

@@ -5,7 +5,6 @@ import { ComponentPropertyProvider } from "../../flow-elements/component-propert
 import { PropertyProvider, PropertyTab } from "./types";
 
 export type { PropertyTab, PropertyProvider } from "./types";
-export { CAMUNDA_CUSTOM_OUTPUTS_PROPERTY_KEY } from "./types";
 
 @Injectable({ providedIn: 'root' })
 export class CompositePropertyProvider implements PropertyProvider {

@@ -23,6 +23,7 @@ export enum Editor {
 
 export interface FieldEditorConfig extends FieldConfig {
     editor?: Editor | Type<any> | TemplateRef<any> | string;
+    /** 统一 expression 编辑器的表达式方言 */
     validator?: any;
     defaultValue?: any;
     hidden?: boolean;
@@ -95,6 +96,7 @@ export function toFormlyConfig(config: FieldEditorConfig, wrapper = 'form-field'
             readonly: props?.readonly || config.readonly,
             disabled: props?.readonly || config.readonly || props?.disabled,
             hidden: hidden,
+            expressionDialect: config.expressionDialect,
             ...(config.options?.length
                 ? { options: config.options, valueProp: 'value', labelProp: 'label' }
                 : {}),

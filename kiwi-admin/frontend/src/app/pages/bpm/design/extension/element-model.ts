@@ -4,16 +4,23 @@ import Modeling from "bpmn-js/lib/features/modeling/Modeling";
 import { Element } from "bpmn-js/lib/model/Types";
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
+import { ExpressionDialect } from '@app/shared/formly/types/expression-editor-type';
 export abstract class ElementModel {
 
     abstract getModdleExtension(): any;
 
     /**
-     * 属性面板里「输入 / In」命名空间且未指定 htmlType 时的默认 Formly 表达式编辑器。
-     * Flowable 等为 SpEL；Camunda 引擎表达式为 JUEL。
+     * 属性面板统一 expression 编辑器默认方言。
+     */
+    expressionDialect(): ExpressionDialect {
+        return 'spel';
+    }
+
+    /**
+     * 兼容旧逻辑：统一返回 expression type。
      */
     expressionEditorFormlyType(): string {
-        return 'spel-expression';
+        return 'expression';
     }
 
     public getValue(bpmnModeler: BaseViewer, element: Element, namespace: string, key: string): any {

@@ -14,6 +14,7 @@ export class BasePropertyProvider implements PropertyProvider {
             commonProperties.push({
                 key: "condition",
                 name: "condition",
+                htmlType: "expression",
                 defaultValue: "",
                 example: "",
             });
