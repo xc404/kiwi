@@ -4,7 +4,7 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
 import { ElementModel } from '../design/extension/element-model';
 import { PaletteItem } from "../design/palette/palette-provider";
-import { PropertyDescription } from "../design/property-panel/types";
+import { PropertyDescription, PropertyNamespace } from "../design/property-panel/types";
 import { ComponentDescription, ComponentProvider } from './component-provider';
 import { isCallActivity } from "./utils";
 
@@ -52,25 +52,22 @@ export class ComponentService {
     }
 
     public initElement(bpmnModeler: BpmnModeler, element: Element, item: ComponentDescription | any) {
-        // Initialize the business object with the item properties
-        // businessObject.name = item.title;
-        // businessObject.icon = item.icon;
-        // businessObject.componentId = item.key;
         ModelUtil.getBusinessObject(element);
-        let type = item.type;
 
-        let inputNamespace = isCallActivity(type) ? 'In' : "InputParameter";
-        // CallActivity 的输入输出参数放在 In/Out 命名空间；Service Task 使用 inputParameter / outputParameter
-        let outputNamespace = isCallActivity(type) ? 'Out' : "outputParameter";
+        let inputNamespace = PropertyNamespace.inputParameter;
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {
-            this.elementModel.setValue(bpmnModeler, element, p.namespace || inputNamespace, p.key, p.defaultValue || '');
+            const fallbackValue = this.resolveInputDefaultValue(p);
+            this.elementModel.setValue(
+                bpmnModeler,
+                element,
+                p.namespace || inputNamespace,
+                p.key,
+                p.defaultValue ?? fallbackValue ?? ''
+            );
         });
 
-        item.outputParameters?.forEach((p: PropertyDescription) => {
-            this.elementModel.setValue(bpmnModeler, element, p.namespace || outputNamespace, p.key, p.defaultValue || '');
-        });
     }
 
 
@@ -84,6 +81,23 @@ export class ComponentService {
             return undefined;
         }
         return this.componentProvider.getComponent(componentId);
+    }
+
+    private resolveInputDefaultValue(property: PropertyDescription): string | undefined {
+        if (property.required !== true) {
+            return undefined;
+        }
+        if (!property.key) {
+            return undefined;
+        }
+        const defaultValue = property.defaultValue;
+        if (typeof defaultValue === "string" && defaultValue.trim().length > 0) {
+            return undefined;
+        }
+        if (defaultValue !== undefined && defaultValue !== null && typeof defaultValue !== "string") {
+            return undefined;
+        }
+        return `\${${property.key}}`;
     }
 
 }

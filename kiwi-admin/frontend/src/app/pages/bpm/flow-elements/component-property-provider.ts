@@ -21,9 +21,10 @@ export class ComponentPropertyProvider implements PropertyProvider {
 
         const bindingGroups = this.buildBindingGroups(element);
         const component = this.componentService.getComponentForElement(element);
+        const inputParameters = this.normalizeRequiredInputDefaults(component?.inputParameters ?? []);
 
         const inputSplit = component
-            ? this.splitAndGroupByGroup(component.inputParameters || [], "输入")
+            ? this.splitAndGroupByGroup(inputParameters, "输入")
             : { importantGroups: [] as { name: string; properties: PropertyDescription[]; important?: boolean }[], unimportant: [] as PropertyDescription[] };
 
         const inputTabGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [
@@ -131,5 +132,24 @@ export class ComponentPropertyProvider implements PropertyProvider {
             important: true,
         }));
         return { importantGroups, unimportant };
+    }
+
+    private normalizeRequiredInputDefaults(parameters: PropertyDescription[]): PropertyDescription[] {
+        return parameters.map((property) => {
+            if (property.required !== true || !property.key) {
+                return property;
+            }
+            const defaultValue = property.defaultValue;
+            const hasDefault =
+                (typeof defaultValue === "string" && defaultValue.trim().length > 0)
+                || (defaultValue !== undefined && defaultValue !== null && typeof defaultValue !== "string");
+            if (hasDefault) {
+                return property;
+            }
+            return {
+                ...property,
+                defaultValue: `\${${property.key}}`,
+            };
+        });
     }
 }
