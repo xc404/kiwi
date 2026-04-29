@@ -98,7 +98,8 @@ public class CyroemsPrepareActivity implements JavaDelegate {
             Thread.currentThread().interrupt();
             throw new BpmnError("PREPARE_INTERRUPTED", "header 执行被中断", e);
         } catch (Exception e) {
-            throw new BpmnError("PREPARE_FAILED", "cryoems 预处理失败: " + e.getMessage(), e);
+//            throw new BpmnError("PREPARE_FAILED", "cryoems 预处理失败: " + e.getMessage(), e);
+            throw new RuntimeException(e);
         } finally {
             try {
                 Files.deleteIfExists(headerOut);

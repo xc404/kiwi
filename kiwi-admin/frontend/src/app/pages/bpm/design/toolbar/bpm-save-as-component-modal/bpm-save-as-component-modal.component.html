@@ -1,0 +1,17 @@
+<div class="bpm-save-as-component-dialog">
+  <p class="bpm-save-as-component-dialog__hint">
+    与接口 SaveAsComponentInput 一致：服务端根据已保存流程 BPMN 推导输入/输出并入库。
+  </p>
+  <div class="bpm-save-as-component-dialog__field">
+    <div class="bpm-save-as-component-dialog__label">name（必填）</div>
+    <input nz-input name="saveAsComponentName" [(ngModel)]="name" placeholder="组件名称" />
+  </div>
+  <div class="bpm-save-as-component-dialog__field">
+    <div class="bpm-save-as-component-dialog__label">description</div>
+    <input nz-input name="saveAsComponentDescription" [(ngModel)]="description" placeholder="描述" />
+  </div>
+  <div class="bpm-save-as-component-dialog__field">
+    <div class="bpm-save-as-component-dialog__label">version</div>
+    <input nz-input name="saveAsComponentVersion" [(ngModel)]="version" placeholder="例如 1.0" />
+  </div>
+</div>

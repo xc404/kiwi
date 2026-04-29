@@ -55,6 +55,11 @@ class HttpRequestActivityTest {
 
             ActivityExecution execution = mock(ActivityExecution.class);
             when(execution.getVariableTyped("url")).thenReturn(Variables.stringValue(url));
+            when(execution.getVariableTyped("method")).thenReturn(null);
+            when(execution.getVariableTyped("connectTimeoutSeconds")).thenReturn(null);
+            when(execution.getVariableTyped("readTimeoutSeconds")).thenReturn(null);
+            when(execution.getVariableTyped("headers")).thenReturn(null);
+            when(execution.getVariableTyped("body")).thenReturn(null);
             when(execution.getVariableTyped("statusCode")).thenReturn(Variables.stringValue("sc"));
             when(execution.getVariableTyped("responseBody")).thenReturn(Variables.stringValue("rb"));
             when(execution.getVariableTyped("responseHeaders")).thenReturn(Variables.stringValue("rh"));
@@ -71,7 +76,8 @@ class HttpRequestActivityTest {
                             eq("rh"),
                             org.mockito.ArgumentMatchers.argThat(
                                     (Object json) ->
-                                            json != null && json.toString().contains("X-Test")));
+                                            json != null
+                                                    && json.toString().toLowerCase().contains("x-test")));
         } finally {
             server.stop(0);
         }
@@ -81,6 +87,10 @@ class HttpRequestActivityTest {
     void execute_invalidHeadersFailsBeforeNetwork() {
         ActivityExecution execution = mock(ActivityExecution.class);
         when(execution.getVariableTyped("url")).thenReturn(Variables.stringValue("http://127.0.0.1:9/nope"));
+        when(execution.getVariableTyped("method")).thenReturn(null);
+        when(execution.getVariableTyped("connectTimeoutSeconds")).thenReturn(null);
+        when(execution.getVariableTyped("readTimeoutSeconds")).thenReturn(null);
+        when(execution.getVariableTyped("body")).thenReturn(null);
         when(execution.getVariableTyped("headers")).thenReturn(Variables.stringValue("["));
         HttpRequestActivity activity = new HttpRequestActivity();
         IllegalArgumentException ex =

@@ -17,7 +17,7 @@ import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { DndModule } from 'ngx-drag-drop';
 import { combineLatest, map, Observable, of } from 'rxjs';
 import { ComponentPalleteProvider } from '../../flow-elements/component-pallete-provider';
-import { BpmEditorToken } from "../editor/bpm-editor";
+import { BpmEditorToken } from '../editor/bpm-editor-token';
 import BasePaletteProvider from './base-pallete-provider';
 import { PaletteGroup, PaletteItem, PaletteProvider } from './palette-provider';
 
