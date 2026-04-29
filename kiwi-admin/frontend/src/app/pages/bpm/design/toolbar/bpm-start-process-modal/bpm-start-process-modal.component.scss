@@ -1,0 +1,19 @@
+.bpm-start-process-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 400px;
+}
+
+.bpm-start-process-dialog__hint {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.5;
+}
+
+.bpm-start-process-dialog__editor {
+  display: block;
+  width: 100%;
+  min-height: 260px;
+}

@@ -1,0 +1,9 @@
+<div class="bpm-start-process-dialog">
+  <p class="bpm-start-process-dialog__hint">
+    须为 JSON 对象，将作为流程变量传入引擎；启动成功后会按流程 ID 缓存在本地，下次打开预填。
+  </p>
+  <app-json-code-editor
+    class="bpm-start-process-dialog__editor"
+    [initialText]="nzData.initialText"
+  />
+</div>
