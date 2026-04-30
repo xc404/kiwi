@@ -33,6 +33,11 @@ app:
 #         options:
 #           model: qwen-plus
 
+# 可选：部署解析时为所有 Service Task（除 external / 显式 asyncBefore=false）默认加 asyncBefore，失败时保留流程实例与 Incident
+# kiwi:
+#   bpm:
+#     default-async-before-enabled: true
+
 # 可选：外部任务 / Slurm 等扩展
 # kiwi:
 #   bpm:
