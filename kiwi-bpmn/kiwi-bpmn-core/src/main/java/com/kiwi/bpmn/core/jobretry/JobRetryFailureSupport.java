@@ -15,4 +15,13 @@ final class JobRetryFailureSupport {
         }
         return false;
     }
+
+    static boolean isIRetryOnChain(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c instanceof IRetry) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
