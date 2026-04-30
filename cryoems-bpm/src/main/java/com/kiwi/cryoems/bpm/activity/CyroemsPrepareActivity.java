@@ -8,6 +8,7 @@ import com.kiwi.cryoems.bpm.support.MrcHeaderParser;
 import com.kiwi.cryoems.bpm.support.MicroscopeScaleRegistry;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
@@ -63,6 +64,7 @@ import java.util.concurrent.TimeUnit;
         })
 @Component("cyroemsPrepareActivity")
 @RequiredArgsConstructor
+@Slf4j
 public class CyroemsPrepareActivity implements JavaDelegate {
 
     private final MicroscopeScaleRegistry microscopeScaleRegistry;
@@ -98,8 +100,8 @@ public class CyroemsPrepareActivity implements JavaDelegate {
             Thread.currentThread().interrupt();
             throw new BpmnError("PREPARE_INTERRUPTED", "header 执行被中断", e);
         } catch (Exception e) {
-//            throw new BpmnError("PREPARE_FAILED", "cryoems 预处理失败: " + e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new BpmnError("PREPARE_FAILED", "cryoems 预处理失败: " + e.getMessage(), e);
+//            throw new RuntimeException(e);
         } finally {
             try {
                 Files.deleteIfExists(headerOut);

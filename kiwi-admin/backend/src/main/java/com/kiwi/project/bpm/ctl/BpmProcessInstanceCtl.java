@@ -66,9 +66,6 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         return new PageImpl<>(content, pageable, total);
     }
 
-
-
-
     private static InstanceState resolveInstanceState(Boolean unfinishedLegacy, String instanceStateParam) {
         if (unfinishedLegacy != null) {
             return unfinishedLegacy ? InstanceState.RUNNING : InstanceState.ALL;
