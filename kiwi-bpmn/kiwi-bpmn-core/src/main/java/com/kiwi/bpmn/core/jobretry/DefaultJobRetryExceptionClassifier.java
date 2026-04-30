@@ -7,6 +7,6 @@ public class DefaultJobRetryExceptionClassifier implements JobRetryExceptionClas
 {
     @Override
     public boolean shouldUseStandardFailedJobRetry(Throwable failure) {
-        return failure instanceof IRetry;
+        return JobRetryFailureSupport.isIRetryOnChain(failure);
     }
 }
