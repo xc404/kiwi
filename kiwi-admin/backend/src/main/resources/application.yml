@@ -86,6 +86,11 @@ camunda.bpm:
       # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
       failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R5/PT1M}
 
+# External Task 统一重试（AbstractExternalTaskHandler）：需在引擎进程启用；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
+# kiwi.bpm.external-task-retry:
+#   enabled: false
+#   # default-time-cycle: R5/PT1M   # 省略则与上方 camunda generic failedJobRetryTimeCycle 一致（活动未配 cycle 时）
+
 sa-token:
   token-name: Authorization
   token-prefix: Bearer

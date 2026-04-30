@@ -5,6 +5,7 @@ import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
+import com.kiwi.bpmn.external.ExternalTaskAsyncResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
@@ -254,21 +255,22 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
 
     public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
                                     @Autowired(required = false) SlurmService slurmService,
-                                    @Autowired(required = false)SlurmTaskManager slurmTaskManager) {
+                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager) {
         this.shellActivityBehavior = shellActivityBehavior;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
     }
 
     @Override
-    public CompletableFuture<Void> executeAsync(DelegateExecution execution) throws Exception {
+    public CompletableFuture<ExternalTaskAsyncResult> executeAsync(DelegateExecution execution) throws Exception {
         if (!supportSlurm()) {
             shellActivityBehavior.execute(execution);
             execution.setVariable("slurmJobId", "skipped");
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(ExternalTaskAsyncResult.updateVariablesOnly());
         }
 
-        String slurmCmd = ExecutionUtils.getStringInputVariable(execution, "slurmCmd").orElseThrow();
+        String slurmCmd = ExecutionUtils.getStringInputVariable(execution, "command").orElseThrow(() ->
+                new IllegalArgumentException("Missing required input variable: command"));
         SlurmCmd.valueOf(slurmCmd);
 
         SbatchConfig sbatchConfig = sbatchConfigBuilder.build(execution);
@@ -279,7 +281,7 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
             execution.setVariable("sbatchFilePath", slurmJob.getSbatchFilePath());
             execution.setVariable("outputFilePath", slurmJob.getOutputFilePath());
             execution.setVariable("errorFilePath", slurmJob.getErrorFilePath());
-            return null;
+            return ExternalTaskAsyncResult.updateVariablesOnly();
         });
     }
 

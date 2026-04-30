@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties({ClientProperties.class})
+@EnableConfigurationProperties({ClientProperties.class, ExternalTaskRetryProperties.class})
 public class ClientAutoConfiguration {
 
   @Bean
