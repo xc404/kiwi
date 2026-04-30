@@ -83,6 +83,8 @@ camunda.bpm:
       # 未捕获的 BpmnError 时抛 ProcessEngineException，而非按「none end」静默结束（ACT_HI_PROCINST 易为 COMPLETED）
       # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
       enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
+      # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
+      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R5/PT1M}
 
 sa-token:
   token-name: Authorization
