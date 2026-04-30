@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * Kiwi-admin {@code GET /bpm/integration/process-instances/{id}/state} 响应体映射。
+ * Kiwi-admin {@code GET /bpm/process-instance/{id}/state} 响应体映射。
  */
 @Data
 public class KiwiProcessInstanceState {
