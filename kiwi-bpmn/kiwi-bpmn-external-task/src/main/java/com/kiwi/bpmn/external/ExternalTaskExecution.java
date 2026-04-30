@@ -22,7 +22,6 @@ public class ExternalTaskExecution implements DelegateExecution
     private final ExternalTask externalTask;
     private final ExternalTaskService externalTaskService;
     private final VariableMap outputVariable = new VariableMapImpl();
-    private boolean complete;
 
     public ExternalTaskExecution(ExternalTask externalTask, ExternalTaskService externalTaskService) {
         this.externalTask = externalTask;
@@ -374,13 +373,5 @@ public class ExternalTaskExecution implements DelegateExecution
 
     public ExternalTask getExternalTask() {
         return externalTask;
-    }
-
-    public boolean isComplete() {
-        return complete;
-    }
-
-    public void setComplete(boolean complete) {
-        this.complete = complete;
     }
 }
