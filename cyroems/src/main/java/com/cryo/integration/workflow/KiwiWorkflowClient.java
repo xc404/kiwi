@@ -51,7 +51,7 @@ public class KiwiWorkflowClient {
     }
 
     /**
-     * 调用 Kiwi 启动 Camunda 流程实例（对应库中 {@code BpmProcess} 主键）。
+     * 调用 Kiwi {@code POST /bpm/process/{bpmProcessId}/start} 启动 Camunda 流程实例（库中 {@code BpmProcess} 主键）。
      * 若返回 429，按 {@link KiwiWorkflowProperties.ClientProperties#getRateLimitRetryIntervalMillis()} 等待并重试，
      * 至多 {@link KiwiWorkflowProperties.ClientProperties#getMaxStartAttempts()} 次。
      */
@@ -62,7 +62,7 @@ public class KiwiWorkflowClient {
         waitMinStartInterval();
 
         String base = trimTrailingSlash(properties.getBaseUrl());
-        URI uri = URI.create(base + "/bpm/integration/process/" + bpmProcessId + "/start");
+        URI uri = URI.create(base + "/bpm/process/" + bpmProcessId + "/start");
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("variables", variables == null ? Map.of() : variables);
@@ -121,7 +121,7 @@ public class KiwiWorkflowClient {
             throw new IllegalStateException("Kiwi workflow client is not configured");
         }
         String base = trimTrailingSlash(properties.getBaseUrl());
-        URI uri = URI.create(base + "/bpm/integration/process-instances/" + instanceId + "/state");
+        URI uri = URI.create(base + "/bpm/process-instance/" + instanceId + "/state");
         HttpRequest req = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(properties.getClient().getHttpRequestTimeoutSeconds()))
                 .header("Authorization", authorizationHeader())

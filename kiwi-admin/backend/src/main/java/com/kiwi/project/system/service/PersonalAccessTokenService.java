@@ -2,13 +2,13 @@ package com.kiwi.project.system.service;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
-import com.kiwi.project.bpm.integration.KiwiIntegrationProperties;
 import com.kiwi.project.system.dao.SysPersonalAccessTokenDao;
 import com.kiwi.project.system.entity.SysPersonalAccessToken;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -26,7 +26,14 @@ public class PersonalAccessTokenService {
     public static final String SA_DEVICE_PREFIX = "pat-";
 
     private final SysPersonalAccessTokenDao tokenDao;
-    private final KiwiIntegrationProperties integrationProperties;
+
+    /** {@code kiwi.personal-access-token.max-per-user}；≤0 表示不限制。 */
+    @Value("${kiwi.personal-access-token.max-per-user:30}")
+    private int personalAccessTokenMaxPerUser;
+
+    /** {@code kiwi.personal-access-token.session-timeout-seconds}：PAT 对应 Sa 登录会话有效期（秒）。 */
+    @Value("${kiwi.personal-access-token.session-timeout-seconds:31536000}")
+    private long patSessionTimeoutSeconds;
 
     public List<SysPersonalAccessToken> listMine(String userId) {
         Query q = Query.query(Criteria.where("userId").is(userId)).with(Sort.by(Sort.Direction.DESC, "createdTime"));
@@ -37,7 +44,7 @@ public class PersonalAccessTokenService {
         if (StringUtils.isNotBlank(name) && name.length() > 64) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "备注名称长度不能超过 64 字符");
         }
-        int max = integrationProperties.getPersonalAccessTokenMaxPerUser();
+        int max = personalAccessTokenMaxPerUser;
         if (max > 0) {
             long n = tokenDao.countBy(Query.query(Criteria.where("userId").is(userId)));
             if (n >= max) {
@@ -45,7 +52,7 @@ public class PersonalAccessTokenService {
                         HttpStatus.BAD_REQUEST, "长期访问令牌数量已达上限（" + max + "），请先删除不再使用的令牌");
             }
         }
-        long ttl = integrationProperties.getApiTokenTimeoutSeconds();
+        long ttl = patSessionTimeoutSeconds;
         if (ttl <= 0) {
             ttl = 60L * 60 * 24 * 365;
         }

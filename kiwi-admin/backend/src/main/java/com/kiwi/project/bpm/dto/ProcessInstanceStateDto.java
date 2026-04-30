@@ -1,4 +1,4 @@
-package com.kiwi.project.bpm.integration;
+package com.kiwi.project.bpm.dto;
 
 import lombok.Data;
 
@@ -8,7 +8,7 @@ import java.util.Date;
  * 机机查询 Camunda 流程实例状态（运行中 / 历史）。
  */
 @Data
-public class ProcessInstanceIntegrationDto {
+public class ProcessInstanceStateDto {
 
     private String id;
     /**
