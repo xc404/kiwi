@@ -15,7 +15,7 @@ class ExternalTaskRetryPlannerTest {
         when(task.getRetries()).thenReturn(null);
         when(task.getErrorMessage()).thenReturn(null);
 
-        ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner();
+        ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner(null, null, null);
         ExternalTaskRetryPlan plan = planner.plan("R5/PT1M", task);
 
         assertEquals(4, plan.nextRetries());
@@ -27,7 +27,7 @@ class ExternalTaskRetryPlannerTest {
         when(task.getRetries()).thenReturn(4);
         when(task.getErrorMessage()).thenReturn("x");
 
-        ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner();
+        ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner(null, null, null);
         ExternalTaskRetryPlan plan = planner.plan("R5/PT1M", task);
 
         assertEquals(3, plan.nextRetries());
