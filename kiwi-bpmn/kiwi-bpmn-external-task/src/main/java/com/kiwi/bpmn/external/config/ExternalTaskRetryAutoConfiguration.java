@@ -2,7 +2,6 @@ package com.kiwi.bpmn.external.config;
 
 import com.kiwi.bpmn.core.jobretry.JobRetryExceptionClassifier;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryCycleResolver;
-import com.kiwi.bpmn.external.retry.ExternalTaskRetryExecutor;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import org.camunda.bpm.engine.RepositoryService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,11 +15,6 @@ import org.springframework.core.env.Environment;
 @ConditionalOnProperty(prefix = "kiwi.bpm.external-task-retry", name = "enabled", havingValue = "true")
 @ConditionalOnBean(RepositoryService.class)
 public class ExternalTaskRetryAutoConfiguration {
-
-    @Bean
-    public ExternalTaskRetryPlanner externalTaskRetryPlanner() {
-        return new ExternalTaskRetryPlanner();
-    }
 
     @Bean
     public ExternalTaskRetryCycleResolver externalTaskRetryCycleResolver(RepositoryService repositoryService) {
@@ -39,11 +33,10 @@ public class ExternalTaskRetryAutoConfiguration {
     }
 
     @Bean
-    public ExternalTaskRetryExecutor externalTaskRetryExecutor(
+    public ExternalTaskRetryPlanner externalTaskRetryPlanner(
             JobRetryExceptionClassifier classifier,
-            ExternalTaskRetryPlanner planner,
             ExternalTaskRetryCycleResolver retryCycleResolver,
             @Qualifier("externalTaskRetryEngineDefaultCycle") String engineDefaultCycle) {
-        return new ExternalTaskRetryExecutor(classifier, planner, retryCycleResolver, engineDefaultCycle);
+        return new ExternalTaskRetryPlanner(classifier, retryCycleResolver, engineDefaultCycle);
     }
 }

@@ -22,6 +22,18 @@ public class SlurmProperties {
     private int threadPoolSize = 5;
 
     /**
+     * Slurm 作业完成写入 .flag 后，调用 External Task {@code complete} 的最大尝试次数（每次失败后休眠 1 秒）。
+     * 达到上限仍失败则抛出异常，避免无限重试。
+     */
+    private int externalTaskCompleteMaxAttempts = 60;
+
+    /**
+     * 与外部任务 client 的 workerId 一致时，本机才处理 {@code *.flag}（多节点共享 Slurm 工作目录时避免误 complete/handleFailure）。
+     * 未配置或为空时，SlurmTaskManager 会回退使用 {@code kiwi.bpm.external-task.worker-id}；两者皆空则不做过滤（兼容单机）。
+     */
+    private String externalTaskWorkerId;
+
+    /**
      * 工作目录下临时文件（.sbatch、日志、flag 等）的自动清理。
      */
     private Cleanup cleanup = new Cleanup();

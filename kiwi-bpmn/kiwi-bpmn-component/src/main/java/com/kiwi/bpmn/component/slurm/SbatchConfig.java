@@ -2,6 +2,8 @@ package com.kiwi.bpmn.component.slurm;
 
 public class SbatchConfig
 {
+    /** 作业脚本末尾执行的用户命令（对应流程变量 {@code command}），非 #SBATCH 指令。 */
+    private String command;
     private String jobName;
     private String begin;
     private String constraints;
@@ -32,6 +34,13 @@ public class SbatchConfig
     private Integer gpus_per_node;
     private Integer gpus_per_task;
 
+    public String getCommand() {
+        return command;
+    }
+
+    public void setCommand(String command) {
+        this.command = command;
+    }
 
     public String getJobName() {
         return jobName;

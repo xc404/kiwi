@@ -1,7 +1,6 @@
 package com.kiwi.bpmn.component.slurm;
 
 import com.kiwi.bpmn.component.activity.ShellActivityBehavior;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
@@ -10,11 +9,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Slurm 主题（{@code topicName = "slurm"}）的 External Task 处理器：根据流程变量生成 sbatch 配置并提交作业，
+ * 或在没有启用 Slurm 集成时退化为本地 {@link ShellActivityBehavior} 执行。
+ * <p>
+ * 仅当 Spring 容器中注册了 {@link SlurmTaskManager} 时走 Slurm 路径；否则 {@link SlurmService} 可为空，
+ * 此时 {@link SlurmSbatchConfigBuilder} 仍会被构造，但 {@link #supportSlurm()} 为 false，不会提交 sbatch。
+ */
+@Slf4j
 @Component
 @ExternalTaskSubscription(topicName = "slurm", lockDuration = 300000)
 @ComponentDescription(
@@ -253,6 +261,11 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
 
+    /**
+     * @param shellActivityBehavior 无 Slurm 集成时的回退执行器
+     * @param slurmService          可选；用于路径解析等，与 {@link SlurmTaskManager} 独立注入
+     * @param slurmTaskManager      可选；缺失时表示未装配 Slurm 提交能力，本处理器仅走 Shell 回退
+     */
     public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
                                     @Autowired(required = false) SlurmService slurmService,
                                     @Autowired(required = false) SlurmTaskManager slurmTaskManager) {
@@ -261,21 +274,38 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
     }
 
+    /**
+     * 异步执行：有 {@link SlurmTaskManager} 则构建 {@link SbatchConfig} 并提交；否则同步跑 Shell 并标记 {@code slurmJobId = skipped}。
+     * 必填变量 {@code command} 等在 {@link SlurmSbatchConfigBuilder#build} 中校验并写入 {@link SbatchConfig}。
+     */
     @Override
     public CompletableFuture<ExternalTaskAsyncResult> executeAsync(DelegateExecution execution) throws Exception {
+        String processInstanceId = execution.getProcessInstanceId();
+        String activityId = execution.getCurrentActivityId();
         if (!supportSlurm()) {
+            log.warn(
+                    "SlurmTaskManager 未装配，Slurm 外部任务回退为 Shell：processInstanceId={}, activityId={}, businessKey={}",
+                    processInstanceId,
+                    activityId,
+                    execution.getBusinessKey());
             shellActivityBehavior.execute(execution);
             execution.setVariable("slurmJobId", "skipped");
             return CompletableFuture.completedFuture(ExternalTaskAsyncResult.updateVariablesOnly());
         }
 
-        String slurmCmd = ExecutionUtils.getStringInputVariable(execution, "command").orElseThrow(() ->
-                new IllegalArgumentException("Missing required input variable: command"));
-        SlurmCmd.valueOf(slurmCmd);
-
         SbatchConfig sbatchConfig = sbatchConfigBuilder.build(execution);
+        log.info(
+                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, command={}",
+                processInstanceId,
+                activityId,
+                sbatchConfig.getJobName(),
+                sbatchConfig.getCommand());
         return this.slurmTaskManager.submitSlurmJob(execution, sbatchConfig).thenApply(slurmJob -> {
-
+            log.info(
+                    "Slurm 作业已提交：processInstanceId={}, activityId={}, slurmJobId={}",
+                    processInstanceId,
+                    activityId,
+                    slurmJob.getJobId());
             execution.setVariable("slurmJobId", slurmJob.getJobId());
             execution.setVariable("slurmJobName", slurmJob.getJobName());
             execution.setVariable("sbatchFilePath", slurmJob.getSbatchFilePath());
@@ -285,6 +315,7 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
         });
     }
 
+    /** @return 是否具备 sbatch 提交与监听能力（由 {@link SlurmTaskManager} Bean 是否存在决定） */
     private boolean supportSlurm() {
         return this.slurmTaskManager != null;
     }

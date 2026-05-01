@@ -43,5 +43,4 @@ public class ClientProperties extends ClientConfiguration {
     this.subscriptions = subscriptions;
   }
 
-
 }

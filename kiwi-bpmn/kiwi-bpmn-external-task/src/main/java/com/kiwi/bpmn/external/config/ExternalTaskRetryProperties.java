@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ExternalTaskRetryProperties {
 
     /**
-     * 为 true 时注册 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryExecutor}，
+     * 为 true 时注册 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner}（含 BPMN 周期解析与失败规划），
      * {@link com.kiwi.bpmn.external.AbstractExternalTaskHandler} 失败路径走统一重试。
      */
     private boolean enabled = false;

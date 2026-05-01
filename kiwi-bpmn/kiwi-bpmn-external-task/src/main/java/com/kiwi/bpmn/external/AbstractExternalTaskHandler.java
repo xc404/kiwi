@@ -1,6 +1,7 @@
 package com.kiwi.bpmn.external;
 
-import com.kiwi.bpmn.external.retry.ExternalTaskRetryExecutor;
+import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlan;
+import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.client.task.ExternalTask;
 import org.camunda.bpm.client.task.ExternalTaskHandler;
@@ -11,7 +12,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -19,18 +19,18 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public abstract class AbstractExternalTaskHandler implements JavaDelegate, ExternalTaskHandler
 {
-    private ObjectProvider<ExternalTaskRetryExecutor> externalTaskRetryExecutor;
+    private ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner;
 
     /**
-     * 可选：存在 {@link ExternalTaskRetryExecutor} Bean 时由 Spring 注入，子类无需在构造函数中传递。
+     * 可选：存在 {@link ExternalTaskRetryPlanner} Bean 时由 Spring 注入，子类无需在构造函数中传递。
      */
     @Autowired(required = false)
-    public void setExternalTaskRetryExecutor(ObjectProvider<ExternalTaskRetryExecutor> provider) {
-        this.externalTaskRetryExecutor = provider;
+    public void setExternalTaskRetryPlanner(ObjectProvider<ExternalTaskRetryPlanner> provider) {
+        this.externalTaskRetryPlanner = provider;
     }
 
-    protected ObjectProvider<ExternalTaskRetryExecutor> getExternalTaskRetryExecutor() {
-        return externalTaskRetryExecutor;
+    protected ObjectProvider<ExternalTaskRetryPlanner> getExternalTaskRetryPlanner() {
+        return externalTaskRetryPlanner;
     }
 
     @Override
@@ -72,25 +72,26 @@ public abstract class AbstractExternalTaskHandler implements JavaDelegate, Exter
                     externalTask.getTopicName(),
                     externalTask.getId(),
                     failure);
-            ExternalTaskRetryExecutor retryExecutor = resolveRetryExecutor();
-            if (retryExecutor != null) {
-                retryExecutor.handleFailure(externalTask, externalTaskService, failure);
-            } else {
-                externalTaskService.handleFailure(
-                        externalTask.getId(),
-                        failure.getMessage(),
-                        failure.getLocalizedMessage(),
-                        Optional.ofNullable(externalTask.getRetries()).orElse(0),
-                        0L);
+            String errorMessage = failureMessage(failure);
+            String errorDetails = failureDetails(failure);
+            int retries = 0;
+            long retryTimeoutMs = 0L;
+            ExternalTaskRetryPlanner retryPlanner = resolveRetryPlanner();
+            if (retryPlanner != null) {
+                ExternalTaskRetryPlan plan = retryPlanner.plan(externalTask, failure);
+                retries = plan.nextRetries();
+                retryTimeoutMs = plan.retryTimeoutMs();
             }
+            externalTaskService.handleFailure(
+                    externalTask, errorMessage, errorDetails, retries, retryTimeoutMs);
         }
     }
 
     /**
      * 将 {@link CompletableFuture} 常见的包装异常展开一层，便于分类器与日志。
      */
-    private ExternalTaskRetryExecutor resolveRetryExecutor() {
-        ObjectProvider<ExternalTaskRetryExecutor> provider = this.externalTaskRetryExecutor;
+    private ExternalTaskRetryPlanner resolveRetryPlanner() {
+        ObjectProvider<ExternalTaskRetryPlanner> provider = this.externalTaskRetryPlanner;
         return provider != null ? provider.getIfAvailable() : null;
     }
 
@@ -102,6 +103,20 @@ public abstract class AbstractExternalTaskHandler implements JavaDelegate, Exter
             t = t.getCause();
         }
         return t;
+    }
+
+    private static String failureMessage(Throwable f) {
+        return f.getMessage() != null ? f.getMessage() : f.getClass().getName();
+    }
+
+    private static String failureDetails(Throwable f) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        f.printStackTrace(new java.io.PrintWriter(sw));
+        String s = sw.toString();
+        if (s.length() > 8000) {
+            return s.substring(0, 8000) + "...";
+        }
+        return s;
     }
 
     @Override

@@ -1,7 +1,9 @@
 package com.kiwi.bpmn.component.slurm;
 
+import com.kiwi.bpmn.external.config.ClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.engine.ProcessEngine;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -23,8 +25,11 @@ public class SlurmAutoConfiguration {
     }
 
     @Bean
-    public static SlurmTaskManager slurmTaskManager(SlurmProperties slurmProperties, SlurmService slurmService,
-            ProcessEngine processEngine) {
-        return new SlurmTaskManager(slurmProperties, slurmService, processEngine);
+    public static SlurmTaskManager slurmTaskManager(
+            SlurmProperties slurmProperties,
+            SlurmService slurmService,
+            ProcessEngine processEngine,
+            ObjectProvider<ClientProperties> clientProperties) {
+        return new SlurmTaskManager(slurmProperties, slurmService, processEngine, clientProperties);
     }
 }
