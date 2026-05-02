@@ -1,4 +1,4 @@
-package com.kiwi.bpmn.core.jobretry;
+package com.kiwi.bpmn.core.retry;
 
 import org.camunda.bpm.engine.impl.interceptor.Command;
 import org.camunda.bpm.engine.impl.jobexecutor.DefaultFailedJobCommandFactory;

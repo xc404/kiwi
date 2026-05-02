@@ -1,4 +1,4 @@
-package com.kiwi.bpmn.core.jobretry;
+package com.kiwi.bpmn.core.retry;
 
 /**
  * 可重试语义标记接口；{@link JobRetryException} 实现本接口，供 Job 失败分类等场景识别。

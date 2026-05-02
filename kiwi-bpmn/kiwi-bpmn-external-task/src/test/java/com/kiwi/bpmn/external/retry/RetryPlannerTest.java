@@ -1,5 +1,6 @@
 package com.kiwi.bpmn.external.retry;
 
+import com.kiwi.bpmn.core.retry.RetryPlan;
 import org.camunda.bpm.client.task.ExternalTask;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -7,7 +8,8 @@ import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
-class ExternalTaskRetryPlannerTest {
+class RetryPlannerTest
+{
 
     @Test
     void firstFailure_r5pt1m_nextRetriesIs4() {
@@ -16,7 +18,7 @@ class ExternalTaskRetryPlannerTest {
         when(task.getErrorMessage()).thenReturn(null);
 
         ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner(null, null, null);
-        ExternalTaskRetryPlan plan = planner.plan("R5/PT1M", task);
+        RetryPlan plan = planner.plan("R5/PT1M", task);
 
         assertEquals(4, plan.nextRetries());
     }
@@ -28,7 +30,7 @@ class ExternalTaskRetryPlannerTest {
         when(task.getErrorMessage()).thenReturn("x");
 
         ExternalTaskRetryPlanner planner = new ExternalTaskRetryPlanner(null, null, null);
-        ExternalTaskRetryPlan plan = planner.plan("R5/PT1M", task);
+        RetryPlan plan = planner.plan("R5/PT1M", task);
 
         assertEquals(3, plan.nextRetries());
     }
