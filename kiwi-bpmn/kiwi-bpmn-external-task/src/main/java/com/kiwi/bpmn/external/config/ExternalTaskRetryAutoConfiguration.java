@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.external.config;
 
-import com.kiwi.bpmn.core.jobretry.JobRetryExceptionClassifier;
+import com.kiwi.bpmn.core.retry.JobRetryExceptionClassifier;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryCycleResolver;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import org.camunda.bpm.engine.RepositoryService;

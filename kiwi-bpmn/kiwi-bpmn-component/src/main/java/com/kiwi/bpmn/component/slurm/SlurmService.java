@@ -48,20 +48,19 @@ public class SlurmService implements InitializingBean
         try {
             FileUtils.writeStringToFile(sbatchFile, "#!/bin/bash\n\n", StandardCharsets.UTF_8);
             FileUtils.writeStringToFile(sbatchFile, sbatchConfig.toSbatchCmd() + "\n\n", StandardCharsets.UTF_8, true);
-            // 子 shell 内执行用户命令并捕获退出码，供后续 flag 行写入（见 SlurmTaskManager 追加的 printf）
-            FileUtils.writeStringToFile(sbatchFile, "set +e\n(\n", StandardCharsets.UTF_8, true);
+            // 用户命令直接写入脚本；作业退出码以 sacct .batch 的 ExitCode 为准（见 SlurmJobCompletionTracker）
             FileUtils.writeStringToFile(sbatchFile, cmd, StandardCharsets.UTF_8, true);
-            FileUtils.writeStringToFile(
-                    sbatchFile,
-                    "\n)\n__KIWI_SLURM_CMD_EC=$?\nset -e\n\n",
-                    StandardCharsets.UTF_8,
-                    true);
+            FileUtils.writeStringToFile(sbatchFile, "\n", StandardCharsets.UTF_8, true);
         } catch( IOException e ) {
             throw new RuntimeException(e);
         }
         return sbatchFile;
     }
 
+    /**
+     * @deprecated 已弃用 .flag 机制，请使用 sacct 跟踪（{@link SlurmJobCompletionTracker}）。
+     */
+    @Deprecated
     public String getFlagFilePath(String jobId) {
         return shellFileDir.getAbsolutePath() + "/" + jobId + ".flag";
     }

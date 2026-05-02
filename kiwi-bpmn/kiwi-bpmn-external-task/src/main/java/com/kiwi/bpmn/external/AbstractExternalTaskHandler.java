@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.external;
 
-import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlan;
+import com.kiwi.bpmn.core.retry.RetryPlan;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.client.task.ExternalTask;
@@ -78,7 +78,7 @@ public abstract class AbstractExternalTaskHandler implements JavaDelegate, Exter
             long retryTimeoutMs = 0L;
             ExternalTaskRetryPlanner retryPlanner = resolveRetryPlanner();
             if (retryPlanner != null) {
-                ExternalTaskRetryPlan plan = retryPlanner.plan(externalTask, failure);
+                RetryPlan plan = retryPlanner.plan(externalTask, failure);
                 retries = plan.nextRetries();
                 retryTimeoutMs = plan.retryTimeoutMs();
             }

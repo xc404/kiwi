@@ -1,4 +1,4 @@
-package com.kiwi.bpmn.core.jobretry;
+package com.kiwi.bpmn.core.retry;
 
 /**
  * 在异步 Job 失败时（{@link org.camunda.bpm.engine.impl.jobexecutor.FailedJobListener} 调用

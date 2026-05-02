@@ -28,15 +28,53 @@ public class SlurmProperties {
     private int externalTaskCompleteMaxAttempts = 60;
 
     /**
-     * 与外部任务 client 的 workerId 一致时，本机才处理 {@code *.flag}（多节点共享 Slurm 工作目录时避免误 complete/handleFailure）。
-     * 未配置或为空时，SlurmTaskManager 会回退使用 {@code kiwi.bpm.external-task.worker-id}；两者皆空则不做过滤（兼容单机）。
+     * 是否启用已弃用的工作目录 {@code *.flag} 文件监听（默认关闭；作业终态请使用 {@link Sacct}）。
      */
-    private String externalTaskWorkerId;
+    private boolean flagListenerEnabled = false;
 
     /**
      * 工作目录下临时文件（.sbatch、日志、flag 等）的自动清理。
      */
     private Cleanup cleanup = new Cleanup();
+
+    /**
+     * 周期性 {@code sacct} 查询作业终态；启用后依赖 Mongo 持久化 {@link SlurmJob}。需配置 {@code spring.data.mongodb} 且存在 {@code MongoTemplate}。
+     */
+    private Sacct sacct = new Sacct();
+
+    @Data
+    public static class Sacct {
+
+        /**
+         * 是否启用 sacct 轮询（与 Mongo 中 {@link SlurmJob} 跟踪记录配合）。生产环境推荐 true；无 Mongo 时保持 false。
+         */
+        private boolean enabled = false;
+
+        /**
+         * 两次 sacct 批量查询之间的间隔（毫秒）。
+         */
+        private long pollIntervalMs = 15_000L;
+
+        /**
+         * 自提交起超过该时长仍未终态则按超时失败上报（毫秒）。
+         */
+        private long maxTrackDurationMs = 168L * 3600_000L;
+
+        /**
+         * sacct 可执行文件（PATH 内名称或绝对路径）。
+         */
+        private String executable = "sacct";
+
+        /**
+         * 附加在 sacct 命令后的参数（例如集群名等）。
+         */
+        private List<String> extraArgs = new ArrayList<>();
+
+        /**
+         * 单次 sacct 调用最多携带的作业 id 个数，避免命令行过长。
+         */
+        private int maxJobsPerSacctCall = 80;
+    }
 
     @Data
     public static class Cleanup {
