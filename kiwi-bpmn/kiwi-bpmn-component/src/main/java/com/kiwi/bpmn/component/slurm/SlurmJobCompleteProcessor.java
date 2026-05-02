@@ -6,6 +6,7 @@ import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import com.kiwi.bpmn.external.utils.DtoUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.camunda.bpm.client.task.impl.ExternalTaskImpl;
 import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.ProcessEngine;
@@ -39,18 +40,21 @@ public class SlurmJobCompleteProcessor {
     private final ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner;
     private final List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers;
     private final SlurmProperties slurmProperties;
+    private final ObjectProvider<SlurmJobRepository> slurmJobRepository;
 
     public SlurmJobCompleteProcessor(
             ProcessEngine processEngine,
             ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner,
             List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
-            SlurmProperties slurmProperties) {
+            SlurmProperties slurmProperties,
+            ObjectProvider<SlurmJobRepository> slurmJobRepository) {
         this.processEngine = processEngine;
         this.externalTaskService = processEngine.getExternalTaskService();
         this.externalTaskRetryPlanner = externalTaskRetryPlanner;
         this.slurmExternalTaskFailureResolvers =
                 slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of();
         this.slurmProperties = slurmProperties;
+        this.slurmJobRepository = slurmJobRepository;
     }
 
     /**
@@ -63,6 +67,50 @@ public class SlurmJobCompleteProcessor {
             log.warn("processTerminal skipped: missing externalTaskId or workerId on SlurmJob");
             return false;
         }
+        return withOptimisticLock(job.getJobId(), () -> reportExternalTaskTerminalWithRetries(job, exitCode));
+    }
+
+    /**
+     * 模板方法：解析 Mongo 终态乐观锁后执行 {@code camundaReport}；仅在 Camunda 接受终态且本线程持有锁时
+     * {@link SlurmJobRepository#finalizeTerminalAfterReport}，否则在失败路径上 {@link SlurmJobRepository#releaseTerminalReportingLock}。
+     */
+    private boolean withOptimisticLock(String jobId, Supplier<Boolean> camundaReport) {
+        SlurmJobRepository repo = slurmJobRepository.getIfAvailable();
+        if(repo == null){
+            // 无 Mongo 依赖时直接执行 Camunda 上报
+            return camundaReport.get();
+        }
+        LockOutcome outcome = acquireLock(jobId);
+        if (outcome == LockOutcome.ALREADY_TERMINATED) {
+            return true;
+        }
+        if (outcome == LockOutcome.LOST_RACE) {
+            log.debug("processTerminal skipped: could not acquire SlurmJob terminal lock, jobId={}", jobId);
+            return false;
+        }
+        boolean mongoLockHeld = outcome == LockOutcome.ACQUIRED;
+        boolean camundaOk = false;
+        try {
+            camundaOk = camundaReport.get();
+            if (camundaOk && mongoLockHeld ) {
+                repo.finalizeTerminalAfterReport(jobId);
+            }
+            return camundaOk;
+        } finally {
+            if (mongoLockHeld && !camundaOk) {
+                try {
+                    repo.releaseTerminalReportingLock(jobId);
+                } catch (Exception ex) {
+                    log.warn("releaseTerminalReportingLock failed for jobId={}: {}", jobId, ex.toString());
+                }
+            }
+        }
+    }
+
+    /**
+     * 向 Camunda 上报终态（complete / handleFailure），含失败重试；不含 Mongo 锁的获取与释放。
+     */
+    private boolean reportExternalTaskTerminalWithRetries(SlurmJob job, int exitCode) {
         String taskId = job.getExternalTaskId();
         String workerId = job.getWorkerId();
         int maxAttempts = externalTaskCompleteMaxAttempts();
@@ -114,9 +162,50 @@ public class SlurmJobCompleteProcessor {
     }
 
     /**
+     * Mongo 中存在对应 {@link SlurmJob} 时，用 RUNNING→REPORTING_TERMINAL 的原子更新作为乐观锁；无库或无文档时不加锁。
+     */
+    private LockOutcome acquireLock(String jobId) {
+        SlurmJobRepository repo = this.slurmJobRepository.getObject();
+        long claimed = repo.claimTerminalReportingLock(jobId);
+        if (claimed > 0) {
+            return LockOutcome.ACQUIRED;
+        }
+        Optional<SlurmJob> opt = repo.findById(jobId);
+        if (opt.isEmpty()) {
+            return LockOutcome.NO_TRACKING;
+        }
+        SlurmJob current = opt.get();
+        SlurmJobStatus s = current.getStatus();
+        if (s == SlurmJobStatus.TERMINATED) {
+            return LockOutcome.ALREADY_TERMINATED;
+        }
+        if (s == SlurmJobStatus.REPORTING_TERMINAL) {
+            return LockOutcome.LOST_RACE;
+        }
+        if (s == SlurmJobStatus.RUNNING) {
+            long retryClaim = repo.claimTerminalReportingLock(jobId);
+            return retryClaim > 0 ? LockOutcome.ACQUIRED : LockOutcome.LOST_RACE;
+        }
+        return LockOutcome.LOST_RACE;
+    }
+
+    /** {@link #withOptimisticLock} 使用的抢锁 / 幂等判定结果 */
+    private enum LockOutcome
+    {
+        /** 无 Mongo 跟踪或库中无此 jobId，直接走 Camunda 上报 */
+        NO_TRACKING,
+        /** 已抢到 REPORTING_TERMINAL */
+        ACQUIRED,
+        /** 文档已是 TERMINATED，幂等成功 */
+        ALREADY_TERMINATED,
+        /** 他处持有 REPORTING_TERMINAL 或状态异常 */
+        LOST_RACE
+    }
+
+    /**
      * 单次 {@code complete}。{@code exitCode} 仅用于日志。
      */
-    public boolean handleComplete(SlurmJob job, int exitCode) {
+    private boolean handleComplete(SlurmJob job, int exitCode) {
         if (!hasExternalTaskKeys(job)) {
             log.warn("handleComplete skipped: missing externalTaskId or workerId");
             return false;
@@ -146,7 +235,7 @@ public class SlurmJobCompleteProcessor {
      *
      * @return empty 表示引擎已接受；否则为 {@code handleFailure} 抛出的错误
      */
-    public Optional<Throwable> handleFailure(SlurmJob job, int exitCode) {
+    private Optional<Throwable> handleFailure(SlurmJob job, int exitCode) {
         if (!hasExternalTaskKeys(job)) {
             return Optional.of(new IllegalStateException("SlurmJob missing externalTaskId or workerId"));
         }
@@ -240,19 +329,10 @@ public class SlurmJobCompleteProcessor {
     }
 
     private static boolean hasExternalTaskKeys(SlurmJob job) {
-        return job != null && notBlank(job.getExternalTaskId()) && notBlank(job.getWorkerId());
+        return job != null && StringUtils.isNotBlank(job.getExternalTaskId()) && StringUtils.isNotBlank(job.getWorkerId());
     }
 
-    private static boolean notBlank(String s) {
-        return s != null && !s.isBlank();
-    }
 
-    private static String effectiveErrorFilePath(SlurmJob job, RuntimeService runtimeService, String executionId) {
-        if (job != null && notBlank(job.getErrorFilePath())) {
-            return job.getErrorFilePath().trim();
-        }
-        return readStringExecutionVariable(runtimeService, executionId, ERROR_FILE_PATH_VARIABLE);
-    }
 
     private static Map<String, Object> safeExecutionVariables(RuntimeService runtimeService, String executionId) {
         try {

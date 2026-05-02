@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Slurm sbatch ???????? {@link SlurmJobCompletionTracker} ?? {@code sacct} ? Mongo ?????
+ * Slurm sbatch ??? {@link SlurmJobTracker}?{@code sacct}?Mongo ?????
  */
 @Slf4j
 public class SlurmTaskManager implements InitializingBean {
@@ -26,7 +26,7 @@ public class SlurmTaskManager implements InitializingBean {
     private final SlurmProperties slurmProperties;
     private final SlurmService slurmService;
     private final SlurmFlagFileHandler slurmFlagFileHandler;
-    private final ObjectProvider<SlurmJobCompletionTracker> slurmJobCompletionTracker;
+    private final ObjectProvider<SlurmJobTracker> slurmJobTracker;
 
     private ThreadPoolTaskExecutor taskExecutor;
     private final FileAlterationMonitor flagFileMonitor = new FileAlterationMonitor(1000);
@@ -36,11 +36,11 @@ public class SlurmTaskManager implements InitializingBean {
             SlurmProperties slurmProperties,
             SlurmService slurmService,
             SlurmFlagFileHandler slurmFlagFileHandler,
-            ObjectProvider<SlurmJobCompletionTracker> slurmJobCompletionTracker) {
+            ObjectProvider<SlurmJobTracker> slurmJobTracker) {
         this.slurmProperties = slurmProperties;
         this.slurmService = slurmService;
         this.slurmFlagFileHandler = slurmFlagFileHandler;
-        this.slurmJobCompletionTracker = slurmJobCompletionTracker;
+        this.slurmJobTracker = slurmJobTracker;
     }
 
     @Override
@@ -57,9 +57,9 @@ public class SlurmTaskManager implements InitializingBean {
         }
         if (slurmProperties.getSacct() != null
                 && slurmProperties.getSacct().isEnabled()
-                && slurmJobCompletionTracker.getIfAvailable() == null) {
+                && slurmJobTracker.getIfAvailable() == null) {
             log.warn(
-                    "kiwi.bpm.slurm.sacct.enabled=true but Mongo is not available (no SlurmJobCompletionTracker): "
+                    "kiwi.bpm.slurm.sacct.enabled=true but Mongo is not available (no SlurmJobTracker): "
                             + "configure spring.data.mongodb and ensure MongoTemplate is present for job completion tracking.");
         }
         String effective = slurmFlagFileHandler.effectiveExternalTaskWorkerId();
@@ -74,7 +74,7 @@ public class SlurmTaskManager implements InitializingBean {
     }
 
     /**
-     * @deprecated ??????? {@code sacct}?{@link SlurmJobCompletionTracker}???? {@link SlurmProperties#isFlagListenerEnabled()} ? true ????????????
+     * @deprecated ??? .flag???? {@code sacct} ? {@link SlurmJobTracker}??? {@link SlurmProperties#isFlagListenerEnabled()} ? true ??????
      */
     @Deprecated
     public synchronized void startFlagWatcher() {
@@ -138,7 +138,7 @@ public class SlurmTaskManager implements InitializingBean {
                 if (ew == null || ew.equals(wid)) {
                     job.setExternalTaskId(tid);
                     job.setWorkerId(wid);
-                    slurmJobCompletionTracker.ifAvailable(t -> t.saveTrackedJob(job));
+                    slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
                 }
             }
             return job;

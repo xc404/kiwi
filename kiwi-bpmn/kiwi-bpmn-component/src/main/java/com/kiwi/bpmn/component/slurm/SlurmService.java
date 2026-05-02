@@ -48,7 +48,7 @@ public class SlurmService implements InitializingBean
         try {
             FileUtils.writeStringToFile(sbatchFile, "#!/bin/bash\n\n", StandardCharsets.UTF_8);
             FileUtils.writeStringToFile(sbatchFile, sbatchConfig.toSbatchCmd() + "\n\n", StandardCharsets.UTF_8, true);
-            // 用户命令直接写入脚本；作业退出码以 sacct .batch 的 ExitCode 为准（见 SlurmJobCompletionTracker）
+            // 用户命令直接写入脚本；作业退出码以 sacct .batch 的 ExitCode 为准（见 SlurmJobTracker）
             FileUtils.writeStringToFile(sbatchFile, cmd, StandardCharsets.UTF_8, true);
             FileUtils.writeStringToFile(sbatchFile, "\n", StandardCharsets.UTF_8, true);
         } catch( IOException e ) {
@@ -58,7 +58,7 @@ public class SlurmService implements InitializingBean
     }
 
     /**
-     * @deprecated 已弃用 .flag 机制，请使用 sacct 跟踪（{@link SlurmJobCompletionTracker}）。
+     * @deprecated 已弃用 .flag 机制，请使用 sacct 跟踪（{@link SlurmJobTracker}）。
      */
     @Deprecated
     public String getFlagFilePath(String jobId) {
