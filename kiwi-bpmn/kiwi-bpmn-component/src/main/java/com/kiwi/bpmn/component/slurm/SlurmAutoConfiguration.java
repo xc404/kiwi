@@ -33,12 +33,14 @@ public class SlurmAutoConfiguration {
             ProcessEngine processEngine,
             ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner,
             List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
-            SlurmProperties slurmProperties) {
+            SlurmProperties slurmProperties,
+            ObjectProvider<SlurmJobRepository> slurmJobRepository) {
         return new SlurmJobCompleteProcessor(
                 processEngine,
                 externalTaskRetryPlanner,
                 slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of(),
-                slurmProperties);
+                slurmProperties,
+                slurmJobRepository);
     }
 
     @Bean
@@ -58,11 +60,11 @@ public class SlurmAutoConfiguration {
     static class SlurmSacctMongoConfiguration {
 
         @Bean
-        public SlurmJobCompletionTracker slurmJobCompletionTracker(
+        public SlurmJobTracker slurmJobTracker(
                 SlurmProperties slurmProperties,
                 SlurmFlagFileHandler slurmFlagFileHandler,
                 SlurmJobRepository slurmJobRepository) {
-            return new SlurmJobCompletionTracker(slurmProperties, slurmFlagFileHandler, slurmJobRepository);
+            return new SlurmJobTracker(slurmProperties, slurmFlagFileHandler, slurmJobRepository);
         }
     }
 
@@ -71,7 +73,7 @@ public class SlurmAutoConfiguration {
             SlurmProperties slurmProperties,
             SlurmService slurmService,
             SlurmFlagFileHandler slurmFlagFileHandler,
-            ObjectProvider<SlurmJobCompletionTracker> slurmJobCompletionTracker) {
-        return new SlurmTaskManager(slurmProperties, slurmService, slurmFlagFileHandler, slurmJobCompletionTracker);
+            ObjectProvider<SlurmJobTracker> slurmJobTracker) {
+        return new SlurmTaskManager(slurmProperties, slurmService, slurmFlagFileHandler, slurmJobTracker);
     }
 }

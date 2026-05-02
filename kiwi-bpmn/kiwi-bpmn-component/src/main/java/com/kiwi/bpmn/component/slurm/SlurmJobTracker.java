@@ -16,10 +16,11 @@ import java.util.stream.Collectors;
 
 /**
  * 提交后将 {@link SlurmJob} 写入 Mongo，周期性 {@code sacct} 查询终态；与 {@link SlurmFlagFileHandler} 共用终态上报逻辑，
- * 以 {@link SlurmJob#getStatus()} 区分是否仍待处理（{@link SlurmJobStatus#RUNNING}）。
+ * 以 {@link SlurmJob#getStatus()} 区分是否仍待 sacct 轮询（仅 {@link SlurmJobStatus#RUNNING}；上报中见
+ * {@link SlurmJobStatus#REPORTING_TERMINAL}）。
  */
 @Slf4j
-public class SlurmJobCompletionTracker implements InitializingBean, DisposableBean {
+public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     private final SlurmProperties slurmProperties;
     private final SlurmFlagFileHandler slurmFlagFileHandler;
@@ -27,7 +28,7 @@ public class SlurmJobCompletionTracker implements InitializingBean, DisposableBe
 
     private volatile ScheduledExecutorService scheduler;
 
-    public SlurmJobCompletionTracker(
+    public SlurmJobTracker(
             SlurmProperties slurmProperties,
             SlurmFlagFileHandler slurmFlagFileHandler,
             SlurmJobRepository slurmJobRepository) {
@@ -178,9 +179,14 @@ public class SlurmJobCompletionTracker implements InitializingBean, DisposableBe
     }
 
     private void markTerminated(SlurmJob job) {
-        job.setStatus(SlurmJobStatus.TERMINATED);
+        if (job == null || job.getJobId() == null) {
+            return;
+        }
         try {
-            slurmJobRepository.save(job);
+            long n = slurmJobRepository.markTerminatedIfStillActive(job.getJobId());
+            if (n == 0) {
+                log.debug("markTerminated: jobId={} already TERMINATED or not active", job.getJobId());
+            }
         } catch (Exception e) {
             log.debug("Failed to persist TERMINATED for jobId={}: {}", job.getJobId(), e.toString());
         }
