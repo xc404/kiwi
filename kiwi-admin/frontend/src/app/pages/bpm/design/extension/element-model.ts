@@ -4,9 +4,24 @@ import Modeling from "bpmn-js/lib/features/modeling/Modeling";
 import { Element } from "bpmn-js/lib/model/Types";
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
+import { ExpressionDialect } from '@app/shared/formly/types/expression-editor-type';
 export abstract class ElementModel {
 
     abstract getModdleExtension(): any;
+
+    /**
+     * 属性面板统一 expression 编辑器默认方言。
+     */
+    expressionDialect(): ExpressionDialect {
+        return 'spel';
+    }
+
+    /**
+     * 兼容旧逻辑：统一返回 expression type。
+     */
+    expressionEditorFormlyType(): string {
+        return 'expression';
+    }
 
     public getValue(bpmnModeler: BaseViewer, element: Element, namespace: string, key: string): any {
         if (namespace == 'bpmn' || namespace == 'element' || !namespace) {
@@ -99,5 +114,14 @@ export abstract class ElementModel {
             element.$parent = parent;
         }
         return element;
+    }
+
+    /** Camunda/Flowable 子类返回 extensionElements 下 inputOutput 的 outputParameters；默认无 */
+    getOutputParameters(_element: Element): Element[] {
+        return [];
+    }
+
+    /** 删除单个 outputParameter（按 name）；默认无实现 */
+    removeOutputParameter(_bpmnModeler: BaseViewer, _element: Element, _key: string): void {
     }
 }

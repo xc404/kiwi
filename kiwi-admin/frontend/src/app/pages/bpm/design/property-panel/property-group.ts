@@ -3,11 +3,16 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { FieldEditorConfig, toFormlyConfig } from "@app/shared/components/field/field-editor";
 import { FormlyModule } from "@ngx-formly/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { ComponentService } from "../../component/component-service";
+import { ComponentService } from "../../flow-elements/component-service";
 import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
-import { PropertyDescription, PropertyNamespace, toEditFieldConfig, toViewFieldConfig } from "./types";
+import {
+    PropertyDescription,
+    PropertyNamespace,
+    toEditFieldConfig,
+    toViewFieldConfig,
+} from "./types";
 import BaseViewer from "bpmn-js/lib/BaseViewer";
 @Component({
     selector: 'property-group',
@@ -60,12 +65,15 @@ export class PropertyGroup {
                 config = toViewFieldConfig(p);
             } else {
 
-                config = toEditFieldConfig(p);
+                config = toEditFieldConfig(p, this.elementModel);
             }
 
             const baseProps: Record<string, unknown> = { variables: this.variables() };
-            if (config.editor === 'spel-expression') {
+            if (
+                config.editor === 'expression' 
+            ) {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
+                baseProps['expressionDialect'] = this.elementModel.expressionDialect();
             }
             return toFormlyConfig(config, "horizontal", baseProps);
         });
@@ -73,13 +81,4 @@ export class PropertyGroup {
 
 
 
-    private isInputParameter(p: PropertyDescription): boolean {
-        const ns = p.namespace as string | undefined;
-        return ns === PropertyNamespace.inputParameter || ns === 'In';
-    }
-
-    private isOutputParameter(p: PropertyDescription): boolean {
-        const ns = p.namespace as string | undefined;
-        return ns === PropertyNamespace.outputParameter || ns === 'Out';
-    }
 }

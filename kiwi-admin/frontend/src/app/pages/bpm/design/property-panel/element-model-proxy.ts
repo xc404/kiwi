@@ -1,8 +1,7 @@
-import BpmnModeler from 'bpmn-js/lib/Modeler'
-import { isTextType, PropertyDescription } from "./types";
-import { ElementModel } from '../extension/element-model';
-import { Element } from "bpmn-js/lib/model/Types";
 import BaseViewer from 'bpmn-js/lib/BaseViewer';
+import { Element } from "bpmn-js/lib/model/Types";
+import { ElementModel } from '../extension/element-model';
+import { isTextType, PropertyDescription } from "./types";
 
 
 export class ElementModelProxyHandler {
@@ -14,7 +13,6 @@ export class ElementModelProxyHandler {
         private viewMode = false,
         private variables: any[] = []
     ) {
-
     }
 
     get(target: any, prop: string, receiver: any) {

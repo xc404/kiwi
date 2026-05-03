@@ -1,0 +1,11 @@
+{
+  "Itech": {
+    "clientId": "1414643546170253312",
+    "clientSecret": "199285E7995VXJZZX9VQ",
+    "redirectUri": "https://cryoems.ihuman.shanghaitech.edu.cn/test-server/api/oauth/complete",
+    "platform": "Itech",
+    "authorizeUrl": "https://ids.shanghaitech.edu.cn/authserver/oauth2.0/authorize",
+    "accessTokenUrl": "https://ids.shanghaitech.edu.cn/authserver/oauth2.0/accessToken",
+    "userInfoUrl": "https://ids.shanghaitech.edu.cn/authserver/oauthApi/user/profile"
+  }
+}

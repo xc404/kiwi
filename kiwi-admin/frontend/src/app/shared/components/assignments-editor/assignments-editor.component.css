@@ -1,0 +1,49 @@
+.assignments-editor {
+  width: 100%;
+}
+
+.assignments-toolbar {
+  margin-bottom: 8px;
+}
+
+.assignment-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.key-in {
+  flex: 1 1 120px;
+  min-width: 100px;
+}
+
+.val-in {
+  flex: 2 1 180px;
+  min-width: 140px;
+}
+
+.var-ref {
+  flex: 1 1 100px;
+  min-width: 96px;
+  max-width: 160px;
+}
+
+.assignments-readonly {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.assignments-readonly li {
+  margin-bottom: 4px;
+}
+
+.assignments-readonly .sep {
+  margin: 0 6px;
+  opacity: 0.65;
+}
+
+.text-muted {
+  opacity: 0.55;
+}

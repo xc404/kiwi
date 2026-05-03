@@ -1,0 +1,38 @@
+---
+description: Java 中 Enum 与 static 常量使用 PascalCase（首字母大写/大驼峰）
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# Enum 与 static 常量命名
+
+在本仓库的 Java 代码中，**枚举常量**与 **static 常量**（尤其 `static final`）采用 **PascalCase**：每个单词首字母大写，无下划线分隔。
+
+## 约定
+
+- **枚举常量**：`Pending`、`Completed`、`InProgress`，而非 `PENDING`、`pending`。
+- **类内 static final 常量**：与枚举一致，使用 PascalCase，例如 `DefaultTimeout`、`MaxRetries`。
+
+## 示例
+
+```java
+// 推荐
+public enum JobStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed
+}
+
+private static final Duration DefaultPollInterval = Duration.ofSeconds(30);
+
+// 不推荐（全大写下划线、或小驼峰用于“常量”语义）
+public enum JobStatus {
+    PENDING,
+    running
+}
+
+private static final Duration defaultPollInterval = ...;
+```
+
+与局部变量、方法、实例字段的 camelCase 区分：常量级命名统一为 PascalCase。

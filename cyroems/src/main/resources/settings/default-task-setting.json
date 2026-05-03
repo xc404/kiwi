@@ -1,0 +1,33 @@
+{
+  "acceleration_kv": 300,
+  "spherical_aberration": 2.7,
+  "amplitude_contrast": 0.07,
+  "binning_factor": 2,
+  "motion_correction_settings": {
+    "software": "motionCor2",
+    "motionCor2": {
+      "patch": 5,
+      "eer_sampling": 2,
+      "eer_fraction": 40,
+      "save_as_float16": false
+    },
+    "motionCor3": null
+  },
+  "ctf_estimation_settings": {
+    "software": "ctffind5",
+    "ctffind4": null,
+    "ctffind5": {
+      "spectrum_size": 512,
+      "min_res": 30,
+      "max_res": 5,
+      "min_defocus": 5000,
+      "max_defocus": 50000,
+      "defocus_step": 100
+    }
+  },
+  "taskDataSetSetting": {
+    "p_size": 0.41,
+    "total_dose_per_movie": 62
+  }
+}
+

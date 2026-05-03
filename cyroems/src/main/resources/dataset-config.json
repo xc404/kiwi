@@ -1,0 +1,16 @@
+{
+  "Titan3_falcon": {
+    "source_dir": "/home/cryoems/source_dataset/Titan3_falcon",
+    "scan_days" :3,
+    "directory_prefixes": [
+      "20",
+      "tomo"
+    ],
+    "file_types": [
+      ".eer",
+      ".gain",
+      ".mdoc"
+    ],
+    "target": "/home/cryoems/dataset"
+  }
+}

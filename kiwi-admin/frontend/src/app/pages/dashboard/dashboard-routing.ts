@@ -10,7 +10,7 @@ export default [
   },
   { path: 'monitor', title: '监控页', data: { key: 'monitor' }, loadComponent: () => import('./monitor/monitor.component').then(m => m.MonitorComponent) },
   { path: 'workbench', title: '工作台', data: { key: 'workbench' }, loadComponent: () => import('./workbench/workbench.component').then(m => m.WorkbenchComponent) },
-  // 侧栏菜单需在「系统管理-菜单」中配置路由：/default/dashboard/ai-chat
+  // 侧栏菜单需在「系统管理-菜单」中配置路由：/dashboard/ai-chat
   {
     path: 'ai-chat',
     title: 'AI 对话',

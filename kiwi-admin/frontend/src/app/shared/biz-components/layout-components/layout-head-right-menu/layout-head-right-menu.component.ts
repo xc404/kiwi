@@ -11,10 +11,10 @@ import { AccountService, UserPsd } from '@services/system/account.service';
 import { ScreenLessHiddenDirective } from '@shared/directives/screen-less-hidden.directive';
 import { ToggleFullscreenDirective } from '@shared/directives/toggle-fullscreen.directive';
 import { UserInfoStoreService } from '@store/common-store/userInfo-store.service';
-import { ModalBtnStatus } from '@widget/base-modal';
-import { ChangePasswordService } from '@widget/biz-widget/change-password/change-password.service';
-import { LockWidgetService } from '@widget/common-widget/lock-widget/lock-widget.service';
-import { SearchRouteService } from '@widget/common-widget/search-route/search-route.service';
+import { ModalBtnStatus } from '@shared/modal/base-modal';
+import { ChangePasswordService } from '@shared/modal/change-password/change-password.service';
+import { LockWidgetService } from '@shared/components/lock-widget/lock-widget.service';
+import { SearchRouteService } from '@shared/components/search-route/search-route.service';
 
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -145,6 +145,6 @@ export class LayoutHeadRightMenuComponent implements OnInit {
   }
 
   goPage(path: string): void {
-    this.router.navigateByUrl(`/default/personal/${path}`);
+    this.router.navigateByUrl(`/personal/${path}`);
   }
 }

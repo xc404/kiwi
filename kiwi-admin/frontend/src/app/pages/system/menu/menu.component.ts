@@ -2,13 +2,13 @@ import { Component, computed, inject, OnInit, signal, viewChild } from "@angular
 import { CrudPage, PageConfig } from "@app/shared/components/crud/components/crud-page";
 import { PageHeaderComponent } from "@app/shared/components/page-header/page-header.component";
 import { MenuSelectType } from "@app/shared/formly/types/menu-select.type";
-import { ModalWrapService } from "@app/widget/base-modal";
+import { ModalWrapService } from "@shared/modal/base-modal";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzCardModule } from "ng-zorro-antd/card";
 import { NzIconModule } from "ng-zorro-antd/icon";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { MenuPermissionComponent } from "./menu-permission";
-import { NzModalWrapService } from "@app/widget/modal/nz-modal-wrap.service";
+import { NzModalWrapService } from "@shared/modal/nz-modal-wrap.service";
 import { ColumnToken } from "@app/shared/components/table/column";
 
 

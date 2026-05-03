@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 public class MenuNavigatePathValidator {
 
     /**
-     * 与前端主布局下路由一致，禁止外链与路径穿越。
+     * 与前端主布局下路由一致（不再包含 {@code /default} 前缀），禁止外链与路径穿越。
      */
-    private static final Pattern SAFE_APP_PATH = Pattern.compile("^/default(/[a-zA-Z0-9_.:-]+)*$");
+    private static final Pattern SAFE_APP_PATH = Pattern.compile("^/[a-zA-Z0-9_.:-]+(/[a-zA-Z0-9_.:-]+)*$");
 
     private final MenuService menuService;
     private final SessionService sessionService;
@@ -36,7 +36,7 @@ public class MenuNavigatePathValidator {
         }
         String trimmed = path.trim();
         if (!SAFE_APP_PATH.matcher(trimmed).matches()) {
-            return Optional.of("routePath 格式不合法，须为应用内路径（例如 /default/system/dict），且与菜单中配置的路由一致。");
+            return Optional.of("routePath 格式不合法，须为应用内路径（例如 /system/dict），且与菜单中配置的路由一致。");
         }
         if (!isListedInUserMenus(trimmed)) {
             return Optional.of("routePath 与当前用户可见菜单中的路由不一致，请先调用 auth_menus 查看各菜单的 path 字段。");

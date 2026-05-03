@@ -16,34 +16,36 @@
     <nz-tabs>
         @for (item of filteredPalleteTabs(); track item.providerIndex) {
         <nz-tab [nzTitle]="item.name">
-            <nz-collapse>
-                @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
+            <div class="bpm-pallete__collapse-scroll">
+                <nz-collapse>
+                    @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
 
-                <nz-collapse-panel [nzHeader]="group.group" nzShowArrow="true" nzActive>
-                    <div class="palette-items">
-                        @for (paletteItem of group.palettes; let paletteIndex = $index; track paletteIndex) {
-                        <button
-                            type="button"
-                            nz-button
-                            nzType="dashed"
-                            class="palette-item"
-                            draggable="true"
-                            nz-tooltip
-                            [nzTooltipTitle]="paletteItem.title"
-                            (dragstart)="onDragStart($event, item.providerIndex, paletteItem)"
-                            (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
-                        >
-                            <span class="palette-item__icon" aria-hidden="true">
-                                <nz-icon [nzIconfont]="paletteItem.icon" />
-                            </span>
-                            <span class="palette-item__name">{{ paletteItem.title }}</span>
-                        </button>
-                        }
-                    </div>
-                </nz-collapse-panel>
+                    <nz-collapse-panel [nzHeader]="group.group" nzShowArrow="true" nzActive>
+                        <div class="palette-items">
+                            @for (paletteItem of group.palettes; let paletteIndex = $index; track paletteIndex) {
+                            <button
+                                type="button"
+                                nz-button
+                                nzType="dashed"
+                                class="palette-item"
+                                draggable="true"
+                                nz-tooltip
+                                [nzTooltipTitle]="paletteItem.title"
+                                (dragstart)="onDragStart($event, item.providerIndex, paletteItem)"
+                                (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
+                            >
+                                <span class="palette-item__icon" aria-hidden="true">
+                                    <nz-icon [nzIconfont]="paletteItem.icon" />
+                                </span>
+                                <span class="palette-item__name">{{ paletteItem.title }}</span>
+                            </button>
+                            }
+                        </div>
+                    </nz-collapse-panel>
 
-                }
-            </nz-collapse>
+                    }
+                </nz-collapse>
+            </div>
         </nz-tab>
         }
     </nz-tabs>

@@ -4,7 +4,7 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { UserInfoStoreService } from '@app/core/services/store/common-store/userInfo-store.service';
-import { ModalDragDirective } from '@app/widget/modal/modal-drag.directive';
+import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
 import { FormlyConfig, FormlyFormBuilder } from '@ngx-formly/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';

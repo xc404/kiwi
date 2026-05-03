@@ -4,6 +4,7 @@ import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
+import org.apache.commons.lang3.StringUtils;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.springframework.core.annotation.AnnotationUtils;
 
@@ -33,7 +34,15 @@ public class ComponentUtils
             ComponentParameter[] inputs = componentDescription.inputs();
             bpmComponent.setInputParameters(Optional.ofNullable(inputs)
                     .map(parameters -> {
-                        return Arrays.stream(parameters).map(ComponentUtils::toComponentProperty).toList();
+                        return Arrays.stream(parameters).map(p -> {
+                            BpmComponentParameter bpmComponentParameter = toComponentProperty(p);
+                            if (bpmComponentParameter.isRequired()
+                                    && StringUtils.isNotBlank(bpmComponentParameter.getKey())
+                                    && StringUtils.isBlank(bpmComponentParameter.getDefaultValue())) {
+                                bpmComponentParameter.setDefaultValue(buildRequiredInputExpression(bpmComponentParameter.getKey()));
+                            }
+                            return bpmComponentParameter;
+                        }).toList();
                     }).orElse(List.of()));
 
             ComponentParameter[] outputs = componentDescription.outputs();
@@ -41,7 +50,7 @@ public class ComponentUtils
                     .map(parameters -> {
                         return Arrays.stream(parameters).map(p -> {
                             BpmComponentParameter bpmComponentParameter = toComponentProperty(p);
-                            if( bpmComponentParameter.getDefaultValue() == null ) {
+                            if (StringUtils.isBlank(bpmComponentParameter.getDefaultValue())) {
                                 bpmComponentParameter.setDefaultValue(bpmComponentParameter.getKey());
                             }
                             return bpmComponentParameter;
@@ -71,5 +80,9 @@ public class ComponentUtils
         bpmComponentParameter.setType(parameter.type());
         return bpmComponentParameter;
 
+    }
+
+    private static String buildRequiredInputExpression(String key) {
+        return "${" + key + "}";
     }
 }

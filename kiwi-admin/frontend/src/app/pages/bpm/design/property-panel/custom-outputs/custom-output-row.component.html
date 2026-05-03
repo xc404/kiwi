@@ -1,0 +1,40 @@
+<div class="custom-row">
+  <input
+    nz-input
+    class="name-in"
+    placeholder="变量名（写入流程上下文）"
+    [ngModel]="row().name"
+    (ngModelChange)="onNameChange($event)"
+  />
+  <div class="val-in">
+    <app-juel-expression-editor
+      [value]="row().valueText"
+      (valueChange)="onValueChange($event)"
+      [variables]="expressionVariableSuggestions()"
+      [placeholder]="juelInlinePlaceholder"
+    />
+  </div>
+  @if (varNames().length) {
+    <nz-select
+      class="var-ref"
+      nzPlaceHolder="引用变量"
+      nzAllowClear
+      [ngModel]="refSelection()"
+      (ngModelChange)="onRefSelect($event)"
+    >
+      @for (n of varNames(); track n) {
+        <nz-option [nzValue]="n" [nzLabel]="n"></nz-option>
+      }
+    </nz-select>
+  }
+  <button
+    nz-button
+    nzType="text"
+    nzSize="small"
+    type="button"
+    nzDanger
+    (click)="requestRemove()"
+  >
+    <nz-icon nzType="delete" nzTheme="outline" />
+  </button>
+</div>

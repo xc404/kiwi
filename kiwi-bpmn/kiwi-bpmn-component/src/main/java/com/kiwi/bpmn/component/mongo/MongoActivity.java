@@ -30,32 +30,27 @@ import java.util.Objects;
         version = "1.0",
         description = "对 MongoDB 集合执行 findOne / find / insert / updateOne / deleteOne / count（条件与文档均为 JSON）",
         inputs = {
-                @ComponentParameter(key = "collection", htmlType = "#text", name = "集合名", description = "必填"),
+                @ComponentParameter(key = "collection", name = "集合名", description = "必填"),
                 @ComponentParameter(
                         key = "operation",
-                        htmlType = "#text",
                         name = "操作",
                         description = "findOne | find | insert | updateOne | deleteOne | count，默认 findOne"),
                 @ComponentParameter(
                         key = "filter",
-                        htmlType = "#text",
                         name = "filter(JSON)",
                         description = "查询条件，默认 {}"),
                 @ComponentParameter(
                         key = "document",
-                        htmlType = "#text",
                         name = "document(JSON)",
                         description = "insert 时为插入文档；updateOne 时为更新文档（可含 $set 等）"),
                 @ComponentParameter(
                         key = "limit",
-                        htmlType = "#text",
                         name = "find 条数上限",
                         description = "仅 find 有效，默认 500，最大 10000"),
         },
         outputs = {
                 @ComponentParameter(
                         key = "result",
-                        htmlType = "#text",
                         name = "结果变量名",
                         description = "写入查询结果、删除/更新影响条数等",
                         schema = @Schema(defaultValue = "result")),

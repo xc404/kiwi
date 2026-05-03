@@ -6,7 +6,7 @@ import org.camunda.bpm.engine.delegate.DelegateExecution;
 import java.util.Optional;
 
 /**
- * 从流程变量组装 {@link SbatchConfig}（作业名、日志路径默认值及相对路径解析）。
+ * 从流程变量组装 {@link SbatchConfig}（含必填 {@code command}、作业名、日志路径默认值及相对路径解析）。
  */
 final class SlurmSbatchConfigBuilder {
 
@@ -17,6 +17,8 @@ final class SlurmSbatchConfigBuilder {
     }
 
     SbatchConfig build(DelegateExecution execution) {
+        String command = ExecutionUtils.getStringInputVariable(execution, "command")
+                .orElseThrow(() -> new IllegalArgumentException("Missing required input variable: command"));
         String begin = ExecutionUtils.getStringInputVariable(execution, "slurm_begin").orElse(null);
         String constraints = ExecutionUtils.getStringInputVariable(execution, "slurm_constraints").orElse(null);
         String cpu_per_task = ExecutionUtils.getStringInputVariable(execution, "slurm_cpu_per_task").orElse(null);
@@ -56,6 +58,7 @@ final class SlurmSbatchConfigBuilder {
         Integer gpus_per_task = ExecutionUtils.getIntInputVariable(execution, "slurm_gpus_per_task").orElse(null);
 
         SbatchConfig sbatchConfig = new SbatchConfig();
+        sbatchConfig.setCommand(command);
         sbatchConfig.setBegin(begin);
         sbatchConfig.setConstraints(constraints);
         sbatchConfig.setCpu_per_task(cpu_per_task);

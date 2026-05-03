@@ -1,0 +1,22 @@
+.custom-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.name-in {
+  flex: 0 0 140px;
+  min-width: 100px;
+}
+
+.val-in {
+  flex: 1 1 160px;
+  min-width: 120px;
+}
+
+.var-ref {
+  flex: 0 0 120px;
+  min-width: 90px;
+}

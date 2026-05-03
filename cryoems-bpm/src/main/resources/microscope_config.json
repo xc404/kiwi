@@ -1,0 +1,183 @@
+{
+  "Titan1": {
+    "root_path": "/home/Titan1_k3",
+    "microscope_temstigma": {
+      "x_temstigma_step": 38.01,
+      "y_temstigma_step": 36.81,
+      "y_temstigma_angle": -23.61,
+      "x_temstigma_angle": -68.67
+    },
+    "scales": {
+      "1.32": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 14.8
+      },
+      "1.08": {
+        "major_scale": 1.015,
+        "minor_scale": 0.986,
+        "distort_ang": 14.8
+      },
+      "0.82": {
+        "major_scale": 1.014,
+        "minor_scale": 0.986,
+        "distort_ang": 13.5
+      },
+      "0.64": {
+        "major_scale": 1.013,
+        "minor_scale": 0.988,
+        "distort_ang": 15.01
+      },
+      "0.50": {
+        "major_scale": 1.013,
+        "minor_scale": 0.987,
+        "distort_ang": 16.4
+      },
+      "2.1": {
+        "major_scale": 1.014,
+        "minor_scale": 0.986,
+        "distort_ang": 12.8
+      },
+      "1.68": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 16.4
+      },
+      "0.66": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 14.8
+      },
+      "0.53": {
+        "major_scale": 1.015,
+        "minor_scale": 0.986,
+        "distort_ang": 14.8
+      },
+      "0.41": {
+        "major_scale": 1.014,
+        "minor_scale": 0.986,
+        "distort_ang": 13.5
+      },
+      "0.32": {
+        "major_scale": 1.013,
+        "minor_scale": 0.988,
+        "distort_ang": 15.01
+      },
+      "0.25": {
+        "major_scale": 1.013,
+        "minor_scale": 0.987,
+        "distort_ang": 16.4
+      },
+      "0.84": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 16.4
+      },
+      "1.05": {
+        "major_scale": 1.014,
+        "minor_scale": 0.986,
+        "distort_ang": 12.8
+      }
+    }
+  },
+  "Titan2": {
+    "root_path": "/home/Titan2_k3",
+    "microscope_temstigma": {
+      "x_temstigma_step": 37.01,
+      "y_temstigma_step": 35.58,
+      "x_temstigma_angle": 63.98,
+      "y_temstigma_angle": 19.06
+    },
+    "scales": {
+      "1.388": {
+        "major_scale": 1.016,
+        "minor_scale": 1.000,
+        "distort_ang": 136.7
+      },
+      "1.09": {
+        "major_scale": 1.018,
+        "minor_scale": 1.000,
+        "distort_ang": 137.01
+      },
+      "0.832": {
+        "major_scale": 1.018,
+        "minor_scale": 1.000,
+        "distort_ang": 139.2
+      },
+      "0.64": {
+        "major_scale": 1.008,
+        "minor_scale": 0.992,
+        "distort_ang": 137.7
+      },
+      "0.52": {
+        "major_scale": 1.009,
+        "minor_scale": 0.991,
+        "distort_ang": 138.9
+      },
+      "1.7": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      },
+      "2.16": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      },
+      "2.68": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      },
+      "0.694": {
+        "major_scale": 1.016,
+        "minor_scale": 1.000,
+        "distort_ang": 136.7
+      },
+      "0.545": {
+        "major_scale": 1.018,
+        "minor_scale": 1.000,
+        "distort_ang": 137.01
+      },
+      "0.416": {
+        "major_scale": 1.018,
+        "minor_scale": 1.000,
+        "distort_ang": 139.2
+      },
+      "0.32": {
+        "major_scale": 1.018,
+        "minor_scale": 0.992,
+        "distort_ang": 137.7
+      },
+      "0.26": {
+        "major_scale": 1.009,
+        "minor_scale": 0.991,
+        "distort_ang": 138.9
+      },
+      "0.85": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      },
+      "1.08": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      },
+      "1.34": {
+        "major_scale": 1.015,
+        "minor_scale": 0.985,
+        "distort_ang": 135.01
+      }
+    }
+  },
+  "Titan3": {
+    "root_path": "/home/Titan3_falcon",
+    "microscope_temstigma": {
+      "x_temstigma_step": 37.01,
+      "y_temstigma_step": 35.58,
+      "x_temstigma_angle": -19.06,
+      "y_temstigma_angle": -63.98
+    }
+  }
+}

@@ -1,12 +1,24 @@
 // import { BpmnModeler } from 'bpmn-js/lib/Modeler';
 import { inject } from '@angular/core';
-import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/component/component-provider';
+import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/flow-elements/component-provider';
+import BaseViewer from "bpmn-js/lib/BaseViewer";
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import { Element } from "bpmn-js/lib/model/Types";
 import * as ModelUtil from 'bpmn-js/lib/util/ModelUtil';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
 import { ElementModel } from "../element-model";
+import {
+    decodeCamundaInputLiteral,
+    encodeCamundaInputLiteral,
+} from "./camunda-input-literal";
+
+/** 组件赋值为 JSON 字符串，需按字面量持久化，避免 Camunda 将 body 当 JUEL 解析 */
+const INPUT_PARAMETER_LITERAL_STRING_KEYS = new Set<string>(['assignments']);
 export class CamundaElementModel extends ElementModel {
+
+    override expressionDialect(): 'juel' {
+        return 'juel';
+    }
 
     componentProvider = inject(ComponentProvider);
 
@@ -16,6 +28,9 @@ export class CamundaElementModel extends ElementModel {
 
 
     public override getValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string): any {
+        if (element.type === 'bpmn:SequenceFlow' && key === 'condition') {
+            return element.businessObject.conditionExpression?.body ?? null;
+        }
         if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
             const binding = this.getCallActivityIns(element).find((i: any) => i.get('target') === key);
             if (binding) {
@@ -37,7 +52,14 @@ export class CamundaElementModel extends ElementModel {
         if (namespace == 'inputParameter') {
             let ele: any = this.getInputParameter(element, key);
             if (ele) {
-                return ele.get("value");
+                const raw = ele.get("value");
+                if (
+                    INPUT_PARAMETER_LITERAL_STRING_KEYS.has(key) &&
+                    typeof raw === 'string'
+                ) {
+                    return decodeCamundaInputLiteral(raw);
+                }
+                return raw;
             }
             return null;
         }
@@ -53,6 +75,22 @@ export class CamundaElementModel extends ElementModel {
     }
 
     public override setValue(bpmnModeler: BpmnModeler, element: Element, namespace: string, key: string, value: any): void {
+        if (element.type === 'bpmn:SequenceFlow' && key === 'condition') {
+            const str = value == null ? '' : String(value);
+            if (!str) {
+                this.updateProperties(bpmnModeler, element, {
+                    conditionExpression: undefined
+                });
+                return;
+            }
+            const conditionExpression = this.createElement(bpmnModeler, 'bpmn:FormalExpression', {
+                body: str
+            });
+            this.updateProperties(bpmnModeler, element, {
+                conditionExpression
+            });
+            return;
+        }
         if (element.type === 'bpmn:CallActivity' && namespace === 'In') {
             const inEl = this.getOrCreateCallActivityIn(bpmnModeler, element, key);
             const str = value == null ? '' : String(value);
@@ -72,8 +110,16 @@ export class CamundaElementModel extends ElementModel {
         }
         if (namespace == 'inputParameter' || namespace == 'outputParameter') {
             let parameter: Element = this.getOrCreateInputOutputParameter(bpmnModeler, element, namespace, key);
+            let stored = value;
+            if (
+                namespace === 'inputParameter' &&
+                INPUT_PARAMETER_LITERAL_STRING_KEYS.has(key) &&
+                value != null
+            ) {
+                stored = encodeCamundaInputLiteral(String(value));
+            }
             this.updateModdleProperties(bpmnModeler, element, parameter, {
-                "value": value
+                "value": stored
             });
             return;
         }
@@ -101,7 +147,6 @@ export class CamundaElementModel extends ElementModel {
         let component: ComponentDescription = this.componentProvider.getComponent(componentId) as any;
         let id = component.id;
         let componentKey = component.key;
-        let key = "camunda:delegateExpression"
         this.setValue(bpmnModeler, element, "property", "componentId", id);
         if (component.type == "SpringBean") {
             this.updateProperties(bpmnModeler, element, {
@@ -162,7 +207,15 @@ export class CamundaElementModel extends ElementModel {
 
         // (2) ensure extensionProperties
         let extensionProperties: any = this.ensureExtensionPropertiesElements(bpmnModeler, element);
-        let parameter = this.getExtensionProperty(element, key);
+        const values: any[] = extensionProperties.get('values') || [];
+        const matching = values.filter((p: any) => p.get('name') === key);
+        let parameter = matching[0] as Element | undefined;
+        if (matching.length > 1) {
+            const deduped = values.filter((p: any) => p.get('name') !== key || p === matching[0]);
+            this.updateModdleProperties(bpmnModeler, element, extensionProperties, {
+                values: deduped
+            });
+        }
         if (!parameter) {
             const parent = extensionProperties;
             parameter = this.createElement(bpmnModeler, 'camunda:Property', {
@@ -281,10 +334,22 @@ export class CamundaElementModel extends ElementModel {
         return inputOutput && inputOutput.get("inputParameters") || [];
     }
 
-    getOutputParameters(element: Element): Element[] {
+    override getOutputParameters(element: Element): Element[] {
         // return this.getParameters(element, 'outputParameters');
         const inputOutput = this.getInputOutput(element);
         return inputOutput && inputOutput.get("outputParameters") || [];
+    }
+
+    override removeOutputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {
+        const inputOutput = this.ensureInputOutputElements(bpmnModeler as BpmnModeler, element);
+        const existing: any[] = [...(inputOutput.get("outputParameters") || [])];
+        const next = existing.filter((p: any) => String(p.get("name")) !== key);
+        if (next.length === existing.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, inputOutput, {
+            outputParameters: next
+        });
     }
 
 
@@ -315,7 +380,8 @@ export class CamundaElementModel extends ElementModel {
     getExtensionProperty(root: Element, key: string): Element | null {
         let propertyEles: any = this.getExtensionProperties(root);
 
-        let properties: any[] = propertyEles && propertyEles.get("property") || [];
+        // camunda:Properties stores child camunda:property elements in `values`, not `property`
+        let properties: any[] = propertyEles && propertyEles.get("values") || [];
 
 
         let e = properties.filter(i => i.get("name") === key);
@@ -352,7 +418,5 @@ export class CamundaElementModel extends ElementModel {
         }
         return values;
     }
-
-
 
 }

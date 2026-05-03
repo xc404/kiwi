@@ -1,72 +1,13 @@
 <div class="bpm-editor-page">
-  <div class="bpm-editor-process-meta">
-    @if (processLoading()) {
-    <nz-spin nzSimple></nz-spin>
-    } @else if (processMeta(); as meta) {
-    <div class="bpm-editor-process-meta__row">
-      <div class="bpm-editor-process-meta__title" [title]="meta.name">{{ meta.name }}</div>
-      <div class="bpm-editor-process-meta__fields">
-        <span class="bpm-editor-process-meta__field">
-          <span class="bpm-editor-process-meta__label">最后修改</span>
-          <span class="bpm-editor-process-meta__value">{{
-            meta.updatedTime ? (meta.updatedTime | date: 'yyyy-MM-dd HH:mm:ss') : '—'
-            }}</span>
-        </span>
-        <span class="bpm-editor-process-meta__field">
-          <span class="bpm-editor-process-meta__label">部署时间</span>
-          <span class="bpm-editor-process-meta__value">{{
-            meta.deployedAt ? (meta.deployedAt | date: 'yyyy-MM-dd HH:mm:ss') : '未部署'
-            }}</span>
-        </span>
-        <span class="bpm-editor-process-meta__field bpm-editor-process-meta__field--secondary">
-          <span class="bpm-editor-process-meta__label">版本</span>
-          <span class="bpm-editor-process-meta__value">{{ meta.version ?? '—' }} / 已部署 {{ meta.deployedVersion ?? '—'
-            }}</span>
-        </span>
-        @if (meta.id) {
-        <span class="bpm-editor-process-meta__label">ID</span>
-        <div class="bpm-editor-process-meta__id-body">
-          <code class="bpm-editor-process-meta__id-text">{{ meta.id }}</code>
-          <button type="button" nz-button nzType="text" nzSize="small" class="bpm-editor-process-meta__id-copy"
-            title="复制 ID" (click)="copyProcessId(meta.id)">
-            <nz-icon nzType="copy" nzTheme="outline" />
-          </button>
-        </div>
-        }
-      </div>
-    </div>
-    } @else {
-    <span class="bpm-editor-process-meta__empty">无法加载流程信息</span>
-    }
-  </div>
-
-  <nz-modal nzTitle="另存为组件" [nzVisible]="saveAsComponentModalVisible()"
-    (nzVisibleChange)="saveAsComponentModalVisible.set($event)" nzOkText="保存到组件库" nzCancelText="取消"
-    (nzOnCancel)="saveAsComponentModalVisible.set(false)" [nzWidth]="520" (nzOnOk)="onSaveAsComponentOk()">
-    <ng-container *nzModalContent>
-      <div class="bpm-save-as-component-dialog">
-        <p class="bpm-save-as-component-dialog__hint">
-          与接口 SaveAsComponentInput 一致：服务端根据已保存流程 BPMN 推导输入/输出并入库。
-        </p>
-        <div class="bpm-save-as-component-dialog__field">
-          <div class="bpm-save-as-component-dialog__label">name（必填）</div>
-          <input nz-input name="saveAsComponentName" [(ngModel)]="saveAsComponentName" placeholder="组件名称" />
-        </div>
-        <div class="bpm-save-as-component-dialog__field">
-          <div class="bpm-save-as-component-dialog__label">description</div>
-          <input nz-input name="saveAsComponentDescription" [(ngModel)]="saveAsComponentDescription" placeholder="描述" />
-        </div>
-        <div class="bpm-save-as-component-dialog__field">
-          <div class="bpm-save-as-component-dialog__label">version</div>
-          <input nz-input name="saveAsComponentVersion" [(ngModel)]="saveAsComponentVersion" placeholder="例如 1.0" />
-        </div>
-      </div>
-    </ng-container>
-  </nz-modal>
+  <bpm-editor-process-meta [loading]="processLoading()" [meta]="processMeta()" />
 
   <nz-layout class="full-height bpm-editor-layout">
-    <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzWidth="300px" nzTheme="light"
-      nzNoAnimation>
+    <nz-sider
+      class="mix-sider-height side-explorer bpm-editor-palette-sider"
+      nzWidth="300px"
+      nzTheme="light"
+      nzNoAnimation
+    >
       <div class="bpm-editor-palette-scroll">
         <bpm-pallete></bpm-pallete>
       </div>
@@ -77,20 +18,18 @@
           <div class="top-bar">
             <bpm-toolbar [bpmnModeler]="bpmnModeler"></bpm-toolbar>
           </div>
-          <div class="canvas bpm-editor-canvas" ref="canvas">
-          </div>
+          <div class="canvas bpm-editor-canvas" ref="canvas"></div>
         </nz-content>
-        <nz-sider class="mix-sider-height side-explorer bpm-editor-properties-sider" nzWidth="500px" nzTheme="light"
-          nzNoAnimation>
+        <nz-sider
+          class="mix-sider-height side-explorer bpm-editor-properties-sider"
+          nzWidth="500px"
+          nzTheme="light"
+          nzNoAnimation
+        >
           <nz-tabs class="bpm-editor-right-tabs" nzSize="small">
             <nz-tab nzTitle="属性">
               <div class="bpm-editor-properties-scroll">
                 <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
-              </div>
-            </nz-tab>
-            <nz-tab nzTitle="AI">
-              <div class="bpm-editor-ai-scroll">
-                <bpm-designer-chat [bpmnModeler]="bpmnModeler" [processId]="bpmnId()"></bpm-designer-chat>
               </div>
             </nz-tab>
           </nz-tabs>

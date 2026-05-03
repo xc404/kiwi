@@ -47,6 +47,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 | 项 | 说明 |
 |----|------|
 | 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、Redis、Camunda、`app.cors`、AI/MCP 等） |
+| MCP 端点 | `spring.ai.mcp.server.sse-endpoint`、`spring.ai.mcp.server.sse-message-endpoint`（及 `SPRING_AI_MCP_SERVER_*` 环境变量）；助手回环基址 `kiwi.ai.mcp.loopback-base-url` |
 | 本地覆盖 | 复制 `application-local.example.yml` 为 `application-local.yml` 填写真实连接信息；**勿提交** `application-local.yml`（已在 `.gitignore`） |
 | CORS | `app.cors.allowed-origins`，生产环境用环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置实际前端 Origin |
 | 敏感项 | 数据库密码、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD`、AI 密钥（如 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`）等建议用环境变量 |
@@ -94,6 +95,11 @@ mvn -pl kiwi-admin/backend -am clean package
 | `src/main/java/com/kiwi/framework/` | 框架层（启动类、安全、Web、Swagger 等） |
 | `src/main/java/com/kiwi/project/` | 业务：`bpm`、`system`、`tools`（代码生成 / JDBC）、`ai`、`monitor`、`notification` 等 |
 | `src/main/resources/` | `application*.yml`、MyBatis XML、Velocity 模板、权限与 BPM 资源等 |
+
+## MCP 与 AI 工具
+
+- **MCP Server**：`spring-ai-starter-mcp-server-webmvc`；工具由 **`KiwiOpenApiSyncMcpToolsConfiguration`** 根据控制器 **`@Operation(operationId, summary)`** 经 `McpToolUtils` 转为 `SyncToolSpecification`。
+- **助手**：`ChatClient` 通过本机 `McpSyncClient`（`kiwi.ai.mcp.loopback-base-url` + `spring.ai.mcp.server.sse-endpoint`）与 MCP 对齐工具。
 
 ## 相关文档
 

@@ -7,8 +7,8 @@ import { filter, finalize, share, switchMap } from 'rxjs/operators';
 
 import { TokenKey, loginTimeOutCode, tokenErrorCode } from '@config/constant';
 import { SessionService } from '@app/core/services/common/session.service';
-import { ModalBtnStatus } from '@widget/base-modal';
-import { LoginModalService } from '@widget/biz-widget/login/login-modal.service';
+import { ModalBtnStatus } from '@shared/modal/base-modal';
+import { LoginModalService } from '@shared/modal/login/login-modal.service';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzMessageService } from 'ng-zorro-antd/message';

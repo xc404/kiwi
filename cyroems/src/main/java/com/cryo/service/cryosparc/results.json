@@ -1,0 +1,189 @@
+{
+  "task_id": "140ba317-3969-4e0d-95d9-e42db33ef3d0",
+  "status": "completed",
+  "cs_job_uid": "J5223",
+  "error": null,
+  "retry_count": 0,
+  "results": [
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/012552816228193337668_20251225_ZWH_1470.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/012552816228193337668_20251225_ZWH_1470_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 13642.1064453125,
+        "ctf/df2_A": 12831.390625,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.273331642150879,
+        "ctf/df_angle_rad": -1.3364113569259644,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/016494870808616345425_20251225_ZWH_1471.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/016494870808616345425_20251225_ZWH_1471_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 15330.9423828125,
+        "ctf/df2_A": 14456.3095703125,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.3406567573547363,
+        "ctf/df_angle_rad": -1.3493016958236694,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/008024313495351598521_20251225_ZWH_1472.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/008024313495351598521_20251225_ZWH_1472_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 16559.052734375,
+        "ctf/df2_A": 15645.265625,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.5554895401000977,
+        "ctf/df_angle_rad": -1.3328273296356201,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/004173475894947949206_20251225_ZWH_1473.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/004173475894947949206_20251225_ZWH_1473_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 16479.169921875,
+        "ctf/df2_A": 15640.3544921875,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.682964563369751,
+        "ctf/df_angle_rad": -1.3240913152694702,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/003472262364549204992_20251225_ZWH_1474.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/003472262364549204992_20251225_ZWH_1474_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 14143.5048828125,
+        "ctf/df2_A": 13446.4951171875,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.212282180786133,
+        "ctf/df_angle_rad": -1.3043162822723389,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/006075371435094985828_20251225_ZWH_1475.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/006075371435094985828_20251225_ZWH_1475_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 14132.8095703125,
+        "ctf/df2_A": 13312.826171875,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.122102737426758,
+        "ctf/df_angle_rad": -1.316111445426941,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/007896745756189827615_20251225_ZWH_1476.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/007896745756189827615_20251225_ZWH_1476_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 14378.1708984375,
+        "ctf/df2_A": 13575.603515625,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.4506783485412598,
+        "ctf/df_angle_rad": -1.3491160869598389,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/004798533145933517373_20251225_ZWH_1477.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/004798533145933517373_20251225_ZWH_1477_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 14003.5107421875,
+        "ctf/df2_A": 13226.1748046875,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 2.47578501701355,
+        "ctf/df_angle_rad": -1.31649911403656,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    },
+    {
+      "import": {
+        "movie_blob/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5210/imported/010455780000058448576_20251225_ZWH_1478.tif"
+      },
+      "motioncor": {
+        "movie_blob/psize_A": 0.4099999964237213,
+        "micrograph_blob_non_dw/path": "/home/cryoems/cryosparc_project/2025-12/CS-2025-12/J5214/motioncorrected/010455780000058448576_20251225_ZWH_1478_patch_aligned.mrc"
+      },
+      "ctf": {
+        "ctf/df1_A": 14514.2705078125,
+        "ctf/df2_A": 13653.32421875,
+        "ctf/phase_shift_rad": 0.0,
+        "ctf/cross_corr_ctffind4": 0.0,
+        "ctf/ctf_fit_to_A": 3.5754146575927734,
+        "ctf/df_angle_rad": -1.3018559217453003,
+        "ctf/accel_kv": 300.0,
+        "ctf/cs_mm": 2.700000047683716,
+        "ctf/amp_contrast": 0.10000000149011612
+      }
+    }
+  ]
+}

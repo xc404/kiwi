@@ -19,6 +19,7 @@
         <module>kiwi-bpmn</module>
         <module>kiwi-bpmn/kiwi-bpmn-external-task</module>
         <module>kiwi-bpmn/kiwi-bpmn-component</module>
+        <module>cryoems-bpm</module>
     </modules>
     <properties>
         <java.version>25</java.version>

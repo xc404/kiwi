@@ -1,0 +1,22 @@
+---
+description: 前后端对接：CollectionResult 包装、统一异常 R.fail、前端优先 Observable
+alwaysApply: true
+---
+
+# 前后端对接与前端异步规范（kiwi）
+
+## 1. 集合类接口与 `CollectionResult`
+
+- 后端若直接返回 **`Collection`** 或 **数组**，会经 `ResponseAdvice` 等逻辑包装为 **`CollectionResult`**（字段 **`content`** 承载实际集合），再包在统一响应（如 `R`）里。
+- **前端对接**时：不要假设 HTTP 体是「裸数组」；应从统一成功载荷中读取 **`content`**（或项目约定的等价路径），再映射为列表/表格数据。
+- 列表接口若日后扩展分页，`CollectionResult` 也便于扩展字段；对接时以类型定义或服务层封装为准。
+
+## 2. 异常与 `ExceptionHandler`
+
+- 业务与框架异常由 **`ExceptionHandler`**（`@ControllerAdvice`）拦截，统一返回 **`R.fail(...)`**（含业务码、消息等），而不是把 Java 异常栈直接暴露给浏览器。
+- **前端错误处理**应基于统一响应结构（成功/失败、`code`、`msg`、`data` 等）判断，并在 HTTP 拦截器或服务层集中处理登录失效、无权限等分支；不要只依赖 `catch` 原始 Error 文本当作后端语义。
+
+## 3. 前端异步：优先 `Observable`
+
+- 在 Angular 前端（`kiwi-admin/frontend`）中，**异步数据流优先使用 RxJS `Observable`**（如 `HttpClient` 返回的流、`switchMap`/`pipe` 组合），与现有服务层风格一致。
+- 仅在边界处（如必须对接仅支持 Promise 的 API）再使用 `lastValueFrom` / `firstValueFrom` 等转换；避免在业务层大面积混用 `async/await` 与 Observable 导致订阅与取消逻辑不一致。

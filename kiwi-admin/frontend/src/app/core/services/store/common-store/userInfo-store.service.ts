@@ -7,9 +7,13 @@ export interface UserInfo {
   id: number | string;
   roles: string[];
   permissions: string[];
-  /** 与后端 SessionUser 一致 */
+  /** 与后端 SessionUser / SysUser 一致 */
   nickName?: string;
   avatar?: string;
+  email?: string;
+  phonenumber?: string;
+  /** 0 男 1 女 2 未知 */
+  sex?: string;
 }
 
 @Injectable({

@@ -37,11 +37,22 @@ export interface BpmDesignerActionDto {
   queryParams?: Record<string, string>;
 }
 
+export interface BpmDesignerClientCapabilities {
+  toolbarCommands?: string[];
+  allowBpmnXml?: boolean;
+  allowAppendComponent?: boolean;
+  allowNavigate?: boolean;
+  /** 可选：前端当前可见组件 id -> 名称。 */
+  availableComponents?: Record<string, string>;
+}
+
 export interface BpmDesignerAssistantRequest {
   messages: AiChatMessage[];
   processId: string;
   /** 画布当前 BPMN（含未保存修改）；不传则后端用库中版本拼上下文 */
   bpmnXml?: string;
+  /** 由前端声明动作能力，避免命令白名单写死在后端 */
+  clientCapabilities?: BpmDesignerClientCapabilities;
 }
 
 export interface BpmDesignerAssistantResponse {
