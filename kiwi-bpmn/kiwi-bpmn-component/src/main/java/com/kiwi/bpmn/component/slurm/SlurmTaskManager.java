@@ -3,10 +3,6 @@ package com.kiwi.bpmn.component.slurm;
 import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.bpmn.external.ExternalTaskExecution;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.SuffixFileFilter;
-import org.apache.commons.io.monitor.FileAlterationMonitor;
-import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.InitializingBean;
@@ -18,28 +14,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Slurm sbatch ??? {@link SlurmJobTracker}?{@code sacct}?Mongo ?????
+ * Slurm sbatch 提交；作业完成由 {@code sacct} 与 {@link SlurmJobTracker}、Mongo 跟踪驱动。
  */
 @Slf4j
 public class SlurmTaskManager implements InitializingBean {
 
     private final SlurmProperties slurmProperties;
     private final SlurmService slurmService;
-    private final SlurmFlagFileHandler slurmFlagFileHandler;
     private final ObjectProvider<SlurmJobTracker> slurmJobTracker;
 
     private ThreadPoolTaskExecutor taskExecutor;
-    private final FileAlterationMonitor flagFileMonitor = new FileAlterationMonitor(1000);
-    private volatile boolean watcherRunning;
 
     public SlurmTaskManager(
             SlurmProperties slurmProperties,
             SlurmService slurmService,
-            SlurmFlagFileHandler slurmFlagFileHandler,
             ObjectProvider<SlurmJobTracker> slurmJobTracker) {
         this.slurmProperties = slurmProperties;
         this.slurmService = slurmService;
-        this.slurmFlagFileHandler = slurmFlagFileHandler;
         this.slurmJobTracker = slurmJobTracker;
     }
 
@@ -53,7 +44,7 @@ public class SlurmTaskManager implements InitializingBean {
         log.info("SlurmTaskManager thread pool initialized: core=max={}", poolSize);
         if (slurmProperties.isFlagListenerEnabled()) {
             log.warn(
-                    "kiwi.bpm.slurm.flag-listener-enabled=true: legacy .flag file watcher is enabled; prefer sacct-only (kiwi.bpm.slurm.sacct.enabled).");
+                    "kiwi.bpm.slurm.flag-listener-enabled=true is ignored: legacy .flag file watcher has been removed; use sacct (kiwi.bpm.slurm.sacct.enabled).");
         }
         if (slurmProperties.getSacct() != null
                 && slurmProperties.getSacct().isEnabled()
@@ -62,43 +53,10 @@ public class SlurmTaskManager implements InitializingBean {
                     "kiwi.bpm.slurm.sacct.enabled=true but Mongo is not available (no SlurmJobTracker): "
                             + "configure spring.data.mongodb and ensure MongoTemplate is present for job completion tracking.");
         }
-        String effective = slurmFlagFileHandler.effectiveExternalTaskWorkerId();
-        if (effective != null) {
-            log.info(
-                    "Slurm sacct tracking will filter by workerId: {} (from kiwi.bpm.external-task.worker-id)",
-                    effective);
-        } else {
-            log.info(
-                    "Slurm worker filter off for sacct queries: set kiwi.bpm.external-task.worker-id to restrict tracking on shared DB");
-        }
     }
 
     /**
-     * @deprecated ??? .flag???? {@code sacct} ? {@link SlurmJobTracker}??? {@link SlurmProperties#isFlagListenerEnabled()} ? true ??????
-     */
-    @Deprecated
-    public synchronized void startFlagWatcher() {
-        try {
-            if (watcherRunning) {
-                log.debug("Slurm flag watcher already running, skip start");
-                return;
-            }
-            flagFileMonitor.start();
-            File dir = slurmService.getShellFileDir();
-            FileAlterationObserver observer =
-                    FileAlterationObserver.builder().setFile(dir).setFileFilter(new SuffixFileFilter("flag")).get();
-            observer.addListener(slurmFlagFileHandler);
-            flagFileMonitor.addObserver(observer);
-            this.watcherRunning = true;
-            log.info("Slurm flag watcher started on directory: {}", dir.getAbsolutePath());
-        } catch (Exception e) {
-            log.error("Failed to start Slurm flag watcher", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * ?? {@code execution} ? {@code sbatchConfig} ?? sbatch ????????? sacct ??? Mongo ?? {@link SlurmJob} ?????
+     * 按 {@code execution} 与 {@code sbatchConfig} 提交 sbatch；跟踪记录由 sacct 与 Mongo 中 {@link SlurmJob} 完成。
      */
     public CompletableFuture<SlurmJob> submitSlurmJob(DelegateExecution execution, SbatchConfig sbatchConfig) {
         File sbatchFile = slurmService.createSbatchFile(execution.getId() + ".sbatch", sbatchConfig);
@@ -110,10 +68,6 @@ public class SlurmTaskManager implements InitializingBean {
                 execution.getId(),
                 sbatchConfig.getJobName(),
                 sbatchFile.getAbsolutePath());
-
-        if (slurmProperties.isFlagListenerEnabled()) {
-            startFlagWatcher();
-        }
 
         String externalTaskId = null;
         String workerId = null;
@@ -134,12 +88,9 @@ public class SlurmTaskManager implements InitializingBean {
             job.setErrorFilePath(sbatchConfig.getError_file());
             job.setId(job.getJobId());
             if (tid != null && wid != null && jn != null) {
-                String ew = slurmFlagFileHandler.effectiveExternalTaskWorkerId();
-                if (ew == null || ew.equals(wid)) {
-                    job.setExternalTaskId(tid);
-                    job.setWorkerId(wid);
-                    slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
-                }
+                job.setExternalTaskId(tid);
+                job.setWorkerId(wid);
+                slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
             }
             return job;
         });

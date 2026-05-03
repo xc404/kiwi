@@ -30,10 +30,22 @@ public class SlurmJob extends BaseEntity<String> {
     private String workerId;
 
     /**
-     * 本系统跟踪状态；新建时为 {@link SlurmJobStatus#RUNNING}；上报 Camunda 终态前经 Repository 原子改为
-     * {@link SlurmJobStatus#REPORTING_TERMINAL}（乐观锁）；完成后为 {@link SlurmJobStatus#TERMINATED}。
+     * 本系统跟踪状态；新建时为 {@link SlurmJobStatus#RUNNING}，终态上报成功后为 {@link SlurmJobStatus#TERMINATED}。
+     * 与 {@link #terminalReportLocked} 解耦：上报 Camunda 终态期间 {@code status} 可仍为 {@link SlurmJobStatus#RUNNING}。
      */
     private SlurmJobStatus status;
+
+    /**
+     * 终态上报（complete / handleFailure）的 Mongo 乐观锁：{@code true} 表示本节点已抢到锁、正在上报；
+     * 与 {@link #status} 独立，避免用“伪状态”表达锁。
+     */
+    private Boolean terminalReportLocked;
+
+    /** Slurm / sacct 侧命令退出码；终态上报成功后由 {@link SlurmJobCompleteProcessor} 写入。 */
+    private Integer exitCode;
+
+    /** 与终态失败上报一致的人类可读说明；成功且退出码为 0 时可为空。 */
+    private String errorMessage;
 
     public void setJobId(String jobId) {
         this.jobId = jobId;
