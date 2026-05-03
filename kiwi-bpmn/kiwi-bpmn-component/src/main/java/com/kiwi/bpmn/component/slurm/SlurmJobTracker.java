@@ -15,25 +15,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * 提交后将 {@link SlurmJob} 写入 Mongo，周期性 {@code sacct} 查询终态；与 {@link SlurmFlagFileHandler} 共用终态上报逻辑，
- * 以 {@link SlurmJob#getStatus()} 区分是否仍待 sacct 轮询（仅 {@link SlurmJobStatus#RUNNING}；上报中见
- * {@link SlurmJobStatus#REPORTING_TERMINAL}）。
+ * 以 {@link SlurmJob#getStatus()} 与 {@link SlurmJob#getTerminalReportLocked()} 区分是否仍待触发终态上报：
+ * 仅 {@link SlurmJobStatus#RUNNING} 且未持终态上报锁时由 sacct 驱动上报。
  */
 @Slf4j
 public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     private final SlurmProperties slurmProperties;
-    private final SlurmFlagFileHandler slurmFlagFileHandler;
+    private final SlurmJobCompleteProcessor slurmJobCompleteProcessor;
     private final SlurmJobRepository slurmJobRepository;
 
     private volatile ScheduledExecutorService scheduler;
 
     public SlurmJobTracker(
             SlurmProperties slurmProperties,
-            SlurmFlagFileHandler slurmFlagFileHandler,
+            SlurmJobCompleteProcessor slurmJobCompleteProcessor,
             SlurmJobRepository slurmJobRepository) {
         this.slurmProperties = slurmProperties;
-        this.slurmFlagFileHandler = slurmFlagFileHandler;
+        this.slurmJobCompleteProcessor = slurmJobCompleteProcessor;
         this.slurmJobRepository = slurmJobRepository;
     }
 
@@ -126,23 +125,13 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
     }
 
     private List<SlurmJob> findTimedOutJobs(long deadline) {
-        String ew = slurmFlagFileHandler.effectiveExternalTaskWorkerId();
         Date deadlineDate = new Date(deadline);
-        if (ew != null) {
-            return slurmJobRepository.findByWorkerIdAndStatusAndCreatedTimeBefore(
-                    ew, SlurmJobStatus.RUNNING, deadlineDate);
-        }
         return slurmJobRepository.findByStatusAndCreatedTimeBefore(SlurmJobStatus.RUNNING, deadlineDate);
     }
 
     private List<SlurmJob> findActiveTrackedJobs(long now, long maxAge) {
         long cutoff = now - maxAge;
         Date cutoffDate = new Date(cutoff);
-        String ew = slurmFlagFileHandler.effectiveExternalTaskWorkerId();
-        if (ew != null) {
-            return slurmJobRepository.findByWorkerIdAndStatusAndCreatedTimeGreaterThanEqual(
-                    ew, SlurmJobStatus.RUNNING, cutoffDate);
-        }
         return slurmJobRepository.findByStatusAndCreatedTimeGreaterThanEqual(SlurmJobStatus.RUNNING, cutoffDate);
     }
 
@@ -153,7 +142,10 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
                 continue;
             }
             SlurmJob reload =
-                    slurmJobRepository.findById(jobId).filter(j -> j.getStatus() == SlurmJobStatus.RUNNING).orElse(null);
+                    slurmJobRepository
+                            .findById(jobId)
+                            .filter(SlurmJobTracker::readyForSacctTerminalHandling)
+                            .orElse(null);
             if (reload == null) {
                 continue;
             }
@@ -171,7 +163,7 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
                             + (res.slurmState() != null ? res.slurmState() : "")
                             + ", exit="
                             + res.commandExitCode();
-            boolean ok = slurmFlagFileHandler.processParsedSlurmTerminal(parsed, diag, null);
+            boolean ok = slurmJobCompleteProcessor.processParsedSlurmTerminal(parsed, diag, null);
             if (ok) {
                 markTerminated(reload);
             }
@@ -217,17 +209,25 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     private void applyTimeout(SlurmJob job) {
         SlurmJob reload =
-                slurmJobRepository.findById(job.getJobId()).filter(j -> j.getStatus() == SlurmJobStatus.RUNNING).orElse(null);
+                slurmJobRepository
+                        .findById(job.getJobId())
+                        .filter(SlurmJobTracker::readyForSacctTerminalHandling)
+                        .orElse(null);
         if (reload == null) {
             return;
         }
         SlurmResult parsed =
                 new SlurmResult(1, reload.getExternalTaskId(), reload.getWorkerId(), reload.getJobName());
         String diag = "sacct-tracker: maxTrackDurationMs exceeded for jobId=" + reload.getJobId();
-        boolean ok = slurmFlagFileHandler.processParsedSlurmTerminal(parsed, diag, null);
+        boolean ok = slurmJobCompleteProcessor.processParsedSlurmTerminal(parsed, diag, null);
         if (ok) {
             markTerminated(reload);
         }
+    }
+
+    /** sacct 已判终态、可安全调用终态上报（未持 Mongo 终态锁） */
+    private static boolean readyForSacctTerminalHandling(SlurmJob j) {
+        return j.getStatus() == SlurmJobStatus.RUNNING && !Boolean.TRUE.equals(j.getTerminalReportLocked());
     }
 
     @Override

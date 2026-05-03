@@ -1,6 +1,5 @@
 package com.kiwi.bpmn.component.slurm;
 
-import com.kiwi.bpmn.external.config.ClientProperties;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.engine.ProcessEngine;
@@ -43,14 +42,6 @@ public class SlurmAutoConfiguration {
                 slurmJobRepository);
     }
 
-    @Bean
-    public static SlurmFlagFileHandler slurmFlagFileHandler(
-            ObjectProvider<ClientProperties> clientProperties,
-            ObjectProvider<SlurmJobRepository> slurmJobRepository,
-            SlurmJobCompleteProcessor slurmJobCompleteProcessor) {
-        return new SlurmFlagFileHandler(clientProperties, slurmJobRepository, slurmJobCompleteProcessor);
-    }
-
     /**
      * sacct 跟踪依赖 Mongo；无 {@link MongoTemplate} 时不注册本 Bean，{@link SlurmTaskManager} 通过 {@link ObjectProvider} 跳过落库。
      */
@@ -62,9 +53,9 @@ public class SlurmAutoConfiguration {
         @Bean
         public SlurmJobTracker slurmJobTracker(
                 SlurmProperties slurmProperties,
-                SlurmFlagFileHandler slurmFlagFileHandler,
+                SlurmJobCompleteProcessor slurmJobCompleteProcessor,
                 SlurmJobRepository slurmJobRepository) {
-            return new SlurmJobTracker(slurmProperties, slurmFlagFileHandler, slurmJobRepository);
+            return new SlurmJobTracker(slurmProperties, slurmJobCompleteProcessor, slurmJobRepository);
         }
     }
 
@@ -72,8 +63,7 @@ public class SlurmAutoConfiguration {
     public static SlurmTaskManager slurmTaskManager(
             SlurmProperties slurmProperties,
             SlurmService slurmService,
-            SlurmFlagFileHandler slurmFlagFileHandler,
             ObjectProvider<SlurmJobTracker> slurmJobTracker) {
-        return new SlurmTaskManager(slurmProperties, slurmService, slurmFlagFileHandler, slurmJobTracker);
+        return new SlurmTaskManager(slurmProperties, slurmService, slurmJobTracker);
     }
 }

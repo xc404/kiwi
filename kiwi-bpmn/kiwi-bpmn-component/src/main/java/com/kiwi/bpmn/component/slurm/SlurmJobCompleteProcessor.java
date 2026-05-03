@@ -59,28 +59,83 @@ public class SlurmJobCompleteProcessor {
 
     /**
      * {@code exitCode == 0} 时 complete，否则 handleFailure；含上报重试。
+     * 入口仅要求 {@link SlurmJob#getExternalTaskId()}；不对 {@link SlurmJob#getWorkerId()} 做非空校验，由 Camunda API 与重试表现决定成败。
+     * Mongo 乐观锁保证多节点 / 多入口下不会重复上报。
      *
      * @return 是否已成功提交 Camunda 终态
      */
     public boolean processTerminal(SlurmJob job, int exitCode) {
-        if (!hasExternalTaskKeys(job)) {
-            log.warn("processTerminal skipped: missing externalTaskId or workerId on SlurmJob");
+        if (job == null || !StringUtils.isNotBlank(job.getExternalTaskId())) {
+            log.warn("processTerminal skipped: missing externalTaskId on SlurmJob");
             return false;
         }
-        return withOptimisticLock(job.getJobId(), () -> reportExternalTaskTerminalWithRetries(job, exitCode));
+        return withOptimisticLock(job.getJobId(), exitCode, () -> reportExternalTaskTerminalWithRetries(job, exitCode));
+    }
+
+    /**
+     * 对已解析的 sacct / 可选 {@code *.flag} 终态调用 {@link #processTerminal(SlurmJob, int)}；不按本机 workerId 过滤。
+     *
+     * @param diagnosticOrFlagRaw 诊断文本；来自 flag 时可为原文
+     * @param flagFile            非 null 且上报成功时写 {@code .done} 并删除源文件
+     */
+    public boolean processParsedSlurmTerminal(SlurmResult parsed, String diagnosticOrFlagRaw, File flagFile) {
+        String taskId = parsed.getTaskId();
+        SlurmJobRepository repo = slurmJobRepository.getIfAvailable();
+        if (repo != null
+                && repo.findByExternalTaskIdAndStatus(taskId, SlurmJobStatus.RUNNING).isEmpty()
+                && repo.existsByExternalTaskId(taskId)) {
+            log.info("Skip Slurm terminal report (Mongo tracking already closed for taskId={})", taskId);
+            finalizeFlagFileQuietly(flagFile);
+            return true;
+        }
+        SlurmJob job = resolveJobForTerminalReport(parsed, repo);
+        boolean ok = processTerminal(job, parsed.getCommandExitCode());
+        if (ok && flagFile != null) {
+            finalizeFlagFileQuietly(flagFile);
+        }
+        return ok;
+    }
+
+    private static SlurmJob resolveJobForTerminalReport(SlurmResult parsed, SlurmJobRepository repo) {
+        if (repo != null) {
+            List<SlurmJob> running = repo.findByExternalTaskIdAndStatus(parsed.getTaskId(), SlurmJobStatus.RUNNING);
+            if (!running.isEmpty()) {
+                return running.get(0);
+            }
+        }
+        SlurmJob job = new SlurmJob();
+        job.setExternalTaskId(parsed.getTaskId());
+        job.setWorkerId(parsed.getWorkerId());
+        job.setJobName(parsed.getJobName());
+        return job;
+    }
+
+    private void finalizeFlagFileQuietly(File flagFile) {
+        if (flagFile == null) {
+            return;
+        }
+        try {
+            FileUtils.copyFile(flagFile, new File(flagFile.getAbsolutePath() + ".done"));
+            FileUtils.deleteQuietly(flagFile);
+        } catch (IOException e) {
+            log.warn("Failed to finalize Slurm flag file: {}", flagFile.getAbsolutePath(), e);
+        }
     }
 
     /**
      * 模板方法：解析 Mongo 终态乐观锁后执行 {@code camundaReport}；仅在 Camunda 接受终态且本线程持有锁时
      * {@link SlurmJobRepository#finalizeTerminalAfterReport}，否则在失败路径上 {@link SlurmJobRepository#releaseTerminalReportingLock}。
      */
-    private boolean withOptimisticLock(String jobId, Supplier<Boolean> camundaReport) {
+    private boolean withOptimisticLock(String jobId, int exitCode, Supplier<TerminalReportOutcome> camundaReport) {
         SlurmJobRepository repo = slurmJobRepository.getIfAvailable();
-        if(repo == null){
+        if (repo == null) {
             // 无 Mongo 依赖时直接执行 Camunda 上报
-            return camundaReport.get();
+            return camundaReport.get().accepted();
         }
-        LockOutcome outcome = acquireLock(jobId);
+        if (!StringUtils.isNotBlank(jobId)) {
+            return camundaReport.get().accepted();
+        }
+        LockOutcome outcome = acquireLock(repo, jobId);
         if (outcome == LockOutcome.ALREADY_TERMINATED) {
             return true;
         }
@@ -88,16 +143,17 @@ public class SlurmJobCompleteProcessor {
             log.debug("processTerminal skipped: could not acquire SlurmJob terminal lock, jobId={}", jobId);
             return false;
         }
-        boolean mongoLockHeld = outcome == LockOutcome.ACQUIRED;
+        boolean lockHeld = outcome == LockOutcome.ACQUIRED;
         boolean camundaOk = false;
         try {
-            camundaOk = camundaReport.get();
-            if (camundaOk && mongoLockHeld ) {
-                repo.finalizeTerminalAfterReport(jobId);
+            TerminalReportOutcome reportOutcome = camundaReport.get();
+            camundaOk = reportOutcome.accepted();
+            if (camundaOk && lockHeld) {
+                repo.finalizeTerminalAfterReport(jobId, exitCode, reportOutcome.errorMessageForPersist());
             }
             return camundaOk;
         } finally {
-            if (mongoLockHeld && !camundaOk) {
+            if (lockHeld && !camundaOk) {
                 try {
                     repo.releaseTerminalReportingLock(jobId);
                 } catch (Exception ex) {
@@ -107,14 +163,16 @@ public class SlurmJobCompleteProcessor {
         }
     }
 
+    /** Camunda 终态上报一次尝试的结果（供 Mongo finalize 持久化 exit / 文案） */
+    private record TerminalReportOutcome(boolean accepted, String errorMessageForPersist) {}
+
     /**
      * 向 Camunda 上报终态（complete / handleFailure），含失败重试；不含 Mongo 锁的获取与释放。
      */
-    private boolean reportExternalTaskTerminalWithRetries(SlurmJob job, int exitCode) {
+    private TerminalReportOutcome reportExternalTaskTerminalWithRetries(SlurmJob job, int exitCode) {
         String taskId = job.getExternalTaskId();
         String workerId = job.getWorkerId();
         int maxAttempts = externalTaskCompleteMaxAttempts();
-        Throwable[] lastFailure = new Throwable[1];
         boolean success = exitCode == 0;
         final Exception failureException;
         final RetryPlan retryPlan;
@@ -125,30 +183,28 @@ public class SlurmJobCompleteProcessor {
             failureException = resolveFailureException(job, exitCode);
             retryPlan = resolveRetryPlan(job, failureException).orElseGet(() -> new RetryPlan(0, 0));
         }
+        String errorMsg = terminalPersistErrorMessage(job, exitCode, failureException);
         Supplier<Boolean> step =
                 () -> {
                     if (success) {
-                        return handleComplete(job, exitCode);
+                        return reportComplete(job, exitCode);
                     }
-                    Optional<Throwable> err = reportHandleFailure(job, exitCode, failureException, retryPlan);
-                    if (err.isEmpty()) {
-                        return true;
-                    }
-                    lastFailure[0] = err.get();
-                    return false;
+                    return reportHandleFailure(job, exitCode, failureException, retryPlan);
                 };
+
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             if (step.get()) {
-                return true;
+                return new TerminalReportOutcome(
+                        true,
+                        exitCode == 0 ? null : errorMsg);
             }
             if (attempt >= maxAttempts) {
                 log.error(
-                        "Failed to report external task failure after {} attempts, taskId={}, workerId={}, cause={}",
+                        "Failed to report external task failure after {} attempts, taskId={}, workerId={}",
                         maxAttempts,
                         taskId,
-                        workerId,
-                        lastFailure[0] != null ? lastFailure[0].getMessage() : "");
-                return false;
+                        workerId);
+                return new TerminalReportOutcome(false, null);
             }
             log.warn(
                     "Failed to report external task failure, retrying ({}/{}), taskId={}, workerId={}",
@@ -158,14 +214,26 @@ public class SlurmJobCompleteProcessor {
                     workerId);
             sleepBetweenExternalTaskRetries();
         }
-        return false;
+        return new TerminalReportOutcome(false, null);
+    }
+
+    private static String terminalPersistErrorMessage(SlurmJob job, int exitCode, Exception failureException) {
+        String raw =
+                failureException != null && StringUtils.isNotBlank(failureException.getMessage())
+                        ? failureException.getMessage().trim()
+                        : defaultFailureMessage(job, exitCode);
+        final int max = 8_000;
+        if (raw.length() > max) {
+            return raw.substring(0, max) + "...";
+        }
+        return raw;
     }
 
     /**
-     * Mongo 中存在对应 {@link SlurmJob} 时，用 RUNNING→REPORTING_TERMINAL 的原子更新作为乐观锁；无库或无文档时不加锁。
+     * Mongo 中存在对应 {@link SlurmJob} 时，用 {@link SlurmJob#getTerminalReportLocked()} 与 {@link SlurmJobStatus#RUNNING}
+     * 组合条件做原子抢锁；无文档时不加锁。
      */
-    private LockOutcome acquireLock(String jobId) {
-        SlurmJobRepository repo = this.slurmJobRepository.getObject();
+    private LockOutcome acquireLock(SlurmJobRepository repo, String jobId) {
         long claimed = repo.claimTerminalReportingLock(jobId);
         if (claimed > 0) {
             return LockOutcome.ACQUIRED;
@@ -179,7 +247,7 @@ public class SlurmJobCompleteProcessor {
         if (s == SlurmJobStatus.TERMINATED) {
             return LockOutcome.ALREADY_TERMINATED;
         }
-        if (s == SlurmJobStatus.REPORTING_TERMINAL) {
+        if (s == SlurmJobStatus.RUNNING && Boolean.TRUE.equals(current.getTerminalReportLocked())) {
             return LockOutcome.LOST_RACE;
         }
         if (s == SlurmJobStatus.RUNNING) {
@@ -190,24 +258,23 @@ public class SlurmJobCompleteProcessor {
     }
 
     /** {@link #withOptimisticLock} 使用的抢锁 / 幂等判定结果 */
-    private enum LockOutcome
-    {
+    private enum LockOutcome {
         /** 无 Mongo 跟踪或库中无此 jobId，直接走 Camunda 上报 */
         NO_TRACKING,
-        /** 已抢到 REPORTING_TERMINAL */
+        /** 已抢到终态上报锁（{@link SlurmJob#getTerminalReportLocked()}） */
         ACQUIRED,
         /** 文档已是 TERMINATED，幂等成功 */
         ALREADY_TERMINATED,
-        /** 他处持有 REPORTING_TERMINAL 或状态异常 */
+        /** 他处已持锁或状态异常 */
         LOST_RACE
     }
 
     /**
      * 单次 {@code complete}。{@code exitCode} 仅用于日志。
      */
-    private boolean handleComplete(SlurmJob job, int exitCode) {
-        if (!hasExternalTaskKeys(job)) {
-            log.warn("handleComplete skipped: missing externalTaskId or workerId");
+    private boolean reportComplete(SlurmJob job, int exitCode) {
+        if (!hasExternalTaskId(job)) {
+            log.warn("handleComplete skipped: missing externalTaskId");
             return false;
         }
         try {
@@ -230,21 +297,7 @@ public class SlurmJobCompleteProcessor {
         }
     }
 
-    /**
-     * 单次失败上报（自定义失败解析 + 重试计划 + {@code handleFailure}）。
-     *
-     * @return empty 表示引擎已接受；否则为 {@code handleFailure} 抛出的错误
-     */
-    private Optional<Throwable> handleFailure(SlurmJob job, int exitCode) {
-        if (!hasExternalTaskKeys(job)) {
-            return Optional.of(new IllegalStateException("SlurmJob missing externalTaskId or workerId"));
-        }
-        Exception failure = resolveFailureException(job, exitCode);
-        RetryPlan plan = resolveRetryPlan(job, failure).orElseGet(() -> new RetryPlan(0, 0));
-        return reportHandleFailure(job, exitCode, failure, plan);
-    }
-
-    private Optional<Throwable> reportHandleFailure(
+    private boolean reportHandleFailure(
             SlurmJob job, int exitCode, Exception failure, RetryPlan retryPlan) {
         String errMsg = failure.getMessage();
         if (errMsg == null || errMsg.isBlank()) {
@@ -263,7 +316,7 @@ public class SlurmJobCompleteProcessor {
                     retryTimeoutMs,
                     Collections.emptyMap(),
                     Collections.emptyMap());
-            return Optional.empty();
+            return true;
         } catch (Exception e) {
             log.warn(
                     "handleFailure failed: taskId={}, workerId={}, retries={}, error={}",
@@ -271,7 +324,7 @@ public class SlurmJobCompleteProcessor {
                     job.getWorkerId(),
                     retries,
                     e.getMessage());
-            return Optional.of(e);
+            return false;
         }
     }
 
@@ -328,8 +381,8 @@ public class SlurmJobCompleteProcessor {
         return new SlurmResult(exitCode, job.getExternalTaskId(), job.getWorkerId(), jn);
     }
 
-    private static boolean hasExternalTaskKeys(SlurmJob job) {
-        return job != null && StringUtils.isNotBlank(job.getExternalTaskId()) && StringUtils.isNotBlank(job.getWorkerId());
+    private static boolean hasExternalTaskId(SlurmJob job) {
+        return job != null && StringUtils.isNotBlank(job.getExternalTaskId());
     }
 
 
