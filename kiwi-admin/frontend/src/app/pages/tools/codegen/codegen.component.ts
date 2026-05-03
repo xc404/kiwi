@@ -4,8 +4,8 @@ import { CrudPage, PageConfig } from "@app/shared/components/crud/components/cru
 import { PageHeaderComponent } from "@app/shared/components/page-header/page-header.component";
 import { ColumnToken } from "@app/shared/components/table/column";
 import { Utils } from "@app/utils/utils";
-import { DictSelector } from "@app/widget/biz-widget/system/dict-selector/dict-selector";
-import { ModalDragDirective } from "@app/widget/modal/modal-drag.directive";
+import { DictSelector } from "@shared/components/dict-selector/dict-selector";
+import { ModalDragDirective } from "@shared/modal/modal-drag.directive";
 import { environment } from '@env/environment';
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzCardModule } from "ng-zorro-antd/card";

@@ -16,18 +16,16 @@ import static com.kiwi.bpmn.component.utils.ExecutionUtils.getOutputVariableName
         version = "1.0",
         description = "这是一个测试组件",
         inputs = {
-                @ComponentParameter(key = "input1", htmlType = "#text", name = "输入参数1"),
-                @ComponentParameter(key = "input2", htmlType = "#text", name = "输入参数2")
+                @ComponentParameter(key = "input1", name = "输入参数1"),
+                @ComponentParameter(key = "input2", name = "输入参数2")
         },
         outputs = {
                 @ComponentParameter(
                         key = "output1",
-                        htmlType = "#text",
                         name = "输出1",
                         schema = @Schema(defaultValue = "output1")),
                 @ComponentParameter(
                         key = "output2",
-                        htmlType = "#text",
                         name = "输出2",
                         schema = @Schema(defaultValue = "output2"))
         }

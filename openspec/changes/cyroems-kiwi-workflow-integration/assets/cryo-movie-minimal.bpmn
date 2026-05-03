@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                id="Definitions_cryo_movie_minimal"
+                targetNamespace="http://cryoems.kiwi/samples">
+  <bpmn:process id="cryo_movie_minimal" name="cryo movie placeholder" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="start"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="EndEvent_1"/>
+    <bpmn:endEvent id="EndEvent_1" name="end"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cryo_movie_minimal">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="159" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="432" y="159" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="215" y="177"/>
+        <di:waypoint x="432" y="177"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

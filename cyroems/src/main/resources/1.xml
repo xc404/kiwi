@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:kiwi="http://kiwi.com/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="p-3dbc94f6-a6c5-479e-8fd0-a697f9c3a7fd" name="cyroems" isExecutable="true">
+        <bpmn:startEvent id="StartEvent_1" name="">
+            <bpmn:outgoing>Flow_1whiiel</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="Activity_0nd8l0g" name="定义全局变量" camunda:delegateExpression="${assignmentActivity}" kiwi:componentId="classpath_assignmentActivity">
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="componentId" value="classpath_assignmentActivity" />
+                </camunda:properties>
+                <camunda:inputOutput>
+                    <camunda:outputParameter name="work_dir">${'/home/chaox/cryoems/tasks/'.concat(task.work_dir)}</camunda:outputParameter>
+                    <camunda:outputParameter name="p_size">${task.p_size}</camunda:outputParameter>
+                    <camunda:outputParameter name="total_dose_per_movie">${task.total_dose_per_movie}</camunda:outputParameter>
+                    <camunda:outputParameter name="movie_id">${movie.id}</camunda:outputParameter>
+                    <camunda:outputParameter name="movie_file_name">${movie.file_name}</camunda:outputParameter>
+                    <camunda:outputParameter name="movie_file_path">${movie.file_path}</camunda:outputParameter>
+                    <camunda:outputParameter name="microscope">${task.microscope}</camunda:outputParameter>
+                    <camunda:outputParameter name="gain_file">${task.gain_file}</camunda:outputParameter>
+                    <camunda:outputParameter name="partition">${'DF'}</camunda:outputParameter>
+                    <camunda:outputParameter name="motion_result_file">${work_dir.concat('/').concat(movie_file_name).concat('.mrc')}</camunda:outputParameter>
+                    <camunda:outputParameter name="patch">${5}</camunda:outputParameter>
+                    <camunda:outputParameter name="eer_sampling">${2}</camunda:outputParameter>
+                    <camunda:outputParameter name="eer_fraction">${40}</camunda:outputParameter>
+                    <camunda:outputParameter name="binning_factor">${2}</camunda:outputParameter>
+                    <camunda:outputParameter name="acceleration_kv">${300}</camunda:outputParameter>
+                    <camunda:outputParameter name="spherical_aberration">${2.7}</camunda:outputParameter>
+                    <camunda:outputParameter name="amplitude_contrast">${0.07}</camunda:outputParameter>
+                    <camunda:outputParameter name="spectrum_size">${1024}</camunda:outputParameter>
+                    <camunda:outputParameter name="min_res">${30}</camunda:outputParameter>
+                    <camunda:outputParameter name="max_res">${5}</camunda:outputParameter>
+                    <camunda:outputParameter name="min_defocus">${5000}</camunda:outputParameter>
+                    <camunda:outputParameter name="max_defocus">${50000}</camunda:outputParameter>
+                    <camunda:outputParameter name="defocus_step">${100}</camunda:outputParameter>
+                </camunda:inputOutput>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_1whiiel</bpmn:incoming>
+            <bpmn:outgoing>Flow_1s47zxm</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:sequenceFlow id="Flow_1whiiel" name="" sourceRef="StartEvent_1" targetRef="Activity_0nd8l0g" />
+        <bpmn:serviceTask id="Activity_1i9jbk1" name="CryoEMS 预处理" camunda:delegateExpression="${cyroemsPrepareActivity}" kiwi:componentId="classpath_cyroemsPrepareActivity">
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="componentId" value="classpath_cyroemsPrepareActivity" />
+                </camunda:properties>
+                <camunda:inputOutput>
+                    <camunda:inputParameter name="movieFile">${movie_file_path}</camunda:inputParameter>
+                    <camunda:inputParameter name="microscope">${microscope}</camunda:inputParameter>
+                    <camunda:inputParameter name="p_size">${p_size}</camunda:inputParameter>
+                    <camunda:inputParameter name="mrcMetadata" />
+                    <camunda:inputParameter name="closetScale" />
+                </camunda:inputOutput>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_1s47zxm</bpmn:incoming>
+            <bpmn:outgoing>Flow_1vk90tn</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:sequenceFlow id="Flow_1s47zxm" name="" sourceRef="Activity_0nd8l0g" targetRef="Activity_1i9jbk1" />
+        <bpmn:serviceTask id="Activity_0edto47" name="MotionCor3 CLI" camunda:delegateExpression="${shell}" camunda:type="external" camunda:topic="slurm" kiwi:componentId="69e6d3a3d734c66ace4fce63">
+            <bpmn:extensionElements>
+                <camunda:properties>
+                    <camunda:property name="componentId" value="69e6d3a3d734c66ace4fce63" />
+                </camunda:properties>
+                <camunda:inputOutput>
+                    <camunda:inputParameter name="directory" />
+                    <camunda:inputParameter name="waitFlag" />
+                    <camunda:inputParameter name="redirectError" />
+                    <camunda:inputParameter name="cleanEnv" />
+                    <camunda:inputParameter name="InMrc"></camunda:inputParameter>
+                    <camunda:inputParameter name="InTiff">${movie_path}</camunda:inputParameter>
+                    <camunda:inputParameter name="InEer"></camunda:inputParameter>
+                    <camunda:inputParameter name="OutMrc">${motion_result_file}</camunda:inputParameter>
+                    <camunda:inputParameter name="ArcDir"></camunda:inputParameter>
+                    <camunda:inputParameter name="FullSum"></camunda:inputParameter>
+                    <camunda:inputParameter name="DefectFile"></camunda:inputParameter>
+                    <camunda:inputParameter name="InAln"></camunda:inputParameter>
+                    <camunda:inputParameter name="OutAln"></camunda:inputParameter>
+                    <camunda:inputParameter name="DefectMap"></camunda:inputParameter>
+                    <camunda:inputParameter name="Serial"></camunda:inputParameter>
+                    <camunda:inputParameter name="Gain">${gain_file}</camunda:inputParameter>
+                    <camunda:inputParameter name="Dark"></camunda:inputParameter>
+                    <camunda:inputParameter name="TmpFile"></camunda:inputParameter>
+                    <camunda:inputParameter name="LogFile"></camunda:inputParameter>
+                    <camunda:inputParameter name="Patch">${patch}</camunda:inputParameter>
+                    <camunda:inputParameter name="Iter"></camunda:inputParameter>
+                    <camunda:inputParameter name="Tol"></camunda:inputParameter>
+                    <camunda:inputParameter name="Bft"></camunda:inputParameter>
+                    <camunda:inputParameter name="PhaseOnly"></camunda:inputParameter>
+                    <camunda:inputParameter name="StackZ"></camunda:inputParameter>
+                    <camunda:inputParameter name="FtBin"></camunda:inputParameter>
+                    <camunda:inputParameter name="InitDose"></camunda:inputParameter>
+                    <camunda:inputParameter name="FmDose"></camunda:inputParameter>
+                    <camunda:inputParameter name="PixSize"></camunda:inputParameter>
+                    <camunda:inputParameter name="kV"></camunda:inputParameter>
+                    <camunda:inputParameter name="Align"></camunda:inputParameter>
+                    <camunda:inputParameter name="Throw"></camunda:inputParameter>
+                    <camunda:inputParameter name="Trunc"></camunda:inputParameter>
+                    <camunda:inputParameter name="SumRange"></camunda:inputParameter>
+                    <camunda:inputParameter name="Group"></camunda:inputParameter>
+                    <camunda:inputParameter name="Crop"></camunda:inputParameter>
+                    <camunda:inputParameter name="FmRef"></camunda:inputParameter>
+                    <camunda:inputParameter name="Tilt"></camunda:inputParameter>
+                    <camunda:inputParameter name="RotGain"></camunda:inputParameter>
+                    <camunda:inputParameter name="FlipGain"></camunda:inputParameter>
+                    <camunda:inputParameter name="Mag"></camunda:inputParameter>
+                    <camunda:inputParameter name="InFmMotion"></camunda:inputParameter>
+                    <camunda:inputParameter name="Gpu"></camunda:inputParameter>
+                    <camunda:inputParameter name="GpuMemUsage"></camunda:inputParameter>
+                    <camunda:inputParameter name="UseGpus"></camunda:inputParameter>
+                    <camunda:inputParameter name="SplitSum"></camunda:inputParameter>
+                    <camunda:inputParameter name="command">MotionCor3 ${not empty InMrc ? ' -InMrc '.concat(InMrc) : ''} ${not empty InTiff ? ' -InTiff '.concat(InTiff) : ''} ${not empty InEer ? ' -InEer '.concat(InEer) : ''} ${not empty OutMrc ? ' -OutMrc '.concat(OutMrc) : ''} ${not empty ArcDir ? ' -ArcDir '.concat(ArcDir) : ''} ${not empty FullSum ? ' -FullSum '.concat(FullSum) : ''} ${not empty DefectFile ? ' -DefectFile '.concat(DefectFile) : ''} ${not empty InAln ? ' -InAln '.concat(InAln) : ''} ${not empty OutAln ? ' -OutAln '.concat(OutAln) : ''} ${not empty DefectMap ? ' -DefectMap '.concat(DefectMap) : ''} ${not empty Serial ? ' -Serial '.concat(Serial) : ''} ${not empty Gain ? ' -Gain '.concat(Gain) : ''} ${not empty Dark ? ' -Dark '.concat(Dark) : ''} ${not empty TmpFile ? ' -TmpFile '.concat(TmpFile) : ''} ${not empty LogFile ? ' -LogFile '.concat(LogFile) : ''} ${not empty Patch ? ' -Patch '.concat(Patch) : ''} ${not empty Iter ? ' -Iter '.concat(Iter) : ''} ${not empty Tol ? ' -Tol '.concat(Tol) : ''} ${not empty Bft ? ' -Bft '.concat(Bft) : ''} ${not empty PhaseOnly ? ' -PhaseOnly '.concat(PhaseOnly) : ''} ${not empty StackZ ? ' -StackZ '.concat(StackZ) : ''} ${not empty FtBin ? ' -FtBin '.concat(FtBin) : ''} ${not empty InitDose ? ' -InitDose '.concat(InitDose) : ''} ${not empty FmDose ? ' -FmDose '.concat(FmDose) : ''} ${not empty PixSize ? ' -PixSize '.concat(PixSize) : ''} ${not empty kV ? ' -kV '.concat(kV) : ''} ${not empty Align ? ' -Align '.concat(Align) : ''} ${not empty Throw ? ' -Throw '.concat(Throw) : ''} ${not empty Trunc ? ' -Trunc '.concat(Trunc) : ''} ${not empty SumRange ? ' -SumRange '.concat(SumRange) : ''} ${not empty Group ? ' -Group '.concat(Group) : ''} ${not empty Crop ? ' -Crop '.concat(Crop) : ''} ${not empty FmRef ? ' -FmRef '.concat(FmRef) : ''} ${not empty Tilt ? ' -Tilt '.concat(Tilt) : ''} ${not empty RotGain ? ' -RotGain '.concat(RotGain) : ''} ${not empty FlipGain ? ' -FlipGain '.concat(FlipGain) : ''} ${not empty Mag ? ' -Mag '.concat(Mag) : ''} ${not empty InFmMotion ? ' -InFmMotion '.concat(InFmMotion) : ''} ${not empty Gpu ? ' -Gpu '.concat(Gpu) : ''} ${not empty GpuMemUsage ? ' -GpuMemUsage '.concat(GpuMemUsage) : ''} ${not empty UseGpus ? ' -UseGpus '.concat(UseGpus) : ''} ${not empty SplitSum ? ' -SplitSum '.concat(SplitSum) : ''}</camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_job_name"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_output_file"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_partition"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_time"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_begin"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_constraints"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_cpu_per_task"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_error_file"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_exclude"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_dependency"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_exclusive"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_gres"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_label"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_mem"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_mem_per_cpu"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_min_nodes"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_max_nodes"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_task_num"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_nodelist"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_qos"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_signal"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_account"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_comment"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_cpus_per_gpu"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_deadline"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_chdir"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_gpus"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_gpus_per_node"></camunda:inputParameter>
+                    <camunda:inputParameter name="slurm_gpus_per_task"></camunda:inputParameter>
+                    <camunda:inputParameter name="result" />
+                    <camunda:inputParameter name="errorCode" />
+                </camunda:inputOutput>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_1vk90tn</bpmn:incoming>
+        </bpmn:serviceTask>
+        <bpmn:sequenceFlow id="Flow_1vk90tn" name="" sourceRef="Activity_1i9jbk1" targetRef="Activity_0edto47" />
+    </bpmn:process>
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-3dbc94f6-a6c5-479e-8fd0-a697f9c3a7fd">
+            <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+                <dc:Bounds x="173" y="102" width="36" height="36" />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Activity_0nd8l0g_di" bpmnElement="Activity_0nd8l0g">
+                <dc:Bounds x="280" y="80" width="100" height="80" />
+                <bpmndi:BPMNLabel />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Activity_1i9jbk1_di" bpmnElement="Activity_1i9jbk1">
+                <dc:Bounds x="300" y="280" width="100" height="80" />
+                <bpmndi:BPMNLabel />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="Activity_0edto47_di" bpmnElement="Activity_0edto47">
+                <dc:Bounds x="710" y="460" width="100" height="80" />
+                <bpmndi:BPMNLabel />
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="Flow_1whiiel_di" bpmnElement="Flow_1whiiel">
+                <di:waypoint x="209" y="120" />
+                <di:waypoint x="280" y="120" />
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_1s47zxm_di" bpmnElement="Flow_1s47zxm">
+                <di:waypoint x="330" y="160" />
+                <di:waypoint x="330" y="220" />
+                <di:waypoint x="350" y="220" />
+                <di:waypoint x="350" y="280" />
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_1vk90tn_di" bpmnElement="Flow_1vk90tn">
+                <di:waypoint x="400" y="320" />
+                <di:waypoint x="555" y="320" />
+                <di:waypoint x="555" y="500" />
+                <di:waypoint x="710" y="500" />
+            </bpmndi:BPMNEdge>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>

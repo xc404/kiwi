@@ -1,0 +1,22 @@
+---
+description: @ComponentParameter 默认不写 htmlType，只有必要时显式声明
+alwaysApply: true
+---
+
+# @ComponentParameter 的 htmlType 规则
+
+在 Java 组件定义中使用 `@ComponentParameter` 时，遵循以下约定：
+
+- **默认不要写 `htmlType`**。
+- 仅当需要覆盖默认编辑器行为时，才显式设置 `htmlType`。
+
+## 需要显式写 `htmlType` 的典型场景
+
+- 布尔开关需要明确渲染为复选框：`htmlType = "CheckBox"`。
+- 需要使用特殊/自定义编辑器：如 `assignments-editor`、`spel-expression` 等。
+- 其他必须指定 UI 控件类型、否则会导致交互或语义不清的场景。
+
+## 不建议显式写 `htmlType` 的场景
+
+- 普通字符串输入（例如历史上常写的 `htmlType = "#text"`）且无特殊交互需求。
+- 已可由默认规则按 `type`、`dictKey` 等信息推断出合适编辑器的参数。

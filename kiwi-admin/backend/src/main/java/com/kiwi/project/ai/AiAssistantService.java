@@ -7,6 +7,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,15 +20,15 @@ import java.util.List;
 @Service
 public class AiAssistantService {
 
-    private final ChatClient kiwiAssistantChatClient;
+    private final ObjectProvider<ChatClient> kiwiAssistantChatClientProvider;
     private final AiChatProperties properties;
     private final MenuAssistantActionContext menuAssistantActionContext;
 
     public AiAssistantService(
-            @Qualifier("kiwiAssistantChatClient") ChatClient kiwiAssistantChatClient,
+            @Qualifier("kiwiAssistantChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
             AiChatProperties properties,
             MenuAssistantActionContext menuAssistantActionContext) {
-        this.kiwiAssistantChatClient = kiwiAssistantChatClient;
+        this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
         this.menuAssistantActionContext = menuAssistantActionContext;
     }
@@ -56,7 +57,7 @@ public class AiAssistantService {
         String content;
         List<AiAssistantResponse.ClientAction> actions;
         try {
-            content = kiwiAssistantChatClient
+            content = kiwiAssistantChatClientProvider.getObject()
                     .prompt()
                     .messages(springMessages)
                     .call()

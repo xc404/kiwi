@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "kiwi.bpm.slurm", name = "enabled", havingValue = "true", matchIfMissing = true)
 @ConditionalOnProperty(prefix = "kiwi.bpm.slurm.cleanup", name = "enabled", havingValue = "true")
 public class SlurmWorkdirCleanupScheduler {
 

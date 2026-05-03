@@ -1,0 +1,61 @@
+<nz-card nzBordered="false" class="pat-wrap">
+  <p class="pat-intro">
+    长期访问令牌用于脚本、外部系统（如 cryoEMS）以你的身份调用 Kiwi API，与浏览器登录会话相互独立；数据库存储令牌摘要，完整值仅在签发时显示一次。删除令牌将立即在服务端吊销（Sa-Token 失效）。
+  </p>
+
+  <div class="pat-create-row">
+    <input
+      nz-input
+      class="pat-name-input"
+      type="text"
+      maxlength="64"
+      placeholder="备注名称（可选），便于区分用途"
+      [(ngModel)]="draftName"
+      (ngModelChange)="cdr.markForCheck()"
+    />
+    <button nz-button nzType="primary" type="button" [nzLoading]="creating()" (click)="create()">签发新令牌</button>
+  </div>
+
+  @if (lastCreated(); as created) {
+    <nz-alert nzType="warning" nzShowIcon class="pat-alert" nzMessage="请立即复制并安全保存；离开本页后无法再次查看完整令牌。" />
+    <div class="pat-created-row">
+      <input nz-input readonly type="text" class="pat-token-input" [value]="fullAuthorization(created)" />
+      <button nz-button type="button" (click)="copy(fullAuthorization(created))">复制</button>
+      <button nz-button nzType="default" type="button" (click)="dismissCreated()">已保存</button>
+    </div>
+  }
+
+  <nz-table class="pat-table" [nzData]="rows()" [nzShowPagination]="false" nzBordered nzSize="middle">
+    <thead>
+      <tr>
+        <th>备注</th>
+        <th>令牌摘要</th>
+        <th>创建时间</th>
+        <th>预计过期</th>
+        <th nzWidth="120px">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.id) {
+        <tr>
+          <td>{{ row.name || '—' }}</td>
+          <td><code>{{ row.tokenHint }}</code></td>
+          <td>{{ row.createdTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+          <td>{{ row.expiresAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+          <td>
+            <button
+              nz-button
+              nzType="link"
+              nzDanger
+              nz-popconfirm
+              nzPopconfirmTitle="确定删除并吊销该令牌？此操作不可恢复。"
+              (nzOnConfirm)="revoke(row)"
+            >
+              删除
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>

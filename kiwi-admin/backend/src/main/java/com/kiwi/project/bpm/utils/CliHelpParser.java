@@ -190,7 +190,7 @@ public final class CliHelpParser {
             p.setDescription(o.description());
             // p.setGroup("CLI");
             p.setImportant(true);
-            p.setHtmlType(o.expectsValue() ? "#text" : "CheckBox");
+//            p.setHtmlType(o.expectsValue() ? "#text" : "CheckBox");
             p.setRequired(false);
             if (!o.expectsValue()) {
                 p.setDefaultValue("false");

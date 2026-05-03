@@ -2,7 +2,7 @@ import { Component, effect, inject, signal, viewChild } from "@angular/core";
 import { BaseHttpService } from "@app/core/services/http/base-http.service";
 import { AppTableComponent } from "@app/shared/components/table/app-table/app-table.component";
 import { AppTableConfig } from "@app/shared/components/table/table";
-import { DictSelector } from "@app/widget/biz-widget/system/dict-selector/dict-selector";
+import { DictSelector } from "@shared/components/dict-selector/dict-selector";
 import { FormlyForm } from "@ngx-formly/core";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzCardModule } from "ng-zorro-antd/card";

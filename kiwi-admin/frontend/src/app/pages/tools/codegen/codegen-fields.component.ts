@@ -3,7 +3,7 @@ import { AddAction } from "@app/shared/components/crud/actions";
 import { CrudPage, PageConfig } from "@app/shared/components/crud/components/crud-page";
 import { PageHeaderComponent } from "@app/shared/components/page-header/page-header.component";
 import { ColumnToken } from "@app/shared/components/table/column";
-import { ModalDragDirective } from "@app/widget/modal/modal-drag.directive";
+import { ModalDragDirective } from "@shared/modal/modal-drag.directive";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzCardModule } from "ng-zorro-antd/card";
 import { NzDropDownModule } from "ng-zorro-antd/dropdown";

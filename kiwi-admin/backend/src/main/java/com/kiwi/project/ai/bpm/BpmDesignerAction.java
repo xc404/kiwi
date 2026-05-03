@@ -5,9 +5,7 @@ import lombok.Data;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * 前端可执行的 BPM 设计器动作（由 {@link BpmDesignerTools} 登记，经接口返回）。
- */
+/** 前端可执行的 BPM 设计器动作（由模型按 JSON 协议返回，经后端过滤后交给前端执行）。 */
 @Data
 public class BpmDesignerAction {
 

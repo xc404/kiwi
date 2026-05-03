@@ -9,6 +9,7 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
 export interface FormlyFieldProps extends CoreFormlyFieldProps {
   hideRequiredMarker?: boolean;
   hideLabel?: boolean;
+  hideOuterDescription?: boolean;
 }
 
 @Component({
@@ -21,7 +22,7 @@ export interface FormlyFieldProps extends CoreFormlyFieldProps {
             {{ props.label }}
           </nz-form-label>
         }
-      <nz-form-control class="app-form-control" [nzXs]="24" [nzValidateStatus]="errorState" [nzErrorTip]="errorTpl" [nzExtra]="props.description">
+      <nz-form-control class="app-form-control" [nzXs]="24" [nzValidateStatus]="errorState" [nzErrorTip]="errorTpl" [nzExtra]="props.hideOuterDescription ? undefined : props.description">
         <ng-container #fieldComponent></ng-container>
         <ng-template #errorTpl let-control>
           <formly-validation-message [field]="field"></formly-validation-message>
@@ -48,7 +49,7 @@ export class HorizontalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<F
             {{ props.label }}
           </nz-form-label>
         }
-      <nz-form-control class="app-form-control"  [nzValidateStatus]="errorState" [nzErrorTip]="errorTpl" [nzExtra]="props.description">
+      <nz-form-control class="app-form-control"  [nzValidateStatus]="errorState" [nzErrorTip]="errorTpl" [nzExtra]="props.hideOuterDescription ? undefined : props.description">
         <ng-container #fieldComponent></ng-container>
         <ng-template #errorTpl let-control>
           <formly-validation-message [field]="field"></formly-validation-message>

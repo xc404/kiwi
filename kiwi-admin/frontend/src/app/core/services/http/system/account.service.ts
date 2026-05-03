@@ -1,12 +1,19 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { PageInfo, SearchCommonVO } from '../../types';
 import { BaseHttpService } from '../base-http.service';
 
-/*
- * 用户管理
- * */
+/** 与后端 SysUser / PUT /user/update 请求体一致（可编辑的基本资料） */
+export interface UserProfileUpdate {
+  nickName?: string | null;
+  email?: string | null;
+  phonenumber?: string | null;
+  /** 0 男 1 女 2 未知 */
+  sex?: string | null;
+  avatar?: string | null;
+}
+
+/** 系统用户管理弹窗等场景使用的用户模型（与 SysUser 不必逐字段一致） */
 export interface User {
   id: number;
   password: string;
@@ -38,7 +45,7 @@ export interface UserPsd {
 export class AccountService {
   http = inject(BaseHttpService);
 
-  public editAccount(param: User): Observable<void> {
+  public editAccount(param: UserProfileUpdate): Observable<void> {
     return this.http.put('/user/update', param, { needSuccessInfo: true });
   }
 

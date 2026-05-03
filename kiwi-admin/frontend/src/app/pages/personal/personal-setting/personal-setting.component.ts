@@ -1,6 +1,15 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgClass } from '@angular/common';
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, DestroyRef, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  inject,
+  OnInit,
+  viewChild
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AdComponent, DynamicComponent } from '@core/services/types';
@@ -12,6 +21,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzMenuModeType, NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
+import { AccessTokensComponent } from './access-tokens/access-tokens.component';
 import { BaseComponent } from './base/base.component';
 import { BindComponent } from './bind/bind.component';
 import { NoticeComponent } from './notice/notice.component';
@@ -27,15 +37,19 @@ interface TabInterface {
   templateUrl: './personal-setting.component.html',
   styleUrls: ['./personal-setting.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NzCardModule, NgClass, NzMenuModule, NzButtonModule, NzGridModule, NzTypographyModule]
+  imports: [NzCardModule, NgClass, NzMenuModule, NzButtonModule, NzGridModule, NzTypographyModule, AdDirective]
 })
-export class PersonalSettingComponent implements OnInit {
+export class PersonalSettingComponent implements OnInit, AfterViewInit {
   readonly adHost = viewChild.required(AdDirective);
   tabModel: NzMenuModeType = 'inline';
   settingComponent: TabInterface[] = [
     {
       key: 'base',
       component: new DynamicComponent(BaseComponent, { label: '基本设置' })
+    },
+    {
+      key: 'access-tokens',
+      component: new DynamicComponent(AccessTokensComponent, { label: '长期访问令牌' })
     },
     {
       key: 'safe',
@@ -58,20 +72,25 @@ export class PersonalSettingComponent implements OnInit {
       selected: true
     },
     {
-      key: 'safe',
-      title: '安全设置',
+      key: 'access-tokens',
+      title: '长期访问令牌',
       selected: false
     },
-    {
-      selected: false,
-      key: 'bind',
-      title: '账号绑定'
-    },
-    {
-      selected: false,
-      key: 'notice',
-      title: '新消息通知'
-    }
+    // {
+    //   key: 'safe',
+    //   title: '安全设置',
+    //   selected: false
+    // },
+    // {
+    //   selected: false,
+    //   key: 'bind',
+    //   title: '账号绑定'
+    // },
+    // {
+    //   selected: false,
+    //   key: 'notice',
+    //   title: '新消息通知'
+    // }
   ];
   currentTitle: string = this.menus[0].title;
 
@@ -100,7 +119,10 @@ export class PersonalSettingComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.to(this.menus[0]);
     this.obBreakPoint();
+  }
+
+  ngAfterViewInit(): void {
+    this.to(this.menus[0]);
   }
 }

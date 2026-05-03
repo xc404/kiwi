@@ -3,85 +3,155 @@ import { NgClass } from '@angular/common';
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, DestroyRef, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 
+import { SessionService } from '@core/services/common/session.service';
+import { AccountService } from '@core/services/http/system/account.service';
+import { LoginService } from '@core/services/http/login/login.service';
 import { ValidatorsService } from '@core/services/validators/validators.service';
+import { UserInfoStoreService } from '@store/common-store/userInfo-store.service';
 import { fnCheckForm } from '@utils/tools';
+import { environment } from '@env/environment';
 
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzWaveModule } from 'ng-zorro-antd/core/wave';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzUploadChangeParam, NzUploadModule } from 'ng-zorro-antd/upload';
 
 @Component({
   selector: 'app-base',
   templateUrl: './base.component.html',
   styleUrls: ['./base.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NzGridModule, FormsModule, NzFormModule, ReactiveFormsModule, NzInputModule, NzSelectModule, NzButtonModule, NzWaveModule, NgClass, NzAvatarModule, NzUploadModule, NzIconModule]
+  imports: [
+    NzGridModule,
+    FormsModule,
+    NzFormModule,
+    ReactiveFormsModule,
+    NzInputModule,
+    NzSelectModule,
+    NzButtonModule,
+    NzWaveModule,
+    NgClass,
+    NzAvatarModule
+  ]
 })
 export class BaseComponent implements OnInit {
   readonly data = input.required<{
     label: string;
   }>();
   validateForm!: FormGroup;
-  selectedProvince = 'Zhejiang';
-  selectedCity = 'Hangzhou';
-  provinceData = ['Zhejiang', 'Jiangsu'];
   formOrder = 1;
   avatarOrder = 0;
-  cityData: Record<string, string[]> = {
-    Zhejiang: ['Hangzhou', 'Ningbo', 'Wenzhou'],
-    Jiangsu: ['Nanjing', 'Suzhou', 'Zhenjiang']
-  };
-  destroyRef = inject(DestroyRef);
+  submitting = false;
+  readonly sexOptions = [
+    { label: '男', value: '0' },
+    { label: '女', value: '1' },
+    { label: '未知', value: '2' }
+  ];
 
+  destroyRef = inject(DestroyRef);
   private fb = inject(FormBuilder);
   private msg = inject(NzMessageService);
   private validatorsService = inject(ValidatorsService);
   private breakpointObserver = inject(BreakpointObserver);
   private cdr = inject(ChangeDetectorRef);
-
-  provinceChange(value: string): void {
-    this.selectedCity = this.cityData[value][0];
-    this.selectedProvince = value;
-    this.validateForm.get('city')?.setValue(this.selectedCity);
-  }
+  private accountService = inject(AccountService);
+  private loginService = inject(LoginService);
+  private sessionService = inject(SessionService);
+  private userInfoStore = inject(UserInfoStoreService);
 
   initForm(): void {
     this.validateForm = this.fb.group({
-      email: [null, [Validators.required]],
-      area: [null, [Validators.required]],
-      nickName: [null],
-      desc: [null, [Validators.required]],
-      city: [null, [Validators.required]],
-      province: [null, [Validators.required]],
-      mobile: [null, [Validators.required, this.validatorsService.mobileValidator()]],
-      telephone: [null, [Validators.required, this.validatorsService.telephoneValidator()]],
-      street: [null, [Validators.required]]
+      userName: [{ value: '', disabled: true }],
+      nickName: [''],
+      email: ['', [Validators.required, this.validatorsService.emailValidator()!]],
+      phonenumber: ['', [this.validatorsService.mobileValidator()!]],
+      sex: ['2'],
+      avatar: ['']
     });
+  }
+
+  /** 与顶部栏一致：相对路径拼 API 根 */
+  avatarPreviewUrl(): string {
+    const raw = (this.validateForm?.get('avatar')?.value as string | null | undefined)?.trim();
+    if (!raw) {
+      return 'imgs/default_face.png';
+    }
+    if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) {
+      return raw;
+    }
+    const base = environment.api.baseUrl.replace(/\/$/, '');
+    const path = raw.startsWith('/') ? raw : `/${raw}`;
+    return `${base}${path}`;
+  }
+
+  private patchFormFromSessionUser(u: {
+    userName?: string;
+    nickName?: string;
+    email?: string;
+    phonenumber?: string;
+    sex?: string;
+    avatar?: string;
+  }): void {
+    this.validateForm.patchValue({
+      userName: u.userName ?? '',
+      nickName: u.nickName ?? '',
+      email: u.email ?? '',
+      phonenumber: u.phonenumber ?? '',
+      sex: u.sex != null && u.sex !== '' ? u.sex : '2',
+      avatar: u.avatar ?? ''
+    });
+    this.cdr.markForCheck();
+  }
+
+  loadProfile(): void {
+    this.loginService
+      .getUserInfo()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(info => {
+        this.patchFormFromSessionUser(info);
+      });
   }
 
   submitForm(): void {
     if (!fnCheckForm(this.validateForm)) {
       return;
     }
-  }
-
-  handleChange(info: NzUploadChangeParam): void {
-    if (info.file.status !== 'uploading') {
-      console.log(info.file, info.fileList);
-    }
-    if (info.file.status === 'done') {
-      this.msg.success(`${info.file.name} file uploaded successfully`);
-    } else if (info.file.status === 'error') {
-      this.msg.error(`${info.file.name} file upload failed.`);
-    }
+    const v = this.validateForm.getRawValue() as {
+      nickName: string;
+      email: string;
+      phonenumber: string;
+      sex: string;
+      avatar: string;
+    };
+    this.submitting = true;
+    this.cdr.markForCheck();
+    this.accountService
+      .editAccount({
+        nickName: v.nickName?.trim() || null,
+        email: v.email?.trim() || null,
+        phonenumber: v.phonenumber?.trim() || null,
+        sex: v.sex || null,
+        avatar: v.avatar?.trim() || null
+      })
+      .pipe(
+        finalize(() => {
+          this.submitting = false;
+          this.cdr.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        void this.sessionService.refreshSession().then(() => {
+          const refreshed = this.userInfoStore.$userInfo();
+          this.patchFormFromSessionUser(refreshed);
+        });
+      });
   }
 
   obBreakPoint(): void {
@@ -102,6 +172,8 @@ export class BaseComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.patchFormFromSessionUser(this.userInfoStore.$userInfo());
+    this.loadProfile();
     this.obBreakPoint();
   }
 }

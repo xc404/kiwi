@@ -67,7 +67,7 @@ export class LoginFormComponent implements OnInit {
       )
       .subscribe(res => {
         this.loginInOutService.setSession(res.token);
-        this.router.navigateByUrl('default/dashboard/analysis');
+        this.router.navigateByUrl('/dashboard/analysis');
       });
   }
 

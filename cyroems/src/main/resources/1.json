@@ -1,0 +1,15 @@
+{
+  "task":{
+    "work_dir": "20260110_wym",
+    "p_size": 0.41,
+    "total_dose_per_movie": 62,
+    "microscope": "Titan1",
+    "gain_file": "/home/chaox/cryoems/SuperRef_20260110_wym_0001_usable.mrc"
+},
+  "movie": {
+    "id": "20260110_wym_0001",
+    "file_path": "/home/chaox/cryoems/20260110_wym_0001.tif",
+    "file_name": "20260110_wym_0001"
+
+  }
+}

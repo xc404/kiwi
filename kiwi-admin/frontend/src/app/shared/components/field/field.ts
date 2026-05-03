@@ -16,6 +16,7 @@ export enum FieldType {
 
 export interface FieldConfig {
     name: string;
+    description?: string;
     dataIndex?: string;
     type?: FieldType;
     dictKey?: string;

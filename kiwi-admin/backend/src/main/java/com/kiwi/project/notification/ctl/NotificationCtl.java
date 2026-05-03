@@ -1,7 +1,6 @@
 package com.kiwi.project.notification.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import org.springframework.ai.tool.annotation.Tool;
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.notification.NotificationService;
 import com.kiwi.project.notification.dto.NotificationDto;
@@ -24,9 +23,8 @@ public class NotificationCtl extends BaseCtl {
 
     private final NotificationService notificationService;
 
-    @Tool(name = "notif_list", description = "当前登录用户的站内消息列表（按创建时间倒序）。")
+    @Operation(operationId = "notif_list", summary = "当前登录用户的站内消息列表（按创建时间倒序）")
     @GetMapping
-    @Operation(summary = "当前用户站内消息列表（按创建时间倒序）")
     public List<NotificationDto> list() {
         String uid = getCurrentUserId();
         if (uid == null) {
