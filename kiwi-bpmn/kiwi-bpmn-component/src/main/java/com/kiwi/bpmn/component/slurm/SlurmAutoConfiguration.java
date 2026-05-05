@@ -10,7 +10,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.List;
@@ -47,7 +46,6 @@ public class SlurmAutoConfiguration {
      */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnBean(MongoTemplate.class)
-    @EnableMongoRepositories(basePackageClasses = SlurmJobRepository.class)
     static class SlurmSacctMongoConfiguration {
 
         @Bean
