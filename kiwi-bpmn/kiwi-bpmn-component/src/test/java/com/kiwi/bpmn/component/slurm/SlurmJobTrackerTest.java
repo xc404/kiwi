@@ -18,6 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
@@ -56,7 +57,7 @@ class SlurmJobTrackerTest {
             persisted.add(j);
             return j;
         });
-        when(slurmJobRepository.findById(ArgumentMatchers.anyString()))
+        when(slurmJobRepository.findById(anyString()))
                 .thenAnswer(inv -> {
                     String id = inv.getArgument(0);
                     return persisted.stream().filter(x -> id.equals(x.getJobId())).findFirst();
