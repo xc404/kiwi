@@ -1,0 +1,6 @@
+@for (v of processInstanceVariables(); track trackProcessVariable($index, v)) {
+<bpm-readonly-property-row [propertyDescription]="processVariablePropertyDescription(v)"
+    [variables]="processInstanceVariables()" />
+} @empty {
+<div class="instance-var-empty">暂无流程变量</div>
+}

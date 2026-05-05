@@ -13,7 +13,8 @@
     <nz-sider nzWidth="450px" nzTheme="light" class="bpm-viewer-properties-sider">
       <div class="bpm-viewer-properties-scroll">
         @if (viewer) {
-        <bpm-properties-panel [bpmnModeler]="viewer" [viewMode]="true"
+        <bpm-properties-panel [bpmnModeler]="viewer" [viewMode]="true" 
+          [usedHeight]="135"
           [processInstance]="processInstance()"></bpm-properties-panel>
         }
       </div>

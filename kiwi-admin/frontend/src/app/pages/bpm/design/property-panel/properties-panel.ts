@@ -22,11 +22,10 @@ import {
 } from '../service/process-instance.service';
 import { CustomOutputsPanel } from './custom-outputs/custom-outputs-panel';
 import { PanelHeader } from './panel-header';
+import { ProcessInstanceVariablesListComponent } from './process-instance-variables-list.component';
 import { PropertyGroupEdit } from './property-group-edit';
 import { PropertyGroupReadonly } from './property-group-readonly';
-import { PROPERTY_PROVIDER, PropertyTab } from './property-provider';
-import { ReadonlyPropertyRowComponent } from './readonly-property-row/readonly-property-row.component';
-import { PropertyDescription } from './types';
+import { CompositePropertyProvider,  PropertyTab } from './property-provider';
 import Viewer from 'bpmn-js/lib/Viewer';
 
 /** Modeler 与只读 Viewer 均基于 diagram-js，事件与 get('canvas') 一致 */
@@ -46,7 +45,7 @@ function variableCreateTimeMs(v: CamundaHistoricVariableInstance): number {
     selector: 'bpm-properties-panel',
     templateUrl: 'properties-panel.html',
     styleUrls: ['properties-panel.css'],
-    imports: [CommonModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroupEdit, PropertyGroupReadonly, CustomOutputsPanel, ReadonlyPropertyRowComponent],
+    imports: [CommonModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroupEdit, PropertyGroupReadonly, CustomOutputsPanel, ProcessInstanceVariablesListComponent],
     standalone: true,
 })
 export class BpmPropertiesPanel implements OnInit {
@@ -57,9 +56,20 @@ export class BpmPropertiesPanel implements OnInit {
     viewMode = input(false);
     processInstance = input<BpmProcessInstanceDto>(undefined as unknown as BpmProcessInstanceDto);
 
+    /**
+     * 属性折叠区（`.properties-panel-collapse-scroll`）的 max-height。
+     * 可用 `calc(100dvh - …px)` 按布局预留；设计器/查看器可按壳层高度单独传入。
+     */
+    usedHeight = input<number>();
+    collapseScrollMaxHeight = computed(() => {
+        var height = this.usedHeight() ?? 0;
+        height = height + 103;
+        return `calc(100dvh - ${height}px)`;
+    });
+
     element = signal<Element>(undefined as unknown as Element);
     tabs = signal<PropertyTab[]>([]);
-    propertyProvider = inject(PROPERTY_PROVIDER);
+    propertyProvider = inject(CompositePropertyProvider);
 
     private readonly instanceVariables = signal<any[]>([]);
     processInstanceVariables = signal<any[]>([]);
@@ -147,30 +157,6 @@ export class BpmPropertiesPanel implements OnInit {
                 console.error('Failed to load process variables', err);
             },
         });
-    }
-
-    /** 折叠面板与「流程变量」Tab 列表 track */
-    trackProcessVariable(
-        index: number,
-        v: CamundaHistoricVariableInstance,
-    ): string {
-        return `${v.name ?? ''}-${index}`;
-    }
-
-    /** 将历史变量项映射为只读属性行（key/name 与 Camunda 变量名一致，便于 `variables` 按名匹配） */
-    processVariablePropertyDescription(
-        v: CamundaHistoricVariableInstance,
-    ): PropertyDescription {
-        const name =
-            typeof v.name === 'string' && v.name.length > 0 ? v.name : '';
-        const typeStr =
-            v.type != null && String(v.type).length > 0 ? String(v.type) : '';
-        return {
-            key: name,
-            name: name || '—',
-            description: typeStr ? `类型: ${typeStr}` : undefined,
-            readonly: true,
-        };
     }
 
     activityVariables = computed(() => {

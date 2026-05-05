@@ -64,11 +64,14 @@ export class ReadonlyPropertyRowComponent {
     // });
 
     protected readonly value = computed(() => {
-        if(this.hasRuntimeValue()){
-            return this.runtimeRaw();
-        }else {
+        if (!this.hasRuntimeValue()) {
             return this.configuredValue();
         }
+        const v = this.runtimeRaw();
+        if (typeof v === "object" && v !== null) {
+            return JSON.stringify(v);
+        }
+        return String(v);
     });
 
     protected readonly configuredDetail = computed(() => {
@@ -78,17 +81,22 @@ export class ReadonlyPropertyRowComponent {
 
     protected readonly runtimeRaw = computed(() => {
         const key = this.propertyDescription().key;
-        let v = this.variables().find((v) => v?.name === key)?.value;
-        
-        return JSON.stringify(v);
+        return this.variables().find((v) => v?.name === key)?.value;
     });
 
     protected readonly hasRuntimeValue = computed(() => {
-        return this.runtimeRaw() !== undefined && this.runtimeRaw() !== null;
+        const v = this.runtimeRaw();
+        return v !== undefined && v !== null;
     });
 
     protected readonly runtimeDetail = computed(() => {
         const v = this.runtimeRaw();
-        return v !== undefined && v !== null ? JSON.stringify(v) : "—";
+        if (v === undefined || v === null) {
+            return undefined;
+        }
+        if (typeof v === "object") {
+            return JSON.stringify(v);
+        }
+        return String(v);
     });
 }

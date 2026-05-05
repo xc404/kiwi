@@ -23,6 +23,7 @@ import {
   ProcessInstanceService
 } from '../service/process-instance.service';
 import { BpmPropertiesPanel } from "../property-panel/properties-panel";
+import { BPM_ACTIVITY_MARKER_NAMES, BpmActivityMarkerName } from './bpm-activity-markers';
 import { BpmViewerHeaderComponent } from './bpm-viewer-header.component';
 import { ElementModel } from '../extension/element-model';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
@@ -54,11 +55,7 @@ export class BpmViewer implements OnInit, OnDestroy {
   /** 最近一次 importXML 已成功，可与 processActivities 叠加打标 */
   private readonly bpmnImportReady = signal(false);
 
-  private readonly activityMarkerNames = [
-    'kiwi-bpmn-completed',
-    'kiwi-bpmn-active',
-    'kiwi-bpmn-error',
-  ] as const;
+  private readonly activityMarkerNames = BPM_ACTIVITY_MARKER_NAMES;
   private markedActivityElementIds: string[] = [];
 
   /** diagram-js 默认使用 marker `selected`；在 SelectionVisuals 之后同步为 `kiwi-bpmn-selected`（EventBus 默认优先级 1000，此处用更低优先级以在其后执行） */
@@ -295,7 +292,7 @@ export class BpmViewer implements OnInit, OnDestroy {
   private markerForHistoricActivity(
     activity: CamundaHistoricActivityInstance,
     incidentActivityIds: Set<string>,
-  ): 'kiwi-bpmn-completed' | 'kiwi-bpmn-active' | 'kiwi-bpmn-error' | null {
+  ): BpmActivityMarkerName | null {
     const id = activity.activityId?.trim();
     if (!id) {
       return null;

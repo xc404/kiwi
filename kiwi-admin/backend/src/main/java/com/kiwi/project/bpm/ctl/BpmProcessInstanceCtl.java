@@ -2,26 +2,18 @@ package com.kiwi.project.bpm.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.kiwi.framework.ctl.BaseCtl;
-import com.kiwi.project.bpm.dto.BpmActivityPointerDto;
 import com.kiwi.project.bpm.dto.BpmInstanceRecoverResultDto;
-import com.kiwi.project.bpm.dto.BpmOpenIncidentDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceDto;
-import com.kiwi.project.bpm.dto.ProcessInstanceState;
-import lombok.RequiredArgsConstructor;
+import com.kiwi.project.bpm.service.BpmProcessInstanceService;
 import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.ManagementService;
 import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.RepositoryService;
 import org.camunda.bpm.engine.RuntimeService;
-import org.camunda.bpm.engine.history.HistoricActivityInstance;
 import org.camunda.bpm.engine.history.HistoricProcessInstance;
 import org.camunda.bpm.engine.history.HistoricProcessInstanceQuery;
 import org.camunda.bpm.engine.runtime.Incident;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
-import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.bpm.model.bpmn.instance.FlowNode;
-import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -55,13 +47,13 @@ public class BpmProcessInstanceCtl extends BaseCtl {
 
     private final ProcessEngine processEngine;
     private final HistoryService historyService;
-    private final RepositoryService repositoryService;
+    private final BpmProcessInstanceService bpmProcessInstanceService;
     private final RuntimeService runtimeService;
 
-    public BpmProcessInstanceCtl(ProcessEngine processEngine) {
+    public BpmProcessInstanceCtl(ProcessEngine processEngine, BpmProcessInstanceService bpmProcessInstanceService) {
         this.processEngine = processEngine;
         this.historyService = processEngine.getHistoryService();
-        this.repositoryService = processEngine.getRepositoryService();
+        this.bpmProcessInstanceService = bpmProcessInstanceService;
         this.runtimeService = processEngine.getRuntimeService();
     }
 
@@ -88,7 +80,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
                 .listPage((int) pageable.getOffset(), pageable.getPageSize());
 
         List<BpmProcessInstanceDto> content = list.stream()
-                .map(this::toRow)
+                .map(bpmProcessInstanceService::toListRowDto)
                 .collect(Collectors.toList());
 
         return new PageImpl<>(content, pageable, total);
@@ -99,32 +91,6 @@ public class BpmProcessInstanceCtl extends BaseCtl {
      */
     @GetMapping("{instanceId}")
     public BpmProcessInstanceDto get(@PathVariable String instanceId) {
-        HistoryService historyService = processEngine.getHistoryService();
-        RuntimeService runtimeService = processEngine.getRuntimeService();
-        RepositoryService repositoryService = processEngine.getRepositoryService();
-
-//        ProcessInstance pi = runtimeService.createProcessInstanceQuery()
-//                .processInstanceId(instanceId)
-//                .singleResult();
-//        if (pi != null) {
-//            BpmProcessInstanceDto dto = new BpmProcessInstanceDto();
-//            dto.setId(pi.getId());
-//            dto.setEnded(false);
-//            dto.setSuspended(pi.isSuspended());
-//            dto.setProcessDefinitionId(pi.getProcessDefinitionId());
-//            dto.setProcessDefinitionKey(pi.getProcessDefinitionKey());
-//            dto.setStartTime();
-//            List<Incident> openIncidents =
-//                    runtimeService.createIncidentQuery().processInstanceId(instanceId).list();
-//            dto.setOpenIncidents(mapOpenIncidents(openIncidents, repositoryService));
-//            fillCurrentActivities( instanceId, pi.getProcessDefinitionId(), dto);
-//            if (!openIncidents.isEmpty()) {
-//                dto.setState(ProcessInstanceState.ERROR);
-//            } else {
-//                dto.setState(pi.isSuspended() ? ProcessInstanceState.SUSPENDED : ProcessInstanceState.RUNNING);
-//            }
-//            return dto;
-//        }
 
         HistoricProcessInstance hip = historyService.createHistoricProcessInstanceQuery()
                 .processInstanceId(instanceId)
@@ -133,42 +99,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "process instance not found");
         }
 
-        BpmProcessInstanceDto dto = new BpmProcessInstanceDto();
-        dto.setId(hip.getId());
-        dto.setEndTime(hip.getEndTime());
-        dto.setStartTime(hip.getStartTime());
-        dto.setProcessDefinitionId(hip.getProcessDefinitionId());
-        dto.setProcessDefinitionKey(hip.getProcessDefinitionKey());
-        dto.setProcessDefinitionName(hip.getProcessDefinitionName());
-        dto.setDeleteReason(hip.getDeleteReason());
-        if (hip.getEndTime() == null) {
-            dto.setEnded(false);
-            fillCurrentActivities(instanceId, hip.getProcessDefinitionId(), dto);
-            List<Incident> incidents =
-                    runtimeService.createIncidentQuery().processInstanceId(instanceId).list();
-            dto.setOpenIncidents(mapOpenIncidents(incidents, repositoryService));
-            ProcessInstance pi = runtimeService.createProcessInstanceQuery()
-                    .processInstanceId(instanceId)
-                    .singleResult();
-            if (pi != null) {
-                dto.setSuspended(pi.isSuspended());
-                if (!incidents.isEmpty()) {
-                    dto.setState(ProcessInstanceState.ERROR);
-                } else if (pi.isSuspended()) {
-                    dto.setState(ProcessInstanceState.SUSPENDED);
-                } else {
-                    dto.setState(ProcessInstanceState.RUNNING);
-                }
-            } else {
-                dto.setSuspended(false);
-                dto.setState(!incidents.isEmpty() ? ProcessInstanceState.ERROR : ProcessInstanceState.ACTIVE);
-            }
-            return dto;
-        }
-        dto.setEnded(true);
-        boolean canceled = StringUtils.hasText(hip.getDeleteReason());
-        dto.setState(canceled ? ProcessInstanceState.CANCELED : ProcessInstanceState.COMPLETED);
-        return dto;
+        return bpmProcessInstanceService.detailDtoFromHistoric(instanceId, hip);
     }
 
     /**
@@ -182,8 +113,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     public BpmInstanceRecoverResultDto recover(
             @PathVariable String instanceId,
             @RequestParam(defaultValue = "3") int retries) {
-        RuntimeService runtimeService = processEngine.getRuntimeService();
-        ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+        ProcessInstance pi = this.runtimeService.createProcessInstanceQuery()
                 .processInstanceId(instanceId)
                 .singleResult();
         if (pi == null) {
@@ -290,91 +220,5 @@ public class BpmProcessInstanceCtl extends BaseCtl {
 
     private static boolean isNotBlank(String s) {
         return s != null && !s.isBlank();
-    }
-
-    private BpmProcessInstanceDto toRow(HistoricProcessInstance pi) {
-        BpmProcessInstanceDto row = new BpmProcessInstanceDto();
-        row.setId(pi.getId());
-        row.setBusinessKey(pi.getBusinessKey());
-        row.setProcessDefinitionId(pi.getProcessDefinitionId());
-        row.setProcessDefinitionKey(pi.getProcessDefinitionKey());
-        row.setProcessDefinitionName(pi.getProcessDefinitionName());
-        row.setStartTime(pi.getStartTime());
-        row.setTenantId(pi.getTenantId());
-        return row;
-    }
-
-    private static List<BpmOpenIncidentDto> mapOpenIncidents(
-            List<Incident> incidents, RepositoryService repositoryService) {
-        List<BpmOpenIncidentDto> out = new ArrayList<>(incidents.size());
-        for (Incident i : incidents) {
-            BpmOpenIncidentDto row = new BpmOpenIncidentDto();
-            row.setIncidentId(i.getId());
-            row.setIncidentType(i.getIncidentType());
-            row.setMessage(i.getIncidentMessage());
-            row.setActivityId(i.getActivityId());
-            row.setActivityName(
-                    resolveActivityName(repositoryService, i.getProcessDefinitionId(), i.getActivityId()));
-            out.add(row);
-        }
-        return out;
-    }
-
-    private void fillCurrentActivities(
-            String processInstanceId,
-            String processDefinitionId,
-            BpmProcessInstanceDto dto) {
-
-        List<HistoricActivityInstance> historic = historyService
-                .createHistoricActivityInstanceQuery()
-                .processInstanceId(processInstanceId)
-                .unfinished()
-                .orderByHistoricActivityInstanceStartTime()
-                .asc()
-                .list();
-
-        List<BpmActivityPointerDto> pointers = new ArrayList<>();
-        if (!historic.isEmpty()) {
-            for (HistoricActivityInstance h : historic) {
-                BpmActivityPointerDto p = new BpmActivityPointerDto();
-                p.setActivityId(h.getActivityId());
-                p.setActivityType(h.getActivityType());
-                String name = StringUtils.hasText(h.getActivityName()) ? h.getActivityName() : null;
-                if (!StringUtils.hasText(name) && StringUtils.hasText(h.getActivityId())) {
-                    name = resolveActivityName(repositoryService, processDefinitionId, h.getActivityId());
-                }
-                p.setActivityName(name);
-                pointers.add(p);
-            }
-        } else if (StringUtils.hasText(processDefinitionId)) {
-            for (String aid : runtimeService.getActiveActivityIds(processInstanceId)) {
-                if (!StringUtils.hasText(aid)) {
-                    continue;
-                }
-                BpmActivityPointerDto p = new BpmActivityPointerDto();
-                p.setActivityId(aid);
-                p.setActivityName(resolveActivityName(repositoryService, processDefinitionId, aid));
-                pointers.add(p);
-            }
-        }
-        dto.setCurrentActivities(pointers);
-    }
-
-    private static String resolveActivityName(
-            RepositoryService repositoryService, String processDefinitionId, String activityId) {
-        if (!StringUtils.hasText(activityId) || !StringUtils.hasText(processDefinitionId)) {
-            return null;
-        }
-        try {
-            BpmnModelInstance model = repositoryService.getBpmnModelInstance(processDefinitionId);
-            ModelElementInstance el = model.getModelElementById(activityId);
-            if (el instanceof FlowNode) {
-                String n = ((FlowNode) el).getName();
-                return StringUtils.hasText(n) ? n : null;
-            }
-        } catch (RuntimeException ignored) {
-            // 定义缺失或模型不可解析时忽略
-        }
-        return null;
     }
 }

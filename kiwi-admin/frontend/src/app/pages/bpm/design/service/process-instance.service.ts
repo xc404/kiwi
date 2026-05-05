@@ -16,6 +16,15 @@ export interface BpmOpenIncidentDto {
   activityName?: string | null;
 }
 
+/** 与后端 ProcessInstanceState 枚举序列化一致 */
+export type BpmProcessInstanceState =
+  | 'RUNNING'
+  | 'SUSPENDED'
+  | 'COMPLETED'
+  | 'CANCELED'
+  | 'ACTIVE'
+  | 'ERROR';
+
 export interface BpmProcessInstanceDto {
   id?: string;
   businessKey?: string;
@@ -24,7 +33,7 @@ export interface BpmProcessInstanceDto {
   processDefinitionName?: string;
   startTime?: string;
   tenantId?: string | null;
-  state?: string;
+  state?: BpmProcessInstanceState | string;
   ended?: boolean;
   suspended?: boolean;
   endTime?: string | null;

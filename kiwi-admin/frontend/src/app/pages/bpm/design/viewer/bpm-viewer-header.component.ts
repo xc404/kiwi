@@ -1,13 +1,21 @@
+import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 import { BpmProcessInstanceDto } from '../service/process-instance.service';
+import { BPM_ACTIVITY_MARKER_LEGEND } from './bpm-activity-markers';
+
+/** 工具栏错误区单行：可选节点名 + 说明 */
+export interface BpmViewerToolbarErrorLine {
+  nodeLabel: string | null;
+  text: string;
+}
 
 @Component({
   selector: 'bpm-viewer-header',
   templateUrl: './bpm-viewer-header.component.html',
   styleUrl: './bpm-viewer-header.component.scss',
-  imports: [NzTagModule, NzTypographyModule],
+  imports: [DatePipe, NgClass, NzTagModule, NzTypographyModule],
   standalone: true,
 })
 export class BpmViewerHeaderComponent {
@@ -17,15 +25,32 @@ export class BpmViewerHeaderComponent {
   /** 已有实例 ID 且仍在拉取详情时展示加载文案。 */
   readonly loading = input(false);
 
+  readonly activityMarkerLegend = BPM_ACTIVITY_MARKER_LEGEND;
+
   readonly statusLabel = computed(() => {
     const v = this.processInstance();
     if (!v) {
       return '';
     }
-    if (v.suspended) {
+    const state = String(v.state ?? '')
+      .trim()
+      .toUpperCase();
+    const hasOpenIncidents = (v.openIncidents?.length ?? 0) > 0;
+
+    if (state === 'ERROR' || hasOpenIncidents) {
+      return '异常';
+    }
+    if (v.suspended || state === 'SUSPENDED') {
       return '已挂起';
     }
-    if (v.ended) {
+    if (v.ended || state === 'COMPLETED' || state === 'CANCELED') {
+      if (state === 'CANCELED') {
+        return '已取消';
+      }
+      const dr = typeof v.deleteReason === 'string' ? v.deleteReason.trim() : '';
+      if (dr) {
+        return '已取消';
+      }
       return '已结束';
     }
     return '运行中';
@@ -36,14 +61,63 @@ export class BpmViewerHeaderComponent {
     if (!v) {
       return 'default';
     }
-    if (v.suspended) {
+    const state = String(v.state ?? '')
+      .trim()
+      .toUpperCase();
+    const hasOpenIncidents = (v.openIncidents?.length ?? 0) > 0;
+
+    if (state === 'ERROR' || hasOpenIncidents) {
+      return 'error';
+    }
+    if (v.suspended || state === 'SUSPENDED') {
       return 'warning';
     }
-    if (v.ended) {
-      return 'default';
+    if (v.ended || state === 'COMPLETED' || state === 'CANCELED') {
+      const dr = typeof v.deleteReason === 'string' ? v.deleteReason.trim() : '';
+      const canceled = state === 'CANCELED' || !!dr;
+      return canceled ? 'warning' : 'default';
     }
     return 'processing';
   });
+
+  /**
+   * 删除原因与未关闭 Incident（含节点名）；无内容时不展示错误区。
+   */
+  readonly errorLines = computed((): BpmViewerToolbarErrorLine[] => {
+    const v = this.processInstance();
+    if (!v) {
+      return [];
+    }
+    const out: BpmViewerToolbarErrorLine[] = [];
+    const dr = typeof v.deleteReason === 'string' ? v.deleteReason.trim() : '';
+    if (dr) {
+      out.push({ nodeLabel: null, text: dr });
+    }
+    const incidents = v.openIncidents;
+    if (incidents?.length) {
+      for (const inc of incidents) {
+        const nameRaw =
+          typeof inc.activityName === 'string' ? inc.activityName.trim() : '';
+        const idRaw = typeof inc.activityId === 'string' ? inc.activityId.trim() : '';
+        const nodeLabel = nameRaw || idRaw || null;
+        const msg = typeof inc.message === 'string' ? inc.message.trim() : '';
+        const typeStr =
+          inc.incidentType != null ? String(inc.incidentType).trim() : '';
+        const text = msg || typeStr || '—';
+        out.push({ nodeLabel, text });
+      }
+    }
+    return out;
+  });
+
+  readonly showErrorStrip = computed(() => this.errorLines().length > 0);
+
+  /** 合并文案，供 title 等使用 */
+  readonly errorSummaryText = computed(() =>
+    this.errorLines()
+      .map((l) => (l.nodeLabel ? `${l.nodeLabel}：${l.text}` : l.text))
+      .join('；'),
+  );
 
   /** 展示用流程名称：优先 API 名称，其次定义 Key */
   readonly processTitle = computed(() => {

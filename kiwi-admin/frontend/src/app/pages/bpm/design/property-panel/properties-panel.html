@@ -6,7 +6,7 @@
         <nz-tabs>
             @for (tab of tabs(); track $index) {
             <nz-tab [nzTitle]="tab.name!">
-                <div class="properties-panel-collapse-scroll">
+                <div class="properties-panel-collapse-scroll" [style.max-height]="collapseScrollMaxHeight()">
                     <nz-collapse>
                         @for (group of tab.groups; track $index) {
                         <nz-collapse-panel [nzHeader]="group.name" [nzActive]="true"
@@ -43,10 +43,11 @@
 
             @if (isProcessInstanceContext()) {
             <nz-tab nzTitle="流程变量">
-                <div class="properties-panel-collapse-scroll">
+                <div class="properties-panel-collapse-scroll" [style.max-height]="collapseScrollMaxHeight()">
                     <nz-collapse>
                         <nz-collapse-panel nzHeader="流程变量" [nzActive]="true" nzShowArrow="true">
-                            <ng-container *ngTemplateOutlet="processInstanceVarsListTpl" />
+                            <bpm-process-instance-variables-list
+                                [processInstanceVariables]="processInstanceVariables()" />
                         </nz-collapse-panel>
                     </nz-collapse>
                 </div>
@@ -59,13 +60,4 @@
     }
 </div>
 
-<ng-template #processInstanceVarsListTpl>
-    @for (v of processInstanceVariables(); track trackProcessVariable($index, v)) {
-    <bpm-readonly-property-row
-        [propertyDescription]="processVariablePropertyDescription(v)"
-        [variables]="processInstanceVariables()" />
-    } @empty {
-    <div class="instance-var-empty">暂无流程变量</div>
-    }
-</ng-template>
 <!-- }  -->

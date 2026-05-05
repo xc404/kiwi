@@ -66,12 +66,12 @@
   /*
    * 实例页无流程信息条、无侧栏外层「属性」tab；顶部为 instance-toolbar。
    * 48px  全局顶栏（与 base.less 一致）
-   * 96px  .instance-toolbar：padding 12px×2 + 标题/元信息约两行（保守估值）
+   * 120px .instance-toolbar：padding + 标题/元信息 + 节点状态图例一行（保守估值）
    * 55px  bpm-panel-header
    * 46px  内层 nz-tabs 导航
    * 8px   间隙
    */
-  --bpm-collapse-vh-offset: calc(48px + 96px + 55px + 46px + 8px);
+  --bpm-collapse-vh-offset: calc(48px + 120px + 55px + 46px + 8px);
 }
 
 .bpm-viewer-sider-header {

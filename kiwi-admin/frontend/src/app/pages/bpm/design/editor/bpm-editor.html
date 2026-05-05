@@ -26,13 +26,7 @@
           nzTheme="light"
           nzNoAnimation
         >
-          <nz-tabs class="bpm-editor-right-tabs" nzSize="small">
-            <nz-tab nzTitle="属性">
-              <div class="bpm-editor-properties-scroll">
-                <bpm-properties-panel [bpmnModeler]="bpmnModeler"></bpm-properties-panel>
-              </div>
-            </nz-tab>
-          </nz-tabs>
+        <bpm-properties-panel [bpmnModeler]="bpmnModeler" [usedHeight]="50"></bpm-properties-panel>
         </nz-sider>
       </nz-layout>
     </nz-content>

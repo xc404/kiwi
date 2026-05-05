@@ -15,7 +15,7 @@
 
     /* 后备：与设计器同款合计（261px），避免未注入变量时塌陷 */
     --bpm-collapse-vh-offset: calc(
-         0px 
+         400px 
     );
 }
 
@@ -42,23 +42,16 @@
 
 /**
  * 纵向滚动：nz-collapse 区域。
- * max-height 使用 100dvh 减去「视口顶 → 本容器顶」的估算叠加；另用 75vh 兜底流程信息条换行等情况。
+ * max-height 由组件 input `collapseScrollMaxHeight` 绑定到本节点 style。
  */
 .properties-panel-collapse-scroll {
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height:calc(100dvh - 200px);
     -webkit-overflow-scrolling: touch;
 }
 
 .properties-panel .ant-tabs-nav {
     margin-bottom: 0 !important;
     margin: 0 !important;
-}
-
-.instance-var-empty {
-    color: #999;
-    font-size: 12px;
-    padding: 8px 0;
 }
