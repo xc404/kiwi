@@ -1,0 +1,19 @@
+<header class="instance-toolbar">
+  @if (processInstance(); as v) {
+  <div class="instance-toolbar__head">
+    <h3 class="instance-toolbar__title" nz-typography>{{ processTitle() }}</h3>
+    <nz-tag [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
+  </div>
+  <div class="instance-toolbar__meta">
+    <span class="meta-item instance-id" title="流程实例 ID">ID {{ v.id }}</span>
+    @if (v.processDefinitionKey) {
+    <span class="meta-item def-key" title="流程定义 Key">{{ v.processDefinitionKey }}</span>
+    }
+    @if (v.businessKey) {
+    <span class="meta-item biz-key">业务键 {{ v.businessKey }}</span>
+    }
+  </div>
+  } @else if (loading()) {
+  <span class="toolbar-loading">正在加载流程实例…</span>
+  }
+</header>

@@ -1,0 +1,66 @@
+<nz-form-item class="app-formly-vertical-item">
+  <div class="app-formly-vertical-item__label-row">
+    <nz-form-label nzNoColon="true" class="app-formly-vertical-item__label">
+      {{ displayName() }}
+    </nz-form-label>
+    @if (descriptionTooltip(); as tip) {
+      <span
+        class="app-formly-vertical-item__tip"
+        nz-icon
+        nzType="question-circle"
+        nzTheme="outline"
+        nz-tooltip
+        [nzTooltipTitle]="tip"
+      ></span>
+    }
+  </div>
+  <nz-form-control class="app-formly-vertical-item__control">
+    <nz-input-group
+      class="readonly-property-row__input-group"
+      [nzSuffix]="detailSuffixTpl"
+    >
+      <input
+        nz-input
+        type="text"
+        disabled
+        [value]="value()"
+        tabindex="-1"
+        [attr.aria-label]="value()"
+      />
+    </nz-input-group>
+  </nz-form-control>
+  <ng-template #detailSuffixTpl>
+    <span
+      class="detail-trigger"
+      nz-icon
+      nzType="info-circle"
+      nzTheme="outline"
+      nz-popover
+      nzPopoverTrigger="click"
+      nzPopoverPlacement="bottomRight"
+      [nzPopoverContent]="detailTpl"
+      nzPopoverTitle="详情"
+      tabindex="0"
+      role="button"
+      aria-label="查看详情"
+    ></span>
+  </ng-template>
+  <ng-template #detailTpl>
+    <div class="detail-body">
+      <div class="detail-row">
+        <span class="detail-label">名称</span>
+        <span class="detail-value">{{ displayName() }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">配置值</span>
+        <span class="detail-value">{{ configuredDetail() }}</span>
+      </div>
+      @if (hasRuntimeValue()) {
+      <div class="detail-row">
+        <span class="detail-label">运行时值</span>
+        <span class="detail-value">{{ runtimeRaw() }}</span>
+      </div>
+    }
+    </div>
+  </ng-template>
+</nz-form-item>

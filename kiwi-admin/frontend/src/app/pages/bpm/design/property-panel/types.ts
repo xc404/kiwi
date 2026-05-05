@@ -17,6 +17,8 @@ export declare type PropertyDescription = {
     type?: string;
     key: string;
     name?: string;
+    /** 只读行等场景：设计时配置文本（如绑定表达式）；由调用方从模型填充 */
+    valueText?: string;
     description?: string;
     namespace?: PropertyNamespace;
     htmlType?: string;
@@ -45,14 +47,15 @@ export interface PropertyProvider {
 
 
 
-export function toEditFieldConfig(property: PropertyDescription, elementModel?: ElementModel): FieldEditorConfig {
-    
+export function toEditFieldConfig(property: PropertyDescription): FieldEditorConfig {
+
     return {
         ...property,
         dataIndex: property.key,
         name: property.name || property.key,
-        editor:property.htmlType,
-        
+        editor: property.htmlType,
+        description: property.description,
+
     } as FieldEditorConfig;
 }
 

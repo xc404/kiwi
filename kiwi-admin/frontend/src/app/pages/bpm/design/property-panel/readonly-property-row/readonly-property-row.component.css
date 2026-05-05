@@ -1,0 +1,49 @@
+:host {
+  display: block;
+}
+
+.readonly-property-row__input-group {
+  width: 100%;
+}
+
+.readonly-property-row__input-group input[nz-input]:disabled {
+  cursor: default;
+  color: rgba(0, 0, 0, 0.88);
+  text-overflow: ellipsis;
+}
+
+.detail-trigger {
+  margin-left: auto;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.detail-trigger:hover {
+  color: #1890ff;
+}
+
+.detail-body {
+  width: 320px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.detail-value {
+  word-break: break-word;
+  color: rgba(0, 0, 0, 0.88);
+}

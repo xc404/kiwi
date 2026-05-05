@@ -36,18 +36,18 @@ import java.util.concurrent.TimeUnit;
         inputs = {
                 @ComponentParameter(
                         key = "movieFile",
-                        name = "movieFile",
-                        description = "电影文件路径（字符串）；可与 movie.file_path 二选一",
+                        name = "Movie文件路径",
+                        description = "电影文件路径（字符串）",
                         required = true
                 ),
                 @ComponentParameter(
                         key = "microscope",
-                        name = "microscope",
+                        name = "显微镜类型",
                         description = "显微镜标识，用于标尺匹配",
                         required = true),
                 @ComponentParameter(
                         key = "p_size",
-                        name = "p_size",
+                        name = "PSize",
                         description = "像素尺寸，用于选取最近标尺",
                         required = true)
         },

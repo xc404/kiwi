@@ -1,18 +1,26 @@
 import { Component, computed, effect, inject, input, signal, untracked } from "@angular/core";
 import { ElementModel } from "@app/pages/bpm/design/extension/element-model";
-import { PropertyNamespace } from "@app/pages/bpm/design/property-panel/types";
+import { PropertyDescription, PropertyNamespace } from "@app/pages/bpm/design/property-panel/types";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzDividerModule } from "ng-zorro-antd/divider";
 import { NzIconModule } from "ng-zorro-antd/icon";
 import BaseViewer from "bpmn-js/lib/BaseViewer";
 import { Element } from "bpmn-js/lib/model/Types";
+import { ReadonlyPropertyRowComponent } from "@app/pages/bpm/design/property-panel/readonly-property-row/readonly-property-row.component";
 import { CustomOutputRowComponent } from "./custom-output-row.component";
 import type { CustomOutputRow } from "./custom-output-row.model";
+import { ComponentService } from "@app/pages/bpm/flow-elements/component-service";
 
 @Component({
     selector: "bpm-custom-outputs-panel",
     standalone: true,
-    imports: [NzDividerModule, NzButtonModule, NzIconModule, CustomOutputRowComponent],
+    imports: [
+        NzDividerModule,
+        NzButtonModule,
+        NzIconModule,
+        CustomOutputRowComponent,
+        ReadonlyPropertyRowComponent,
+    ],
     templateUrl: "./custom-outputs-panel.html",
     styleUrl: "./custom-outputs-panel.css",
 })
@@ -23,7 +31,6 @@ export class CustomOutputsPanel {
     element = input.required<Element>();
     viewMode = input(false);
     variables = input<any[]>([]);
-    catalogOutputKeys = input<string[]>([]);
 
     protected readonly customRows = signal<CustomOutputRow[]>([]);
     protected readonly readonlyFlag = computed(() => this.viewMode());
@@ -36,6 +43,7 @@ export class CustomOutputsPanel {
     private readonly catalogFingerprint = computed(() =>
         [...this.catalogOutputKeys()].sort().join("\0"),
     );
+    componentService = inject(ComponentService);
 
     constructor() {
         effect(() => {
@@ -70,6 +78,16 @@ export class CustomOutputsPanel {
         this.customRows.set([...this.customRows(), { name: "", valueText: "" }]);
     }
 
+    /** 将编辑行映射为 `PropertyDescription`，供 `bpm-readonly-property-row` 使用。 */
+    protected toPropertyDescription(row: CustomOutputRow): PropertyDescription {
+        return {
+            key: row.name,
+            name: row.name,
+            namespace: PropertyNamespace.outputParameter,
+            valueText: row.valueText,
+        };
+    }
+
     private reloadFromModel(): void {
         const element = this.element();
         const catalog = new Set(this.catalogOutputKeys());
@@ -78,30 +96,28 @@ export class CustomOutputsPanel {
             .filter((name) => !catalog.has(name))
             .map((name) => ({
                 name,
-                valueText: this.readOutputValue(name),
+                valueText: this.configuredOutputParameterValue(name),
             }));
         this.customRows.set(rows);
     }
 
-    private readOutputValue(name: string): string {
+    /** 模型中的配置文本；只读主行合并逻辑由 `bpm-readonly-property-row` 负责。 */
+    private configuredOutputParameterValue(name: string): string {
         const value = this.elementModel.getValue(
             this.bpmnModeler(),
             this.element(),
             PropertyNamespace.outputParameter,
             name,
         );
-        if (!this.viewMode()) {
-            return value == null ? "" : String(value);
-        }
-        const rawValue = this.variablesProp().find(v => v.name === name)?.value;
-        if (!value && !rawValue) {
-            return "";
-        }
-        if (rawValue !== undefined && rawValue !== value) {
-            return `${rawValue} (${value})`;
-        }
         return value == null ? "" : String(value);
     }
+
+
+    
+    catalogOutputKeys = computed(() => {
+        const component = this.componentService.getComponentForElement(this.element());
+        return (component?.outputParameters ?? []).map((p:any) => p.key);
+    });
 
     private flush(): void {
         if (this.readonlyFlag()) {

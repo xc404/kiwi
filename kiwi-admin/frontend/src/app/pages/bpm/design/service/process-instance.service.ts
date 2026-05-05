@@ -1,29 +1,38 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { environment } from '@env/environment';
 import { Observable, map } from 'rxjs';
 
 /**
- * 统一后的流程实例视图（由 {@link ProcessInstanceService} 从运行时 / 历史 API 归一化）。
- * Camunda 历史接口使用 processDefinitionId、endTime、state；运行时使用 definitionId、ended、suspended。
+ * 与后端 {@code BpmProcessInstanceDto} 一致（单实例查询 {@code GET /bpm/process-instance/{id}}）。
  */
-export interface ProcessInstance {
-  id: string;
-  /** 流程定义 ID（已从历史字段 processDefinitionId 对齐） */
-  definitionId: string;
-  /** Camunda 流程定义名称（历史实例常带；运行时可能没有，可再调 {@link ProcessInstanceService.getProcessDefinition}） */
-  processDefinitionName?: string;
-  processDefinitionKey?: string;
-  businessKey?: string;
-  caseInstanceId?: string;
-  ended?: boolean;
-  suspended?: boolean;
-  tenantId?: string | null;
-  [key: string]: any; // 可扩展字段（含 API 原始字段）
+/** 未关闭的引擎 Incident（与后端 BpmOpenIncidentDto 一致） */
+export interface BpmOpenIncidentDto {
+  incidentId?: string;
+  incidentType?: string | null;
+  message?: string | null;
+  activityId?: string | null;
+  activityName?: string | null;
 }
 
-/** Camunda GET /process-instance/{id} 与 GET /history/process-instance/{id} 原始响应（字段因端点而异） */
-type CamundaProcessInstanceResponse = Record<string, any>;
+export interface BpmProcessInstanceDto {
+  id?: string;
+  businessKey?: string;
+  processDefinitionId?: string;
+  processDefinitionKey?: string;
+  processDefinitionName?: string;
+  startTime?: string;
+  tenantId?: string | null;
+  state?: string;
+  ended?: boolean;
+  suspended?: boolean;
+  endTime?: string | null;
+  deleteReason?: string | null;
+  currentActivities?: unknown[];
+  openIncidents?: BpmOpenIncidentDto[];
+  [key: string]: unknown;
+}
 
 /** Camunda GET /process-definition/{id} 常用字段 */
 export interface CamundaProcessDefinition {
@@ -39,8 +48,17 @@ export interface CamundaHistoricVariableInstance {
   name: string | null;
   type?: string | null;
   value?: unknown;
+  /** 形如 `Activity_xxx:uuid`，前缀为画布节点 id */
+  activityInstanceId?: string | null;
+  /** Camunda 历史变量创建时间（ISO 8601） */
+  createTime?: string | null;
   [key: string]: unknown;
 }
+
+/**
+ * 画布/属性区语义：已结束 | 异常 | 运行中 | 未运行（无历史活动记录）。
+ */
+export type BpmActivityVisualState = 'completed' | 'error' | 'running' | 'notStarted';
 
 /** Camunda History Activity Instance（GET /history/activity-instance） */
 export interface CamundaHistoricActivityInstance {
@@ -48,6 +66,8 @@ export interface CamundaHistoricActivityInstance {
   activityId: string | null;
   activityType: string | null;
   endTime: string | null;
+  /** Camunda 原生字段：已取消的活动实例（可与 endTime 同时存在） */
+  canceled?: boolean;
   completed: boolean;
   active: boolean;
 }
@@ -62,56 +82,19 @@ export interface CamundaProcessDefinitionXml {
 })
 export class ProcessInstanceService {
   private readonly http = inject(HttpClient);
+  private readonly baseHttp = inject(BaseHttpService);
 
   private engineRestRoot(): string {
     return `${environment.api.baseUrl}${environment.api.camundaEngineRestPath}`;
   }
 
   /**
-   * 将运行时或历史 API 返回的流程实例转为统一的 {@link ProcessInstance}。
+   * 单实例详情：{@code GET /bpm/process-instance/{instanceId}}（运行中与已结束均由后端统一解析）。
    */
-  private normalizeProcessInstance(raw: CamundaProcessInstanceResponse): ProcessInstance {
-    const definitionId = String(raw['definitionId'] ?? raw['processDefinitionId'] ?? '').trim();
-    const historicEndedByTime = raw['endTime'] != null && raw['endTime'] !== '';
-    const state = raw['state'];
-    const historicEndedByState =
-      typeof state === 'string' &&
-      ['COMPLETED', 'INTERNALLY_TERMINATED', 'EXTERNALLY_TERMINATED'].includes(state);
-    const ended = raw['ended'] === true || historicEndedByTime || historicEndedByState;
-    const suspended = raw['suspended'] === true || state === 'SUSPENDED';
-    return {
-      ...raw,
-      id: String(raw['id'] ?? ''),
-      definitionId,
-      processDefinitionName:
-        raw['processDefinitionName'] != null && String(raw['processDefinitionName']).trim() !== ''
-          ? String(raw['processDefinitionName']).trim()
-          : undefined,
-      processDefinitionKey: raw['processDefinitionKey'] || raw['definitionKey'],
-      businessKey: raw['businessKey'],
-      caseInstanceId: raw['caseInstanceId'],
-      ended,
-      suspended,
-      tenantId: raw['tenantId'],
-    };
-  }
-
-  /** GET /process-instance/{id} */
-  getRuntimeProcessInstance(processInstanceId: string): Observable<ProcessInstance> {
-    return this.http
-      .get<CamundaProcessInstanceResponse>(
-        `${this.engineRestRoot()}/process-instance/${encodeURIComponent(processInstanceId)}`,
-      )
-      .pipe(map((raw) => this.normalizeProcessInstance(raw)));
-  }
-
-  /** GET /history/process-instance/{id} */
-  getHistoricProcessInstance(processInstanceId: string): Observable<ProcessInstance> {
-    return this.http
-      .get<CamundaProcessInstanceResponse>(
-        `${this.engineRestRoot()}/history/process-instance/${encodeURIComponent(processInstanceId)}`,
-      )
-      .pipe(map((raw) => this.normalizeProcessInstance(raw)));
+  getProcessInstance(processInstanceId: string): Observable<BpmProcessInstanceDto> {
+    return this.baseHttp.get<BpmProcessInstanceDto>(
+      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}`,
+    );
   }
 
   /** GET /process-definition/{id}/xml */
@@ -142,36 +125,30 @@ export class ProcessInstanceService {
     ) 
     .pipe(map((items) => {
       return items.map((item) => {
+        const completed = item.endTime != null && item.endTime !== '';
         return {
           ...item,
-          completed: item.endTime != null && item.endTime !== '',
-          active: item.endTime == null || item.endTime === '',
+          completed,
+          active: !completed,
         };
       });
     }));
   }
 
-  // getProcessInstanceVariables(processInstanceId: string, runtime = true): Observable<Record<string, any>> {
-  //   if (runtime) {
-  //     return this.getRuntimeProcessInstanceVariables(processInstanceId);
-  //   }
-  //   return this.getHistoricProcessInstanceVariables(processInstanceId);
+
+  // /** GET /process-instance/{id}/variables */
+  // getRuntimeProcessInstanceVariables(processInstanceId: string): Observable<Record<string, any>> {
+  //   return this.http.get<Record<string, any>>(
+  //     `${this.engineRestRoot()}/process-instance/${encodeURIComponent(processInstanceId)}/variables`
+  //   );
   // }
-
-
-  /** GET /process-instance/{id}/variables */
-  getRuntimeProcessInstanceVariables(processInstanceId: string): Observable<Record<string, any>> {
-    return this.http.get<Record<string, any>>(
-      `${this.engineRestRoot()}/process-instance/${encodeURIComponent(processInstanceId)}/variables`
-    );
-  }
 
   /**
    * GET /history/variable-instance?processInstanceId={id}
    * Camunda 返回变量实例数组；映射为与 GET /process-instance/{id}/variables 相近的 Record（name -> { type, value }）。
    * 同名变量多次出现时后者覆盖前者（与历史 API 列表顺序一致）。
    */
-  getHistoricProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
+  getProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
     return this.http
       .get<CamundaHistoricVariableInstance[]>(`${this.engineRestRoot()}/history/variable-instance`, {
         params: { processInstanceId },

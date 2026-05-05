@@ -7,13 +7,13 @@ export class BasePropertyProvider implements PropertyProvider {
 
     getProperties(element: Element): PropertyTab[] {
         const commonProperties: PropertyDescription[] = [
-            { key: "id", name: "id", htmlType: "Text", defaultValue: "", readonly: true, example: "", required: true },
-            { key: "name", name: "name", htmlType: "input", defaultValue: "", example: "", required: true }
+            { key: "id", name: "ID", htmlType: "Text", defaultValue: "", readonly: true, example: "", required: true },
+            { key: "name", name: "名称", htmlType: "input", defaultValue: "", example: "" }
         ];
         if (element.type === 'bpmn:SequenceFlow') {
             commonProperties.push({
                 key: "condition",
-                name: "condition",
+                name: "条件",
                 htmlType: "expression",
                 defaultValue: "",
             });

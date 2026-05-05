@@ -9,12 +9,18 @@
                 <div class="properties-panel-collapse-scroll">
                     <nz-collapse>
                         @for (group of tab.groups; track $index) {
-                        <nz-collapse-panel [nzHeader]="group.name" [nzActive]="group.important ? true : false"
+                        <nz-collapse-panel [nzHeader]="group.name" [nzActive]="true"
                             nzShowArrow="true">
                             <div style="width: 100%;">
-                                <property-group [element]="element()" [bpmnModeler]="bpmnModeler()"
-                                    [properties]="group.properties" [viewMode]="viewMode()"
-                                    [variables]="activityVariables()"></property-group>
+                                @if (viewMode() || isOutputTab(tab)) {
+                                <property-group-readonly [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                    [properties]="group.properties"
+                                    [variables]="activityVariables()"></property-group-readonly>
+                                } @else {
+                                <property-group-edit [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                    [properties]="group.properties"
+                                    [variables]="activityVariables()"></property-group-edit>
+                                }
                             </div>
                         </nz-collapse-panel>
 
@@ -25,11 +31,23 @@
                             <div style="width: 100%;">
                                 <bpm-custom-outputs-panel [element]="element()" [bpmnModeler]="bpmnModeler()"
                                     [viewMode]="viewMode()" [variables]="activityVariables()"
-                                    [catalogOutputKeys]="catalogOutputKeys()"></bpm-custom-outputs-panel>
+                                  ></bpm-custom-outputs-panel>
                             </div>
                         </nz-collapse-panel>
                         }
 
+                    </nz-collapse>
+                </div>
+            </nz-tab>
+            }
+
+            @if (isProcessInstanceContext()) {
+            <nz-tab nzTitle="流程变量">
+                <div class="properties-panel-collapse-scroll">
+                    <nz-collapse>
+                        <nz-collapse-panel nzHeader="流程变量" [nzActive]="true" nzShowArrow="true">
+                            <ng-container *ngTemplateOutlet="processInstanceVarsListTpl" />
+                        </nz-collapse-panel>
                     </nz-collapse>
                 </div>
             </nz-tab>
@@ -40,4 +58,14 @@
 
     }
 </div>
+
+<ng-template #processInstanceVarsListTpl>
+    @for (v of processInstanceVariables(); track trackProcessVariable($index, v)) {
+    <bpm-readonly-property-row
+        [propertyDescription]="processVariablePropertyDescription(v)"
+        [variables]="processInstanceVariables()" />
+    } @empty {
+    <div class="instance-var-empty">暂无流程变量</div>
+    }
+</ng-template>
 <!-- }  -->

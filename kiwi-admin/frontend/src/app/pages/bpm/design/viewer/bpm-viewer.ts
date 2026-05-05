@@ -4,7 +4,6 @@ import {
   OnDestroy,
   OnInit,
   ViewChild,
-  computed,
   effect,
   inject,
   signal
@@ -16,23 +15,22 @@ import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzTypographyModule } from 'ng-zorro-antd/typography';
-import { catchError } from 'rxjs';
 import { filter, map as mapOp } from 'rxjs/operators';
 import {
+  BpmActivityVisualState,
+  BpmProcessInstanceDto,
   CamundaHistoricActivityInstance,
-  ProcessInstance,
   ProcessInstanceService
 } from '../service/process-instance.service';
 import { BpmPropertiesPanel } from "../property-panel/properties-panel";
+import { BpmViewerHeaderComponent } from './bpm-viewer-header.component';
 import { ElementModel } from '../extension/element-model';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
 @Component({
   selector: 'bpm-viewer',
   templateUrl: './bpm-viewer.html',
   styleUrl: './bpm-viewer.scss',
-  imports: [NzTagModule, NzTypographyModule, NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel],
+  imports: [NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel, BpmViewerHeaderComponent],
   standalone: true,
 })
 export class BpmViewer implements OnInit, OnDestroy {
@@ -41,7 +39,7 @@ export class BpmViewer implements OnInit, OnDestroy {
 
   @ViewChild('canvasHost', { static: true }) canvasHost!: ElementRef<HTMLElement>;
 
-  protected readonly processInstance = signal<ProcessInstance>(undefined as unknown as ProcessInstance);
+  protected readonly processInstance = signal<BpmProcessInstanceDto>(undefined as unknown as BpmProcessInstanceDto);
 
   protected viewer!: NavigatedViewer;
   protected canvas!: any;
@@ -56,7 +54,11 @@ export class BpmViewer implements OnInit, OnDestroy {
   /** 最近一次 importXML 已成功，可与 processActivities 叠加打标 */
   private readonly bpmnImportReady = signal(false);
 
-  private readonly activityMarkerNames = ['kiwi-bpmn-completed', 'kiwi-bpmn-active'] as const;
+  private readonly activityMarkerNames = [
+    'kiwi-bpmn-completed',
+    'kiwi-bpmn-active',
+    'kiwi-bpmn-error',
+  ] as const;
   private markedActivityElementIds: string[] = [];
 
   /** diagram-js 默认使用 marker `selected`；在 SelectionVisuals 之后同步为 `kiwi-bpmn-selected`（EventBus 默认优先级 1000，此处用更低优先级以在其后执行） */
@@ -89,56 +91,10 @@ export class BpmViewer implements OnInit, OnDestroy {
     effect(() => {
       this.activityStates();
       this.bpmnImportReady();
+      this.processInstance();
       this.markActivityState();
     });
   }
-
-  protected readonly statusLabel = computed(() => {
-    const v = this.processInstance();
-    if (!v) {
-      return '';
-    }
-    if (v.suspended) {
-      return '已挂起';
-    }
-    if (v.ended) {
-      return '已结束';
-    }
-    return '运行中';
-  });
-
-  protected readonly statusColor = computed(() => {
-    const v = this.processInstance();
-    if (!v) {
-      return 'default';
-    }
-    if (v.suspended) {
-      return 'warning';
-    }
-    if (v.ended) {
-      return 'default';
-    }
-    return 'processing';
-  });
-
-  /** 展示用流程名称：优先 API 名称，其次定义 Key */
-  protected readonly processTitle = computed(() => {
-    const v = this.processInstance();
-    if (!v?.id) {
-      return '';
-    }
-    const name = v.processDefinitionName?.trim();
-    if (name) {
-      return name;
-    }
-    const key = v.processDefinitionKey?.trim();
-    if (key) {
-      return key;
-    }
-    return '流程实例';
-  });
-
-
 
   ngOnInit(): void {
     this.viewer = new NavigatedViewer({
@@ -177,17 +133,7 @@ export class BpmViewer implements OnInit, OnDestroy {
 
 
   loadProcessInstance() {
-    this.processInstanceService.getRuntimeProcessInstance(this.processInstanceId()!).pipe(
-      // 不要改这里，这里的返回是code: 404，不是HttpErrorResponse
-      catchError((err: any) => {
-
-        if (err.code === 404) {
-          // 404 可能是因为流程实例已结束，尝试获取历史流程实例
-          return this.processInstanceService.getHistoricProcessInstance(this.processInstanceId()!);
-        }
-        throw err;
-      }),
-    ).subscribe({
+    this.processInstanceService.getProcessInstance(this.processInstanceId()!).subscribe({
       next: (pi) => {
         this.processInstance.set(pi);
         this.ensureProcessDefinitionName(pi);
@@ -199,14 +145,15 @@ export class BpmViewer implements OnInit, OnDestroy {
   }
 
   /** 运行时实例常无 processDefinitionName，补拉 GET /process-definition/{id} */
-  private ensureProcessDefinitionName(pi: ProcessInstance): void {
-    if (!pi.definitionId) {
+  private ensureProcessDefinitionName(pi: BpmProcessInstanceDto): void {
+    const defId = pi.processDefinitionId?.trim();
+    if (!defId) {
       return;
     }
     if (pi.processDefinitionName?.trim()) {
       return;
     }
-    this.processInstanceService.getProcessDefinition(pi.definitionId).subscribe({
+    this.processInstanceService.getProcessDefinition(defId).subscribe({
       next: (def) => {
         const n = def.name != null ? String(def.name).trim() : '';
         if (!n) {
@@ -227,7 +174,7 @@ export class BpmViewer implements OnInit, OnDestroy {
     });
   }
   loadBpmnXml() {
-    const definitionId = this.processInstance().definitionId;
+    const definitionId = this.processInstance().processDefinitionId;
     if (!definitionId) {
       console.error('无法解析流程定义 ID（definitionId / processDefinitionId）');
       return;
@@ -314,11 +261,77 @@ export class BpmViewer implements OnInit, OnDestroy {
 
     this.clearActivityMarkers();
 
+    const incidentIds = this.openIncidentActivityIds();
+
     for (const activity of this.activityStates().values()) {
-      const marker = activity.completed ? 'kiwi-bpmn-completed' : 'kiwi-bpmn-active';
+      const marker = this.markerForHistoricActivity(activity, incidentIds);
+      if (!marker) {
+        continue;
+      }
       this.addActivityMarker(activity.activityId!, marker);
       this.markedActivityElementIds.push(activity.activityId!);
     }
+  }
+
+  /** 运行中实例上未关闭 incident 对应的 BPMN activityId */
+  private openIncidentActivityIds(): Set<string> {
+    const incidents = this.processInstance()?.openIncidents;
+    const set = new Set<string>();
+    if (!incidents?.length) {
+      return set;
+    }
+    for (const inc of incidents) {
+      const aid = inc.activityId?.trim();
+      if (aid) {
+        set.add(aid);
+      }
+    }
+    return set;
+  }
+
+  /**
+   * 与 activityStates 一致的四种语义：已结束 / error / 运行中；（未运行不入 Map，无 marker）。
+   */
+  private markerForHistoricActivity(
+    activity: CamundaHistoricActivityInstance,
+    incidentActivityIds: Set<string>,
+  ): 'kiwi-bpmn-completed' | 'kiwi-bpmn-active' | 'kiwi-bpmn-error' | null {
+    const id = activity.activityId?.trim();
+    if (!id) {
+      return null;
+    }
+    if (incidentActivityIds.has(id)) {
+      return 'kiwi-bpmn-error';
+    }
+    if (!activity.completed) {
+      return 'kiwi-bpmn-active';
+    }
+    if (activity.canceled) {
+      return 'kiwi-bpmn-error';
+    }
+    return 'kiwi-bpmn-completed';
+  }
+
+  getActivityVisualState(activityId: string | undefined | null): BpmActivityVisualState {
+    const id = activityId?.trim();
+    if (!id) {
+      return 'notStarted';
+    }
+    const activity = this.activityStates().get(id);
+    if (!activity) {
+      return 'notStarted';
+    }
+    const incidents = this.openIncidentActivityIds();
+    if (incidents.has(id)) {
+      return 'error';
+    }
+    if (!activity.completed) {
+      return 'running';
+    }
+    if (activity.canceled) {
+      return 'error';
+    }
+    return 'completed';
   }
 
 
@@ -366,11 +379,8 @@ export class BpmViewer implements OnInit, OnDestroy {
     this.canvas!.addMarker(activityId, marker);
   }
 
+  /** 是否正常结束（不含取消 / incident） */
   isActivityCompleted(activityId: string): boolean {
-    const activity = this.activityStates().get(activityId);
-    if (!activity) {
-      return false;
-    }
-    return activity.completed;
+    return this.getActivityVisualState(activityId) === 'completed';
   }
 }

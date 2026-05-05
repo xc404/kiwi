@@ -9,13 +9,12 @@ import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
 import {
     PropertyDescription,
-    PropertyNamespace,
     toEditFieldConfig,
-    toViewFieldConfig,
 } from "./types";
 import BaseViewer from "bpmn-js/lib/BaseViewer";
+
 @Component({
-    selector: 'property-group',
+    selector: 'property-group-edit',
     template: `
     <form   nzLayout="vertical" [formGroup]="form()">
         <formly-form [form]="form()" [model]="model()" [fields]="fields()"></formly-form>
@@ -24,14 +23,13 @@ import BaseViewer from "bpmn-js/lib/BaseViewer";
     imports: [FormlyModule, ReactiveFormsModule, FormsModule],
     standalone: true
 })
-export class PropertyGroup {
+export class PropertyGroupEdit {
 
     elementModel = inject(ElementModel);
     private readonly componentService = inject(ComponentService);
     properties = input([] as PropertyDescription[]);
     bpmnModeler = input.required<BaseViewer>();
     element = input.required<Element>();
-    viewMode = input(false);
     variables = input<any[]>([]);
 
     form = computed(() => {
@@ -41,10 +39,9 @@ export class PropertyGroup {
     model = computed(() => {
         return new Proxy({}, new ElementModelProxyHandler(this.bpmnModeler(),
             this.elementModel, this.element(),
-            this.properties(), this.viewMode(), this.variables()));
+            this.properties(), false, this.variables()));
     });
 
-    /** SpEL 编辑器：`$` 补全用的变量（图中引用 + 上游输出） */
     private spelVariableSuggestions = computed(() => {
         try {
             return buildSpelVariableSuggestions(
@@ -60,25 +57,13 @@ export class PropertyGroup {
 
     fields = computed(() => {
         return this.properties().map(p => {
-            let config: FieldEditorConfig;
-            if (this.viewMode()) {
-                config = toViewFieldConfig(p);
-            } else {
-
-                config = toEditFieldConfig(p);
-            }
-
+            const config: FieldEditorConfig = toEditFieldConfig(p);
             const baseProps: Record<string, unknown> = { variables: this.variables() };
-            if (
-                config.editor === 'expression'
-            ) {
+            if (config.editor === 'expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
                 baseProps['expressionDialect'] = this.elementModel.expressionDialect();
             }
             return toFormlyConfig(config, "vertical", baseProps);
         });
     });
-
-
-
 }

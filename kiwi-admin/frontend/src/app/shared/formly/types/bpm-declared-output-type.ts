@@ -1,24 +1,39 @@
 import { Component } from "@angular/core";
 import { FieldType, FieldTypeConfig, FormlyFieldProps } from "@ngx-formly/core";
 import { NzIconModule } from "ng-zorro-antd/icon";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { NzPopoverModule } from "ng-zorro-antd/popover";
 
 @Component({
     selector: "bpm-declared-output-type",
     standalone: true,
-    imports: [NzIconModule, NzTooltipModule],
+    imports: [NzIconModule, NzPopoverModule],
     template: `
         <div class="declared-output-line">
             <span class="name-text">{{ displayName }}</span>
-                <span
-                    class="help-icon"
-                    nz-icon
-                    nzType="question-circle"
-                    nzTheme="outline"
-                    nz-tooltip
-                    [nzTooltipTitle]="displayDescription"
-                ></span>
+            <span
+                class="help-icon"
+                nz-icon
+                nzType="question-circle"
+                nzTheme="outline"
+                nz-popover
+                nzPopoverTrigger="click"
+                nzPopoverPlacement="bottom"
+                [nzPopoverContent]="helpPopoverTpl"
+                nzPopoverTitle="详情"
+            ></span>
         </div>
+        <ng-template #helpPopoverTpl>
+            <div class="help-popover-body">
+                <div class="help-row">
+                    <span class="help-label">Key</span>
+                    <span class="help-value">{{ outputKey || "—" }}</span>
+                </div>
+                <div class="help-row">
+                    <span class="help-label">说明</span>
+                    <span class="help-value">{{ displayDescription || "—" }}</span>
+                </div>
+            </div>
+        </ng-template>
     `,
     styles: [
         `
@@ -36,24 +51,44 @@ import { NzTooltipModule } from "ng-zorro-antd/tooltip";
                 word-break: break-word;
             }
             .help-icon {
-                color: rgba(0, 0, 0, 0.45);
+                // color: rgba(0, 0, 0, 0.45);
                 font-size: 14px;
-                cursor: help;
+                cursor: pointer;
+            }
+            .help-popover-body {
+                max-width: 320px;
+                font-size: 13px;
+            }
+            .help-row {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+                margin-bottom: 8px;
+            }
+            .help-row:last-child {
+                margin-bottom: 0;
+            }
+            .help-label {
+                flex: 0 0 auto;
+                color: rgba(0, 0, 0, 0.45);
+                min-width: 36px;
+            }
+            .help-value {
+                flex: 1 1 auto;
+                color: rgba(0, 0, 0, 0.88);
+                word-break: break-word;
             }
         `,
     ],
 })
 export class BpmDeclaredOutputType extends FieldType<FieldTypeConfig<FormlyFieldProps>> {
-    get displayName(): string {
-        const label = this.props?.label;
-        if (label != null && String(label).trim().length > 0) {
-            return String(label);
-        }
+    get outputKey(): string {
         const key = this.field.key;
-        if (key == null) {
-            return "";
-        }
-        return Array.isArray(key) ? key.join(".") : String(key);
+        return key ? String(key) : "";
+    }
+
+    get displayName(): string {
+        return this.outputKey;
     }
 
     get displayDescription(): string {

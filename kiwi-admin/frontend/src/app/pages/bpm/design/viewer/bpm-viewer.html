@@ -1,28 +1,7 @@
 <section class="page-content bpm-viewer-page">
-  <header class="instance-toolbar">
-    @if (processInstance(); as v) {
-    <div class="instance-toolbar__head">
-      <h3 class="instance-toolbar__title" nz-typography>{{ processTitle() }}</h3>
-      <nz-tag [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
-    </div>
-    <div class="instance-toolbar__meta">
-      <span class="meta-item instance-id" title="流程实例 ID">ID {{ v.id }}</span>
-      @if (v.processDefinitionKey) {
-      <span class="meta-item def-key" title="流程定义 Key">{{ v.processDefinitionKey }}</span>
-      }
-      @if (v.businessKey) {
-      <span class="meta-item biz-key">业务键 {{ v.businessKey }}</span>
-      }
-    </div>
-    <!-- <div class="instance-toolbar__legend" aria-hidden="true">
-      <span class="legend-item"><i class="legend-dot legend-dot--completed"></i>已完成</span>
-      <span class="legend-item"><i class="legend-dot legend-dot--active"></i>进行中</span>
-      <span class="legend-item"><i class="legend-dot legend-dot--selected"></i>选中</span>
-    </div> -->
-    } @else if (processInstanceId()) {
-    <span class="toolbar-loading">正在加载流程实例…</span>
-    }
-  </header>
+  <bpm-viewer-header
+    [processInstance]="processInstance()"
+    [loading]="!!processInstanceId() && !processInstance()" />
   <nz-layout class="full-height bpm-viewer-layout">
     <nz-content class="flex flex-column bpm-viewer-main-content">
       <nz-layout class="bpm-viewer-workspace">

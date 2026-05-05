@@ -74,103 +74,6 @@
   --bpm-collapse-vh-offset: calc(48px + 96px + 55px + 46px + 8px);
 }
 
-.instance-toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--neutral-border, #f0f0f0);
-  background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
-  font-size: 13px;
-}
-
-.instance-toolbar__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.instance-toolbar__title {
-  margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: rgba(0, 0, 0, 0.88);
-  letter-spacing: 0.02em;
-}
-
-.instance-toolbar__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-  color: rgba(0, 0, 0, 0.55);
-}
-
-.meta-item {
-  font-size: 12px;
-}
-
-.instance-id {
-  font-family: ui-monospace, monospace;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.def-key,
-.biz-key {
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.instance-toolbar__legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  padding-top: 2px;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-
-.legend-dot--completed {
-  background: rgba(82, 196, 26, 0.9);
-  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.25);
-}
-
-.legend-dot--active {
-  background: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.3);
-}
-
-.legend-dot--selected {
-  background: #722ed1;
-  box-shadow: 0 0 0 2px rgba(114, 46, 209, 0.28);
-}
-
-.toolbar-loading {
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 14px;
-}
-
 .bpm-viewer-sider-header {
   flex: 0 0 auto;
   padding: 10px 12px;
@@ -225,6 +128,12 @@
   filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.55));
 }
 
+:host ::ng-deep .kiwi-bpmn-error:not(.djs-connection) .djs-visual> :nth-child(1) {
+  stroke: #ff4d4f !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 4px rgba(255, 77, 79, 0.45));
+}
+
 /* 选中态（与完成/当前态可叠加，选中描边优先可见） */
 :host ::ng-deep .kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: #722ed1 !important;
@@ -233,7 +142,8 @@
 }
 
 :host ::ng-deep .kiwi-bpmn-active.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1),
-:host ::ng-deep .kiwi-bpmn-completed.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1) {
+:host ::ng-deep .kiwi-bpmn-completed.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1),
+:host ::ng-deep .kiwi-bpmn-error.kiwi-bpmn-selected:not(.djs-connection) .djs-visual> :nth-child(1) {
   stroke: #722ed1 !important;
   stroke-width: 3px !important;
   filter: drop-shadow(0 0 6px rgba(114, 46, 209, 0.5));

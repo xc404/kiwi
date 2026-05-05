@@ -7,3 +7,53 @@
 .app-form-control {
     flex: 1 1 auto;
 }
+
+/* VerticalFormFieldWrapper：上标签（可含右侧提示图标）、下控件 */
+.app-formly-vertical-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.app-formly-vertical-item__label-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+.app-formly-vertical-item__label {
+    flex: 0 1 auto;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    line-height: 1.4;
+    max-width: 100%;
+}
+
+/* antd 的 label 默认有 padding-bottom，会叠在「标签行」和「控件」之间，需穿透到 nz-form-label */
+.app-formly-vertical-item__label-row ::ng-deep .ant-form-item-label,
+.app-formly-vertical-item__label-row ::ng-deep label.ant-form-item-label {
+    padding-bottom: 0 !important;
+    margin-bottom: 0;
+}
+
+.app-formly-vertical-item__tip {
+    flex: 0 0 auto;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.45);
+    cursor: help;
+    line-height: 1;
+}
+
+.app-formly-vertical-item__control {
+    width: 100%;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+/* nz-form-control 内部仍有 ant 默认间距时收紧 */
+.app-formly-vertical-item ::ng-deep .ant-form-item-control-input {
+    margin-top: 0;
+}
