@@ -28,7 +28,6 @@ export class ComponentPropertyProvider implements PropertyProvider {
             : { importantGroups: [] as { name: string; properties: PropertyDescription[]; important?: boolean }[], unimportant: [] as PropertyDescription[] };
 
         const inputTabGroups: { name: string; properties: PropertyDescription[]; important?: boolean }[] = [
-            ...bindingGroups,
             ...inputSplit.importantGroups,
         ];
         if (inputSplit.unimportant.length > 0) {
@@ -51,10 +50,14 @@ export class ComponentPropertyProvider implements PropertyProvider {
             outputTabGroups.push({ name: "其他", properties: outputSplit.unimportant, important: false });
         }
 
-        return [
-            { name: "输入", groups: inputTabGroups },
-            { name: "输出", groups: outputTabGroups },
+        const tabs: PropertyTab[] = [
+            { name: "基础信息", groups: bindingGroups },
         ];
+        if (inputTabGroups.length > 0) {
+            tabs.push({ name: "输入", groups: inputTabGroups });
+        }
+        tabs.push({ name: "输出", groups: outputTabGroups });
+        return tabs;
     }
 
     private buildBindingGroups(element: Element): { name: string; properties: PropertyDescription[]; important?: boolean }[] {

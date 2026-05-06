@@ -26,8 +26,8 @@ export abstract class BpmEditorToken {
   /** 启动流程弹窗：变量 JSON 编辑器初始文本 */
   abstract getStartProcessModalInitialText(): string;
 
-  /** 启动流程：部署并带变量调引擎（由 Toolbar modal 的 nzOnOk 调用） */
-  abstract submitStartProcessFromModal(variables: Record<string, unknown>): Promise<void>;
+  /** 启动流程：部署并带变量调引擎（由 Toolbar modal 的 nzOnOk 调用）；成功时解析为引擎返回的流程实例载荷 */
+  abstract submitStartProcessFromModal(variables: Record<string, unknown>): Promise<unknown>;
 
   /** 用 BPMN 2.0 XML 替换当前画布内容（不自动保存到服务端）。 */
   abstract importBpmnXml(xml: string): Promise<void>;

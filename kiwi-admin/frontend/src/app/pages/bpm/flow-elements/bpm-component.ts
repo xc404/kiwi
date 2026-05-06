@@ -12,17 +12,33 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzModalModule } from "ng-zorro-antd/modal";
+import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { forkJoin, Observable, of } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { BpmInputOutputParameters } from "./bpm-parameters";
 import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
+import { ArrayResult } from '@app/core/services/types';
+
+/** 与后端 BpmComponentPreviewConflictItem DTO 对齐 */
+export interface BpmPreviewConflictItem {
+    index: number;
+    conflict: boolean;
+    existingId?: string | null;
+    existingName?: string | null;
+    sourceKey?: string | null;
+    duplicateOfBatchIndex?: number | null;
+}
+
+type ConflictSaveAction = 'cancel' | 'overwrite' | 'add';
 
 @Component({
     selector: 'app-bpm',
     templateUrl: './bpm-component.html',
     styles: [`
       .cli-help-hint { margin: 0 0 12px; color: rgba(0,0,0,.65); font-size: 13px; line-height: 1.5; }
+      .conflict-row { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+      .conflict-row:last-child { border-bottom: none; }
     `],
     imports: [
         PageHeaderComponent,
@@ -36,6 +52,7 @@ import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
         NzMenuModule,
         NzIconModule,
         NzTooltipModule,
+        NzRadioModule,
         ModalDragDirective,
     ],
 })
@@ -43,6 +60,13 @@ export class BpmComponent implements AfterViewInit {
 
     selectedComponent = signal<any>(null);
     parametersModalVisible = signal(false);
+
+    /** 生成结果保存：sourceKey 冲突确认 */
+    conflictModalVisible = signal(false);
+    pendingDrafts = signal<any[]>([]);
+    previewConflictItems = signal<BpmPreviewConflictItem[]>([]);
+    conflictActions = signal<ConflictSaveAction[]>([]);
+    private afterConflictSave?: () => void;
 
     generateModalVisible = signal(false);
     helpCommandInput = '';
@@ -107,18 +131,6 @@ export class BpmComponent implements AfterViewInit {
         if (!tpl) {
             return;
         }
-        // this.pageConfig = {
-        //     ...this.pageConfig,
-        //     toolbarActions: [
-        //         AddAction,
-        //         toolbarAction({
-        //             name: '生成组件',
-        //             icon: 'down',
-        //             tooltip: '从命令行或 OpenAPI / Swagger 文档生成',
-        //             template: tpl,
-        //         }),
-        //     ],
-        // };
     }
 
     openGenerateFromCli(): void {
@@ -135,7 +147,7 @@ export class BpmComponent implements AfterViewInit {
     }
 
     /**
-     * 供 nzModal nzOnOk 订阅：成功时关闭弹窗并打开新增表单（预填后端返回的 BpmComponent）。
+     * 生成草稿后预检 sourceKey；无冲突直接保存，有冲突弹出二次确认（供 nzModal nzOnOk 订阅 Observable）。
      */
     confirmGenerateFromCli() {
         const cmd = this.helpCommandInput?.trim();
@@ -149,30 +161,30 @@ export class BpmComponent implements AfterViewInit {
             body.helpText = pasted;
         }
         this.http.post<any>('/bpm/component/from-cli-help', body).pipe(
-            tap((comp) => {
-                this.generateModalVisible.set(false);
-                this.helpCommandInput = '';
-                this.helpTextInput = '';
-                this.crudPage()?.popupAdd(comp);
-                this.message.success('已生成组件草稿，请确认后保存');
-            }),
-            map(() => true),
-            catchError(() => {
-                this.message.error('生成失败');
+            switchMap((comp) =>
+                this.afterGeneratePersistPipeline(
+                    [comp],
+                    () => {
+                        this.generateModalVisible.set(false);
+                        this.helpCommandInput = '';
+                        this.helpTextInput = '';
+                    },
+                    'cli'
+                )
+            ),
+            catchError(e => {
+                this.message.error('生成或保存失败' + e.message);
                 return of(false);
             })
         ).subscribe();
     }
 
-    /**
-     * 调用 POST /bpm/component/from-openapi，再逐条 POST /bpm/component 持久化。
-     */
-    confirmGenerateFromOpenApi(): void {
+    confirmGenerateFromOpenApi(){
         const specUrl = this.openApiSpecUrlInput?.trim();
         const spec = this.openApiSpecInput?.trim();
         if (!specUrl && !spec) {
             this.message.warning('请填写文档链接，或粘贴 OpenAPI / Swagger 全文（JSON 或 YAML）');
-            return;
+            return ;
         }
         const baseUrl = this.openApiBaseUrlInput?.trim();
         const body: { spec?: string; specUrl?: string; baseUrl?: string } = {
@@ -184,38 +196,188 @@ export class BpmComponent implements AfterViewInit {
         if (spec) {
             body.spec = spec;
         }
-        this.http
-            .post<Record<string, unknown>[]>('/bpm/component/from-openapi', body)
+        this.http.post<any[]>('/bpm/component/from-openapi', body).pipe(
+            switchMap((list) => {
+                if (!list?.length) {
+                    this.message.warning('未生成任何组件');
+                    return of(false);
+                }
+                return this.afterGeneratePersistPipeline(
+                    list,
+                    () => {
+                        this.openApiModalVisible.set(false);
+                        this.openApiSpecUrlInput = '';
+                        this.openApiSpecInput = '';
+                        this.openApiBaseUrlInput = '';
+                    },
+                    'openapi'
+                );
+            }),
+            catchError(e => {
+                this.message.error('生成或保存失败' + e.message);
+                return of(false);
+            })
+        ).subscribe();
+    }
+
+    /**
+     * @returns 已全部保存或已打开冲突弹窗（后者返回 false，以免关闭生成来源弹窗）
+     */
+    private afterGeneratePersistPipeline(
+        drafts: any[],
+        afterSuccess: () => void,
+        source: 'cli' | 'openapi'
+    ): Observable<boolean> {
+        return this.http
+            .post<ArrayResult<BpmPreviewConflictItem>>('/bpm/component/preview-conflicts', { components: drafts })
             .pipe(
-                switchMap((list) => {
-                    if (!list?.length) {
-                        this.message.warning('未生成任何组件');
-                        return of(null);
+                switchMap((preview) => {
+                    const previewItems : BpmPreviewConflictItem[] = preview.content || [];
+                    if (!previewItems.some((x) => x.conflict)) {
+                        return forkJoin(
+                            drafts.map((d) =>
+                                this.http.post<unknown>('/bpm/component', d, { showLoading: false })
+                            )
+                        ).pipe(
+                            tap(() => {
+                                afterSuccess();
+                                this.crudPage()?.reloadTable();
+                                if (source === 'cli') {
+                                    this.message.success('已根据 CLI help 生成并保存组件');
+                                } else {
+                                    this.message.success(`已根据文档生成并保存 ${drafts.length} 个组件`);
+                                }
+                            }),
+                            map(() => true)
+                        );
                     }
-                    return forkJoin(
-                        list.map((comp) =>
-                            this.http.post<unknown>('/bpm/component', comp, { showLoading: false })
-                        )
+                    this.pendingDrafts.set(drafts);
+                    this.previewConflictItems.set(previewItems);
+                    this.conflictActions.set(
+                        previewItems.map((p) => (p.conflict ? this.defaultConflictAction(p) : 'cancel'))
                     );
-                }),
-                tap((saved) => {
-                    if (saved === null) {
-                        return;
-                    }
-                    this.openApiModalVisible.set(false);
-                    this.openApiSpecUrlInput = '';
-                    this.openApiSpecInput = '';
-                    this.openApiBaseUrlInput = '';
-                    this.crudPage()?.reloadTable();
-                    const n = Array.isArray(saved) ? saved.length : 0;
-                    this.message.success(`已根据文档生成并保存 ${n} 个组件`);
-                }),
-                catchError(() => {
-                    this.message.error('生成或保存失败');
-                    return of(null);
+                    this.afterConflictSave = afterSuccess;
+                    this.conflictModalVisible.set(true);
+                    return of(false);
                 })
-            )
-            .subscribe();
+            );
+    }
+
+    private defaultConflictAction(p: BpmPreviewConflictItem): ConflictSaveAction {
+        if (p.existingId) {
+            return 'overwrite';
+        }
+        if (p.duplicateOfBatchIndex != null && p.duplicateOfBatchIndex >= 0) {
+            return 'add';
+        }
+        return 'cancel';
+    }
+
+    setConflictAction(index: number, action: string): void {
+        const cur = [...this.conflictActions()];
+        cur[index] = action as ConflictSaveAction;
+        this.conflictActions.set(cur);
+    }
+
+    closeConflictModal(): void {
+        this.conflictModalVisible.set(false);
+        this.afterConflictSave = undefined;
+        this.pendingDrafts.set([]);
+        this.previewConflictItems.set([]);
+        this.conflictActions.set([]);
+    }
+
+    /**
+     * 冲突弹窗确定：按每行选择执行 POST / PUT / 跳过。
+     */
+    confirmConflictSave() {
+        const drafts = this.pendingDrafts();
+        const preview = this.previewConflictItems();
+        const actions = this.conflictActions();
+        this.persistAccordingToPreview(drafts, preview, actions).pipe(
+            tap((closedOk) => {
+                if (closedOk) {
+                    const cb = this.afterConflictSave;
+                    this.afterConflictSave = undefined;
+                    cb?.();
+                    this.crudPage()?.reloadTable();
+                    this.message.success('保存完成');
+                }
+            }),
+            map((closedOk) => closedOk)
+        ).subscribe();
+    }
+
+    conflictHint(p: BpmPreviewConflictItem): string {
+        if (p.existingId) {
+            return `库中已有：${p.existingName || p.existingId}`;
+        }
+        if (p.duplicateOfBatchIndex != null && p.duplicateOfBatchIndex >= 0) {
+            return `与本次列表第 ${p.duplicateOfBatchIndex + 1} 条重复（尚无库记录）`;
+        }
+        return '';
+    }
+
+    private persistAccordingToPreview(
+        drafts: any[],
+        preview: BpmPreviewConflictItem[],
+        actions: ConflictSaveAction[]
+    ): Observable<boolean> {
+        const reqs: Observable<unknown>[] = [];
+        for (let i = 0; i < drafts.length; i++) {
+            const p = preview[i];
+            const d = drafts[i];
+            if (!p.conflict) {
+                reqs.push(this.http.post<unknown>('/bpm/component', d, { showLoading: false }));
+                continue;
+            }
+            const act = actions[i];
+            if (act === 'cancel') {
+                continue;
+            }
+            if (act === 'overwrite') {
+                const id = p.existingId;
+                if (!id) {
+                    continue;
+                }
+                reqs.push(
+                    this.http.put<unknown>(`/bpm/component/${id}`, { ...d, id }, { showLoading: false })
+                );
+                continue;
+            }
+            if (act === 'add') {
+                reqs.push(
+                    this.http
+                        .post<{ sourceKey: string }>('/bpm/component/allocate-source-key', {
+                            parentId: d.parentId,
+                            baseSourceKey: d.sourceKey,
+                        })
+                        .pipe(
+                            switchMap((r) =>
+                                this.http.post<unknown>(
+                                    '/bpm/component',
+                                    { ...d, sourceKey: r.sourceKey },
+                                    { showLoading: false }
+                                )
+                            )
+                        )
+                );
+            }
+        }
+        if (reqs.length === 0) {
+            this.message.warning('未保存任何组件');
+            return of(false);
+        }
+        return forkJoin(reqs).pipe(
+            map(() => {
+                this.conflictModalVisible.set(false);
+                return true;
+            }),
+            catchError(() => {
+                this.message.error('保存失败');
+                return of(false);
+            })
+        );
     }
 
     saveParameters() {

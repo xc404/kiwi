@@ -1,6 +1,7 @@
 package com.kiwi.project.bpm.service;
 
 import com.kiwi.project.bpm.dao.BpmComponentDao;
+import com.kiwi.project.bpm.dto.BpmComponentPreviewConflictItem;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import com.kiwi.project.system.spi.Refreshable;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +63,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
         result.setType(Optional.ofNullable(bpmComponent.getType()).orElse(parent.getType()))  ;
         result.setParentId(bpmComponent.getParentId());
         result.setVersion(Optional.ofNullable(bpmComponent.getVersion()).orElse(parent.getVersion()))  ;
+        result.setSourceKey(bpmComponent.getSourceKey());
         List<BpmComponentParameter> parentInput = copyParameterList(parent.getInputParameters());
         applyDefaultParameterGroup(parentInput, parent.getName());
         List<BpmComponentParameter> parentOutput = copyParameterList(parent.getOutputParameters());
@@ -113,6 +116,70 @@ public class BpmComponentService implements InitializingBean, Refreshable
 
     private BpmComponent getComponent(String parentId) {
         return this.CachedComponents.get(parentId);
+    }
+
+    /**
+     * 空白 {@code parentId} 与 {@code null} 视为同一划分键（与 Mongo 存库一致便于匹配）。
+     */
+    public static String normalizeParentId(String parentId) {
+        return StringUtils.isBlank(parentId) ? null : parentId.trim();
+    }
+
+    /**
+     * 批量预检：按 {@code parentId + sourceKey} 判是否与库中或其它草稿冲突。
+     */
+    public List<BpmComponentPreviewConflictItem> previewConflicts(List<BpmComponent> components) {
+        List<BpmComponentPreviewConflictItem> out = new ArrayList<>();
+        if (components == null || components.isEmpty()) {
+            return out;
+        }
+        Map<String, Integer> firstBatchIndex = new LinkedHashMap<>();
+        for (int i = 0; i < components.size(); i++) {
+            BpmComponent d = components.get(i);
+            String sk = StringUtils.trimToNull(d != null ? d.getSourceKey() : null);
+            String pid = d != null ? normalizeParentId(d.getParentId()) : null;
+            if (StringUtils.isBlank(sk)) {
+                out.add(new BpmComponentPreviewConflictItem(i, false, null, null, null, null));
+                continue;
+            }
+            String composite = compositeConflictKey(pid, sk);
+            Optional<BpmComponent> inDb = bpmComponentDao.findFirstByParentIdAndSourceKey(pid, sk);
+            if (inDb.isPresent()) {
+                BpmComponent ex = inDb.get();
+                out.add(new BpmComponentPreviewConflictItem(
+                        i, true, ex.getId(), ex.getName(), sk, null));
+                continue;
+            }
+            if (firstBatchIndex.containsKey(composite)) {
+                out.add(new BpmComponentPreviewConflictItem(
+                        i, true, null, null, sk, firstBatchIndex.get(composite)));
+                continue;
+            }
+            firstBatchIndex.put(composite, i);
+            out.add(new BpmComponentPreviewConflictItem(i, false, null, null, sk, null));
+        }
+        return out;
+    }
+
+    private static String compositeConflictKey(String parentId, String sourceKey) {
+        return String.valueOf(parentId) + "\u0000" + sourceKey;
+    }
+
+    /**
+     * 在 {@code parentId} 下生成不与库冲突的 {@code sourceKey}（用于「新增」保存）。
+     */
+    public String allocateUniqueSourceKey(String parentId, String baseSourceKey) {
+        String pid = normalizeParentId(parentId);
+        if (StringUtils.isBlank(baseSourceKey)) {
+            baseSourceKey = "generated";
+        }
+        String candidate = baseSourceKey;
+        int n = 2;
+        while (bpmComponentDao.findFirstByParentIdAndSourceKey(pid, candidate).isPresent()) {
+            candidate = baseSourceKey + "__" + n;
+            n++;
+        }
+        return candidate;
     }
 
     /**

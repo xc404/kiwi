@@ -1,4 +1,5 @@
 import { Component, ElementRef, inject, input, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { saveAs } from 'file-saver';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -32,6 +33,7 @@ export class BpmToolbar {
   private readonly bpmnEditor = inject(BpmEditorToken);
   private readonly message = inject(NzMessageService);
   private readonly modalWrap = inject(NzModalWrapService);
+  private readonly router = inject(Router);
 
   @ViewChild('bpmnFileInput') private bpmnFileInput?: ElementRef<HTMLInputElement>;
 
@@ -187,8 +189,9 @@ export class BpmToolbar {
         }
         return this.bpmnEditor
           .submitStartProcessFromModal(parsed)
-          .then(() => {
+          .then((started) => {
             this.message.success('流程已启动');
+            this.promptOpenProcessInstanceViewer(started);
           })
           .catch((err: unknown) => {
             const e = err as { error?: { message?: string }; message?: string };
@@ -197,6 +200,51 @@ export class BpmToolbar {
           });
       },
     });
+  }
+
+  /** 引擎 POST /start 返回的载荷（通常为 Camunda ProcessInstanceDto） */
+  private promptOpenProcessInstanceViewer(startResult: unknown): void {
+    const dto = startResult != null && typeof startResult === 'object' ? (startResult as Record<string, unknown>) : null;
+    const idRaw = dto?.['id'];
+    const id = idRaw != null && String(idRaw).trim() !== '' ? String(idRaw) : '';
+
+    const lines: string[] = [];
+    if (id) {
+      lines.push(`实例 ID：${id}`);
+    }
+    const defIdRaw = dto?.['definitionId'];
+    if (defIdRaw != null && String(defIdRaw).trim() !== '') {
+      lines.push(`流程定义 ID：${String(defIdRaw)}`);
+    }
+    const bkRaw = dto?.['businessKey'];
+    if (bkRaw != null && String(bkRaw).trim() !== '') {
+      lines.push(`业务键：${String(bkRaw)}`);
+    }
+    const body = lines.length > 0 ? lines.join('\n') : JSON.stringify(startResult ?? {}, null, 2);
+
+    this.modalWrap.confirm({
+      nzTitle: '流程实例已创建',
+      nzWidth: 560,
+      nzContent: body,
+      nzBodyStyle: { whiteSpace: 'pre-wrap', wordBreak: 'break-all' },
+      nzOkText: '查看流程实例',
+      nzCancelText: '关闭',
+      nzOnOk: () => {
+        if (!id) {
+          this.message.warning('未返回实例 ID，无法打开查看器');
+          return;
+        }
+        this.openProcessInstanceViewerInNewWindow(id);
+      },
+    });
+  }
+
+  private openProcessInstanceViewerInNewWindow(processInstanceId: string): void {
+    const url = new URL(window.location.href);
+    url.hash = this.router.serializeUrl(
+      this.router.createUrlTree(['/bpm/process-instance', processInstanceId]),
+    );
+    window.open(url.toString(), '_blank', 'noopener,noreferrer');
   }
 
   onImportXmlClick(): void {

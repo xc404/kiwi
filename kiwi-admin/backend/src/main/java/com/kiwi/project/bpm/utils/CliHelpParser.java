@@ -115,7 +115,19 @@ public final class CliHelpParser {
         String compKey = slugKey(executable);
         String description = "从 help 命令生成: " + trimmed;
         String group = "命令行";
-        return buildFromHelpText(helpText, executable, compName, compKey, group, description, shellParentId);
+        String normalizedCmd = normalizeHelpCommandForSourceKey(trimmed);
+        String sourceKey = cliSourceKey(normalizedCmd);
+        return buildFromHelpText(
+                helpText, executable, compName, compKey, group, description, shellParentId, sourceKey);
+    }
+
+    /** 与同一条 help 命令对应的稳定来源键（用于入库判重）。 */
+    public static String cliSourceKey(String normalizedHelpCommand) {
+        return "cli-help:v1|" + normalizedHelpCommand;
+    }
+
+    static String normalizeHelpCommandForSourceKey(String helpCommand) {
+        return helpCommand.trim().replaceAll("\\s+", " ");
     }
 
     /**
@@ -165,13 +177,17 @@ public final class CliHelpParser {
             String key,
             String group,
             String description,
-            String shellParentId
+            String shellParentId,
+            String sourceKey
     ) {
         List<ParsedOption> options = parseOptions(helpText);
         BpmComponent c = new BpmComponent();
         c.setParentId(shellParentId);
         c.setName(name);
         c.setDescription(description);
+        c.setKey(key);
+        c.setGroup(group);
+        c.setSourceKey(sourceKey);
         // c.setType(BpmComponent.Type.SpringBean);
         List<BpmComponentParameter> inputs = new ArrayList<>();
         Set<String> usedKeys = new LinkedHashSet<>();
@@ -188,9 +204,7 @@ public final class CliHelpParser {
             p.setKey(paramKey);
             p.setName(paramKey);
             p.setDescription(o.description());
-            // p.setGroup("CLI");
             p.setImportant(true);
-//            p.setHtmlType(o.expectsValue() ? "#text" : "CheckBox");
             p.setRequired(false);
             if (!o.expectsValue()) {
                 p.setDefaultValue("false");
@@ -201,10 +215,9 @@ public final class CliHelpParser {
         command.setKey("command");
         command.setName("command");
         command.setDescription("由 CLI 选项拼装的完整命令（覆盖父组件 command；Camunda 输入中可使用 JUEL 表达式）");
-        command.setGroup("命令行");
+        command.setGroup("脚本");
         command.setHidden(true);
         command.setImportant(false);
-        command.setHtmlType("#text");
         command.setDefaultValue(buildCommandTemplate(executable, named));
         inputs.add(command);
         c.setInputParameters(inputs);

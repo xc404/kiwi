@@ -2,6 +2,7 @@ package com.kiwi.project.bpm.ctl;
 
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
+import com.kiwi.project.bpm.dto.BpmComponentPreviewConflictItem;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.service.BpmComponentRecentUsageService;
 import com.kiwi.project.bpm.service.BpmComponentService;
@@ -111,7 +112,29 @@ public class BpmComponentCtl extends BaseCtl
         bpmComponentDao.deleteById(id);
     }
 
+    @Operation(operationId = "bpmComp_previewConflicts", summary = "预检生成组件与库内或同批草稿的 sourceKey 冲突")
+    @PostMapping("preview-conflicts")
+    @ResponseBody
+    public List<BpmComponentPreviewConflictItem> previewConflicts(@RequestBody PreviewConflictsRequest request) {
+        if (request == null || request.getComponents() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "components 不能为空");
+        }
+        return bpmComponentService.previewConflicts(request.getComponents());
+    }
 
+    @Operation(operationId = "bpmComp_allocateSourceKey", summary = "分配不与库冲突的 sourceKey（「新增」分支保存前）")
+    @PostMapping("allocate-source-key")
+    @ResponseBody
+    public AllocateSourceKeyResponse allocateSourceKey(@RequestBody AllocateSourceKeyRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求体不能为空");
+        }
+        String sk = bpmComponentService.allocateUniqueSourceKey(
+                request.getParentId(), request.getBaseSourceKey());
+        AllocateSourceKeyResponse res = new AllocateSourceKeyResponse();
+        res.setSourceKey(sk);
+        return res;
+    }
 
     @Operation(operationId = "bpmComp_listGrouped", summary = "按分组返回全部 BPM 组件列表")
     @GetMapping("list")
@@ -204,6 +227,22 @@ public class BpmComponentCtl extends BaseCtl
             return request.getSpec();
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spec 与 specUrl 至少填写一项");
+    }
+
+    @Data
+    public static class PreviewConflictsRequest {
+        private List<BpmComponent> components;
+    }
+
+    @Data
+    public static class AllocateSourceKeyRequest {
+        private String parentId;
+        private String baseSourceKey;
+    }
+
+    @Data
+    public static class AllocateSourceKeyResponse {
+        private String sourceKey;
     }
 
     @Data

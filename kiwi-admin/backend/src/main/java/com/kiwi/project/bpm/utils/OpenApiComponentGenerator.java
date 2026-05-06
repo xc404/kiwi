@@ -124,6 +124,7 @@ public final class OpenApiComponentGenerator {
         c.setParentId(httpRequestParentId);
         c.setType(BpmComponent.Type.SpringBean);
         c.setKey(buildKey(operation, path, method));
+        c.setSourceKey(buildSourceKey(path, method, operation));
         c.setName(buildName(operation, path, method));
         c.setDescription(buildDescription(openAPI, path, method, operation));
         c.setGroup(firstTag(operation));
@@ -138,6 +139,17 @@ public final class OpenApiComponentGenerator {
             return "openapi_" + slug(opId);
         }
         return "openapi_" + method.toLowerCase(Locale.ROOT) + "_" + slug(path);
+    }
+
+    /** OpenAPI 操作级稳定来源键（与 {@link #buildKey} 分离，仅用于生成入库判重）。 */
+    static String buildSourceKey(String path, String method, Operation operation) {
+        String opId = operation != null ? StringUtils.trimToEmpty(operation.getOperationId()) : "";
+        return "openapi:v1|"
+                + method.toUpperCase(Locale.ROOT)
+                + "|"
+                + path
+                + "|"
+                + opId;
     }
 
     private static String buildName(Operation operation, String path, String method) {
@@ -297,8 +309,6 @@ public final class OpenApiComponentGenerator {
                 bp.setName("body." + prop);
                 bp.setDescription(
                         describeSchemaProp(prop, propSchema, requiredBodyProps.contains(prop)));
-                bp.setHtmlType(jsonBodyHtmlType(propSchema));
-                bp.setGroup("Body");
                 bp.setImportant(requiredBodyProps.contains(prop));
                 bp.setRequired(requiredBodyProps.contains(prop));
                 list.add(bp);

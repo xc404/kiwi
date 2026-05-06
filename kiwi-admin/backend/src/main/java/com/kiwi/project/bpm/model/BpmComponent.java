@@ -22,6 +22,11 @@ public class BpmComponent extends BaseEntity<String>
     }
     private String parentId;
     private String key;
+    /**
+     * 生成/导入场景下的稳定来源标识（如 CLI help、OpenAPI 操作），用于与库内组件判重；
+     * 与 {@link #key} 的业务语义无关。
+     */
+    private String sourceKey;
     private String source;
     private String name;
     private String description;

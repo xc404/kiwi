@@ -27,6 +27,7 @@ export interface SearchCommonVO<T> {
   filters?: T;
 }
 
+
 // 分页
 export interface PageInfo<T> {
   pageIndex: number;
@@ -48,6 +49,17 @@ export interface PageInfo<T> {
   hasNextPage?: boolean;
   navigatePages?: number;
   navigatepageIndexs?: number[];
+}
+
+export interface ArrayResult<T> {
+  content: T[];
+}
+
+export interface PageResult<T> {
+  pageIndex: number;
+  pageSize: number;
+  total: number;
+  content: T[];
 }
 
 // 动态组件

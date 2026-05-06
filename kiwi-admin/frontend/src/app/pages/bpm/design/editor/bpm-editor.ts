@@ -281,8 +281,8 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     return cached !== undefined ? JSON.stringify(cached, null, 2) : '{}';
   }
 
-  submitStartProcessFromModal(variables: Record<string, unknown>): Promise<void> {
-    return this.startProcessWithVariables(variables).then(() => undefined);
+  submitStartProcessFromModal(variables: Record<string, unknown>): Promise<unknown> {
+    return this.startProcessWithVariables(variables);
   }
 
   private refreshRecentComponentUsages(): void {

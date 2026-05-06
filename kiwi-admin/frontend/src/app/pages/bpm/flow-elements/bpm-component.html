@@ -23,7 +23,7 @@
       <crud-page [pageConfig]="pageConfig()">
       </crud-page>
 
-      <nz-modal nzxModalDrag [nzVisible]="generateModalVisible()" nzTitle="从命令行生成组件" nzOkText="生成" nzCancelText="取消"
+      <nz-modal nzxModalDrag [nzVisible]="generateModalVisible()" nzTitle="从命令行生成组件" nzOkText="生成并保存" nzCancelText="取消"
             nzWidth="560px" (nzOnCancel)="generateModalVisible.set(false)"
             (nzVisibleChange)="generateModalVisible.set($event)" (nzOnOk)="confirmGenerateFromCli()">
             <div *nzModalContent>
@@ -56,6 +56,29 @@
                   </div>
                   <textarea nz-input name="openApiSpec" [(ngModel)]="openApiSpecInput" rows="14"
                         placeholder="或直接粘贴全文（与文档链接二选一）"></textarea>
+            </div>
+      </nz-modal>
+
+      <nz-modal nzxModalDrag [nzVisible]="conflictModalVisible()" nzTitle="组件 sourceKey 冲突"
+            nzOkText="保存" nzCancelText="取消" nzWidth="720px" (nzOnCancel)="closeConflictModal()"
+            (nzVisibleChange)="conflictModalVisible.set($event)" (nzOnOk)="confirmConflictSave()">
+            <div *nzModalContent>
+                  <p class="cli-help-hint">以下条目与库中已有组件（相同 parentId + sourceKey）或本次生成列表中的另一条重复，请选择处理方式。</p>
+                  @for (p of previewConflictItems(); track $index; let i = $index) {
+                  @if (p.conflict) {
+                  <div class="conflict-row">
+                        <div><strong>{{ pendingDrafts()[i]?.name }}</strong></div>
+                        <div style="font-size:12px;color:rgba(0,0,0,.45);word-break:break-all;">sourceKey: {{ p.sourceKey }}</div>
+                        <div style="font-size:12px;color:#1890ff;margin:6px 0;">{{ conflictHint(p) }}</div>
+                        <nz-radio-group [ngModel]="conflictActions()[i]"
+                              (ngModelChange)="setConflictAction(i, $event)">
+                              <label nz-radio nzValue="cancel">取消（不保存本条）</label>
+                              <label nz-radio nzValue="overwrite" [nzDisabled]="!p.existingId">覆盖库中已有</label>
+                              <label nz-radio nzValue="add">新增（自动分配不冲突的 sourceKey）</label>
+                        </nz-radio-group>
+                  </div>
+                  }
+                  }
             </div>
       </nz-modal>
 
