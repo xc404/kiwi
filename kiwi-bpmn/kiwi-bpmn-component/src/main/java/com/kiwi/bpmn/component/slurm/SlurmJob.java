@@ -7,6 +7,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
 /**
  * Slurm 提交结果；启用 sacct 跟踪时持久化到 Mongo（主键与 {@link #jobId} 一致），供 {@link SlurmJobTracker} 轮询终态。
  * 跟踪起算时间使用 {@link com.kiwi.common.entity.BaseEntity#getCreatedTime()}。
@@ -46,6 +48,12 @@ public class SlurmJob extends BaseEntity<String> {
 
     /** 与终态失败上报一致的人类可读说明；成功且退出码为 0 时可为空。 */
     private String errorMessage;
+
+    /**
+     * sacct 跟踪视为超时的绝对时刻（通常 ≈ {@link com.kiwi.common.entity.BaseEntity#getCreatedTime()} + 跟踪窗口）。
+     * 窗口时长见 {@link SlurmService#getSlurmJobMaxDuration(org.camunda.bpm.engine.delegate.DelegateExecution)}。
+     */
+    private Date expiration;
 
     public void setJobId(String jobId) {
         this.jobId = jobId;

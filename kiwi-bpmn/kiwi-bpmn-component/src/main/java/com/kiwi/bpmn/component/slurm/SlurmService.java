@@ -1,19 +1,56 @@
 package com.kiwi.bpmn.component.slurm;
 
+import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import org.apache.commons.io.FileUtils;
+import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 public class SlurmService implements InitializingBean
 {
+    /**
+     * 与 {@link SlurmExternalTaskHandler} 上 {@code @ExternalTaskSubscription(lockDuration = 300000)} 一致（毫秒）。
+     */
+    public static final long SLURM_TOPIC_LOCK_DURATION_MS = 300_000L;
+
     protected final SlurmProperties slurmProperties;
     private File shellFileDir;
 
     public SlurmService(SlurmProperties slurmProperties) {
         this.slurmProperties = slurmProperties;
+    }
+
+    /**
+     * sacct 跟踪窗口时长（毫秒）：优先流程变量 {@code task_max_time}（秒，与外部任务 lock 延长语义一致），
+     * 否则为 {@link #SLURM_TOPIC_LOCK_DURATION_MS} 减 {@link SlurmProperties#getExpirationExternalTaskLockDeltaMs()}，
+     * 再否则为 {@link SlurmProperties.Sacct#getMaxTrackDurationMs()}
+     * （下限为 {@link SlurmProperties#getExpirationExternalTaskLockDeltaMs()} 与 {@link SlurmProperties.Sacct#getMaxTrackDurationMs()} 的较大值）。
+     */
+    public long getSlurmJobMaxDuration(DelegateExecution execution) {
+        Optional<Double> taskMaxSec =
+                execution == null
+                        ? Optional.empty()
+                        : ExecutionUtils.getNumberInputVariable(execution, "task_max_time");
+        long taskMaxMs =
+                taskMaxSec
+                        .filter(s -> s > 0)
+                        .map(s -> Math.round(s * 1000.0))
+                        .orElse(0L);
+        if (taskMaxMs > 0) {
+            return taskMaxMs;
+        }
+        long delta = slurmProperties.getExpirationExternalTaskLockDeltaMs();
+        long durationFromTopicLock = SLURM_TOPIC_LOCK_DURATION_MS - delta;
+        if (durationFromTopicLock > 0) {
+            return durationFromTopicLock;
+        }
+        SlurmProperties.Sacct sacct = slurmProperties.getSacct();
+        long sacctMs = sacct != null ? sacct.getMaxTrackDurationMs() : 168L * 3600_000L;
+        return Math.min(SLURM_TOPIC_LOCK_DURATION_MS, sacctMs);
     }
 
     public File getShellFileDir() {

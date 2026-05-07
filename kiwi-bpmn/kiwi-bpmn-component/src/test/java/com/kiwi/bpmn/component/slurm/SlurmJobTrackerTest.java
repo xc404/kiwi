@@ -46,7 +46,6 @@ class SlurmJobTrackerTest {
     @BeforeEach
     void setUp() {
         slurmProperties = new SlurmProperties();
-        slurmProperties.getSacct().setEnabled(true);
         slurmProperties.getSacct().setPollIntervalMs(60_000L);
         slurmProperties.getSacct().setMaxTrackDurationMs(3600_000L);
         tracker = new SlurmJobTracker(slurmProperties, slurmJobCompleteProcessor, slurmJobRepository);
@@ -62,15 +61,21 @@ class SlurmJobTrackerTest {
                     String id = inv.getArgument(0);
                     return persisted.stream().filter(x -> id.equals(x.getJobId())).findFirst();
                 });
-        when(slurmJobRepository.findByStatusAndCreatedTimeGreaterThanEqual(
+        when(slurmJobRepository.findByStatusAndExpirationBefore(eq(SlurmJobStatus.RUNNING), ArgumentMatchers.any(Date.class)))
+                .thenReturn(List.of());
+        when(slurmJobRepository.findByStatusAndExpirationGreaterThanEqual(
                         eq(SlurmJobStatus.RUNNING), ArgumentMatchers.any(Date.class)))
                 .thenAnswer(
-                        inv -> persisted.stream()
-                                .filter(
-                                        j -> j.getStatus() == null || j.getStatus() == SlurmJobStatus.RUNNING)
-                                .collect(Collectors.toCollection(ArrayList::new)));
-        when(slurmJobRepository.findByStatusAndCreatedTimeBefore(eq(SlurmJobStatus.RUNNING), ArgumentMatchers.any(Date.class)))
-                .thenReturn(List.of());
+                        inv -> {
+                            Date now = inv.getArgument(1);
+                            return persisted.stream()
+                                    .filter(j -> j.getStatus() == null || j.getStatus() == SlurmJobStatus.RUNNING)
+                                    .filter(
+                                            j ->
+                                                    j.getExpiration() != null
+                                                            && !j.getExpiration().before(now))
+                                    .collect(Collectors.toCollection(ArrayList::new));
+                        });
         when(slurmJobRepository.markTerminatedIfStillActive(anyString()))
                 .thenAnswer(
                         inv -> {
@@ -123,7 +128,6 @@ class SlurmJobTrackerTest {
 
     @Test
     void saveTrackedJob_whenSacctDisabled_noPersist() {
-        slurmProperties.getSacct().setEnabled(false);
         tracker.saveTrackedJob(trackedJob("1", "e", "w", "j"));
         verify(slurmJobRepository, never()).save(ArgumentMatchers.any());
     }
@@ -135,7 +139,9 @@ class SlurmJobTrackerTest {
         j.setExternalTaskId(extId);
         j.setWorkerId(workerId);
         j.setJobName(jobName);
-        j.setCreatedTime(new Date());
+        Date created = new Date();
+        j.setCreatedTime(created);
+        j.setExpiration(new Date(created.getTime() + 3600_000L));
         return j;
     }
 }

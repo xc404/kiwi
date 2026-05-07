@@ -10,6 +10,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -47,10 +48,9 @@ public class SlurmTaskManager implements InitializingBean {
                     "kiwi.bpm.slurm.flag-listener-enabled=true is ignored: legacy .flag file watcher has been removed; use sacct (kiwi.bpm.slurm.sacct.enabled).");
         }
         if (slurmProperties.getSacct() != null
-                && slurmProperties.getSacct().isEnabled()
                 && slurmJobTracker.getIfAvailable() == null) {
             log.warn(
-                    "kiwi.bpm.slurm.sacct.enabled=true but Mongo is not available (no SlurmJobTracker): "
+                    "Mongo is not available (no SlurmJobTracker): "
                             + "configure spring.data.mongodb and ensure MongoTemplate is present for job completion tracking.");
         }
     }
@@ -79,7 +79,6 @@ public class SlurmTaskManager implements InitializingBean {
         }
         final String tid = externalTaskId;
         final String wid = workerId;
-        final String jn = jobNameForTrack;
         return taskExecutor.submitCompletable(() -> {
             SlurmJob job = submitSbatch(sbatchFile);
             job.setJobName(sbatchConfig.getJobName());
@@ -87,9 +86,13 @@ public class SlurmTaskManager implements InitializingBean {
             job.setOutputFilePath(sbatchConfig.getOutput_file());
             job.setErrorFilePath(sbatchConfig.getError_file());
             job.setId(job.getJobId());
-            if (tid != null && wid != null && jn != null) {
+            if (tid != null) {
                 job.setExternalTaskId(tid);
                 job.setWorkerId(wid);
+                Date created = new Date();
+                job.setCreatedTime(created);
+                long trackMs = slurmService.getSlurmJobMaxDuration(execution);
+                job.setExpiration(new Date(created.getTime() + trackMs));
                 slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
             }
             return job;

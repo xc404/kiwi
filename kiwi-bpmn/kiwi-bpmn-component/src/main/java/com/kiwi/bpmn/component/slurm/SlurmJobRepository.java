@@ -13,9 +13,9 @@ public interface SlurmJobRepository extends MongoRepository<SlurmJob, String> {
 
     boolean existsByExternalTaskId(String externalTaskId);
 
-    List<SlurmJob> findByStatusAndCreatedTimeBefore(SlurmJobStatus status, Date deadline);
+    List<SlurmJob> findByStatusAndExpirationBefore(SlurmJobStatus status, Date now);
 
-    List<SlurmJob> findByStatusAndCreatedTimeGreaterThanEqual(SlurmJobStatus status, Date cutoff);
+    List<SlurmJob> findByStatusAndExpirationGreaterThanEqual(SlurmJobStatus status, Date now);
 
     /**
      * 乐观并发：仅当 {@link SlurmJobStatus#RUNNING} 且未持锁（{@link SlurmJob#getTerminalReportLocked()} 非 true）时

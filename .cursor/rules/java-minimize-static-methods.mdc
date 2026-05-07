@@ -1,0 +1,41 @@
+---
+description: Java 尽量少用静态方法（工具类除外），优先实例方法与依赖注入
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# 尽量少实现静态方法（Java）
+
+在本仓库的 Java 代码中，**优先使用实例方法**；通过构造注入或 Spring 注入协作对象，便于测试与扩展。**避免**在普通业务类、服务类、组件类中堆砌 `static` 方法。
+
+## 例外：工具类
+
+以下情形可使用 **仅含静态 API** 的风格（常见命名如 `*Utils`、`*Helper`，或 `final` 类 + `private` 构造器）：
+
+- 纯函数式、无状态的通用转换、格式化、校验、集合/字符串小工具；
+- 明确设计为 **library-style** 的可复用静态入口，且不携带 Spring 生命周期或可变全局状态。
+
+## 不推荐
+
+```java
+public class OrderService {
+    public static void validate(Order o) { ... }
+    public static BigDecimal calcTax(Order o) { ... }
+}
+```
+
+## 推荐
+
+```java
+@Component
+public class OrderService {
+    public void validate(Order o) { ... }
+    public BigDecimal calcTax(Order o) { ... }
+}
+```
+
+或把纯算法抽到 `OrderTaxUtils` 等 **命名清晰的工具类**，而不是在领域服务上挂 `static`。
+
+## 与 `static final` 常量
+
+本规则针对 **方法**；`static final` 常量命名仍遵循仓库内 Java 常量约定（见 `java-enum-static-constants-naming`）。

@@ -374,4 +374,8 @@ public class ExternalTaskExecution implements DelegateExecution
     public ExternalTask getExternalTask() {
         return externalTask;
     }
+
+    public void extendLock(long newDurationMs) {
+        this.externalTaskService.extendLock(this.externalTask, newDurationMs);
+    }
 }

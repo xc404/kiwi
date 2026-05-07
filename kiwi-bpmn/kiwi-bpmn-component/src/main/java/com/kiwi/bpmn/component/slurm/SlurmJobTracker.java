@@ -26,6 +26,7 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
     private final SlurmJobRepository slurmJobRepository;
 
     private volatile ScheduledExecutorService scheduler;
+    private SlurmProperties.Sacct sacct;
 
     public SlurmJobTracker(
             SlurmProperties slurmProperties,
@@ -40,14 +41,9 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
      * 将已提交作业写入库，供 sacct 轮询直至终态。
      */
     public void saveTrackedJob(SlurmJob job) {
-        SlurmProperties.Sacct sacct = slurmProperties.getSacct();
-        if (sacct == null || !sacct.isEnabled()) {
-            return;
-        }
         if (job == null
                 || job.getJobId() == null
-                || job.getExternalTaskId() == null
-                || job.getWorkerId() == null) {
+                || job.getExternalTaskId() == null) {
             return;
         }
         job.setId(job.getJobId());
@@ -63,9 +59,9 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() {
-        SlurmProperties.Sacct sacct = slurmProperties.getSacct();
-        if (sacct == null || !sacct.isEnabled()) {
-            log.info("Slurm sacct polling disabled (kiwi.bpm.slurm.sacct.enabled=false)");
+        this.sacct = slurmProperties.getSacct();
+        if (sacct == null) {
+            log.info("Slurm sacct polling disabled )");
             return;
         }
         long ms = Math.max(5_000L, sacct.getPollIntervalMs());
@@ -90,15 +86,13 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     private void tickInternal() {
         long now = System.currentTimeMillis();
-        long maxAge = Math.max(60_000L, slurmProperties.getSacct().getMaxTrackDurationMs());
-        long deadline = now - maxAge;
 
-        List<SlurmJob> timedOut = findTimedOutJobs(deadline);
+        List<SlurmJob> timedOut = findTimedOutJobs(now);
         for (SlurmJob j : timedOut) {
             applyTimeout(j);
         }
 
-        List<SlurmJob> active = findActiveTrackedJobs(now, maxAge);
+        List<SlurmJob> active = findActiveTrackedJobs(now);
         if (active.isEmpty()) {
             return;
         }
@@ -124,15 +118,13 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
         }
     }
 
-    private List<SlurmJob> findTimedOutJobs(long deadline) {
-        Date deadlineDate = new Date(deadline);
-        return slurmJobRepository.findByStatusAndCreatedTimeBefore(SlurmJobStatus.RUNNING, deadlineDate);
+    private List<SlurmJob> findTimedOutJobs(long nowMs) {
+        return slurmJobRepository.findByStatusAndExpirationBefore(SlurmJobStatus.RUNNING, new Date(nowMs));
     }
 
-    private List<SlurmJob> findActiveTrackedJobs(long now, long maxAge) {
-        long cutoff = now - maxAge;
-        Date cutoffDate = new Date(cutoff);
-        return slurmJobRepository.findByStatusAndCreatedTimeGreaterThanEqual(SlurmJobStatus.RUNNING, cutoffDate);
+    private List<SlurmJob> findActiveTrackedJobs(long nowMs) {
+        return slurmJobRepository.findByStatusAndExpirationGreaterThanEqual(
+                SlurmJobStatus.RUNNING, new Date(nowMs));
     }
 
     private void applySacctLinesToTrackedJobs(
@@ -189,8 +181,7 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
      */
     void applySacctStdoutForTests(String sacctStdout) {
         long now = System.currentTimeMillis();
-        long maxAge = Math.max(60_000L, slurmProperties.getSacct().getMaxTrackDurationMs());
-        List<SlurmJob> active = findActiveTrackedJobs(now, maxAge);
+        List<SlurmJob> active = findActiveTrackedJobs(now);
         if (active.isEmpty()) {
             return;
         }
@@ -218,7 +209,7 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
         }
         SlurmResult parsed =
                 new SlurmResult(1, reload.getExternalTaskId(), reload.getWorkerId(), reload.getJobName());
-        String diag = "sacct-tracker: maxTrackDurationMs exceeded for jobId=" + reload.getJobId();
+        String diag = "sacct-tracker: tracking expiration exceeded for jobId=" + reload.getJobId();
         boolean ok = slurmJobCompleteProcessor.processParsedSlurmTerminal(parsed, diag, null);
         if (ok) {
             markTerminated(reload);

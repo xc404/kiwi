@@ -5,6 +5,7 @@ import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
 import com.kiwi.bpmn.external.ExternalTaskAsyncResult;
+import com.kiwi.bpmn.external.ExternalTaskExecution;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
@@ -169,6 +170,12 @@ import lombok.extern.slf4j.Slf4j;
             important = true
         ),
         @ComponentParameter(
+            key = "task_max_time",
+            name = "Task Max Time (seconds)",
+            type = "Integer",
+            description = "Maximum external task lock time in seconds. If set, lock will be extended after successful Slurm submission."
+        ),
+        @ComponentParameter(
             key = "slurm_account",
             name = "Slurm Account",
             type = "String",
@@ -260,7 +267,8 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     private final ShellActivityBehavior shellActivityBehavior;
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
-
+    private final SlurmService slurmService;
+    private final SlurmProperties slurmProperties;
     /**
      * @param shellActivityBehavior 无 Slurm 集成时的回退执行器
      * @param slurmService          可选；用于路径解析等，与 {@link SlurmTaskManager} 独立注入
@@ -268,10 +276,13 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
      */
     public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
                                     @Autowired(required = false) SlurmService slurmService,
-                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager) {
+                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager,
+                                    @Autowired(required = false) SlurmProperties slurmProperties) {
         this.shellActivityBehavior = shellActivityBehavior;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
+        this.slurmService = slurmService;
+        this.slurmProperties = slurmProperties;
     }
 
     /**
@@ -306,6 +317,7 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
                     processInstanceId,
                     activityId,
                     slurmJob.getJobId());
+            extendLockIfConfigured(execution);
             execution.setVariable("slurmJobId", slurmJob.getJobId());
             execution.setVariable("slurmJobName", slurmJob.getJobName());
             execution.setVariable("sbatchFilePath", slurmJob.getSbatchFilePath());
@@ -314,6 +326,27 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
             return ExternalTaskAsyncResult.updateVariablesOnly();
         });
     }
+
+    private void extendLockIfConfigured(DelegateExecution execution) {
+        if (!(execution instanceof ExternalTaskExecution externalTaskExecution)) {
+            return;
+        }
+        long slurmJobMaxDuration = this.slurmService.getSlurmJobMaxDuration(execution);
+        long lockDurationMs = this.slurmProperties.getExpirationExternalTaskLockDeltaMs() > 0
+                ? slurmJobMaxDuration + this.slurmProperties.getExpirationExternalTaskLockDeltaMs()
+                : slurmJobMaxDuration;
+        if (lockDurationMs <= 0) {
+            return;
+        }
+        externalTaskExecution.extendLock(lockDurationMs);
+        log.info(
+                "ExternalTask lock 已延长：processInstanceId={}, activityId={}, durationMs={}",
+                execution.getProcessInstanceId(),
+                execution.getCurrentActivityId(),
+                lockDurationMs);
+    }
+
+
 
     /** @return 是否具备 sbatch 提交与监听能力（由 {@link SlurmTaskManager} Bean 是否存在决定） */
     private boolean supportSlurm() {

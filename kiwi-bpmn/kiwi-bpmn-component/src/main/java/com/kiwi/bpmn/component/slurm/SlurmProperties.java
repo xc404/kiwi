@@ -11,6 +11,15 @@ import java.util.List;
 public class SlurmProperties {
 
     /**
+     * {@link SlurmJob#getExpiration()} 所代表的时长与外部任务 topic {@code lockDuration}（毫秒）之间的差值。
+     * {@link SlurmService#getSlurmJobMaxDuration} 在未配置 {@code task_max_time} 时用 {@code topicLockDuration - delta} 推导默认时长；
+     * 回退至 {@link Sacct#getMaxTrackDurationMs()} 时亦与该差值取较大值作为下限。
+     * <p>
+     * 配置键：{@code kiwi.bpm.slurm.expiration-external-task-lock-delta-ms}。
+     */
+    private long expirationExternalTaskLockDeltaMs = 60_000L;
+
+    /**
      * 是否启用 Slurm 集成（sbatch、外部任务监听、工作目录清理等）。
      * 为唯一总开关：仅当为 true 且配置了 {@link #workDirectory} 时加载 Slurm 相关 Bean。
      * 若不在配置文件中设置该项，默认为 true，与历史上仅配置 {@code work-directory} 的行为一致；
@@ -45,10 +54,6 @@ public class SlurmProperties {
     @Data
     public static class Sacct {
 
-        /**
-         * 是否启用 sacct 轮询（与 Mongo 中 {@link SlurmJob} 跟踪记录配合）。生产环境推荐 true；无 Mongo 时保持 false。
-         */
-        private boolean enabled = false;
 
         /**
          * 两次 sacct 批量查询之间的间隔（毫秒）。
