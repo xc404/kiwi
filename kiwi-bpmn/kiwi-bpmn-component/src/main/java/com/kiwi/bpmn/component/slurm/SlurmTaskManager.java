@@ -91,6 +91,7 @@ public class SlurmTaskManager implements InitializingBean {
             job.setWorkerId(wid);
             Date created = new Date();
             job.setCreatedTime(created);
+            // 与 SlurmService#getExternalTaskLockExtensionDurationMs 同源基准（±delta 仅作用于 extendLock）
             long trackMs = slurmService.getSlurmJobMaxDuration(execution);
             job.setExpiration(new Date(created.getTime() + trackMs));
             slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));

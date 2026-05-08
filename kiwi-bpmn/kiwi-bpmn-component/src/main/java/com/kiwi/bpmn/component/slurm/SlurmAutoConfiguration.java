@@ -46,6 +46,7 @@ public class SlurmAutoConfiguration {
                 List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
                 DefaultSlurmExternalTaskFailureResolver defaultSlurmExternalTaskFailureResolver,
                 SlurmProperties slurmProperties,
+                SlurmService slurmService,
                 SlurmJobRepository slurmJobRepository) {
             return new SlurmJobCompleteProcessor(
                     processEngine,
@@ -53,6 +54,7 @@ public class SlurmAutoConfiguration {
                     slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of(),
                     defaultSlurmExternalTaskFailureResolver,
                     slurmProperties,
+                    slurmService,
                     slurmJobRepository);
         }
 

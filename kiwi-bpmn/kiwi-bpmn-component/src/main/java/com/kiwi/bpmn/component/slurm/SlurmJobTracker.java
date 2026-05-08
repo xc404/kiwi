@@ -154,7 +154,27 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean
         SlurmJob parsed = job.clone();
         SlurmJobResult jobResult = new SlurmJobResult();
         jobResult.setExitCode(1);
+        jobResult.setSlurmState(SlurmJobResult.STATE_TRACKING_EXPIRED);
+        jobResult.setErrorMessage(trackingExpiredUserMessage(job));
+        log.warn(
+                "Slurm sacct tracking window expired (Mongo expiration reached before terminal state): jobId={}, expiration={}",
+                job.getJobId(),
+                job.getExpiration());
         slurmJobCompleteProcessor.complete(parsed, jobResult);
+    }
+
+    /**
+     * 与 {@link SlurmJobResult#STATE_TRACKING_EXPIRED} 配套的人类可读说明（写入 Mongo / Camunda 失败原因）。
+     */
+    private String trackingExpiredUserMessage(SlurmJob job) {
+        String jobId = job.getJobId() != null ? job.getJobId() : "";
+        String exp =
+                job.getExpiration() != null ? job.getExpiration().toString() : "unknown";
+        return "本系统 sacct/Mongo 跟踪截止时刻已到（expiration="
+                + exp
+                + "），仍未观测到 Slurm 作业终态（jobId="
+                + jobId
+                + "）；集群上作业可能仍在运行。";
     }
 
 

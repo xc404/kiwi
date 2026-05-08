@@ -43,6 +43,7 @@ public class SlurmJobCompleteProcessor
     private final List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers;
     private final DefaultSlurmExternalTaskFailureResolver defaultFailureResolver;
     private final SlurmProperties slurmProperties;
+    private final SlurmService slurmService;
     private final SlurmJobRepository slurmJobRepository;
     private final RuntimeService runtimeService;
 
@@ -52,6 +53,7 @@ public class SlurmJobCompleteProcessor
             List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
             DefaultSlurmExternalTaskFailureResolver defaultFailureResolver,
             SlurmProperties slurmProperties,
+            SlurmService slurmService,
             SlurmJobRepository slurmJobRepository) {
         this.processEngine = processEngine;
         this.externalTaskService = processEngine.getExternalTaskService();
@@ -60,6 +62,7 @@ public class SlurmJobCompleteProcessor
                 slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of();
         this.defaultFailureResolver = defaultFailureResolver;
         this.slurmProperties = slurmProperties;
+        this.slurmService = slurmService;
         this.slurmJobRepository = slurmJobRepository;
         this.runtimeService = processEngine.getRuntimeService();
     }
@@ -79,6 +82,7 @@ public class SlurmJobCompleteProcessor
         slurmJob.setExitCode(slurmJobResult.getExitCode());
         if( StringUtils.isBlank(slurmJob.getExternalTaskId()) ) {
             this.setJobCompleteStatus(slurmJob, slurmJobResult);
+            return;
         }
         boolean updated = withOptimisticLock(
                 slurmJob, () -> completeExternalTaskWithRetries(slurmJob, slurmJobResult));
@@ -398,8 +402,15 @@ public class SlurmJobCompleteProcessor
         if( errorFilePath == null || errorFilePath.isBlank() ) {
             return null;
         }
+        String trimmed = errorFilePath.trim();
+        if( !slurmService.isResolvedPathUnderWorkDirectory(trimmed) ) {
+            log.warn(
+                    "Skipping read of Slurm error file (path not under kiwi.bpm.slurm.work-directory): {}",
+                    trimmed);
+            return null;
+        }
         try {
-            String text = FileUtils.readFileToString(new File(errorFilePath.trim()), StandardCharsets.UTF_8);
+            String text = FileUtils.readFileToString(new File(trimmed), StandardCharsets.UTF_8);
             if( text.length() > MAX_ERROR_FILE_READ_LENGTH ) {
                 return text.substring(0, MAX_ERROR_FILE_READ_LENGTH) + "\n...(truncated)";
             }

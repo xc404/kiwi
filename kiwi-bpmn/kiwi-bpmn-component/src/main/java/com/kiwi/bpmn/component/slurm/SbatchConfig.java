@@ -2,7 +2,12 @@ package com.kiwi.bpmn.component.slurm;
 
 public class SbatchConfig
 {
-    /** 作业脚本末尾执行的用户命令（对应流程变量 {@code command}），非 #SBATCH 指令。 */
+    /**
+     * 作业脚本末尾执行的用户命令（对应流程变量 {@code command}），非 #SBATCH 指令。
+     * <p>
+     * {@link #toSbatchCmd()} 会对写入 #SBATCH 的字符串做换行剥离（见 {@link SlurmScriptSanitizeUtils}）；用户命令在
+     * {@link SlurmService#createSbatchFile} 写入前同样处理。
+     */
     private String command;
     private String jobName;
     private String begin;
@@ -277,40 +282,40 @@ public class SbatchConfig
     public String toSbatchCmd() {
         StringBuilder stringBuilder = new StringBuilder();
         if (jobName != null) {
-            stringBuilder.append("#SBATCH --job-name=").append(jobName).append("\n");
+            stringBuilder.append("#SBATCH --job-name=").append(s(jobName)).append("\n");
         }
         if (begin != null) {
-            stringBuilder.append("#SBATCH --begin=").append(begin).append("\n");
+            stringBuilder.append("#SBATCH --begin=").append(s(begin)).append("\n");
         }
         if (constraints != null) {
-            stringBuilder.append("#SBATCH --constraints=").append(constraints).append("\n");
+            stringBuilder.append("#SBATCH --constraints=").append(s(constraints)).append("\n");
         }
         if (cpu_per_task != null) {
-            stringBuilder.append("#SBATCH --cpus-per-task=").append(cpu_per_task).append("\n");
+            stringBuilder.append("#SBATCH --cpus-per-task=").append(s(cpu_per_task)).append("\n");
         }
         if (error_file != null) {
-            stringBuilder.append("#SBATCH --error=").append(error_file).append("\n");
+            stringBuilder.append("#SBATCH --error=").append(s(error_file)).append("\n");
         }
         if (exclude != null) {
-            stringBuilder.append("#SBATCH --exclude=").append(exclude).append("\n");
+            stringBuilder.append("#SBATCH --exclude=").append(s(exclude)).append("\n");
         }
         if (dependency != null) {
-            stringBuilder.append("#SBATCH --dependency=").append(dependency).append("\n");
+            stringBuilder.append("#SBATCH --dependency=").append(s(dependency)).append("\n");
         }
         if (exclusive != null) {
-            stringBuilder.append("#SBATCH --exclusive=").append(exclusive).append("\n");
+            stringBuilder.append("#SBATCH --exclusive=").append(s(exclusive)).append("\n");
         }
         if (gres != null) {
-            stringBuilder.append("#SBATCH --gres=").append(gres).append("\n");
+            stringBuilder.append("#SBATCH --gres=").append(s(gres)).append("\n");
         }
         if (label != null) {
-            stringBuilder.append("#SBATCH --label=").append(label).append("\n");
+            stringBuilder.append("#SBATCH --label=").append(s(label)).append("\n");
         }
         if (mem != null) {
-            stringBuilder.append("#SBATCH --mem=").append(mem).append("\n");
+            stringBuilder.append("#SBATCH --mem=").append(s(mem)).append("\n");
         }
         if (mem_per_cpu != null) {
-            stringBuilder.append("#SBATCH --mem-per-cpu=").append(mem_per_cpu).append("\n");
+            stringBuilder.append("#SBATCH --mem-per-cpu=").append(s(mem_per_cpu)).append("\n");
         }
         if (min_nodes != null) {
             stringBuilder.append("#SBATCH --minnodes=").append(min_nodes).append("\n");
@@ -322,40 +327,40 @@ public class SbatchConfig
             stringBuilder.append("#SBATCH --ntasks=").append(task_num).append("\n");
         }
         if (nodelist != null) {
-            stringBuilder.append("#SBATCH --nodelist=").append(nodelist).append("\n");
+            stringBuilder.append("#SBATCH --nodelist=").append(s(nodelist)).append("\n");
         }
         if (output_file != null) {
-            stringBuilder.append("#SBATCH --output=").append(output_file).append("\n");
+            stringBuilder.append("#SBATCH --output=").append(s(output_file)).append("\n");
         }
         if (partition != null) {
-            stringBuilder.append("#SBATCH --partition=").append(partition).append("\n");
+            stringBuilder.append("#SBATCH --partition=").append(s(partition)).append("\n");
         }
         if (qos != null) {
-            stringBuilder.append("#SBATCH --qos=").append(qos).append("\n");
+            stringBuilder.append("#SBATCH --qos=").append(s(qos)).append("\n");
         }
         if (signal != null) {
-            stringBuilder.append("#SBATCH --signal=").append(signal).append("\n");
+            stringBuilder.append("#SBATCH --signal=").append(s(signal)).append("\n");
         }
         if (time != null) {
-            stringBuilder.append("#SBATCH --time=").append(time).append("\n");
+            stringBuilder.append("#SBATCH --time=").append(s(time)).append("\n");
         }
         if (account != null) {
-            stringBuilder.append("#SBATCH --account=").append(account).append("\n");
+            stringBuilder.append("#SBATCH --account=").append(s(account)).append("\n");
         }
         if (comment != null) {
-            stringBuilder.append("#SBATCH --comment=").append(comment).append("\n");
+            stringBuilder.append("#SBATCH --comment=").append(s(comment)).append("\n");
         }
         if (cpus_per_gpu != null) {
             stringBuilder.append("#SBATCH --cpus-per-gpu=").append(cpus_per_gpu).append("\n");
         }
         if (deadline != null) {
-            stringBuilder.append("#SBATCH --deadline=").append(deadline).append("\n");
+            stringBuilder.append("#SBATCH --deadline=").append(s(deadline)).append("\n");
         }
         if (chdir != null) {
-            stringBuilder.append("#SBATCH --chdir=").append(chdir).append("\n");
+            stringBuilder.append("#SBATCH --chdir=").append(s(chdir)).append("\n");
         }
         if (gpus != null) {
-            stringBuilder.append("#SBATCH --gpus=").append(gpus).append("\n");
+            stringBuilder.append("#SBATCH --gpus=").append(s(gpus)).append("\n");
         }
         if (gpus_per_node != null) {
             stringBuilder.append("#SBATCH --gpus-per-node=").append(gpus_per_node).append("\n");
@@ -364,5 +369,9 @@ public class SbatchConfig
             stringBuilder.append("#SBATCH --gpus-per-task=").append(gpus_per_task).append("\n");
         }
         return stringBuilder.toString();
+    }
+
+    private String s(String value) {
+        return SlurmScriptSanitizeUtils.stripEmbeddedNewlines(value);
     }
 }

@@ -276,7 +276,6 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
     private final SlurmService slurmService;
-    private final SlurmProperties slurmProperties;
     /**
      * @param shellActivityBehavior 无 Slurm 集成时的回退执行器
      * @param slurmService          可选；用于路径解析等，与 {@link SlurmTaskManager} 独立注入
@@ -284,13 +283,11 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
      */
     public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
                                     @Autowired(required = false) SlurmService slurmService,
-                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager,
-                                    @Autowired(required = false) SlurmProperties slurmProperties) {
+                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager) {
         this.shellActivityBehavior = shellActivityBehavior;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
         this.slurmService = slurmService;
-        this.slurmProperties = slurmProperties;
     }
 
     /**
@@ -345,10 +342,7 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
         if (!(execution instanceof ExternalTaskExecution externalTaskExecution)) {
             return;
         }
-        long slurmJobMaxDuration = this.slurmService.getSlurmJobMaxDuration(execution);
-        long lockDurationMs = this.slurmProperties.getExpirationExternalTaskLockDeltaMs() > 0
-                ? slurmJobMaxDuration + this.slurmProperties.getExpirationExternalTaskLockDeltaMs()
-                : slurmJobMaxDuration;
+        long lockDurationMs = this.slurmService.getExternalTaskLockExtensionDurationMs(execution);
         if (lockDurationMs <= 0) {
             return;
         }
