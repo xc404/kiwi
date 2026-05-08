@@ -1,7 +1,7 @@
 ---
 description: Java 尽量少用静态方法（工具类除外），优先实例方法与依赖注入
 globs: "**/*.java"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # 尽量少实现静态方法（Java）
@@ -35,6 +35,15 @@ public class OrderService {
 ```
 
 或把纯算法抽到 `OrderTaxUtils` 等 **命名清晰的工具类**，而不是在领域服务上挂 `static`。
+
+## `private static` 与普通类里的静态方法
+
+在 **业务类、服务类、组件类** 等「常规类」中：
+
+- **不要为了整理结构而写 `private static` 辅助方法**：与公开静态 API 一样，优先改成 **`private` 实例方法**（不依赖注入时同样是实例方法，便于与类内其它逻辑一致、子类可覆盖（若需要）、测试时也可替换）。
+- **没有必要时，生成代码阶段就不要引入静态方法**；若逻辑是纯函数且会在多处复用，再 **抽到专用的 `*Utils` / `*Helper`**，而不是留在当前类里用 `static`。
+
+简言之：**要么实例方法，要么独立工具类**；常规类内 **`static` 方法（含 `private static`）默认不写**。
 
 ## 与 `static final` 常量
 

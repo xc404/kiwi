@@ -6,8 +6,8 @@ package com.kiwi.bpmn.component.slurm;
 public enum SlurmJobStatus {
 
     /** 已提交，正由 {@link SlurmJobTracker} 通过 sacct 轮询直至终态 */
-    RUNNING,
+    Running,
 
-    /** 已通过 Camunda 上报终态；文档保留在库中，不再参与 sacct 轮询（仅 {@link #RUNNING} 会被加载） */
-    TERMINATED
+    /** 已通过 Camunda 上报终态；文档保留在库中，不再参与 sacct 轮询（仅 {@link #Running} 会被加载） */
+    Completed
 }

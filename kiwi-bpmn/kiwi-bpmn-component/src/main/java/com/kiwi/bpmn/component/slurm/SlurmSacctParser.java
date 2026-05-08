@@ -6,7 +6,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 解析 {@code sacct --parsable2} 输出，判断作业是否终态及用于 {@link SlurmResult} 的退出码。
+ * 解析 {@code sacct --parsable2} 输出，判断作业是否终态及用于 {@link SlurmJob#setExitCode(Integer)} 的退出码。
  */
 public final class SlurmSacctParser {
 
@@ -53,7 +53,7 @@ public final class SlurmSacctParser {
      */
     public static SacctResolution resolveForJob(List<SacctLine> lines, String requestedJobId) {
         if (requestedJobId == null || requestedJobId.isBlank()) {
-            return SacctResolution.notYetTerminal();
+            return SacctResolution.noFinalStateYet();
         }
         List<SacctLine> relevant = new ArrayList<>();
         for (SacctLine l : lines) {
@@ -62,11 +62,11 @@ public final class SlurmSacctParser {
             }
         }
         if (relevant.isEmpty()) {
-            return SacctResolution.notYetTerminal();
+            return SacctResolution.noFinalStateYet();
         }
         for (SacctLine l : relevant) {
             if (ACTIVE_STATES.contains(l.state())) {
-                return SacctResolution.notYetTerminal();
+                return SacctResolution.noFinalStateYet();
             }
         }
         for (SacctLine l : relevant) {
@@ -75,7 +75,7 @@ public final class SlurmSacctParser {
                 if (ec == 0) {
                     ec = mapStateToSyntheticExit(l.state());
                 }
-                return SacctResolution.terminalFailure(ec, l.state());
+                return SacctResolution.finalStateFailure(ec, l.state());
             }
         }
         SacctLine batch = null;
@@ -88,9 +88,9 @@ public final class SlurmSacctParser {
         if (batch != null && "COMPLETED".equals(batch.state())) {
             int ec = parsePrimaryExitCode(batch.exitCodeField());
             if (ec == 0) {
-                return SacctResolution.terminalSuccess();
+                return SacctResolution.finalStateSuccess();
             }
-            return SacctResolution.terminalFailure(ec, batch.state());
+            return SacctResolution.finalStateFailure(ec, batch.state());
         }
         boolean allCompletedLike = true;
         for (SacctLine l : relevant) {
@@ -107,11 +107,11 @@ public final class SlurmSacctParser {
                 }
             }
             if (worst == 0) {
-                return SacctResolution.terminalSuccess();
+                return SacctResolution.finalStateSuccess();
             }
-            return SacctResolution.terminalFailure(worst, "COMPLETED");
+            return SacctResolution.finalStateFailure(worst, "COMPLETED");
         }
-        return SacctResolution.notYetTerminal();
+        return SacctResolution.noFinalStateYet();
     }
 
     private static boolean matchesJob(String jobIdCol, String requestedJobId) {
@@ -154,32 +154,34 @@ public final class SlurmSacctParser {
     }
 
     public static final class SacctResolution {
-        private final boolean terminal;
+        /** sacct 是否已呈现可处理的作业终态（非 RUNNING 等活跃态）。 */
+        private final boolean finalStateKnown;
         private final boolean success;
         private final int commandExitCode;
         private final String slurmState;
 
-        private SacctResolution(boolean terminal, boolean success, int commandExitCode, String slurmState) {
-            this.terminal = terminal;
+        private SacctResolution(boolean finalStateKnown, boolean success, int commandExitCode, String slurmState) {
+            this.finalStateKnown = finalStateKnown;
             this.success = success;
             this.commandExitCode = commandExitCode;
             this.slurmState = slurmState;
         }
 
-        public static SacctResolution notYetTerminal() {
+        /** 尚无终态（仍在队列/运行中，或尚无 sacct 行）。 */
+        public static SacctResolution noFinalStateYet() {
             return new SacctResolution(false, false, 0, null);
         }
 
-        public static SacctResolution terminalSuccess() {
+        public static SacctResolution finalStateSuccess() {
             return new SacctResolution(true, true, 0, "COMPLETED");
         }
 
-        public static SacctResolution terminalFailure(int commandExitCode, String slurmState) {
+        public static SacctResolution finalStateFailure(int commandExitCode, String slurmState) {
             return new SacctResolution(true, false, commandExitCode, slurmState);
         }
 
-        public boolean terminal() {
-            return terminal;
+        public boolean hasFinalState() {
+            return finalStateKnown;
         }
 
         public boolean success() {

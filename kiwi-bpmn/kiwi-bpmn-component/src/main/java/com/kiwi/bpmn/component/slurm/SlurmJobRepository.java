@@ -18,27 +18,27 @@ public interface SlurmJobRepository extends MongoRepository<SlurmJob, String> {
     List<SlurmJob> findByStatusAndExpirationGreaterThanEqual(SlurmJobStatus status, Date now);
 
     /**
-     * 乐观并发：仅当 {@link SlurmJobStatus#RUNNING} 且未持锁（{@link SlurmJob#getTerminalReportLocked()} 非 true）时
-     * 原子置 {@code terminalReportLocked=true}；返回修改行数（0 表示未抢到）。
+     * 乐观并发：仅当 {@link SlurmJobStatus#Running} 且未持锁（{@link SlurmJob#getCompleteProcessLock()} 非 true）时
+     * 原子置 {@code completeProcessLock=true}；返回修改行数（0 表示未抢到）。
      */
-    @Query("{ '_id': ?0, 'status': 'RUNNING', 'terminalReportLocked': { '$ne': true } }")
-    @Update("{ '$set': { 'terminalReportLocked': true } }")
-    long claimTerminalReportingLock(String jobId);
+    @Query("{ '_id': ?0, 'status': 'Running', 'completeProcessLock': { '$ne': true } }")
+    @Update("{ '$set': { 'completeProcessLock': true } }")
+    long claimCompleteProcessLock(String jobId);
 
-    /** 终态上报失败时释放锁；{@link SlurmJobStatus} 保持 {@link SlurmJobStatus#RUNNING}。 */
-    @Query("{ '_id': ?0, 'terminalReportLocked': true }")
-    @Update("{ '$set': { 'terminalReportLocked': false } }")
-    long releaseTerminalReportingLock(String jobId);
+    /** Camunda 上报失败时释放锁；{@link SlurmJobStatus} 保持 {@link SlurmJobStatus#Running}。 */
+    @Query("{ '_id': ?0, 'completeProcessLock': true }")
+    @Update("{ '$set': { 'completeProcessLock': false } }")
+    long releaseCompleteProcessLock(String jobId);
 
-    /** 终态上报成功后写入 {@link SlurmJobStatus#TERMINATED}、清锁，并记录退出码与错误说明（成功时 {@code errorMessage} 可为 null）。 */
-    @Query("{ '_id': ?0, 'terminalReportLocked': true }")
-    @Update("{ '$set': { 'status': 'TERMINATED', 'terminalReportLocked': false, 'exitCode': ?1, 'errorMessage': ?2 } }")
-    long finalizeTerminalAfterReport(String jobId, int exitCode, String errorMessage);
+    /** Camunda 已接受 complete/handleFailure 后写入 {@link SlurmJobStatus#Completed}、清锁，并记录退出码与错误说明（成功时 {@code errorMessage} 可为 null）。 */
+    @Query("{ '_id': ?0, 'completeProcessLock': true }")
+    @Update("{ '$set': { 'status': 'Completed', 'completeProcessLock': false } }")
+    long finalizeAfterCamundaReport(String jobId);
 
     /**
-     * 兼容路径：仍为 {@link SlurmJobStatus#RUNNING} 且未持锁时置为 TERMINATED（幂等；已 TERMINATED 或正持锁则 0）。
+     * 兼容路径：仍为 {@link SlurmJobStatus#Running} 且未持锁时置为 Completed（幂等；已 Completed 或正持锁则 0）。
      */
-    @Query("{ '_id': ?0, 'status': 'RUNNING', 'terminalReportLocked': { '$ne': true } }")
-    @Update("{ '$set': { 'status': 'TERMINATED' } }")
-    long markTerminatedIfStillActive(String jobId);
+    @Query("{ '_id': ?0, 'status': 'Running', 'completeProcessLock': { '$ne': true } }")
+    @Update("{ '$set': { 'status': 'Completed' } }")
+    long markCompletedIfStillActive(String jobId);
 }

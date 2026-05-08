@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.mongodb.core.mapping.Document;
+import lombok.NonNull;
 
 import java.util.Date;
 
@@ -17,31 +17,47 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SlurmJob extends BaseEntity<String> {
+public class SlurmJob extends BaseEntity<String> implements Cloneable{
 
     private String jobId;
     private String jobName;
+
+    /** 提交的作业命令（如 sbatch 行或实际执行的命令）。 */
+    private String command;
+
+    /**
+     * 业务任务类型，用于 {@link SlurmExternalTaskFailureResolver} 等按类型解析失败；来自流程变量 {@code taskType}，
+     * 未设置时为 {@link #command} 按空白分隔的第一个词。
+     */
+    private String taskType;
+
     private String sbatchFilePath;
     private String outputFilePath;
     private String errorFilePath;
 
-    /** Camunda 外部任务 id（sacct 终态上报用） */
+    /** Camunda 外部任务 id */
     private String externalTaskId;
 
     /** 外部任务 workerId */
     private String workerId;
 
     /**
-     * 本系统跟踪状态；新建时为 {@link SlurmJobStatus#RUNNING}，终态上报成功后为 {@link SlurmJobStatus#TERMINATED}。
-     * 与 {@link #terminalReportLocked} 解耦：上报 Camunda 终态期间 {@code status} 可仍为 {@link SlurmJobStatus#RUNNING}。
+     * 本系统跟踪状态；新建时为 {@link SlurmJobStatus#Running}，终态上报成功后为 {@link SlurmJobStatus#Completed}。
+     * 与 {@link #completeProcessLock} 解耦：上报 Camunda 终态期间 {@code status} 可仍为 {@link SlurmJobStatus#Running}。
      */
     private SlurmJobStatus status;
+
+    /**
+     * Slurm {@code sacct} 作业状态字符串（如 {@code COMPLETED}、{@code FAILED}），与 {@link #status} 含义不同；
+     * 一般仅在 sacct 判终态后由 {@link SlurmJobTracker} / 终态持久化写入。
+     */
+    private String slurmState;
 
     /**
      * 终态上报（complete / handleFailure）的 Mongo 乐观锁：{@code true} 表示本节点已抢到锁、正在上报；
      * 与 {@link #status} 独立，避免用“伪状态”表达锁。
      */
-    private Boolean terminalReportLocked;
+    private Boolean completeProcessLock;
 
     /** Slurm / sacct 侧命令退出码；终态上报成功后由 {@link SlurmJobCompleteProcessor} 写入。 */
     private Integer exitCode;
@@ -58,5 +74,17 @@ public class SlurmJob extends BaseEntity<String> {
     public void setJobId(String jobId) {
         this.jobId = jobId;
         setId(jobId);
+    }
+
+
+    @Override
+    public SlurmJob clone() {
+        try {
+            SlurmJob clone = (SlurmJob) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch( CloneNotSupportedException e ) {
+            throw new AssertionError();
+        }
     }
 }

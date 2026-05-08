@@ -50,15 +50,16 @@ public class SlurmTaskManager implements InitializingBean {
         if (slurmProperties.getSacct() != null
                 && slurmJobTracker.getIfAvailable() == null) {
             log.warn(
-                    "Mongo is not available (no SlurmJobTracker): "
-                            + "configure spring.data.mongodb and ensure MongoTemplate is present for job completion tracking.");
+                    "Slurm sacct tracking unavailable (no SlurmJobTracker): "
+                            + "configure Mongo / Spring Data MongoDB so SlurmJobRepository is registered for job completion tracking.");
         }
     }
 
     /**
-     * 按 {@code execution} 与 {@code sbatchConfig} 提交 sbatch；跟踪记录由 sacct 与 Mongo 中 {@link SlurmJob} 完成。
+     * 按 {@code execution} 与 {@code sbatchConfig} 提交 sbatch；{@code taskType} 写入 Mongo 跟踪文档供失败解析等使用。
      */
-    public CompletableFuture<SlurmJob> submitSlurmJob(DelegateExecution execution, SbatchConfig sbatchConfig) {
+    public CompletableFuture<SlurmJob> submitSlurmJob(String taskType,
+            DelegateExecution execution, SbatchConfig sbatchConfig) {
         File sbatchFile = slurmService.createSbatchFile(execution.getId() + ".sbatch", sbatchConfig);
 
         log.info(
@@ -71,30 +72,28 @@ public class SlurmTaskManager implements InitializingBean {
 
         String externalTaskId = null;
         String workerId = null;
-        String jobNameForTrack = null;
         if (execution instanceof ExternalTaskExecution ext) {
             externalTaskId = ext.getExternalTask().getId();
             workerId = ext.getExternalTask().getWorkerId();
-            jobNameForTrack = sbatchConfig.getJobName();
         }
         final String tid = externalTaskId;
         final String wid = workerId;
         return taskExecutor.submitCompletable(() -> {
             SlurmJob job = submitSbatch(sbatchFile);
             job.setJobName(sbatchConfig.getJobName());
+            job.setCommand(sbatchConfig.getCommand());
+            job.setTaskType(taskType);
             job.setSbatchFilePath(sbatchFile.getAbsolutePath());
             job.setOutputFilePath(sbatchConfig.getOutput_file());
             job.setErrorFilePath(sbatchConfig.getError_file());
             job.setId(job.getJobId());
-            if (tid != null) {
-                job.setExternalTaskId(tid);
-                job.setWorkerId(wid);
-                Date created = new Date();
-                job.setCreatedTime(created);
-                long trackMs = slurmService.getSlurmJobMaxDuration(execution);
-                job.setExpiration(new Date(created.getTime() + trackMs));
-                slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
-            }
+            job.setExternalTaskId(tid);
+            job.setWorkerId(wid);
+            Date created = new Date();
+            job.setCreatedTime(created);
+            long trackMs = slurmService.getSlurmJobMaxDuration(execution);
+            job.setExpiration(new Date(created.getTime() + trackMs));
+            slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
             return job;
         });
     }

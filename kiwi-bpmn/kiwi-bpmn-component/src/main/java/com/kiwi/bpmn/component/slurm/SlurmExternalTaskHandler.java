@@ -1,6 +1,7 @@
 package com.kiwi.bpmn.component.slurm;
 
 import com.kiwi.bpmn.component.activity.ShellActivityBehavior;
+import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
@@ -38,6 +39,13 @@ import lombok.extern.slf4j.Slf4j;
             type = "String",
             description = "The command to be executed in the Slurm job.",
             important = true
+        ),
+        @ComponentParameter(
+            key = "taskType",
+            name = "Task Type",
+            type = "String",
+            description = "Logical task type for failure handling (e.g. SlurmExternalTaskFailureResolver). "
+                    + "If omitted, the first whitespace-separated token of command is used."
         ),
         @ComponentParameter(
             key = "slurm_begin",
@@ -305,13 +313,19 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
         }
 
         SbatchConfig sbatchConfig = sbatchConfigBuilder.build(execution);
+        String taskType =
+                ExecutionUtils.getStringInputVariable(execution, "taskType")
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .orElseGet(() -> firstCommandToken(sbatchConfig.getCommand()));
         log.info(
-                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, command={}",
+                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, taskType={}, command={}",
                 processInstanceId,
                 activityId,
                 sbatchConfig.getJobName(),
+                taskType,
                 sbatchConfig.getCommand());
-        return this.slurmTaskManager.submitSlurmJob(execution, sbatchConfig).thenApply(slurmJob -> {
+        return this.slurmTaskManager.submitSlurmJob(taskType, execution, sbatchConfig).thenApply(slurmJob -> {
             log.info(
                     "Slurm 作业已提交：processInstanceId={}, activityId={}, slurmJobId={}",
                     processInstanceId,
@@ -351,5 +365,14 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     /** @return 是否具备 sbatch 提交与监听能力（由 {@link SlurmTaskManager} Bean 是否存在决定） */
     private boolean supportSlurm() {
         return this.slurmTaskManager != null;
+    }
+
+    /** 与未显式设置 {@code taskType} 时的默认规则一致：{@code command} 按空白分隔的第一个片段。 */
+    private String firstCommandToken(String command) {
+        if (command == null || command.isBlank()) {
+            return "";
+        }
+        String[] parts = command.trim().split("\\s+");
+        return parts.length > 0 ? parts[0] : "";
     }
 }

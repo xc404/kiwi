@@ -15,11 +15,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * 以 {@link SlurmJob#getStatus()} 与 {@link SlurmJob#getTerminalReportLocked()} 区分是否仍待触发终态上报：
- * 仅 {@link SlurmJobStatus#RUNNING} 且未持终态上报锁时由 sacct 驱动上报。
+ * 以 {@link SlurmJob#getStatus()} 与 {@link SlurmJob#getCompleteProcessLock()} 区分是否仍待触发终态上报：
+ * 仅 {@link SlurmJobStatus#Running} 且未持终态上报锁时由 sacct 驱动上报。
  */
 @Slf4j
-public class SlurmJobTracker implements InitializingBean, DisposableBean {
+public class SlurmJobTracker implements InitializingBean, DisposableBean
+{
 
     private final SlurmProperties slurmProperties;
     private final SlurmJobCompleteProcessor slurmJobCompleteProcessor;
@@ -41,17 +42,17 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
      * 将已提交作业写入库，供 sacct 轮询直至终态。
      */
     public void saveTrackedJob(SlurmJob job) {
-        if (job == null
+        if( job == null
                 || job.getJobId() == null
-                || job.getExternalTaskId() == null) {
+                || job.getExternalTaskId() == null ) {
             return;
         }
         job.setId(job.getJobId());
-        if (job.getCreatedTime() == null) {
+        if( job.getCreatedTime() == null ) {
             job.setCreatedTime(new Date());
         }
-        if (job.getStatus() == null) {
-            job.setStatus(SlurmJobStatus.RUNNING);
+        if( job.getStatus() == null ) {
+            job.setStatus(SlurmJobStatus.Running);
         }
         slurmJobRepository.save(job);
         log.debug("Slurm job persisted for sacct tracking: jobId={}, externalTaskId={}", job.getJobId(), job.getExternalTaskId());
@@ -59,8 +60,8 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() {
-        this.sacct = slurmProperties.getSacct();
-        if (sacct == null) {
+        this.sacct = this.slurmProperties.getSacct();
+        if( sacct == null ) {
             log.info("Slurm sacct polling disabled )");
             return;
         }
@@ -79,7 +80,7 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
     private void safeTick() {
         try {
             tickInternal();
-        } catch (Throwable t) {
+        } catch( Throwable t ) {
             log.warn("Slurm sacct poll tick failed: {}", t.toString());
         }
     }
@@ -88,28 +89,28 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
         long now = System.currentTimeMillis();
 
         List<SlurmJob> timedOut = findTimedOutJobs(now);
-        for (SlurmJob j : timedOut) {
+        for( SlurmJob j : timedOut ) {
             applyTimeout(j);
         }
 
         List<SlurmJob> active = findActiveTrackedJobs(now);
-        if (active.isEmpty()) {
+        if( active.isEmpty() ) {
             return;
         }
         Map<String, SlurmJob> byJobId =
                 active.stream().collect(Collectors.toMap(SlurmJob::getJobId, j -> j, (a, b) -> a, LinkedHashMap::new));
         List<String> ids = new ArrayList<>(byJobId.keySet());
-        int chunk = Math.max(1, slurmProperties.getSacct().getMaxJobsPerSacctCall());
-        for (int i = 0; i < ids.size(); i += chunk) {
+        int chunk = Math.max(1, this.sacct.getMaxJobsPerSacctCall());
+        for( int i = 0; i < ids.size(); i += chunk ) {
             List<String> batch = new ArrayList<>(ids.subList(i, Math.min(i + chunk, ids.size())));
             String raw;
             try {
                 raw =
                         SlurmSacctClient.queryJobBatch(
                                 batch,
-                                slurmProperties.getSacct().getExecutable(),
-                                slurmProperties.getSacct().getExtraArgs());
-            } catch (Exception ex) {
+                                this.sacct.getExecutable(),
+                                this.sacct.getExtraArgs());
+            } catch( Exception ex ) {
                 log.warn("sacct batch query failed for {} jobs: {}", batch.size(), ex.toString());
                 continue;
             }
@@ -119,112 +120,48 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean {
     }
 
     private List<SlurmJob> findTimedOutJobs(long nowMs) {
-        return slurmJobRepository.findByStatusAndExpirationBefore(SlurmJobStatus.RUNNING, new Date(nowMs));
+        return slurmJobRepository.findByStatusAndExpirationBefore(SlurmJobStatus.Running, new Date(nowMs));
     }
 
     private List<SlurmJob> findActiveTrackedJobs(long nowMs) {
         return slurmJobRepository.findByStatusAndExpirationGreaterThanEqual(
-                SlurmJobStatus.RUNNING, new Date(nowMs));
+                SlurmJobStatus.Running, new Date(nowMs));
     }
 
     private void applySacctLinesToTrackedJobs(
             List<String> batch, List<SlurmSacctParser.SacctLine> lines, Map<String, SlurmJob> byJobId) {
-        for (String jobId : batch) {
-            if (!byJobId.containsKey(jobId)) {
+        for( String jobId : batch ) {
+            if( !byJobId.containsKey(jobId) ) {
                 continue;
             }
-            SlurmJob reload =
-                    slurmJobRepository
-                            .findById(jobId)
-                            .filter(SlurmJobTracker::readyForSacctTerminalHandling)
-                            .orElse(null);
-            if (reload == null) {
-                continue;
-            }
+            SlurmJob slurmJob = byJobId.get(jobId);
             SlurmSacctParser.SacctResolution res = SlurmSacctParser.resolveForJob(lines, jobId);
-            if (!res.terminal()) {
+            if( !res.hasFinalState() ) {
                 continue;
             }
             int ec = res.success() ? 0 : res.commandExitCode();
-            SlurmResult parsed =
-                    new SlurmResult(ec, reload.getExternalTaskId(), reload.getWorkerId(), reload.getJobName());
-            String diag =
-                    "sacct: jobId="
-                            + jobId
-                            + ", state="
-                            + (res.slurmState() != null ? res.slurmState() : "")
-                            + ", exit="
-                            + res.commandExitCode();
-            boolean ok = slurmJobCompleteProcessor.processParsedSlurmTerminal(parsed, diag, null);
-            if (ok) {
-                markTerminated(reload);
-            }
+            SlurmJob parsed = slurmJob.clone();
+            SlurmJobResult jobResult = new SlurmJobResult();
+            jobResult.setExitCode(ec);
+            jobResult.setSlurmState(res.slurmState());
+            slurmJobCompleteProcessor.complete(parsed, jobResult);
         }
     }
 
-    private void markTerminated(SlurmJob job) {
-        if (job == null || job.getJobId() == null) {
-            return;
-        }
-        try {
-            long n = slurmJobRepository.markTerminatedIfStillActive(job.getJobId());
-            if (n == 0) {
-                log.debug("markTerminated: jobId={} already TERMINATED or not active", job.getJobId());
-            }
-        } catch (Exception e) {
-            log.debug("Failed to persist TERMINATED for jobId={}: {}", job.getJobId(), e.toString());
-        }
-    }
 
-    /**
-     * 测试用：对库中在册作业应用给定的 sacct 标准输出（不真实调用 sacct）。
-     */
-    void applySacctStdoutForTests(String sacctStdout) {
-        long now = System.currentTimeMillis();
-        List<SlurmJob> active = findActiveTrackedJobs(now);
-        if (active.isEmpty()) {
-            return;
-        }
-        Map<String, SlurmJob> byJobId =
-                active.stream().collect(Collectors.toMap(SlurmJob::getJobId, j -> j, (a, b) -> a, LinkedHashMap::new));
-        List<SlurmSacctParser.SacctLine> lines = SlurmSacctParser.parseLines(sacctStdout);
-        int chunk = Math.max(1, slurmProperties.getSacct().getMaxJobsPerSacctCall());
-        List<String> ids = new ArrayList<>(byJobId.keySet());
-        for (int i = 0; i < ids.size(); i += chunk) {
-            List<String> batch = new ArrayList<>(ids.subList(i, Math.min(i + chunk, ids.size())));
-            if (!batch.isEmpty()) {
-                applySacctLinesToTrackedJobs(batch, lines, byJobId);
-            }
-        }
-    }
 
     private void applyTimeout(SlurmJob job) {
-        SlurmJob reload =
-                slurmJobRepository
-                        .findById(job.getJobId())
-                        .filter(SlurmJobTracker::readyForSacctTerminalHandling)
-                        .orElse(null);
-        if (reload == null) {
-            return;
-        }
-        SlurmResult parsed =
-                new SlurmResult(1, reload.getExternalTaskId(), reload.getWorkerId(), reload.getJobName());
-        String diag = "sacct-tracker: tracking expiration exceeded for jobId=" + reload.getJobId();
-        boolean ok = slurmJobCompleteProcessor.processParsedSlurmTerminal(parsed, diag, null);
-        if (ok) {
-            markTerminated(reload);
-        }
+        SlurmJob parsed = job.clone();
+        SlurmJobResult jobResult = new SlurmJobResult();
+        jobResult.setExitCode(1);
+        slurmJobCompleteProcessor.complete(parsed, jobResult);
     }
 
-    /** sacct 已判终态、可安全调用终态上报（未持 Mongo 终态锁） */
-    private static boolean readyForSacctTerminalHandling(SlurmJob j) {
-        return j.getStatus() == SlurmJobStatus.RUNNING && !Boolean.TRUE.equals(j.getTerminalReportLocked());
-    }
 
     @Override
     public void destroy() {
         ScheduledExecutorService exec = this.scheduler;
-        if (exec != null) {
+        if( exec != null ) {
             exec.shutdownNow();
         }
     }

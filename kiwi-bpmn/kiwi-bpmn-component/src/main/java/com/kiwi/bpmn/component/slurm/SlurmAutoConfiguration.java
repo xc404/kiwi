@@ -9,7 +9,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.List;
@@ -27,26 +26,35 @@ public class SlurmAutoConfiguration {
     }
 
     @Bean
-    public static SlurmJobCompleteProcessor slurmJobCompleteProcessor(
-            ProcessEngine processEngine,
-            ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner,
-            List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
-            SlurmProperties slurmProperties,
-            ObjectProvider<SlurmJobRepository> slurmJobRepository) {
-        return new SlurmJobCompleteProcessor(
-                processEngine,
-                externalTaskRetryPlanner,
-                slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of(),
-                slurmProperties,
-                slurmJobRepository);
+
+    public static DefaultSlurmExternalTaskFailureResolver defaultSlurmExternalTaskFailureResolver() {
+        return new DefaultSlurmExternalTaskFailureResolver();
     }
 
     /**
-     * sacct 跟踪依赖 Mongo；无 {@link MongoTemplate} 时不注册本 Bean，{@link SlurmTaskManager} 通过 {@link ObjectProvider} 跳过落库。
+     * sacct 终态上报与跟踪依赖 {@link SlurmJobRepository}（Mongo）；无该仓储 Bean 时不注册，
+     * {@link SlurmTaskManager} 仍可用且通过 {@code ObjectProvider<SlurmJobTracker>} 在无跟踪时跳过落库。
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnBean(MongoTemplate.class)
-    static class SlurmSacctMongoConfiguration {
+    @ConditionalOnBean(SlurmJobRepository.class)
+    static class SlurmJobMongoTrackingConfiguration {
+
+        @Bean
+        public static SlurmJobCompleteProcessor slurmJobCompleteProcessor(
+                ProcessEngine processEngine,
+                ObjectProvider<ExternalTaskRetryPlanner> externalTaskRetryPlanner,
+                List<SlurmExternalTaskFailureResolver> slurmExternalTaskFailureResolvers,
+                DefaultSlurmExternalTaskFailureResolver defaultSlurmExternalTaskFailureResolver,
+                SlurmProperties slurmProperties,
+                SlurmJobRepository slurmJobRepository) {
+            return new SlurmJobCompleteProcessor(
+                    processEngine,
+                    externalTaskRetryPlanner,
+                    slurmExternalTaskFailureResolvers != null ? slurmExternalTaskFailureResolvers : List.of(),
+                    defaultSlurmExternalTaskFailureResolver,
+                    slurmProperties,
+                    slurmJobRepository);
+        }
 
         @Bean
         public SlurmJobTracker slurmJobTracker(
