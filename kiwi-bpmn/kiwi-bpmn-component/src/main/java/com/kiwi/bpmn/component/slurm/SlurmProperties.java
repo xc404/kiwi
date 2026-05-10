@@ -63,7 +63,7 @@ public class SlurmProperties {
         /**
          * 自提交起超过该时长仍未终态则按超时失败上报（毫秒）。
          */
-        private long maxTrackDurationMs = 168L * 3600_000L;
+        private long maxTrackDurationMs = 900_000L;
 
         /**
          * sacct 可执行文件（PATH 内名称或绝对路径）。

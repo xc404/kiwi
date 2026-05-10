@@ -19,7 +19,7 @@ public class SlurmService implements InitializingBean
     /**
      * 与 {@link SlurmExternalTaskHandler} 上 {@code @ExternalTaskSubscription(lockDuration = 300000)} 一致（毫秒）。
      */
-    public static final long SLURM_TOPIC_LOCK_DURATION_MS = 300_000L;
+    public static final long SLURM_TOPIC_LOCK_DURATION_MS = 900_000L;
 
     protected final SlurmProperties slurmProperties;
     private File shellFileDir;
@@ -58,7 +58,7 @@ public class SlurmService implements InitializingBean
             return durationFromTopicLock;
         }
         SlurmProperties.Sacct sacct = slurmProperties.getSacct();
-        return sacct != null ? sacct.getMaxTrackDurationMs() : 168L * 3600_000L;
+        return sacct != null ? sacct.getMaxTrackDurationMs() : 900_000L;
     }
 
     /**

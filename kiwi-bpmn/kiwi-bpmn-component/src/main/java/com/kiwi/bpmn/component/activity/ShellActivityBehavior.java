@@ -41,84 +41,71 @@ import java.util.concurrent.TimeUnit;
 
 @ComponentDescription(name = "命令行", description = "Execute a shell command"
 
-            , inputs = {
-            @ComponentParameter(key = "command", description = "The shell command to execute"),
-            @ComponentParameter(key = "directory", description = "The working directory for the command"),
-            @ComponentParameter(key = "waitFlag", htmlType = "CheckBox", description = "Whether to wait for the command to finish before proceeding"),
-            @ComponentParameter(key = "redirectError", htmlType = "CheckBox", description = "Whether to redirect error stream to output stream"),
-            @ComponentParameter(key = "cleanEnv", htmlType = "CheckBox", description = "Whether to clear environment variables for the command")
-    }
-            , outputs = {
-            @ComponentParameter(key = "result", description = "The output of the shell command"),
-            @ComponentParameter(key = "errorCode", description = "The error code returned by the shell command")
-    }
+        , inputs = {
+        @ComponentParameter(key = "command", description = "The shell command to execute"),
+        @ComponentParameter(key = "directory", description = "The working directory for the command"),
+        @ComponentParameter(key = "waitFlag", htmlType = "CheckBox", description = "Whether to wait for the command to finish before proceeding"),
+        @ComponentParameter(key = "redirectError", htmlType = "CheckBox", description = "Whether to redirect error stream to output stream"),
+        @ComponentParameter(key = "cleanEnv", htmlType = "CheckBox", description = "Whether to clear environment variables for the command")
+}
+        , outputs = {
+        @ComponentParameter(key = "result", description = "The output of the shell command"),
+        @ComponentParameter(key = "errorCode", description = "The error code returned by the shell command")
+}
 
 )
 @Component("shell")
 public class ShellActivityBehavior implements JavaDelegate
 {
 
-  protected static final BpmnBehaviorLogger LOG = ProcessEngineLogger.BPMN_BEHAVIOR_LOGGER;
+    protected static final BpmnBehaviorLogger LOG = ProcessEngineLogger.BPMN_BEHAVIOR_LOGGER;
 
 
+    @Override
+    public void execute(DelegateExecution execution) {
 
-  @Override
-  public void execute(DelegateExecution execution) {
+        String commandStr = ExecutionUtils.getStringInputVariable(execution, "command").orElseThrow(() -> new IllegalArgumentException("Missing required input variable: command"));
+        List<String> argList = new ArrayList<String>(Arrays.stream(commandStr.split(" ")).toList());
+        Boolean waitFlag = ExecutionUtils.getBooleanInputVariable(execution, "waitFlag").orElse(true);
+        boolean redirectErrorFlag = ExecutionUtils.getBooleanInputVariable(execution, "redirectError").orElse(false);
+        Boolean cleanEnv = ExecutionUtils.getBooleanInputVariable(execution, "cleanEnv").orElse(false);
+        String directoryStr = ExecutionUtils.getStringInputVariable(execution, "directory").orElse(null);
 
-      String commandStr = execution.getVariableLocal("command").toString();
-//    String directoryStr = execution.getVariableLocal("directory").toString();
-//        Boolean waitFlag = Boolean.valueOf(execution.getVariableLocal("waitFlag").toString());
-//        Boolean redirectErrorFlag = Boolean.valueOf(execution.getVariableLocal("redirectError").toString());
-//        Boolean cleanEnv = Boolean.valueOf(execution.getVariableLocal("cleanEnv").toString());
-//        String resultVariableStr = execution.getVariableLocal("resultVariable").toString();
-      List<String> argList = new ArrayList<String>(Arrays.stream(commandStr.split(" ")).toList());
-//      getStringFromField()
+        ProcessBuilder processBuilder = new ProcessBuilder(argList);
 
-    String resultVariableStr = ExecutionUtils.getOutputVariableName(execution,"result");
-    String errorCodeVariableStr = ExecutionUtils.getOutputVariableName(execution,"errorCode");
-    Boolean waitFlag = ExecutionUtils.getBooleanInputVariable(execution,"waitFlag").orElse(true);
-    Boolean redirectErrorFlag = ExecutionUtils.getBooleanInputVariable(execution,"redirectError").orElse(false);
-    Boolean cleanEnv = ExecutionUtils.getBooleanInputVariable(execution,"cleanEnv").orElse(false);
-    String directoryStr = ExecutionUtils.getStringInputVariable(execution,"directory").orElse(null);
+        try {
+            processBuilder.redirectErrorStream(redirectErrorFlag);
+            if( cleanEnv ) {
+                Map<String, String> env = processBuilder.environment();
+                env.clear();
+            }
+          if( directoryStr != null && !directoryStr.isEmpty() ) {
+            processBuilder.directory(new File(directoryStr));
+          }
 
-    ProcessBuilder processBuilder = new ProcessBuilder(argList);
+            Process process = processBuilder.start();
 
-    try {
-      processBuilder.redirectErrorStream(redirectErrorFlag);
-      if (cleanEnv) {
-        Map<String, String> env = processBuilder.environment();
-        env.clear();
-      }
-      if (directoryStr != null && !directoryStr.isEmpty() )
-        processBuilder.directory(new File(directoryStr));
+            if( waitFlag ) {
+                ProcessHelper.StreamResult drained = ProcessHelper.waitForDrain(process, redirectErrorFlag, 0, TimeUnit.SECONDS);
+                int errorCode = drained.exitCode();
 
-      Process process = processBuilder.start();
+                String result = convertStreamToStr(new ByteArrayInputStream(drained.stdout()));
+                execution.setVariable("result", result);
 
-      if (waitFlag) {
-        ProcessHelper.StreamResult drained = ProcessHelper.waitForDrain(process, redirectErrorFlag, 0, TimeUnit.SECONDS);
-        int errorCode = drained.exitCode();
+                execution.setVariable("errorCode", Integer.toString(errorCode));
 
-        if (resultVariableStr != null) {
-          String result = convertStreamToStr(new ByteArrayInputStream(drained.stdout()));
-          execution.setVariable(resultVariableStr, result);
+
+            }
+        } catch( Exception e ) {
+            throw LOG.shellExecutionException(e);
         }
 
-        if (errorCodeVariableStr != null) {
-          execution.setVariable(errorCodeVariableStr, Integer.toString(errorCode));
-
-        }
-
-      }
-    } catch (Exception e) {
-      throw LOG.shellExecutionException(e);
     }
 
-  }
+    public static String convertStreamToStr(InputStream is) throws IOException {
 
-  public static String convertStreamToStr(InputStream is) throws IOException {
-
-    return IoUtil.inputStreamAsString(is);
-  }
+        return IoUtil.inputStreamAsString(is);
+    }
 
 
 }

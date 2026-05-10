@@ -112,13 +112,12 @@ public final class CliHelpParser {
             executable = "command";
         }
         String compName = executable + " CLI";
-        String compKey = slugKey(executable);
         String description = "从 help 命令生成: " + trimmed;
         String group = "命令行";
         String normalizedCmd = normalizeHelpCommandForSourceKey(trimmed);
         String sourceKey = cliSourceKey(normalizedCmd);
         return buildFromHelpText(
-                helpText, executable, compName, compKey, group, description, shellParentId, sourceKey);
+                helpText, executable, compName,  group, description, shellParentId, sourceKey);
     }
 
     /** 与同一条 help 命令对应的稳定来源键（用于入库判重）。 */
@@ -174,7 +173,6 @@ public final class CliHelpParser {
             String helpText,
             String executable,
             String name,
-            String key,
             String group,
             String description,
             String shellParentId,
@@ -185,10 +183,8 @@ public final class CliHelpParser {
         c.setParentId(shellParentId);
         c.setName(name);
         c.setDescription(description);
-        c.setKey(key);
         c.setGroup(group);
         c.setSourceKey(sourceKey);
-        // c.setType(BpmComponent.Type.SpringBean);
         List<BpmComponentParameter> inputs = new ArrayList<>();
         Set<String> usedKeys = new LinkedHashSet<>();
         usedKeys.add("command");

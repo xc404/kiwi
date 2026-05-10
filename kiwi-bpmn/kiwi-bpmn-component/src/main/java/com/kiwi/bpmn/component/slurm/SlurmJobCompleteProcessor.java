@@ -160,7 +160,6 @@ public class SlurmJobCompleteProcessor
      */
     private ReportOutcome completeExternalTaskWithRetries(SlurmJob job, SlurmJobResult slurmJobResult) {
         int exitCode = Optional.ofNullable(slurmJobResult).map(SlurmJobResult::getExitCode).orElse(0);
-        String slurmState = slurmJobResult != null ? slurmJobResult.getSlurmState() : null;
         String taskId = job.getExternalTaskId();
         int maxAttempts = externalTaskCompleteMaxAttempts();
         boolean success = exitCode == 0;

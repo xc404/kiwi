@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-@ExternalTaskSubscription(topicName = "slurm", lockDuration = 300000)
+@ExternalTaskSubscription(topicName = "slurm", lockDuration = SlurmService.SLURM_TOPIC_LOCK_DURATION_MS)
 @ComponentDescription(
     name = "Slurm External Task Handler",
     description = "Handles external tasks related to Slurm job submission and monitoring.",
