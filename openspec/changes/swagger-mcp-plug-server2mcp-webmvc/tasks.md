@@ -52,7 +52,8 @@
 
 - [x] 4.5 处理非 `@RestController` 的 `@Tool` Bean（如 `BpmDesignerTools`、`MenuAssistantTools`）：**不得**保留为独立 `@Tool` 面；改为等价 REST 端点 + OpenAPI（纳入 server2mcp 扫描），或改为 starter 支持的 prompt/resource 等机制，与 `design.md` 决策 2 一致  
 
-  **说明**：已新增 `AssistantActionsCtl`、`BpmDesignerActionsCtl` 委托原 Service。
+  **说明**：曾新增 `AssistantActionsCtl` 委托原 Service。  
+  **后注（2026-05）**：助手「仅登记 actions」使用 **`AssistantNavigationTools` / `AssistantDesignerTools` + `@Tool`**，在 `KiwiOpenApiSyncMcpToolsConfiguration` 与 OpenAPI 工具合并；`AssistantActionsCtl` 已删除。见 `openspec/changes/assistant-client-actions-tool-exception/decision.md` 与 `swagger-mcp-plug-server2mcp-webmvc/specs/admin-mcp-openapi/spec.md` 末尾窄例外条款。
 
 
 
