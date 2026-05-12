@@ -45,11 +45,11 @@ npm start
 | 右下角浮窗 | 默认布局下显示「Kiwi · AI」对话卡片，可一句话描述问题。 |
 | 仪表盘「AI 对话」 | 路由一般为 `.../dashboard/ai-chat`（侧栏需在「系统管理 → 菜单」中配置对应菜单项，path 与 `dashboard-routing` 中注释一致）。该页为嵌入模式，对话区占满内容区，适合长文本阅读。 |
 
-交互说明：界面提示用**一句话**描述问题；回复由后端 Spring AI 调用通义模型生成。助手接口除文本外，还可能触发 **前端路由跳转**（例如打开某字典页），路径须与系统菜单路由一致。
+交互说明：界面提示用**一句话**描述问题；回复由后端 Spring AI 调用通义模型生成。助手为**单一** `POST /ai/assistant`：模型通过 MCP 自选工具；除文本外，响应中 `actions` 可含 **路由跳转**、**BPM 设计器**相关字段（如 `toolbar`、`bpmnXml`、`appendComponent`）等，由前端编排消费。BPM 场景请在 `messages` 中自行附带当前流程 id、BPMN 片段、可用工具栏命令等上下文，无需单独 HTTP 接口。
 
 ### 开发与联调
 
-- 前端通过 `AiChatService` 调用 **`POST /ai/assistant`**（助手，含工具与导航动作）或 **`POST /ai/chat`**（纯对话补全）。
+- 前端通过 `AiChatService.assistant()` 调用 **`POST /ai/assistant`**；纯补全使用 **`POST /ai/chat`**。
 - `environment.ts` 中 **`api.baseUrl`** 应为主站 API 根地址（如 `http://localhost:8088`），**不要**写成以 `/ai` 结尾，否则与 `/ai/chat` 等路径拼接可能异常；`BaseHttpService.getUrl` 对部分误配做了兜底，仍建议配置正确根地址。
 
 ## 配置说明

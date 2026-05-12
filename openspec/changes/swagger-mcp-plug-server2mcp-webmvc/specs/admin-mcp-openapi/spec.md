@@ -58,3 +58,19 @@ MCP 调用 SHALL 使用与现有 REST API 相同的安全机制（例如 `Author
 
 - **WHEN** 运维将 MCP 相关功能设为关闭（环境变量或配置属性）
 - **THEN** 应用 SHALL 正常启动，且 SHALL 不对外提供 MCP 监听（或等价「不可用」行为），管理后台 HTTP API SHALL 不受影响
+
+## ADDED Requirements（窄例外：`assistant-client-actions-tool-exception`）
+
+### Requirement: 助手客户端 @Tool（导航与设计器）与 OpenAPI 工具合并
+
+除 `com.kiwi.project.system.ai.AssistantNavigationTools` 与 `com.kiwi.project.system.ai.AssistantDesignerTools`（及未来经架构评审、显式列入同一条款的同类「仅登记 actions」Bean）外，通过 MCP 暴露的业务能力 SHALL 仍以 OpenAPI 为主源。上述助手 Bean 中的方法 SHALL 使用 `org.springframework.ai.tool.annotation.Tool` 注册 `assistant_navigate` 与 `assistant_designer_*` 等**仅用于登记 `AiAssistantResponse.actions`、无独立业务 REST 语义**的助手动作；`KiwiOpenApiSyncMcpToolsConfiguration` SHALL 使用 `MethodToolCallbackProvider` 将上述 `@Tool` 与 OpenAPI 扫描得到的 `ToolCallback` **合并**后统一转为 MCP 工具规格。**不得**恢复项目级「全容器扫描 `@Tool`」的 `KiwiToolCallbackConfiguration` 式注册作为 MCP 主来源。
+
+#### Scenario: 不再要求助手动作必须经 REST/OpenAPI 控制器
+
+- **WHEN** 审计 `com.kiwi.project.system.ai` 包内助手动作实现
+- **THEN** SHALL 存在 `AssistantNavigationTools` 与 `AssistantDesignerTools`（或经评审的等价拆分），且 SHALL NOT 再要求为 `assistant_navigate` 等单独维护 `AssistantActionsCtl` 式 REST 端点，仅为此类登记而写的 `@RestController` SHALL 视为已废止
+
+#### Scenario: 工具名与助手系统提示一致
+
+- **WHEN** 列出 MCP 工具名并对照 `KiwiAdminAiMcpConfiguration.SYSTEM_PROMPT`
+- **THEN** `assistant_navigate` 与 `assistant_designer_*` SHALL 出现在合并后的工具列表中且与提示中的命名一致

@@ -1,6 +1,7 @@
 package com.kiwi.project.ai;
 
-import com.kiwi.project.system.ai.MenuAssistantActionContext;
+import com.kiwi.project.ai.mcp.KiwiAdminAiMcpConfiguration;
+import com.kiwi.project.system.ai.AssistantClientActionContext;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -14,23 +15,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 助手对话：基于 {@link ChatClient} 与 Spring AI 原生 tool-calling；菜单相关工具由 {@link com.kiwi.project.system.ai.MenuAssistantTools} 提供，
- * 并通过 MCP Server（WebMVC/SSE）对外暴露同一套 {@link org.springframework.ai.tool.ToolCallback}。
+ * 助手对话：基于统一 {@link ChatClient}（{@code kiwiChatClient}）与 MCP 工具；由模型自行选用工具。
+ * 前端动作由 {@link AssistantClientActionContext} 收集（菜单跳转、BPM 设计器建议等）。
  */
 @Service
 public class AiAssistantService {
 
     private final ObjectProvider<ChatClient> kiwiAssistantChatClientProvider;
     private final AiChatProperties properties;
-    private final MenuAssistantActionContext menuAssistantActionContext;
+    private final AssistantClientActionContext assistantClientActionContext;
 
     public AiAssistantService(
-            @Qualifier("kiwiAssistantChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
+            @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
             AiChatProperties properties,
-            MenuAssistantActionContext menuAssistantActionContext) {
+            AssistantClientActionContext assistantClientActionContext) {
         this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
-        this.menuAssistantActionContext = menuAssistantActionContext;
+        this.assistantClientActionContext = assistantClientActionContext;
     }
 
     public AiAssistantResponse run(List<AiChatMessage> messages) {
@@ -52,18 +53,19 @@ public class AiAssistantService {
             throw new IllegalArgumentException("没有有效的对话内容");
         }
 
-        menuAssistantActionContext.beginRequest();
+        assistantClientActionContext.beginRequest();
 
         String content;
         List<AiAssistantResponse.ClientAction> actions;
         try {
             content = kiwiAssistantChatClientProvider.getObject()
                     .prompt()
+                    .system(KiwiAdminAiMcpConfiguration.SYSTEM_PROMPT)
                     .messages(springMessages)
                     .call()
                     .content();
         } finally {
-            actions = menuAssistantActionContext.drainActions();
+            actions = assistantClientActionContext.drainActions();
         }
 
         if (content == null || content.isBlank()) {

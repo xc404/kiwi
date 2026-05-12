@@ -10,7 +10,9 @@ import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
-import org.springframework.ai.tool.method.MethodToolCallback;
+import com.kiwi.project.system.ai.AssistantDesignerTools;
+import com.kiwi.project.system.ai.AssistantNavigationTools;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,9 +33,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * 根据 {@link RestController} 上的 {@link Operation}（{@code summary} + {@code operationId}）构建
- * {@link MethodToolCallback}，再通过 {@link McpToolUtils#toSyncToolSpecifications(ToolCallback...)} 转为
- * MCP 的 {@link McpServerFeatures.SyncToolSpecification}，供 Spring AI MCP Server 使用。
+ * MCP 工具来源合并：
+ * <ol>
+ *   <li>各 {@link RestController} 上 {@link Operation}（{@code operationId} + {@code summary}）→ OpenAPI 扫描</li>
+ *   <li>{@link AssistantNavigationTools}、{@link AssistantDesignerTools} 上 {@link org.springframework.ai.tool.annotation.Tool} 方法（助手前端动作登记）</li>
+ * </ol>
+ * 再经 {@link McpToolUtils#toSyncToolSpecifications(ToolCallback...)} 转为 MCP 规格。
  */
 @Configuration
 public class KiwiOpenApiSyncMcpToolsConfiguration {
@@ -41,9 +46,16 @@ public class KiwiOpenApiSyncMcpToolsConfiguration {
     @Bean
     public List<McpServerFeatures.SyncToolSpecification> kiwiOpenApiMcpSyncTools(
             ApplicationContext applicationContext,
-            ObjectMapper objectMapper) {
-        ToolCallback[] callbacks = new OpenApiBasedToolCallbacks(applicationContext, objectMapper).getToolCallbacks();
-        return McpToolUtils.toSyncToolSpecifications(callbacks);
+            ObjectMapper objectMapper,
+            AssistantNavigationTools assistantNavigationTools,
+            AssistantDesignerTools assistantDesignerTools) {
+        ToolCallback[] openapi = new OpenApiBasedToolCallbacks(applicationContext, objectMapper).getToolCallbacks();
+        ToolCallback[] assistant = MethodToolCallbackProvider.builder()
+                .toolObjects(assistantNavigationTools, assistantDesignerTools)
+                .build()
+                .getToolCallbacks();
+        ToolCallback[] merged = Stream.concat(Stream.of(openapi), Stream.of(assistant)).toArray(ToolCallback[]::new);
+        return McpToolUtils.toSyncToolSpecifications(merged);
     }
 
     private static final class OpenApiBasedToolCallbacks implements ToolCallbackProvider {

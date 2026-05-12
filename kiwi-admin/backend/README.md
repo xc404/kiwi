@@ -13,7 +13,7 @@
 | 鉴权 | Sa-Token（Redis） |
 | 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；Redis |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE，与 `MenuAssistantTools` 等工具共用） |
+| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描，助手前端动作来自 `AssistantNavigationTools` / `AssistantDesignerTools` 的 `@Tool` 合并注册） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
 
 模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
@@ -56,7 +56,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 
 ### AI 对话与助手
 
-实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；带工具调用的助手由 `AiAssistantService` 提供（可导航字典页等，工具定义见 `com.kiwi.project.system.ai`）。
+实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；**统一助手**由 `AiAssistantService` 提供（单一 `kiwiChatClient` + MCP；模型自行选用工具）。菜单跳转、BPM 设计器建议等前端动作由工具登记至 `AssistantClientActionContext`，经 `actions` 返回（工具定义见 `com.kiwi.project.system.ai`）。
 
 | 配置 / 环境变量 | 说明 |
 |-----------------|------|
@@ -68,7 +68,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 | HTTP 接口 | 说明 |
 |-----------|------|
 | `POST /ai/chat` | 请求体 `{ "messages": [ { "role": "user"\|"assistant"\|"system", "content": "..." } ] }`，返回 `{ "content": "..." }`。需登录（`@SaCheckLogin`）。 |
-| `POST /ai/assistant` | 同上消息格式；返回文本 `content`，以及可选的 **`actions`**（如 `{ "type": "navigate", "path": "/default/system/dict", "queryParams": { ... } }`），由前端路由消费。 |
+| `POST /ai/assistant` | 同上消息格式；模型通过 MCP 自选工具。返回 `content` 与可选 **`actions`**（如 `navigate`、`toolbar`、`bpmnXml`、`appendComponent` 等，由 `assistant_*` / `assistant_designer_*` 工具登记）。BPM 设计器场景由前端在 `messages` 中附带 BPMN/流程上下文，**无单独 BPM 接口**。 |
 
 本地示例密钥占位见 **`application-local.example.yml`**。前端使用说明见 **[kiwi-admin/frontend/README.md](../frontend/README.md)** 中「AI 辅助」一节。
 
