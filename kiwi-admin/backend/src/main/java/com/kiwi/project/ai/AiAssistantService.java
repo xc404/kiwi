@@ -1,7 +1,6 @@
 package com.kiwi.project.ai;
 
 import com.kiwi.project.ai.mcp.KiwiAdminAiMcpConfiguration;
-import com.kiwi.project.system.ai.AssistantClientActionContext;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -56,7 +55,7 @@ public class AiAssistantService {
         assistantClientActionContext.beginRequest();
 
         String content;
-        List<AiAssistantResponse.ClientAction> actions;
+        List<ClientAction> actions;
         try {
             content = kiwiAssistantChatClientProvider.getObject()
                     .prompt()

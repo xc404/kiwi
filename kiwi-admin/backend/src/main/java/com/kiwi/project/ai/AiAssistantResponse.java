@@ -2,9 +2,7 @@ package com.kiwi.project.ai;
 
 import lombok.Data;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class AiAssistantResponse {
@@ -16,26 +14,4 @@ public class AiAssistantResponse {
      * 前端可执行的动作（如跳转）。path 为应用内路由，须与当前用户菜单（auth_menus）中的 path 一致，例如 /system/dict。
      */
     private List<ClientAction> actions;
-
-    @Data
-    public static class ClientAction {
-        private String type;
-        private String path;
-        private Map<String, String> queryParams;
-
-        /** BPM toolbar 等扩展字段；菜单助手场景下多为 null。 */
-        private String toolbarCommand;
-        private Map<String, Object> toolbarOptions;
-        private String xml;
-        private String componentId;
-        private String sourceElementId;
-    }
-
-    public static ClientAction navigate(String path, Map<String, String> queryParams) {
-        ClientAction a = new ClientAction();
-        a.setType("navigate");
-        a.setPath(path);
-        a.setQueryParams(queryParams != null ? queryParams : new LinkedHashMap<>());
-        return a;
-    }
 }

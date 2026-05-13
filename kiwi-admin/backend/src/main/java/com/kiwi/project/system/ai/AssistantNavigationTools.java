@@ -2,6 +2,8 @@ package com.kiwi.project.system.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiwi.project.ai.AssistantClientActionContext;
+import com.kiwi.project.ai.ClientAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.Optional;
 public class AssistantNavigationTools {
 
     private final AssistantClientActionContext assistantClientActionContext;
+    private final MenuNavigatePathValidator menuNavigatePathValidator;
     private final ObjectMapper objectMapper;
 
     @Tool(
@@ -31,10 +34,11 @@ public class AssistantNavigationTools {
         } catch (IllegalArgumentException ex) {
             return ex.getMessage();
         }
-        Optional<String> err = assistantClientActionContext.addNavigate(routePath, query);
+        Optional<String> err = menuNavigatePathValidator.validate(routePath);
         if (err.isPresent()) {
             return err.get();
         }
+        assistantClientActionContext.addClientAction(ClientAction.navigate(routePath.trim(), query));
         return "已登记前端跳转：" + routePath.trim()
                 + (query.isEmpty() ? "。" : "，查询参数=" + query + "。");
     }
