@@ -17,9 +17,10 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
 
-import { Router } from '@angular/router';
 import { ThemeService } from '@store/common-store/theme.service';
 import { AiChatMessage, AiChatService } from '@services/ai-chat/ai-chat.service';
+import { AssistantActionOrchestratorService } from '@shared/ai-assistant/assistant-action-orchestrator.service';
+import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
 
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -55,6 +56,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   readonly changeShows = output<boolean>();
   /** 嵌入页面（如仪表盘路由）时为 true，不再使用右下角 fixed 布局 */
   readonly embed = input(false);
+  /** 每嵌入点可选的额外动作处理器（与内置 navigate 等合并编排） */
+  readonly actionHandlers = input<AssistantActionHandler[]>([]);
 
   validateForm!: FormGroup;
   messageArray: Array<{ msg: string; dir: 'left' | 'right'; isReaded: boolean }> = [];
@@ -62,7 +65,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   show = false;
   themeService = inject(ThemeService);
   private aiChat = inject(AiChatService);
-  private router = inject(Router);
+  private actionOrchestrator = inject(AssistantActionOrchestratorService);
   private nzMessage = inject(NzMessageService);
   private destroyRef = inject(DestroyRef);
 
@@ -140,7 +143,7 @@ export class ChatComponent implements OnInit, OnDestroy {
             }
           });
           this.messageArray.push({ msg: res.content ?? '', dir: 'left', isReaded: false });
-          this.applyAssistantActions(res.actions);
+          this.actionOrchestrator.dispatch(res.actions, this.actionHandlers());
           this.scrollToBottom();
           this.cdr.markForCheck();
         },
@@ -157,21 +160,5 @@ export class ChatComponent implements OnInit, OnDestroy {
       question: [null]
     });
     this.scrollToBottom();
-  }
-
-  private applyAssistantActions(actions: { type: string; path?: string; queryParams?: Record<string, string> }[] | undefined): void {
-    if (!actions?.length) {
-      return;
-    }
-    for (const a of actions) {
-      if (a.type === 'navigate' && a.path) {
-        const raw = a.path.replace(/^\/+/, '');
-        const segments = raw.split('/').filter(Boolean);
-        this.router.navigate(segments, { queryParams: a.queryParams ?? {} }).catch(() => {
-          this.nzMessage.warning('无法打开目标页面');
-        });
-        break;
-      }
-    }
   }
 }

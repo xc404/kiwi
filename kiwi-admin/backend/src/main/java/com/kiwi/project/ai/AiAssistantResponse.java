@@ -22,6 +22,13 @@ public class AiAssistantResponse {
         private String type;
         private String path;
         private Map<String, String> queryParams;
+
+        /** BPM toolbar 等扩展字段；菜单助手场景下多为 null。 */
+        private String toolbarCommand;
+        private Map<String, Object> toolbarOptions;
+        private String xml;
+        private String componentId;
+        private String sourceElementId;
     }
 
     public static ClientAction navigate(String path, Map<String, String> queryParams) {
