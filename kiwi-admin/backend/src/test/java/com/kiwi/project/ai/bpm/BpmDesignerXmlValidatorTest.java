@@ -1,5 +1,6 @@
 package com.kiwi.project.ai.bpm;
 
+import com.kiwi.project.system.ai.BpmDesignerXmlValidator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;

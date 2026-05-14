@@ -1,4 +1,4 @@
-package com.kiwi.project.ai.bpm;
+package com.kiwi.project.system.ai;
 
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
