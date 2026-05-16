@@ -3,7 +3,9 @@ package com.kiwi.project.bpm.ctl;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dto.BpmInstanceRecoverResultDto;
+import com.kiwi.project.bpm.dto.BpmProcessInstanceBatchIdsRequest;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceDto;
+import com.kiwi.project.bpm.dto.BpmProcessInstanceStateDto;
 import com.kiwi.project.bpm.service.BpmProcessInstanceService;
 import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.HistoryService;
@@ -22,6 +24,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -100,6 +103,29 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         }
 
         return bpmProcessInstanceService.detailDtoFromHistoric(instanceId, hip);
+    }
+
+    /**
+     * 轻量状态（机机轮询）：含 incident 导致的 ERROR 时返回 {@code errorReason} 与错误节点字段。
+     */
+    @GetMapping("{instanceId}/state")
+    @ResponseBody
+    public BpmProcessInstanceStateDto getState(@PathVariable String instanceId) {
+        return bpmProcessInstanceService.findStateDto(instanceId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "process instance not found"));
+    }
+
+    /**
+     * 批量查询流程实例状态；顺序与请求体 {@code instanceIds} 一致（服务端去重，上限 {@link BpmProcessInstanceService#MAX_INSTANCE_IDS_PER_BATCH}）。
+     */
+    @PostMapping("states")
+    @ResponseBody
+    public List<BpmProcessInstanceStateDto> batchStates(
+            @RequestBody(required = false) BpmProcessInstanceBatchIdsRequest body) {
+        if (body == null || body.getInstanceIds() == null) {
+            return List.of();
+        }
+        return bpmProcessInstanceService.batchStateDtosInRequestOrder(body.getInstanceIds());
     }
 
     /**
