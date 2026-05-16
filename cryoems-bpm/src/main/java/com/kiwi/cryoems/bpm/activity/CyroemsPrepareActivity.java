@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -68,6 +69,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class CyroemsPrepareActivity implements JavaDelegate {
 
+    private static final List<String> WORK_SUBDIRS = List.of("ctf", "motion", "thumbnails", "vfm");
+
     private final MicroscopeScaleRegistry microscopeScaleRegistry;
 
     @Value("${cryoems.bpm.header-command:header}")
@@ -80,6 +83,10 @@ public class CyroemsPrepareActivity implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         String movieFile = resolveMovieFile(execution);
         String microscope = readString(execution, "microscope");
+
+        String work_dir = readString(execution, "work_dir");
+
+        createWorkDir(work_dir);
         double pSize = readPSize(execution);
 
         Path headerOut;
@@ -101,14 +108,31 @@ public class CyroemsPrepareActivity implements JavaDelegate {
             Thread.currentThread().interrupt();
             throw new BpmnError("PREPARE_INTERRUPTED", "header 执行被中断", e);
         } catch (Exception e) {
-            throw new JobRetryException("cryoems 预处理失败: " + e.getMessage(), e);
-//            throw new RuntimeException(e);
+//            throw new JobRetryException("cryoems 预处理失败: " + e.getMessage(), e);
+            throw new RuntimeException(e);
         } finally {
             try {
                 Files.deleteIfExists(headerOut);
             } catch (IOException ignored) {
                 // best-effort cleanup
             }
+
+        }
+    }
+
+    private void createWorkDir(String workDir) {
+        Path root = Path.of(workDir.trim());
+        try {
+            Files.createDirectories(root);
+            if (!Files.isDirectory(root)) {
+                throw new BpmnError("PREPARE_IO", "工作目录不是目录: " + workDir);
+            }
+            for (String sub : WORK_SUBDIRS) {
+                Files.createDirectories(root.resolve(sub));
+            }
+            log.debug("工作目录已就绪: {} (子目录: {})", root.toAbsolutePath(), WORK_SUBDIRS);
+        } catch (IOException e) {
+            throw new BpmnError("PREPARE_IO", "无法创建工作目录: " + workDir + " - " + e.getMessage(), e);
         }
     }
 

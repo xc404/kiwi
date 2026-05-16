@@ -1,0 +1,50 @@
+package com.kiwi.framework.springboot.config;
+
+import com.kiwi.common.mongo.BaseMongoRepositoryImpl;
+import com.kiwi.common.mongo.KiwiMongoTemplate;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.mongo.MongoConnectionDetails;
+import org.springframework.boot.autoconfigure.mongo.MongoProperties;
+import org.springframework.boot.autoconfigure.mongo.PropertiesMongoConnectionDetails;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.ssl.SslBundles;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
+import org.springframework.data.mongodb.core.convert.MongoConverter;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+
+/**
+ * CryoEMS 业务库（与 cryo-web-server {@code dataset.mongodb} 同源），供 {@code MovieResultRepository} 等访问。
+ */
+@EnableMongoRepositories(
+        basePackages = "com.kiwi.cryoems.bpm.dao",
+        repositoryBaseClass = BaseMongoRepositoryImpl.class,
+        mongoTemplateRef = "cryoemsMongoTemplate")
+@Configuration
+@Slf4j
+public class CryoemsMongoModule {
+
+    @Bean("cryoemsMongoTemplate")
+    public KiwiMongoTemplate cryoemsMongoTemplate(
+            @Qualifier("cryoemsMongoProperties") MongoProperties properties,
+            ObjectProvider<SslBundles> sslBundles,
+            MongoConverter converter) {
+        MongoConnectionDetails connectionDetails = new PropertiesMongoConnectionDetails(properties,sslBundles.getIfAvailable());
+        MongoClient mongoClient = MongoClients.create(connectionDetails.getConnectionString());
+        SimpleMongoClientDatabaseFactory factory =
+                new SimpleMongoClientDatabaseFactory(mongoClient, properties.getDatabase());
+        return new KiwiMongoTemplate(factory, converter);
+    }
+
+    @Bean("cryoemsMongoProperties")
+    @ConfigurationProperties(prefix = "cryoems.mongodb")
+    public MongoProperties cryoemsMongoProperties() {
+        log.info("cryoems MongoDB properties bean created");
+        return new MongoProperties();
+    }
+}

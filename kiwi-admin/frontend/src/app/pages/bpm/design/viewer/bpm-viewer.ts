@@ -87,6 +87,7 @@ export class BpmViewer implements OnInit, OnDestroy {
 
     effect(() => {
       this.activityStates();
+      this.processActivities();
       this.bpmnImportReady();
       this.processInstance();
       this.markActivityState();
@@ -190,25 +191,52 @@ export class BpmViewer implements OnInit, OnDestroy {
     this.processInstanceService.getHistoryActivityInstances(this.processInstanceId()!).subscribe({
       next: (activities) => {
         this.processActivities.set(activities);
-        const activityMap = new Map<string, CamundaHistoricActivityInstance>();
-        for (const activity of activities) {
-          if (activity.activityId == null || activity.activityId === '') {
-            continue;
-          }
-          const activityId = activity.activityId;
-          if (activity.completed) {
-            activityMap.set(activityId, activity);
-          }
-
-          let exist = activityMap.get(activityId);
-          if (exist?.completed) {
-            continue;
-          }
-          activityMap.set(activityId, activity);
-        }
-        this.activityStates.set(activityMap);
+        this.activityStates.set(this.buildActivityStateMap(activities));
       }
     });
+  }
+
+  /**
+   * 同一 BPMN activityId 可能有多条历史实例（重试/多实例）：优先保留未结束的一条，
+   * 以便与 open incident 对齐；同态时保留 startTime 更晚的。
+   */
+  private buildActivityStateMap(
+    activities: CamundaHistoricActivityInstance[],
+  ): Map<string, CamundaHistoricActivityInstance> {
+    const activityMap = new Map<string, CamundaHistoricActivityInstance>();
+    for (const activity of activities) {
+      const activityId = activity.activityId?.trim();
+      if (!activityId) {
+        continue;
+      }
+      const existing = activityMap.get(activityId);
+      if (!existing) {
+        activityMap.set(activityId, activity);
+        continue;
+      }
+      if (existing.completed && !activity.completed) {
+        activityMap.set(activityId, activity);
+        continue;
+      }
+      if (!existing.completed && activity.completed) {
+        continue;
+      }
+      const existingStart = this.historicActivityStartMs(existing);
+      const nextStart = this.historicActivityStartMs(activity);
+      if (nextStart >= existingStart) {
+        activityMap.set(activityId, activity);
+      }
+    }
+    return activityMap;
+  }
+
+  private historicActivityStartMs(activity: CamundaHistoricActivityInstance): number {
+    const raw = activity.startTime;
+    if (raw == null || raw === '') {
+      return 0;
+    }
+    const t = Date.parse(String(raw));
+    return Number.isNaN(t) ? 0 : t;
   }
 
   /**
@@ -258,31 +286,72 @@ export class BpmViewer implements OnInit, OnDestroy {
 
     this.clearActivityMarkers();
 
-    const incidentIds = this.openIncidentActivityIds();
+    const errorActivityIds = this.errorActivityIds();
+
+    for (const activityId of errorActivityIds) {
+      this.applyActivityMarker(activityId, 'kiwi-bpmn-error');
+    }
 
     for (const activity of this.activityStates().values()) {
-      const marker = this.markerForHistoricActivity(activity, incidentIds);
+      const activityId = activity.activityId?.trim();
+      if (!activityId || errorActivityIds.has(activityId)) {
+        continue;
+      }
+      const marker = this.markerForHistoricActivity(activity, errorActivityIds);
       if (!marker) {
         continue;
       }
-      this.addActivityMarker(activity.activityId!, marker);
-      this.markedActivityElementIds.push(activity.activityId!);
+      this.applyActivityMarker(activityId, marker);
     }
   }
 
-  /** 运行中实例上未关闭 incident 对应的 BPMN activityId */
-  private openIncidentActivityIds(): Set<string> {
-    const incidents = this.processInstance()?.openIncidents;
-    const set = new Set<string>();
-    if (!incidents?.length) {
-      return set;
+  private applyActivityMarker(activityId: string, marker: BpmActivityMarkerName): void {
+    if (this.addActivityMarker(activityId, marker)) {
+      this.markedActivityElementIds.push(activityId);
     }
-    for (const inc of incidents) {
-      const aid = inc.activityId?.trim();
-      if (aid) {
+  }
+
+  /**
+   * 异常节点 id：open incident、历史活动上的 incidentIds，以及 ERROR 态下的 currentActivities。
+   */
+  private errorActivityIds(): Set<string> {
+    const set = new Set<string>();
+
+    const incidents = this.processInstance()?.openIncidents;
+    if (incidents?.length) {
+      for (const inc of incidents) {
+        const aid = inc.activityId?.trim();
+        if (aid) {
+          set.add(aid);
+        }
+      }
+    }
+
+    for (const activity of this.processActivities()) {
+      const aid = activity.activityId?.trim();
+      if (!aid) {
+        continue;
+      }
+      if (activity.incidentIds?.length) {
         set.add(aid);
       }
     }
+
+    const state = String(this.processInstance()?.state ?? '')
+      .trim()
+      .toUpperCase();
+    if (state === 'ERROR') {
+      const currents = this.processInstance()?.currentActivities as
+        | Array<{ activityId?: string | null }>
+        | undefined;
+      for (const cur of currents ?? []) {
+        const aid = cur.activityId?.trim();
+        if (aid) {
+          set.add(aid);
+        }
+      }
+    }
+
     return set;
   }
 
@@ -291,13 +360,13 @@ export class BpmViewer implements OnInit, OnDestroy {
    */
   private markerForHistoricActivity(
     activity: CamundaHistoricActivityInstance,
-    incidentActivityIds: Set<string>,
+    errorActivityIds: Set<string>,
   ): BpmActivityMarkerName | null {
     const id = activity.activityId?.trim();
     if (!id) {
       return null;
     }
-    if (incidentActivityIds.has(id)) {
+    if (errorActivityIds.has(id) || (activity.incidentIds?.length ?? 0) > 0) {
       return 'kiwi-bpmn-error';
     }
     if (!activity.completed) {
@@ -318,8 +387,11 @@ export class BpmViewer implements OnInit, OnDestroy {
     if (!activity) {
       return 'notStarted';
     }
-    const incidents = this.openIncidentActivityIds();
-    if (incidents.has(id)) {
+    const errorIds = this.errorActivityIds();
+    if (errorIds.has(id)) {
+      return 'error';
+    }
+    if ((activity.incidentIds?.length ?? 0) > 0) {
       return 'error';
     }
     if (!activity.completed) {
@@ -355,25 +427,40 @@ export class BpmViewer implements OnInit, OnDestroy {
   };
 
   removeActivityMarker(activityId: string, marker: string) {
-    const viewer = this.viewer;
-    if (!viewer) {
-      return;
-    }
-    this.canvas!.removeMarker(activityId, marker);
-  }
-
-  addActivityMarker(activityId: string, marker: string) {
-    if (!this.elementRegistry) {
-      return;
-    }
     if (!this.canvas) {
       return;
     }
-    let element = this.elementRegistry.get(activityId);
+    const element = this.resolveDiagramElement(activityId);
     if (!element) {
       return;
     }
-    this.canvas!.addMarker(activityId, marker);
+    this.canvas.removeMarker(element, marker);
+  }
+
+  addActivityMarker(activityId: string, marker: string): boolean {
+    if (!this.elementRegistry || !this.canvas) {
+      return false;
+    }
+    const element = this.resolveDiagramElement(activityId);
+    if (!element) {
+      return false;
+    }
+    this.canvas.addMarker(element, marker);
+    return true;
+  }
+
+  /** 按 BPMN 元素 id 解析画布节点（兼容 registry 键与 businessObject.id 不一致） */
+  private resolveDiagramElement(activityId: string): unknown | undefined {
+    const id = activityId.trim();
+    if (!id) {
+      return undefined;
+    }
+    const direct = this.elementRegistry.get(id);
+    if (direct) {
+      return direct;
+    }
+    const all = this.elementRegistry.getAll() as Array<{ businessObject?: { id?: string } }>;
+    return all.find((el) => el.businessObject?.id === id);
   }
 
   /** 是否正常结束（不含取消 / incident） */

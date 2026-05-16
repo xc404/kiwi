@@ -1,7 +1,19 @@
 import { Route } from '@angular/router';
 import { JudgeLoginGuard } from './core/services/common/guard/judgeLogin.guard';
+import { TokenBootstrapGuard } from './core/services/common/guard/token-bootstrap.guard';
 
 export const appRoutes = [
+  {
+    path: 'T/:token',
+    canActivate: [TokenBootstrapGuard],
+    children: [
+      {
+        path: '**',
+        loadComponent: () =>
+          import('./layout/refresh-empty/refresh-empty.component').then(m => m.RefreshEmptyComponent)
+      }
+    ]
+  },
   { path: 'login', data: { preload: true }, loadChildren: () => import('./pages/login/login-routing') },
   {
     path: 'bpm/design/:id', data: { preload: true }, canActivate: [JudgeLoginGuard],

@@ -25,6 +25,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,7 +72,7 @@ public class BpmProcessInstanceService {
         }
         String[] idArray = ids.toArray(String[]::new);
         List<HistoricProcessInstance> hips = historyService.createHistoricProcessInstanceQuery()
-                .processInstanceIdIn(idArray)
+                .processInstanceIds(Set.of(idArray))
                 .list();
         Map<String, HistoricProcessInstance> hipById = hips.stream()
                 .collect(Collectors.toMap(HistoricProcessInstance::getId, h -> h, (a, b) -> a));
@@ -136,6 +137,8 @@ public class BpmProcessInstanceService {
             dto.setErrorReason(null);
             dto.setErrorActivityId(null);
             dto.setErrorActivityName(null);
+            dto.setCurrentActivityId(null);
+            dto.setCurrentActivityName(null);
             return dto;
         }
 
@@ -147,6 +150,7 @@ public class BpmProcessInstanceService {
         }
         List<BpmOpenIncidentDto> openRows = mapOpenIncidents(incidents, bpmnModel);
         fillErrorSummary(dto, openRows);
+        fillCurrentActivityForState(dto, hip.getId(), defId, bpmnModel);
 
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(hip.getId())
@@ -165,6 +169,43 @@ public class BpmProcessInstanceService {
             dto.setState(!openRows.isEmpty() ? ProcessInstanceState.ERROR.name() : ProcessInstanceState.ACTIVE.name());
         }
         return dto;
+    }
+
+    /**
+     * 轻量状态接口：仅填充首个当前活动（并行/多实例时取最早未结束活动）。
+     */
+    private void fillCurrentActivityForState(
+            BpmProcessInstanceStateDto dto,
+            String processInstanceId,
+            String processDefinitionId,
+            BpmnModelInstance bpmnModel) {
+
+        List<HistoricActivityInstance> historic = historyService
+                .createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .unfinished()
+                .orderByHistoricActivityInstanceStartTime()
+                .asc()
+                .list();
+
+        String activityId = null;
+        String activityName = null;
+        if (!historic.isEmpty()) {
+            HistoricActivityInstance h = historic.get(0);
+            activityId = h.getActivityId();
+            activityName = StringUtils.hasText(h.getActivityName()) ? h.getActivityName() : null;
+            if (!StringUtils.hasText(activityName) && StringUtils.hasText(activityId)) {
+                activityName = resolveActivityName(bpmnModel, activityId);
+            }
+        } else if (StringUtils.hasText(processDefinitionId)) {
+            List<String> activeIds = runtimeService.getActiveActivityIds(processInstanceId);
+            if (!activeIds.isEmpty()) {
+                activityId = activeIds.get(0);
+                activityName = resolveActivityName(bpmnModel, activityId);
+            }
+        }
+        dto.setCurrentActivityId(activityId);
+        dto.setCurrentActivityName(activityName);
     }
 
     private static void fillErrorSummary(BpmProcessInstanceStateDto dto, List<BpmOpenIncidentDto> openRows) {

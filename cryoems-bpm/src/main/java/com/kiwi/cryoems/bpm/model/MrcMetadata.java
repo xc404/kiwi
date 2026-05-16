@@ -1,5 +1,7 @@
 package com.kiwi.cryoems.bpm.model;
 
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.io.Serializable;
 
 /**
@@ -13,9 +15,15 @@ public class MrcMetadata implements Serializable {
     private int rows;
     private int sections;
     private int mode;
+    @Field("mode_name")
     private String modeName;
+    @Field("minimum_density")
     private double minimumDensity;
+
+    @Field("maximum_density")
     private double maximumDensity;
+
+    @Field("mean_density")
     private double meanDensity;
     private Double vmax;
     private Double vmin;

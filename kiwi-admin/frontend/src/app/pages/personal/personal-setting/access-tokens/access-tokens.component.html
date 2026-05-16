@@ -1,6 +1,6 @@
 <nz-card nzBordered="false" class="pat-wrap">
   <p class="pat-intro">
-    长期访问令牌用于脚本、外部系统（如 cryoEMS）以你的身份调用 Kiwi API，与浏览器登录会话相互独立；数据库存储令牌摘要，完整值仅在签发时显示一次。删除令牌将立即在服务端吊销（Sa-Token 失效）。
+    长期访问令牌（PAT）用于脚本、外部系统（如 cryoEMS）以你的身份访问 Kiwi：PAT 本身不能直接调用业务 API，需先兑换为短期 Sa-Token。数据库存储令牌摘要，完整 PAT 仅在签发时显示一次；删除令牌将立即吊销并使其无法再兑换。
   </p>
 
   <div class="pat-create-row">

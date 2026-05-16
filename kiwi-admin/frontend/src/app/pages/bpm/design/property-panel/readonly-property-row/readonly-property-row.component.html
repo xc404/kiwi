@@ -37,7 +37,7 @@
       nzTheme="outline"
       nz-popover
       nzPopoverTrigger="click"
-      nzPopoverPlacement="bottomRight"
+      nzPopoverPlacement="topRight"
       [nzPopoverContent]="detailTpl"
       nzPopoverTitle="详情"
       tabindex="0"
@@ -53,12 +53,12 @@
       </div>
       <div class="detail-row">
         <span class="detail-label">配置值</span>
-        <span class="detail-value">{{ configuredDetail() }}</span>
+        <pre class="detail-value detail-value--long" [title]="configuredDetail()">{{ configuredDetail() }}</pre>
       </div>
       @if (hasRuntimeValue()) {
       <div class="detail-row">
         <span class="detail-label">运行时值</span>
-        <span class="detail-value">{{ runtimeDetail() }}</span>
+        <pre class="detail-value detail-value--long" [title]="runtimeDetail()">{{ runtimeDetail() }}</pre>
       </div>
     }
     </div>

@@ -32,6 +32,31 @@ public class MicroscopeScaleRegistry {
     /**
      * @return 无 scales 配置或显微镜不存在时返回 {@code null}（例如 Titan3_falcon）
      */
+    /**
+     * @return 无 {@code microscope_temstigma} 时返回 {@code null}
+     */
+    public TemStigma temStigma(String microscopeKey) {
+        if (microscopeKey == null || microscopeKey.isBlank()) {
+            return null;
+        }
+        JsonNode mic = root().get(microscopeKey.trim());
+        if (mic == null || !mic.has("microscope_temstigma")) {
+            return null;
+        }
+        JsonNode tem = mic.get("microscope_temstigma");
+        return new TemStigma(
+                tem.path("x_temstigma_angle").asDouble(),
+                tem.path("y_temstigma_angle").asDouble(),
+                tem.path("x_temstigma_step").asDouble(),
+                tem.path("y_temstigma_step").asDouble());
+    }
+
+    public record TemStigma(
+            double xTemstigmaAngle,
+            double yTemstigmaAngle,
+            double xTemstigmaStep,
+            double yTemstigmaStep) {}
+
     public ClosetScale closestScale(String microscopeKey, double pSize) {
         if (microscopeKey == null || microscopeKey.isBlank()) {
             return null;

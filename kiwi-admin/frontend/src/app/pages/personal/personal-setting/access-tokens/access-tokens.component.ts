@@ -94,7 +94,10 @@ export class AccessTokensComponent implements OnInit {
   }
 
   fullAuthorization(r: CreatePersonalAccessTokenResult): string {
-    const t = (r.tokenType || 'Bearer').trim();
+    const t = (r.tokenType || '').trim();
+    if (!t || t.toLowerCase() === 'pat') {
+      return r.token;
+    }
     return `${t} ${r.token}`.replace(/\s+/g, ' ').trim();
   }
 

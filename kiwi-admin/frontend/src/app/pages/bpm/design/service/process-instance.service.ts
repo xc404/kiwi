@@ -74,9 +74,12 @@ export interface CamundaHistoricActivityInstance {
   id?: string;
   activityId: string | null;
   activityType: string | null;
+  startTime?: string | null;
   endTime: string | null;
   /** Camunda 原生字段：已取消的活动实例（可与 endTime 同时存在） */
   canceled?: boolean;
+  /** 关联的未关闭 incident id 列表（存在时表示该活动处于异常态） */
+  incidentIds?: string[] | null;
   completed: boolean;
   active: boolean;
 }

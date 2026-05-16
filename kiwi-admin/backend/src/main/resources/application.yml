@@ -17,11 +17,13 @@ kiwi:
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
       warmup-backoff-ms: ${KIWI_AI_MCP_WARMUP_BACKOFF_MS:150}
-  # 用户在「个人设置」签发的长期访问令牌（PAT）；机机场景可 Authorization: Bearer 使用该令牌
+  # 用户在「个人设置」签发的长期访问令牌（PAT）；需经兑换接口换取短期 Sa-Token 后调用业务 API
   personal-access-token:
     max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
-    # Sa 会话有效期（秒）；仍兼容旧环境变量 KIWI_INTEGRATION_API_TOKEN_TIMEOUT
+    # PAT 本身有效期（秒）；仍兼容旧环境变量 KIWI_INTEGRATION_API_TOKEN_TIMEOUT
     session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_SESSION_TIMEOUT_SECONDS:${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}}
+    # 单次兑换所得 Sa-Token 会话有效期（秒）
+    exchange-session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_EXCHANGE_SESSION_TIMEOUT:7200}
 
 app:
   cors:
@@ -68,6 +70,14 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+# CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
+
+cryoems:
+  mongodb:
+    uri: ${CRYOEMS_MONGODB_URI:mongodb://127.0.0.1:27017/cryoems?authSource=admin}
+    database: ${CRYOEMS_MONGODB_DATABASE:cryoems}
+    auto-index-creation: true
 
 camunda.bpm:
   admin-user:

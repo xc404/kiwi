@@ -24,6 +24,13 @@ export interface CreatePersonalAccessTokenResult {
   expiresAt: string | null;
 }
 
+export interface ExchangeSaTokenResult {
+  token: string;
+  tokenType: string;
+  expiresInSeconds: number;
+  expiresAt: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -47,5 +54,15 @@ export class PersonalAccessTokenService {
       showLoading: true,
       needSuccessInfo: true
     });
+  }
+
+  /** 使用 PAT 兑换短期 Sa-Token（机机场景；浏览器端一般无需调用） */
+  exchange(personalAccessToken: string): Observable<ExchangeSaTokenResult> {
+    const token = personalAccessToken.replace(/^Bearer\s+/i, '').trim();
+    return this.http.post<ExchangeSaTokenResult>(
+      '/user/personal-access-tokens/exchange',
+      { token },
+      { showLoading: false }
+    );
   }
 }

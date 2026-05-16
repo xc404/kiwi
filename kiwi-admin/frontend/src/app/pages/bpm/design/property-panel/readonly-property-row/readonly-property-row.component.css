@@ -24,12 +24,13 @@
 }
 
 .detail-body {
-  width: 320px;
+  width: min(360px, calc(100vw - 48px));
+  max-width: 360px;
 }
 
 .detail-row {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
   margin-bottom: 8px;
   font-size: 12px;
@@ -44,6 +45,21 @@
 }
 
 .detail-value {
+  min-width: 0;
+  margin: 0;
   word-break: break-word;
+  overflow-wrap: anywhere;
   color: rgba(0, 0, 0, 0.88);
+}
+
+.detail-value--long {
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.02);
 }

@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 
 /**
- * 用户个人长期访问令牌（与 Sa-Token 终端一一对应，集合名便于运维识别）。
+ * 用户个人长期访问令牌（PAT 凭证摘要；与 Sa-Token 终端一一对应，兑换时签发短期会话）。
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -26,6 +26,9 @@ public class SysPersonalAccessToken extends BaseEntity<String> {
 
     /** Sa-Token 终端标识，形如 {@code pat-}{@literal <mongoId>} */
     private String saDevice;
+
+    /** PAT 明文经加盐摘要后的存储值（不可逆） */
+    private String tokenHash;
 
     /** 令牌脱敏展示（仅创建时写入，不可逆） */
     private String tokenHint;

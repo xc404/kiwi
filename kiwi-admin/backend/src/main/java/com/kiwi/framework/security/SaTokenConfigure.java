@@ -15,6 +15,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 白名单路径（无需 token）：
  * <ul>
  *   <li>{@code /auth/signin}、{@code /auth/signout} — 登录/登出</li>
+ *   <li>{@code /user/personal-access-tokens/exchange} — PAT 兑换 Sa-Token（机机）</li>
  *   <li>{@code /swagger-ui/**}、{@code /v3/api-docs/**}、{@code /swagger-ui.html} — OpenAPI/Swagger</li>
  *   <li>{@code /engine-rest/**} — Camunda REST（请结合网关或 Camunda 自身鉴权在生产环境收紧）</li>
  *   <li>{@code /camunda/**} — Camunda Webapp</li>
@@ -32,6 +33,7 @@ public class SaTokenConfigure implements WebMvcConfigurer {
         registry.addInterceptor(new SaInterceptor(handle -> SaRouter.match("/**")
                 .notMatch("/auth/signin")
                 .notMatch("/auth/signout")
+                .notMatch("/user/personal-access-tokens/exchange")
                 .notMatch("/swagger-ui/**")
                 .notMatch("/swagger-ui.html")
                 .notMatch("/v3/api-docs/**")

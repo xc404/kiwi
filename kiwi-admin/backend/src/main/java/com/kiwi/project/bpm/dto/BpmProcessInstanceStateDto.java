@@ -28,4 +28,8 @@ public class BpmProcessInstanceStateDto {
     private String errorActivityId;
     /** 首个 incident 关联的 BPMN 节点展示名（可能为空） */
     private String errorActivityName;
+    /** 运行中实例当前停留的首个活动节点 id（终态或 ERROR 时为空，ERROR 时见 errorActivityId） */
+    private String currentActivityId;
+    /** 运行中实例当前停留的首个活动节点展示名 */
+    private String currentActivityName;
 }
