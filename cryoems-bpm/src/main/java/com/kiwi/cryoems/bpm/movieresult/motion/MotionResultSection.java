@@ -15,6 +15,7 @@ public class MotionResultSection {
 
     private final MotionPathResolver pathResolver;
     private final MotionThumbnailGenerator thumbnailGenerator;
+    private final MotionPatchLogThumbnailGenerator patchLogThumbnailGenerator;
     private final MotionResultApplier applier;
     private final MotionResultValidator validator;
 
@@ -22,6 +23,7 @@ public class MotionResultSection {
             throws Exception {
         MotionPaths paths = pathResolver.resolve(motionNoDwMrc, motionVersion, thumbnailsDir);
         thumbnailGenerator.generate(paths);
+        patchLogThumbnailGenerator.generate(paths);
         applier.apply(result, paths);
         validator.validate(result);
     }

@@ -22,6 +22,10 @@ public class MotionResultValidator {
             if (image != null) {
                 requireFile(image.getPath(), "motion_mrc image");
             }
+            MovieImage patchLog = result.getImages().get(MovieImage.Type.patch_log);
+            if (patchLog != null) {
+                requireFile(patchLog.getPath(), "patch_log image");
+            }
         }
     }
 

@@ -20,16 +20,18 @@ public class MotionPathResolver {
         String logBase = motionDir.resolve(fileName + "_log").toString();
         String localLog;
         String rigidLog;
-        if (StringUtils.hasText(motionVersion) && motionVersion.trim().startsWith("1.6")) {
-            localLog = motionDir.resolve(fileName + "-Patch-Patch.log").toString();
-            rigidLog = motionDir.resolve(fileName + "-Patch-Full.log").toString();
-        } else {
+        if (StringUtils.hasText(motionVersion) && motionVersion.trim().startsWith("1.4")) {
             localLog = logBase + "0-Patch-Patch.log";
             rigidLog = logBase + "0-Patch-Full.log";
+        } else {
+            localLog = motionDir.resolve(fileName + "-Patch-Patch.log").toString();
+            rigidLog = motionDir.resolve(fileName + "-Patch-Full.log").toString();
         }
         String mrcImage = thumbnailsDir.resolve(fileName + "_DW_thumb_@1024.png").toString();
+        String patchLogImage = thumbnailsDir.resolve(fileName + "_local_shifts.png").toString();
 
-        return new MotionPaths(fileName, motionMrc.toString(), dw, dws, localLog, rigidLog, subtarction, mrcImage);
+        return new MotionPaths(
+                fileName, motionMrc.toString(), dw, dws, localLog, rigidLog, subtarction, mrcImage, patchLogImage);
     }
 
     private static String stripExtension(String fileName) {

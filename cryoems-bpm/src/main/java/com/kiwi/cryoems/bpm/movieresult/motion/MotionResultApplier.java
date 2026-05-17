@@ -20,5 +20,6 @@ public class MotionResultApplier {
         motion.setSubtarctionOutput(paths.subtarctionMrc());
         result.setMotion(motion);
         result.addImage(new MovieImage(MovieImage.Type.motion_mrc, paths.mrcImage()));
+        result.addImage(new MovieImage(MovieImage.Type.patch_log, paths.patchLogImage()));
     }
 }

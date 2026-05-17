@@ -67,7 +67,7 @@ import org.springframework.stereotype.Component;
 @Component("cyroemsCreateMovieResultActivity")
 @RequiredArgsConstructor
 @Slf4j
-public class CyroemsCreateMovieResultActivity implements JavaDelegate {
+public class CryoemsCreateMovieResultActivity implements JavaDelegate {
 
     private final MovieResultRepository movieResultRepository;
     private final MovieResultAssemblyService movieResultAssemblyService;
@@ -87,22 +87,18 @@ public class CyroemsCreateMovieResultActivity implements JavaDelegate {
 
 
         MovieResult movieResult = new MovieResult();
-        movieResult.setId(ExecutionUtils.getStringInputVariable(execution,"movie_id").orElse(""));
-        movieResult.setInstance_id(ExecutionUtils.getStringInputVariable(execution,"movie_id").orElse(""));
-
+        String movieId = ExecutionUtils.getStringInputVariableAtPath(execution, "movie.id").orElse("");
+        String configId = ExecutionUtils.getStringInputVariableAtPath(execution, "task.config_id").orElse("");
+        String movieDataId = ExecutionUtils.getStringInputVariableAtPath(execution, "movie.data_id").orElse("");
+        movieResult.setId(movieId);
+        movieResult.setInstance_id(movieId);
+        movieResult.setConfig_id(configId);
+        movieResult.setMovie_data_id(movieDataId);
         movieResultAssemblyService.assemble(movieResult, execution);
         movieResult = movieResultRepository.save(movieResult);
 
         execution.setVariable("movieResultId", movieResult.getId());
-        execution.setVariable("movieResult", movieResult);
+//        execution.setVariable("movieResult", movieResult);
 
-    }
-
-    private static MrcMetadata resolveMrcMetadata(DelegateExecution execution) {
-        Object value = execution.getVariable("mrcMetadata");
-        if (value instanceof MrcMetadata meta) {
-            return meta;
-        }
-        return null;
     }
 }

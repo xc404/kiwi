@@ -11,39 +11,44 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 对齐 cyroems {@code MovieService#createMotionMrc} / {@code SoftwareService#mrc_png}。
+ * 对齐 cyroems {@code MovieService#createPatchLog} / {@code SoftwareService#patch_log_png}。
  */
 @Component
 @Slf4j
-public class MotionThumbnailGenerator {
+public class MotionPatchLogThumbnailGenerator {
 
-    @Value("${cryoems.bpm.mrc-png-command:mrc_png.sh}")
-    private String mrcPngCommand;
+    @Value("${cryoems.bpm.motion-patch-png-command:motion_patch_png.sh}")
+    private String motionPatchPngCommand;
 
     @Value("${cryoems.bpm.png-command-timeout-seconds:300}")
     private long commandTimeoutSeconds;
 
     public void generate(MotionPaths paths) throws IOException, InterruptedException {
-        Path output = Path.of(paths.mrcImage());
+        Path input = Path.of(paths.localLog());
+        if (!Files.isRegularFile(input)) {
+            throw new IllegalStateException("motion patch log file not exist: " + paths.localLog());
+        }
+        Path output = Path.of(paths.patchLogImage());
         Files.createDirectories(output.getParent());
-        runMrcPng(paths.dwMrc(), paths.mrcImage());
+        runPatchLogPng(paths.localLog(), paths.patchLogImage());
     }
 
-    private void runMrcPng(String input, String output) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(mrcPngCommand, "-i", input, "-o", output);
+    private void runPatchLogPng(String input, String output) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(motionPatchPngCommand, "-i", input, "-o", output);
         pb.redirectError(ProcessBuilder.Redirect.PIPE);
         log.info("执行命令: {}", String.join(" ", pb.command()));
         Process process = pb.start();
         boolean finished = process.waitFor(commandTimeoutSeconds, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
-            throw new IllegalStateException(mrcPngCommand + " 超时（" + commandTimeoutSeconds + "s）: -i " + input);
+            throw new IllegalStateException(
+                    motionPatchPngCommand + " 超时（" + commandTimeoutSeconds + "s）: -i " + input);
         }
         int code = process.exitValue();
         if (code != 0) {
             String err = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
             throw new IllegalStateException(
-                    mrcPngCommand
+                    motionPatchPngCommand
                             + " 退出码 "
                             + code
                             + " -i "
@@ -52,6 +57,6 @@ public class MotionThumbnailGenerator {
                             + output
                             + (err.isBlank() ? "" : "\nstderr: " + err));
         }
-        log.debug("命令完成: {} -i {} -o {}", mrcPngCommand, input, output);
+        log.debug("命令完成: {} -i {} -o {}", motionPatchPngCommand, input, output);
     }
 }

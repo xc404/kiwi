@@ -15,6 +15,7 @@ import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
+import { interval } from 'rxjs';
 import { filter, map as mapOp } from 'rxjs/operators';
 import {
   BpmActivityVisualState,
@@ -35,6 +36,9 @@ import kiwiDescriptor from '../../flow-elements/kiwi.json';
   standalone: true,
 })
 export class BpmViewer implements OnInit, OnDestroy {
+  /** 运行中实例轮询间隔（毫秒） */
+  private static readonly AUTO_REFRESH_INTERVAL_MS = 3_000;
+
   private readonly route = inject(ActivatedRoute);
   private readonly processInstanceService = inject(ProcessInstanceService);
 
@@ -55,6 +59,9 @@ export class BpmViewer implements OnInit, OnDestroy {
   /** 最近一次 importXML 已成功，可与 processActivities 叠加打标 */
   private readonly bpmnImportReady = signal(false);
 
+  /** 已加载 BPMN 的流程定义 id，避免轮询刷新实例时重复拉取 XML */
+  private readonly loadedProcessDefinitionId = signal<string | undefined>(undefined);
+
   private readonly activityMarkerNames = BPM_ACTIVITY_MARKER_NAMES;
   private markedActivityElementIds: string[] = [];
 
@@ -72,10 +79,21 @@ export class BpmViewer implements OnInit, OnDestroy {
     });
 
     effect(() => {
-      let processInstance = this.processInstance();
-      if (processInstance) {
+      const defId = this.processInstance()?.processDefinitionId?.trim();
+      if (defId && defId !== this.loadedProcessDefinitionId()) {
+        this.loadedProcessDefinitionId.set(defId);
         this.loadBpmnXml();
       }
+    });
+
+    effect((onCleanup) => {
+      if (!this.isProcessInstanceRunning(this.processInstance())) {
+        return;
+      }
+      const sub = interval(BpmViewer.AUTO_REFRESH_INTERVAL_MS).subscribe(() => {
+        this.refreshRuntimeData();
+      });
+      onCleanup(() => sub.unsubscribe());
     });
 
     effect(() => {
@@ -110,6 +128,7 @@ export class BpmViewer implements OnInit, OnDestroy {
         filter((id): id is string => !!id),
       )
       .subscribe((id) => {
+        this.loadedProcessDefinitionId.set(undefined);
         this.processInstanceId.set(id);
       });
 
@@ -194,6 +213,36 @@ export class BpmViewer implements OnInit, OnDestroy {
         this.activityStates.set(this.buildActivityStateMap(activities));
       }
     });
+  }
+
+  /** 轮询时仅刷新实例状态与活动历史，不重复加载 BPMN 定义 */
+  private refreshRuntimeData(): void {
+    if (!this.processInstanceId()) {
+      return;
+    }
+    this.loadProcessInstance();
+    this.loadProcessActivities();
+  }
+
+  /** 与工具栏状态「运行中」一致：未结束、未挂起、无 open incident 且非 ERROR。 */
+  private isProcessInstanceRunning(pi: BpmProcessInstanceDto | undefined): boolean {
+    if (!pi?.id) {
+      return false;
+    }
+    const state = String(pi.state ?? '')
+      .trim()
+      .toUpperCase();
+    const hasOpenIncidents = (pi.openIncidents?.length ?? 0) > 0;
+    if (state === 'ERROR' || hasOpenIncidents) {
+      return false;
+    }
+    if (pi.suspended || state === 'SUSPENDED') {
+      return false;
+    }
+    if (pi.ended || state === 'COMPLETED' || state === 'CANCELED') {
+      return false;
+    }
+    return true;
   }
 
   /**

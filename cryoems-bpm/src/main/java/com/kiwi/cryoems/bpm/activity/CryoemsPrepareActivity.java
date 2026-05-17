@@ -2,7 +2,6 @@ package com.kiwi.cryoems.bpm.activity;
 
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
-import com.kiwi.bpmn.core.retry.JobRetryException;
 import com.kiwi.cryoems.bpm.model.ClosetScale;
 import com.kiwi.cryoems.bpm.model.MrcMetadata;
 import com.kiwi.cryoems.bpm.support.MrcHeaderParser;
@@ -67,7 +66,7 @@ import java.util.concurrent.TimeUnit;
 @Component("cyroemsPrepareActivity")
 @RequiredArgsConstructor
 @Slf4j
-public class CyroemsPrepareActivity implements JavaDelegate {
+public class CryoemsPrepareActivity implements JavaDelegate {
 
     private static final List<String> WORK_SUBDIRS = List.of("ctf", "motion", "thumbnails", "vfm");
 

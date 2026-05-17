@@ -11,4 +11,5 @@ public record MotionPaths(
         String localLog,
         String rigidLog,
         String subtarctionMrc,
-        String mrcImage) {}
+        String mrcImage,
+        String patchLogImage) {}

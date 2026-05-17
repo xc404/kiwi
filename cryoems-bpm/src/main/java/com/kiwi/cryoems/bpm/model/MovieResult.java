@@ -1,6 +1,5 @@
 package com.kiwi.cryoems.bpm.model;
 
-import com.kiwi.cryoems.bpm.model.cryosparc.CryosparcResult;
 import com.kiwi.cryoems.bpm.model.ctf.EstimationResult;
 import com.kiwi.cryoems.bpm.model.motion.MotionResult;
 import com.kiwi.cryoems.bpm.model.vfm.VFMResult;
@@ -12,7 +11,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * 与 cyroems {@code com.cryo.model.MovieResult} 对齐，写入同一 Mongo 集合 {@code movieResult}。
@@ -26,18 +24,16 @@ public class MovieResult extends CryoDataEntity {
 //    private String task_data_id;
 //
 //    @Indexed
-//    private String task_id;
+    private String task_id;
 
     @Indexed
     private String instance_id;
 
-//    private String data_id;
 
-//    private String config_id;
+    private String config_id;
 //
-//    private String category;
 //
-//    private String movie_data_id;
+    private String movie_data_id;
 
     private Map<MovieImage.Type, MovieImage> images;
     private MrcMetadata mrcMetadata;
