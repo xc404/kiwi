@@ -44,7 +44,9 @@ final class SlurmSbatchConfigBuilder {
                 jobName + ".out");
         errorFile = slurmService.resolvePathUnderShellDir(errorFile);
         outputFile = slurmService.resolvePathUnderShellDir(outputFile);
-        String partition = ExecutionUtils.getStringInputVariable(execution, "slurm_partition").orElse(null);
+        String partition = nonBlankOrElse(
+                ExecutionUtils.getStringInputVariable(execution, "slurm_partition"),
+                defaultPartition());
         String qos = ExecutionUtils.getStringInputVariable(execution, "slurm_qos").orElse(null);
         String signal = ExecutionUtils.getStringInputVariable(execution, "slurm_signal").orElse(null);
         String time = ExecutionUtils.getStringInputVariable(execution, "slurm_time").orElse(null);
@@ -89,6 +91,17 @@ final class SlurmSbatchConfigBuilder {
         sbatchConfig.setGpus_per_node(gpus_per_node);
         sbatchConfig.setGpus_per_task(gpus_per_task);
         return sbatchConfig;
+    }
+
+    private String defaultPartition() {
+        if (slurmService == null) {
+            return null;
+        }
+        String configured = slurmService.slurmProperties.getPartition();
+        if (configured == null || configured.isBlank()) {
+            return null;
+        }
+        return configured.trim();
     }
 
     private static String nonBlankOrElse(Optional<String> value, String defaultValue) {

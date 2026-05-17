@@ -31,6 +31,12 @@ public class SlurmProperties {
     private int threadPoolSize = 5;
 
     /**
+     * 默认 Slurm 分区名；流程变量 {@code slurm_partition} 未传入或为空时使用。
+     * 配置键：{@code kiwi.bpm.slurm.partition}。
+     */
+    private String partition;
+
+    /**
      * Slurm 作业完成写入 .flag 后，调用 External Task {@code complete} 的最大尝试次数（每次失败后休眠 1 秒）。
      * 达到上限仍失败则抛出异常，避免无限重试。
      */

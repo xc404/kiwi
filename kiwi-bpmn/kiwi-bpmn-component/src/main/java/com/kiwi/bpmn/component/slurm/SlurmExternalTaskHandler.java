@@ -155,8 +155,7 @@ import lombok.extern.slf4j.Slf4j;
             key = "slurm_partition",
             name = "Slurm Partition",
             type = "String",
-            description = "Partition to submit the job.",
-            important = true
+            description = "Partition to submit the job. If omitted, uses kiwi.bpm.slurm.partition when configured."
         ),
         @ComponentParameter(
             key = "slurm_qos",
@@ -316,10 +315,11 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
                         .filter(s -> !s.isEmpty())
                         .orElseGet(() -> firstCommandToken(sbatchConfig.getCommand()));
         log.info(
-                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, taskType={}, command={}",
+                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, partition={}, taskType={}, command={}",
                 processInstanceId,
                 activityId,
                 sbatchConfig.getJobName(),
+                sbatchConfig.getPartition(),
                 taskType,
                 sbatchConfig.getCommand());
         return this.slurmTaskManager.submitSlurmJob(taskType, execution, sbatchConfig).thenApply(slurmJob -> {

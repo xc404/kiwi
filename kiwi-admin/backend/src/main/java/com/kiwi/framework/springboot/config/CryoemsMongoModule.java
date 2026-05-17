@@ -22,12 +22,19 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
  * CryoEMS 业务库（与 cryo-web-server {@code dataset.mongodb} 同源），供 {@code MovieResultRepository} 等访问。
  */
 @EnableMongoRepositories(
-        basePackages = "com.kiwi.cryoems.bpm.dao",
+        basePackages = CryoemsMongoModule.REPOSITORY_BASE_PACKAGE,
         repositoryBaseClass = BaseMongoRepositoryImpl.class,
         mongoTemplateRef = "cryoemsMongoTemplate")
 @Configuration
 @Slf4j
 public class CryoemsMongoModule {
+
+    /** CryoEMS 业务库 Repository 扫描包，供 {@link MongoModule} exclude 复用。 */
+    public static final String REPOSITORY_BASE_PACKAGE = "com.kiwi.cryoems.bpm.dao";
+
+    /** 主库 {@link MongoModule} 排除 CryoEMS Repository 用的正则（无需 AspectJ）。 */
+    public static final String REPOSITORY_SCAN_EXCLUDE_REGEX =
+            "com\\.kiwi\\.cryoems\\.bpm\\.dao\\..*";
 
     @Bean("cryoemsMongoTemplate")
     public KiwiMongoTemplate cryoemsMongoTemplate(

@@ -44,8 +44,8 @@ import org.springframework.stereotype.Component;
                 @ComponentParameter(
                         key = "vfmLogFile",
                         name = "VFM 日志",
-                        description = "VFM *_predicted_boxes.txt 路径",
-                        required = true)
+                        description = "VFM *_predicted_boxes.txt 路径；未跑 VFM 时可省略",
+                        required = false)
         },
         outputs = {
                 @ComponentParameter(

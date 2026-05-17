@@ -107,10 +107,10 @@ public class BpmComponentService implements InitializingBean, Refreshable
         if(self == null){
             return parent;
         }
-        List<BpmComponentParameter> result = new ArrayList<>(parent);
-        Set<String> keySet = self.stream().map(p -> p.getKey()).collect(Collectors.toSet());
-        result = result.stream().filter(p -> !keySet.contains(p.getKey())).collect(Collectors.toList());
-        result.addAll(self);
+        List<BpmComponentParameter> result = new ArrayList<>(self);
+        Set<String> selfKeySet = self.stream().map(BpmComponentParameter::getKey).collect(Collectors.toSet());
+        parent = parent.stream().filter(pp -> !selfKeySet.contains(pp.getKey())).toList();
+        result.addAll(parent);
         return result;
     }
 
