@@ -32,7 +32,8 @@ import {
  * @typedef { { autoPlace?: boolean; } } ContextPadConfig
  */
 
-import { isAny } from "bpmn-js/lib/util/ModelUtil";
+import { is, isAny } from "bpmn-js/lib/util/ModelUtil";
+import { isEventSubProcess } from "bpmn-js/lib/util/DiUtil";
 
 /**
  * BPMN-specific context pad provider.
@@ -181,10 +182,27 @@ ContextPadProvider.prototype.getContextPadEntries = function(element) {
 
   var actions = {};
 
+  function deleteAction() {
+    return {
+      'delete': {
+        group: 'edit',
+        className: 'bpmn-icon-trash',
+        title: translate('Delete'),
+        action: {
+          click: removeElement
+        }
+      }
+    };
+  }
+
+  function removeElement(e, element) {
+    modeling.removeElements([ element ]);
+  }
+
   if (element.type === 'label') {
-    // if (this._isDeleteAllowed([ element ])) {
-    //   assign(actions, deleteAction());
-    // }
+    if (this._isDeleteAllowed([ element ])) {
+      assign(actions, deleteAction());
+    }
 
     return actions;
   }
@@ -193,23 +211,6 @@ ContextPadProvider.prototype.getContextPadEntries = function(element) {
 
   function startConnect(event, element) {
     connect.start(event, element);
-  }
-
-  function removeElement(e, element) {
-    modeling.removeElements([ element ]);
-  }
-
-  function deleteAction() {
-    return {
-      // 'delete': {
-      //   group: 'edit',
-      //   className: 'bpmn-icon-trash',
-      //   title: translate('Delete'),
-      //   action: {
-      //     click: removeElement
-      //   }
-      // }
-    };
   }
 
   function getReplaceMenuPosition(element) {
@@ -354,83 +355,25 @@ ContextPadProvider.prototype.getContextPadEntries = function(element) {
   //
   // }
   //
-  // if (is(businessObject, 'bpmn:FlowNode')) {
-  //
-  //   if (is(businessObject, 'bpmn:EventBasedGateway')) {
-  //
-  //     assign(actions, {
-  //       'append.receive-task': appendAction(
-  //         'bpmn:ReceiveTask',
-  //         'bpmn-icon-receive-task',
-  //         translate('Append receive task')
-  //       ),
-  //       'append.message-intermediate-event': appendAction(
-  //         'bpmn:IntermediateCatchEvent',
-  //         'bpmn-icon-intermediate-event-catch-message',
-  //         translate('Append message intermediate catch event'),
-  //         { eventDefinitionType: 'bpmn:MessageEventDefinition' }
-  //       ),
-  //       'append.timer-intermediate-event': appendAction(
-  //         'bpmn:IntermediateCatchEvent',
-  //         'bpmn-icon-intermediate-event-catch-timer',
-  //         translate('Append timer intermediate catch event'),
-  //         { eventDefinitionType: 'bpmn:TimerEventDefinition' }
-  //       ),
-  //       'append.condition-intermediate-event': appendAction(
-  //         'bpmn:IntermediateCatchEvent',
-  //         'bpmn-icon-intermediate-event-catch-condition',
-  //         translate('Append conditional intermediate catch event'),
-  //         { eventDefinitionType: 'bpmn:ConditionalEventDefinition' }
-  //       ),
-  //       'append.signal-intermediate-event': appendAction(
-  //         'bpmn:IntermediateCatchEvent',
-  //         'bpmn-icon-intermediate-event-catch-signal',
-  //         translate('Append signal intermediate catch event'),
-  //         { eventDefinitionType: 'bpmn:SignalEventDefinition' }
-  //       )
-  //     });
-  //   } else if (isEventType(businessObject, 'bpmn:BoundaryEvent', 'bpmn:CompensateEventDefinition')) {
-  //
-  //     assign(actions, {
-  //       'append.compensation-activity':
-  //         appendAction(
-  //           'bpmn:Task',
-  //           'bpmn-icon-task',
-  //           translate('Append compensation activity'),
-  //           {
-  //             isForCompensation: true
-  //           }
-  //         )
-  //     });
-  //   } else if (!is(businessObject, 'bpmn:EndEvent') &&
-  //     !businessObject.isForCompensation &&
-  //     !isEventType(businessObject, 'bpmn:IntermediateThrowEvent', 'bpmn:LinkEventDefinition') &&
-  //     !isEventSubProcess(businessObject)) {
-  //
-  //     assign(actions, {
-  //       'append.end-event': appendAction(
-  //         'bpmn:EndEvent',
-  //         'bpmn-icon-end-event-none',
-  //         translate('Append end event')
-  //       ),
-  //       'append.gateway': appendAction(
-  //         'bpmn:ExclusiveGateway',
-  //         'bpmn-icon-gateway-none',
-  //         translate('Append gateway')
-  //       ),
-  //       'append.append-task': appendAction(
-  //         'bpmn:Task',
-  //         'bpmn-icon-task',
-  //         translate('Append task')
-  //       ),
-  //       'append.intermediate-event': appendAction(
-  //         'bpmn:IntermediateThrowEvent',
-  //         'bpmn-icon-intermediate-event-none',
-  //         translate('Append intermediate/boundary event')
-  //       )
-  //     });
-  //   }
-  // }
+  if (is(businessObject, 'bpmn:FlowNode') &&
+    !is(businessObject, 'bpmn:EndEvent') &&
+    !businessObject.isForCompensation &&
+    !isEventType(businessObject, 'bpmn:IntermediateThrowEvent', 'bpmn:LinkEventDefinition') &&
+    !isEventSubProcess(element)) {
+
+    assign(actions, {
+      'append.end-event': appendAction(
+        'bpmn:EndEvent',
+        'bpmn-icon-end-event-none',
+        translate('Append end event')
+      ),
+      'append.gateway': appendAction(
+        'bpmn:ExclusiveGateway',
+        'bpmn-icon-gateway-none',
+        translate('Append gateway')
+      ),
+    });
+  }
 
   // if (!popupMenu.isEmpty(element, 'bpmn-replace')) {
   //

@@ -23,6 +23,7 @@ import {
   ComponentProvider,
 } from '../../flow-elements/component-provider';
 import appendComponentModule from '../context-pad/append-component-module';
+import customContextPadModule from '../context-pad/index';
 import { ProcessDesignService } from '../service/process-design.service';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
 import type {
@@ -103,6 +104,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       container: '.canvas',
       additionalModules: [
         gridModule,
+        customContextPadModule,
         appendComponentModule,
         { http: ['value', this.http] },
       ],
