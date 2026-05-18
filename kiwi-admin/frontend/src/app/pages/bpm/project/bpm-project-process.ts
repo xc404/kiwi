@@ -19,8 +19,12 @@ import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
-import { finalize } from 'rxjs/operators';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { finalize, tap } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 
+import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
+import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 
 interface BpmProjectOption {
@@ -98,6 +102,8 @@ export class BpmProjectProcess implements OnInit {
   router = inject(Router);
   private readonly workspace = inject(BpmWorkspaceService);
   private readonly http = inject(BaseHttpService);
+  private readonly modalWrap = inject(NzModalWrapService);
+  private readonly message = inject(NzMessageService);
 
   projectId = signal<string | null>(null);
   readonly projectSearch = signal('');
@@ -199,6 +205,49 @@ export class BpmProjectProcess implements OnInit {
     });
   }
 
+  openCloneModal(record: { id?: string; name?: string }): void {
+    const id = record?.id;
+    if (!id) {
+      return;
+    }
+    const defaultName = `${record.name?.trim() || '未命名流程'} 副本`;
+    const ref = this.modalWrap.create({
+      nzTitle: '克隆流程',
+      nzWidth: 480,
+      nzOkText: '克隆',
+      nzCancelText: '取消',
+      nzContent: BpmCloneProcessModalComponent,
+      nzData: { defaultName },
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as BpmCloneProcessModalComponent;
+        const name = comp.tryGetName();
+        if (!name) {
+          return false;
+        }
+        return firstValueFrom(
+          this.http
+            .post(`/bpm/process/${id}/clone`, { name }, { needSuccessInfo: true })
+            .pipe(
+              tap(() => {
+                const pid = this.projectId();
+                const page = this.crudPage();
+                if (page) {
+                  if (pid) {
+                    page.load({ projectId: pid });
+                  } else {
+                    page.reloadTable();
+                  }
+                }
+              })
+            )
+        ).catch((err: unknown) => {
+          const e = err as { error?: { message?: string }; message?: string };
+          this.message.error(e?.error?.message ?? e?.message ?? '克隆失败');
+          return Promise.reject(err);
+        });
+      },
+    });
+  }
 
   pageConfig: PageConfig = {
     title: '工作流',
@@ -223,6 +272,16 @@ export class BpmProjectProcess implements OnInit {
             this.router.navigate(['/bpm/processinstances'], {
               queryParams: { processDefinitionKey: record.id },
             });
+          }
+        },
+      },
+      {
+        icon: 'copy',
+        tooltip: '克隆',
+        handler: () => {
+          const record = inject(ColumnToken, { optional: true })?.getRecord();
+          if (record) {
+            this.openCloneModal(record);
           }
         },
       },

@@ -265,9 +265,8 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         BpmProcess bpmProcess = new BpmProcess();
         bpmProcess.setId(getNewProcessId());
         bpmProcess.setName(cloneInput.name);
-//        String xml = updateId(id, processDefinition.getId(), src.getBpmnXml());
-//        xml = updateName(src.getName(), processDefinition.getName(), xml);
         bpmProcess.setBpmnXml(src.getBpmnXml());
+        bpmProcess.setProjectId(src.getProjectId());
         updateIdAndName(bpmProcess);
         bpmProcess.setCreatedBy(getCurrentUserId());
         bpmProcess.setCreatedTime(new Date());
