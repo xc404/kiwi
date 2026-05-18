@@ -1,8 +1,8 @@
-# Kiwi 远程部署配置（结构化：ssh + spring）
+# Kiwi 远程上传配置（ssh）
 # 复制为 remote.local.yaml 后按需修改，勿提交含密码的副本。
 #
 # 用法：
-#   python ../remote_run.py deploy --config ../conf/remote.local.yaml
+#   python ../deploy.py --config ../conf/remote.local.yaml
 
 ssh:
   # 展示名（日志与提示，可选）
@@ -23,11 +23,3 @@ ssh:
   # password: "your-secret"
 
   strict_host_key_checking: accept-new
-
-# Spring Boot 远端启动：脚本使用 java -Dspring.profiles.active=… -jar …（-D 在 -jar 前，避免未激活 profile）
-# 建议显式加引号，避免 YAML 把 yes/on 等解析成布尔：profiles_active: "local,dev"
-spring:
-  profiles_active: "local,dev"
-  # profiles:
-  #   - local
-  #   - dev
