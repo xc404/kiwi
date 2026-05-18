@@ -2,8 +2,11 @@ package com.kiwi.cryoems.bpm.model.ctf;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class EstimationResult {
+public class EstimationResult implements Serializable
+{
 
     private Double micrograph_number;
     private Double defocus_1;

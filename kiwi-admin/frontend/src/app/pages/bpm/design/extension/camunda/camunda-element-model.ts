@@ -151,7 +151,7 @@ export class CamundaElementModel extends ElementModel {
                 return;
             }
             if (key === 'processId') {
-                this.setProcessIdReference(bpmnModeler, element, value == null ? '' : String(value));
+                this.setProcessId(bpmnModeler, element, value == null ? '' : String(value));
                 return;
             }
         }
@@ -212,22 +212,6 @@ export class CamundaElementModel extends ElementModel {
         this.setValue(bpmnModeler, element, 'property', 'processId', trimmed);
         this.updateProperties(bpmnModeler, element, { calledElement: trimmed });
         this.ensurePropagateAllVariables(bpmnModeler, element);
-        this.applyCallActivityNameFromProcessId(bpmnModeler, element, trimmed);
-    }
-
-    /** 设计期流程引用：仅写 extension `processId`，不更新 `calledElement` */
-    setProcessIdReference(bpmnModeler: BpmnModeler, element: Element, processId: string) {
-        const trimmed = processId.trim();
-        if (!trimmed) {
-            this.removeExtensionProperty(bpmnModeler, element, 'processId');
-            return;
-        }
-        this.removeExtensionProperty(bpmnModeler, element, 'componentId');
-        super.setValue(bpmnModeler, element, 'element', 'processId', trimmed);
-        const parameter = this.getOrCreatePropertyParameter(bpmnModeler, element, 'processId');
-        this.updateModdleProperties(bpmnModeler, element, parameter, {
-            value: trimmed,
-        });
         this.applyCallActivityNameFromProcessId(bpmnModeler, element, trimmed);
     }
 

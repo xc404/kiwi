@@ -73,15 +73,17 @@ export class BpmEditorReplaceService {
       );
     }
     for (const p of inputParams) {
-      if (preservedInputs.has(p.key)) {
-        this.elementModel.setValue(
-          modeler,
-          element,
-          PropertyNamespace.inputParameter,
-          p.key,
-          preservedInputs.get(p.key)!,
-        );
+      if (p.hidden || !preservedInputs.has(p.key)) {
+        continue;
       }
+      console.log('preservedInputs', preservedInputs.get(p.key));
+      this.elementModel.setValue(
+        modeler,
+        element,
+        PropertyNamespace.inputParameter,
+        p.key,
+        preservedInputs.get(p.key)!,
+      );
     }
 
     for (const [name, valueText] of customOutputs.entries()) {

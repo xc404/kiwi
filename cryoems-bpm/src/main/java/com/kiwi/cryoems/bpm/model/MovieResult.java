@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +19,8 @@ import java.util.Map;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Document
-public class MovieResult extends CryoDataEntity {
+public class MovieResult extends CryoDataEntity implements Serializable
+{
 
 //    @Indexed
 //    private String task_data_id;

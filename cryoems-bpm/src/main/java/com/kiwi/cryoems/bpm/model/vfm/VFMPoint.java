@@ -2,8 +2,11 @@ package com.kiwi.cryoems.bpm.model.vfm;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class VFMPoint {
+public class VFMPoint implements Serializable
+{
 
     private double u_min;
     private double u_max;

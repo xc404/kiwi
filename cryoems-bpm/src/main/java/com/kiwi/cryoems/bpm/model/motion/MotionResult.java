@@ -2,8 +2,11 @@ package com.kiwi.cryoems.bpm.model.motion;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class MotionResult {
+public class MotionResult implements Serializable
+{
 
     private MrcFile dw;
     private MrcFile no_dw;
