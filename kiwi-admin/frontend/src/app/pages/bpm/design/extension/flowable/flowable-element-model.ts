@@ -147,12 +147,24 @@ export class FlowableElementModel extends ElementModel {
 
 
 
-    getInputParameters(element: Element): Element[] {
+    override getInputParameters(element: Element): Element[] {
         return this.getParameters(element, 'inputParameters');
     }
 
     override getOutputParameters(element: Element): Element[] {
         return this.getParameters(element, 'outputParameters');
+    }
+
+    override removeInputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {
+        const inputOutput = this.ensureInputOutputForListApply(bpmnModeler as BpmnModeler, element);
+        const existing: any[] = [...(inputOutput.get("inputParameters") || [])];
+        const next = existing.filter((p: any) => String(p.get("name")) !== key);
+        if (next.length === existing.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, inputOutput, {
+            inputParameters: next
+        });
     }
 
     override removeOutputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {

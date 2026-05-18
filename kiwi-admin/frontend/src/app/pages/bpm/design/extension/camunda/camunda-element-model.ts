@@ -329,7 +329,7 @@ export class CamundaElementModel extends ElementModel {
     }
 
 
-    getInputParameters(element: Element): Element[] {
+    override getInputParameters(element: Element): Element[] {
         const inputOutput = this.getInputOutput(element);
         return inputOutput && inputOutput.get("inputParameters") || [];
     }
@@ -338,6 +338,18 @@ export class CamundaElementModel extends ElementModel {
         // return this.getParameters(element, 'outputParameters');
         const inputOutput = this.getInputOutput(element);
         return inputOutput && inputOutput.get("outputParameters") || [];
+    }
+
+    override removeInputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {
+        const inputOutput = this.ensureInputOutputElements(bpmnModeler as BpmnModeler, element);
+        const existing: any[] = [...(inputOutput.get("inputParameters") || [])];
+        const next = existing.filter((p: any) => String(p.get("name")) !== key);
+        if (next.length === existing.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, inputOutput, {
+            inputParameters: next
+        });
     }
 
     override removeOutputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {

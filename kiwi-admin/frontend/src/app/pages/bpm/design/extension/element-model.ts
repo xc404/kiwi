@@ -116,9 +116,18 @@ export abstract class ElementModel {
         return element;
     }
 
+    /** Camunda/Flowable 子类返回 extensionElements 下 inputOutput 的 inputParameters；默认无 */
+    getInputParameters(_element: Element): Element[] {
+        return [];
+    }
+
     /** Camunda/Flowable 子类返回 extensionElements 下 inputOutput 的 outputParameters；默认无 */
     getOutputParameters(_element: Element): Element[] {
         return [];
+    }
+
+    /** 删除单个 inputParameter（按 name）；默认无实现 */
+    removeInputParameter(_bpmnModeler: BaseViewer, _element: Element, _key: string): void {
     }
 
     /** 删除单个 outputParameter（按 name）；默认无实现 */

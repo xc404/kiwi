@@ -23,6 +23,7 @@ import {
   ComponentProvider,
 } from '../../flow-elements/component-provider';
 import appendComponentModule from '../context-pad/append-component-module';
+import replaceComponentModule from '../context-pad/replace-component-module';
 import customContextPadModule from '../context-pad/index';
 import { ProcessDesignService } from '../service/process-design.service';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
@@ -31,6 +32,8 @@ import type {
   SaveAsComponentFormPayload,
 } from '../toolbar/bpm-save-as-component-modal/bpm-save-as-component-modal.component';
 import { BpmEditorAppendService } from '../service/bpm-editor-append.service';
+import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
+import { ComponentService } from '../../flow-elements/component-service';
 import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
 import { BpmEditorToken } from './bpm-editor-token';
 import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
@@ -47,6 +50,7 @@ export { BpmEditorToken };
   providers: [
     { provide: BpmEditorToken, useExisting: BpmEditor },
     BpmEditorAppendService,
+    BpmEditorReplaceService,
   ],
   imports: [
     BpmPropertiesPanel,
@@ -67,6 +71,8 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   private readonly componentProvider = inject(ComponentProvider);
   private readonly elementModel = inject(ElementModel);
   private readonly append = inject(BpmEditorAppendService);
+  private readonly replace = inject(BpmEditorReplaceService);
+  private readonly componentService = inject(ComponentService);
   private readonly message = inject(NzMessageService);
   private readonly startVariables = inject(BpmStartVariablesService);
 
@@ -106,6 +112,7 @@ export class BpmEditor implements OnInit, BpmEditorToken {
         gridModule,
         customContextPadModule,
         appendComponentModule,
+        replaceComponentModule,
         { http: ['value', this.http] },
       ],
       kiwiAppendComponent: {
@@ -115,12 +122,22 @@ export class BpmEditor implements OnInit, BpmEditorToken {
           this.append.appendComponentFromContextPad(sourceElement, component, event);
         },
       },
+      kiwiReplaceComponent: {
+        getComponentGroups: () => this.componentProvider.componentGroups(),
+        getRecentUsages: () => this.recentComponentUsages(),
+        getCurrentComponentId: (element: Element) =>
+          this.componentService.getComponentForElement(element)?.id,
+        replace: (element: Element, component: ComponentDescription) => {
+          this.replace.replaceComponentFromContextPad(element, component);
+        },
+      },
       moddleExtensions: {
         moddleProvider: this.elementModel.getModdleExtension(),
         componentProvider: kiwiDescriptor,
       },
     });
     this.append.init(this.bpmnModeler);
+    this.replace.init(this.bpmnModeler);
     this.commandStack = this.bpmnModeler.get('commandStack');
 
     this.loadDefinition();
