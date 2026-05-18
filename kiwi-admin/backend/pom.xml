@@ -143,6 +143,11 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.velocity.tools/velocity-tools-generic -->
         <dependency>
             <groupId>org.apache.velocity.tools</groupId>

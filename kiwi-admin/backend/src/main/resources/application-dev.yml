@@ -4,15 +4,18 @@
 
 spring:
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://10.19.227.46:3306/bpm?&nullCatalogMeansCurrent=true
-    username: root
-    password: Nm,.`123
-    type: com.mysql.cj.jdbc.MysqlDataSource
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/dev-bpm;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   # MONGODB (MongoProperties)
   data:
     mongodb:
-      uri: mongodb://10.19.227.46:27017/x404?authSource=admin
+      uri: mongodb://10.15.56.173:27017/x404?authSource=admin
       database: x404
       auto-index-creation: true
     redis:
