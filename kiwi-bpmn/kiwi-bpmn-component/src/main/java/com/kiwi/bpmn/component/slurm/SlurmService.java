@@ -5,6 +5,7 @@ import org.springframework.beans.factory.InitializingBean;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class SlurmService implements InitializingBean
 {
@@ -34,22 +35,32 @@ public class SlurmService implements InitializingBean
         return new File(shellFileDir, pathOrName).getAbsolutePath();
     }
 
-    public File createSbatchFile(String fileName, SbatchConfig sbatchConfig, String cmd)  {
+    public File createSbatchFile(String fileName, SbatchConfig sbatchConfig) {
+        String cmd = sbatchConfig.getCommand();
+        if (cmd == null || cmd.isBlank()) {
+            throw new IllegalArgumentException("SbatchConfig.command is required");
+        }
         File dir = shellFileDir;
         if (!dir.exists()) {
             dir.mkdirs();
         }
         File sbatchFile = new File(dir, fileName);
         try {
-            FileUtils.writeStringToFile(sbatchFile, "#!/bin/bash\n\n", "UTF-8");
-            FileUtils.writeStringToFile(sbatchFile, sbatchConfig.toSbatchCmd() + "\n\n", "UTF-8", true);
-            FileUtils.writeStringToFile(sbatchFile, cmd + "\n\n", "UTF-8", true);
+            FileUtils.writeStringToFile(sbatchFile, "#!/bin/bash\n\n", StandardCharsets.UTF_8);
+            FileUtils.writeStringToFile(sbatchFile, sbatchConfig.toSbatchCmd() + "\n\n", StandardCharsets.UTF_8, true);
+            // 用户命令直接写入脚本；作业退出码以 sacct .batch 的 ExitCode 为准（见 SlurmJobTracker）
+            FileUtils.writeStringToFile(sbatchFile, cmd, StandardCharsets.UTF_8, true);
+            FileUtils.writeStringToFile(sbatchFile, "\n", StandardCharsets.UTF_8, true);
         } catch( IOException e ) {
             throw new RuntimeException(e);
         }
         return sbatchFile;
     }
 
+    /**
+     * @deprecated 已弃用 .flag 机制，请使用 sacct 跟踪（{@link SlurmJobTracker}）。
+     */
+    @Deprecated
     public String getFlagFilePath(String jobId) {
         return shellFileDir.getAbsolutePath() + "/" + jobId + ".flag";
     }

@@ -17,10 +17,11 @@ kiwi:
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
       warmup-backoff-ms: ${KIWI_AI_MCP_WARMUP_BACKOFF_MS:150}
-  # cryoEMS → Kiwi：机机调用使用用户在「个人设置 → 基本设置」签发的长期 Token（Authorization: Bearer）
-  integration:
-    api-token-timeout-seconds: ${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}
-    personal-access-token-max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
+  # 用户在「个人设置」签发的长期访问令牌（PAT）；机机场景可 Authorization: Bearer 使用该令牌
+  personal-access-token:
+    max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
+    # Sa 会话有效期（秒）；仍兼容旧环境变量 KIWI_INTEGRATION_API_TOKEN_TIMEOUT
+    session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_SESSION_TIMEOUT_SECONDS:${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}}
 
 app:
   cors:
@@ -79,6 +80,16 @@ camunda.bpm:
     properties:
       skip-isolation-level-check: true
       historyTimeToLive: P15D
+      # 未捕获的 BpmnError 时抛 ProcessEngineException，而非按「none end」静默结束（ACT_HI_PROCINST 易为 COMPLETED）
+      # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
+      enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
+      # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
+      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R5/PT1M}
+
+# External Task 统一重试（AbstractExternalTaskHandler）：需在引擎进程启用；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
+# kiwi.bpm.external-task-retry:
+#   enabled: false
+#   # default-time-cycle: R5/PT1M   # 省略则与上方 camunda generic failedJobRetryTimeCycle 一致（活动未配 cycle 时）
 
 sa-token:
   token-name: Authorization

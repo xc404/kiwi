@@ -8,6 +8,7 @@ import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.externaltask.ExternalTaskQueryBuilder;
 import org.camunda.bpm.engine.externaltask.ExternalTaskQueryTopicBuilder;
 import org.camunda.bpm.engine.externaltask.LockedExternalTask;
+
 import org.camunda.bpm.engine.variable.VariableMap;
 import org.camunda.bpm.engine.variable.type.ValueType;
 import org.camunda.bpm.engine.variable.value.FileValue;
@@ -126,6 +127,37 @@ public class DtoUtils
         dto.setBusinessKey(task.getBusinessKey());
         dto.setExtensionProperties(task.getExtensionProperties());
 
+        return dto;
+    }
+
+    /**
+     * 将引擎 {@link org.camunda.bpm.engine.externaltask.ExternalTask}（如 query 单条结果）转为 client {@link ExternalTaskImpl}，
+     * 供 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner} 等仅依赖 client 模型的代码使用。
+     */
+    public static ExternalTaskImpl fromEngineExternalTask(org.camunda.bpm.engine.externaltask.ExternalTask task) {
+        if (task == null) {
+            return null;
+        }
+        ExternalTaskImpl dto = new ExternalTaskImpl();
+        dto.setActivityId(task.getActivityId());
+        dto.setActivityInstanceId(task.getActivityInstanceId());
+        dto.setErrorMessage(task.getErrorMessage());
+        dto.setErrorDetails(null);
+        dto.setExecutionId(task.getExecutionId());
+        dto.setId(task.getId());
+        dto.setLockExpirationTime(task.getLockExpirationTime());
+        dto.setProcessDefinitionId(task.getProcessDefinitionId());
+        dto.setProcessDefinitionKey(task.getProcessDefinitionKey());
+        dto.setProcessDefinitionVersionTag(task.getProcessDefinitionVersionTag());
+        dto.setProcessInstanceId(task.getProcessInstanceId());
+        dto.setRetries(task.getRetries());
+        dto.setTopicName(task.getTopicName());
+        dto.setWorkerId(task.getWorkerId());
+        dto.setTenantId(task.getTenantId());
+        dto.setVariables(new HashMap<>());
+        dto.setPriority(task.getPriority());
+        dto.setBusinessKey(task.getBusinessKey());
+        dto.setExtensionProperties(task.getExtensionProperties());
         return dto;
     }
 
