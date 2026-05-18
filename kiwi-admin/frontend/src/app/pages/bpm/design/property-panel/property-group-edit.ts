@@ -3,8 +3,7 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { FieldEditorConfig, toFormlyConfig } from "@app/shared/components/field/field-editor";
 import { FormlyModule } from "@ngx-formly/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { ComponentService } from "../../flow-elements/component-service";
-import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
+import { BpmExpressionVariableService } from "../expression/bpm-expression-variable.service";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
 import {
@@ -26,11 +25,13 @@ import BaseViewer from "bpmn-js/lib/BaseViewer";
 export class PropertyGroupEdit {
 
     elementModel = inject(ElementModel);
-    private readonly componentService = inject(ComponentService);
+    private readonly expressionVariableService = inject(BpmExpressionVariableService);
     properties = input([] as PropertyDescription[]);
     bpmnModeler = input.required<BaseViewer>();
     element = input.required<Element>();
     variables = input<any[]>([]);
+    currentProcessId = input<string | null | undefined>(null);
+    projectId = input<string | null | undefined>(null);
 
     form = computed(() => {
         return new FormGroup({});
@@ -44,11 +45,9 @@ export class PropertyGroupEdit {
 
     private spelVariableSuggestions = computed(() => {
         try {
-            return buildSpelVariableSuggestions(
+            return this.expressionVariableService.buildSuggestions(
                 this.bpmnModeler(),
-                this.elementModel,
-                this.componentService,
-                this.element()
+                this.element(),
             );
         } catch {
             return [];
@@ -62,6 +61,10 @@ export class PropertyGroupEdit {
             if (config.editor === 'expression') {
                 baseProps['spelVariables'] = this.spelVariableSuggestions();
                 baseProps['expressionDialect'] = this.elementModel.expressionDialect();
+            }
+            if (config.editor === 'process-selector') {
+                baseProps['excludeProcessId'] = this.currentProcessId() ?? null;
+                baseProps['projectId'] = this.projectId() ?? null;
             }
             return toFormlyConfig(config, "vertical", baseProps);
         });

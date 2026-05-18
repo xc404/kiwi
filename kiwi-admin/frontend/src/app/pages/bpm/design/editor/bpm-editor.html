@@ -26,7 +26,12 @@
           nzTheme="light"
           nzNoAnimation
         >
-        <bpm-properties-panel [bpmnModeler]="bpmnModeler" [usedHeight]="50"></bpm-properties-panel>
+        <bpm-properties-panel
+          [bpmnModeler]="bpmnModeler"
+          [usedHeight]="50"
+          [currentProcessId]="bpmnId()"
+          [projectId]="bpmProcess()?.projectId ?? null"
+        ></bpm-properties-panel>
         </nz-sider>
       </nz-layout>
     </nz-content>

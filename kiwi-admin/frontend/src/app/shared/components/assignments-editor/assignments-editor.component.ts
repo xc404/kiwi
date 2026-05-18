@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import type { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
 import { JuelExpressionEditorComponent } from '@app/shared/components/juel-expression-editor/juel-expression-editor.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';

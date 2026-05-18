@@ -7,6 +7,7 @@ import { FormlyFieldCheckbox } from "./types/checkbox-type";
 import { AssignmentsEditorType } from "./types/assignments-editor-type";
 import { BpmDeclaredOutputType } from "./types/bpm-declared-output-type";
 import { ComponentSelectorType } from "./types/component-select-type";
+import { ProcessSelectorType } from "./types/process-select-type";
 import { ExpressionDialect, ExpressionEditorType } from "./types/expression-editor-type";
 import { IconSelectFieldType } from "./types/icon-select.type";
 
@@ -42,6 +43,11 @@ export function formlyConfig(
             {
                 name: 'component-selector',
                 component: ComponentSelectorType,
+                wrappers: ['form-field'],
+            },
+            {
+                name: 'process-selector',
+                component: ProcessSelectorType,
                 wrappers: ['form-field'],
             },
             {

@@ -1,5 +1,6 @@
 // import { BpmnModeler } from 'bpmn-js/lib/Modeler';
 import { inject } from '@angular/core';
+import { ProcessDesignService } from '@app/pages/bpm/design/service/process-design.service';
 import { ComponentDescription, ComponentProvider } from '@app/pages/bpm/flow-elements/component-provider';
 import BaseViewer from "bpmn-js/lib/BaseViewer";
 import BpmnModeler from 'bpmn-js/lib/Modeler';
@@ -21,6 +22,7 @@ export class CamundaElementModel extends ElementModel {
     }
 
     componentProvider = inject(ComponentProvider);
+    private readonly processDesignService = inject(ProcessDesignService);
 
     override getModdleExtension() {
         return camundaModdleDescriptor;
@@ -71,6 +73,17 @@ export class CamundaElementModel extends ElementModel {
             return null;
         }
 
+        if (
+            (namespace === 'element' || !namespace)
+            && (key === 'componentId' || key === 'processId')
+        ) {
+            const fromProperty = this.readExtensionPropertyValue(element, key);
+            if (fromProperty != null && fromProperty !== '') {
+                return fromProperty;
+            }
+            return element.businessObject[key] ?? null;
+        }
+
         return super.getValue(bpmnModeler, element, namespace, key);
     }
 
@@ -87,7 +100,8 @@ export class CamundaElementModel extends ElementModel {
                 body: str
             });
             this.updateProperties(bpmnModeler, element, {
-                conditionExpression
+                conditionExpression,
+                name: str.trim(),
             });
             return;
         }
@@ -131,6 +145,17 @@ export class CamundaElementModel extends ElementModel {
             return;
         }
 
+        if (element.type === 'bpmn:CallActivity' && namespace === 'element') {
+            if (key === 'componentId') {
+                this.setComponentId(bpmnModeler, element, value);
+                return;
+            }
+            if (key === 'processId') {
+                this.setProcessIdReference(bpmnModeler, element, value == null ? '' : String(value));
+                return;
+            }
+        }
+
         if (element.type == 'bpmn:ServiceTask') {
             if (namespace == "element") {
                 if (key == "componentId") {
@@ -145,6 +170,9 @@ export class CamundaElementModel extends ElementModel {
     setComponentId(bpmnModeler: BpmnModeler, element: Element, componentId: string) {
         super.setValue(bpmnModeler, element, "element", "componentId", componentId);
         let component: ComponentDescription = this.componentProvider.getComponent(componentId) as any;
+        if (!component) {
+            return;
+        }
         let id = component.id;
         let componentKey = component.key;
         this.setValue(bpmnModeler, element, "property", "componentId", id);
@@ -161,9 +189,132 @@ export class CamundaElementModel extends ElementModel {
             });
         }
 
+        if (component.type === 'CallActivity' && element.type === 'bpmn:CallActivity') {
+            this.removeExtensionProperty(bpmnModeler, element, 'processId');
+            const calledElement = this.resolveCalledElementFromComponent(component);
+            this.updateProperties(bpmnModeler, element, {
+                calledElement,
+                name: this.formatCallActivityName(component.name),
+            });
+            this.ensurePropagateAllVariables(bpmnModeler, element);
+        }
+    }
 
+    setProcessId(bpmnModeler: BpmnModeler, element: Element, processId: string) {
+        const trimmed = processId.trim();
+        if (!trimmed) {
+            this.removeExtensionProperty(bpmnModeler, element, 'processId');
+            this.updateProperties(bpmnModeler, element, { calledElement: undefined });
+            return;
+        }
+        this.removeExtensionProperty(bpmnModeler, element, 'componentId');
+        super.setValue(bpmnModeler, element, 'element', 'processId', trimmed);
+        this.setValue(bpmnModeler, element, 'property', 'processId', trimmed);
+        this.updateProperties(bpmnModeler, element, { calledElement: trimmed });
+        this.ensurePropagateAllVariables(bpmnModeler, element);
+        this.applyCallActivityNameFromProcessId(bpmnModeler, element, trimmed);
+    }
 
+    /** 设计期流程引用：仅写 extension `processId`，不更新 `calledElement` */
+    setProcessIdReference(bpmnModeler: BpmnModeler, element: Element, processId: string) {
+        const trimmed = processId.trim();
+        if (!trimmed) {
+            this.removeExtensionProperty(bpmnModeler, element, 'processId');
+            return;
+        }
+        this.removeExtensionProperty(bpmnModeler, element, 'componentId');
+        super.setValue(bpmnModeler, element, 'element', 'processId', trimmed);
+        const parameter = this.getOrCreatePropertyParameter(bpmnModeler, element, 'processId');
+        this.updateModdleProperties(bpmnModeler, element, parameter, {
+            value: trimmed,
+        });
+        this.applyCallActivityNameFromProcessId(bpmnModeler, element, trimmed);
+    }
 
+    private formatCallActivityName(processName: string): string {
+        const trimmed = processName.trim();
+        return trimmed ? `调用<${trimmed}>` : '';
+    }
+
+    private applyCallActivityNameFromProcessId(
+        bpmnModeler: BpmnModeler,
+        element: Element,
+        processId: string,
+    ): void {
+        const cached = this.processDesignService.resolveProcessDisplayName(processId);
+        if (cached) {
+            this.updateProperties(bpmnModeler, element, {
+                name: this.formatCallActivityName(cached),
+            });
+            return;
+        }
+        this.processDesignService.getProcessById(processId).subscribe({
+            next: (p) => {
+                const display = (p.name ?? '').trim() || processId;
+                this.processDesignService.cacheProcessDisplayNames([p]);
+                this.updateProperties(bpmnModeler, element, {
+                    name: this.formatCallActivityName(display),
+                });
+            },
+        });
+    }
+
+    /** Camunda「Propagate all variables」：camunda:in/out variables="all" */
+    override ensurePropagateAllVariables(bpmnModeler: BpmnModeler, element: Element): void {
+        if (element.type !== 'bpmn:CallActivity') {
+            return;
+        }
+        const ins = this.getCallActivityIns(element);
+        if (!ins.some((i: { get: (k: string) => unknown }) => i.get('variables') === 'all')) {
+            const extensionElements = this.ensureExtensionElements(bpmnModeler, element);
+            const inEl = this.createElement(bpmnModeler, 'camunda:In', { variables: 'all' }, extensionElements);
+            this.updateModdleProperties(bpmnModeler, element, extensionElements, {
+                values: [...extensionElements.get('values'), inEl],
+            });
+        }
+        const outs = this.getCallActivityOuts(element);
+        if (!outs.some((o: { get: (k: string) => unknown }) => o.get('variables') === 'all')) {
+            const extensionElements = this.ensureExtensionElements(bpmnModeler, element);
+            const outEl = this.createElement(bpmnModeler, 'camunda:Out', { variables: 'all' }, extensionElements);
+            this.updateModdleProperties(bpmnModeler, element, extensionElements, {
+                values: [...extensionElements.get('values'), outEl],
+            });
+        }
+    }
+
+    private resolveCalledElementFromComponent(component: ComponentDescription): string {
+        const key = component.key ?? '';
+        if (key.startsWith('process:')) {
+            return key.slice('process:'.length);
+        }
+        return component.id;
+    }
+
+    private readExtensionPropertyValue(element: Element, key: string): string | null {
+        const properties = this.getExtensionProperties(element);
+        if (!properties) {
+            return null;
+        }
+        const values: { get: (k: string) => unknown }[] = properties['get']('values') || [];
+        const match = values.find((p) => p.get('name') === key);
+        if (!match) {
+            return null;
+        }
+        const v = match.get('value');
+        return v == null ? null : String(v);
+    }
+
+    private removeExtensionProperty(bpmnModeler: BpmnModeler, element: Element, key: string): void {
+        const properties = this.getExtensionProperties(element);
+        if (!properties) {
+            return;
+        }
+        const values: { get: (k: string) => unknown }[] = [...(properties['get']('values') || [])];
+        const next = values.filter((p) => p.get('name') !== key);
+        if (next.length === values.length) {
+            return;
+        }
+        this.updateModdleProperties(bpmnModeler, element, properties, { values: next });
     }
 
 
@@ -338,6 +489,24 @@ export class CamundaElementModel extends ElementModel {
         // return this.getParameters(element, 'outputParameters');
         const inputOutput = this.getInputOutput(element);
         return inputOutput && inputOutput.get("outputParameters") || [];
+    }
+
+    override getCallActivityInTargets(element: Element): string[] {
+        if (element.type !== 'bpmn:CallActivity') {
+            return [];
+        }
+        return this.getCallActivityIns(element)
+            .map((i: { get: (k: string) => unknown }) => String(i.get('target') ?? '').trim())
+            .filter((k) => k.length > 0);
+    }
+
+    override getCallActivityOutSources(element: Element): string[] {
+        if (element.type !== 'bpmn:CallActivity') {
+            return [];
+        }
+        return this.getCallActivityOuts(element)
+            .map((o: { get: (k: string) => unknown }) => String(o.get('source') ?? '').trim())
+            .filter((k) => k.length > 0);
     }
 
     override removeInputParameter(bpmnModeler: BaseViewer, element: Element, key: string): void {

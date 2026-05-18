@@ -39,7 +39,9 @@ import { BpmEditorToken } from './bpm-editor-token';
 import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
 import type { BpmProcess } from '../../types/bpm-process';
 
-export { buildSpelVariableSuggestions, type SpelVariableSuggestion } from '../expression/bpm-spel-variable-context';
+export { BpmExpressionVariableService } from '../expression/bpm-expression-variable.service';
+export { ExpressionVariableContext } from '../expression/expression-variable-context';
+export type { SpelVariableSuggestion } from '../expression/expression-variable';
 
 export { BpmEditorToken };
 

@@ -10,7 +10,10 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import {
+  SpelVariableSuggestion,
+  spelVariableSuggestionDetail,
+} from '@app/pages/bpm/design/expression/expression-variable';
 import { buildSpelVariableCompletion } from '@app/shared/components/spel-expression-editor/spel-expression-editor.component';
 import { autocompletion, closeBrackets, CompletionContext, completionKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, historyKeymap } from '@codemirror/commands';
@@ -139,6 +142,10 @@ export class JuelExpressionEditorComponent implements OnDestroy {
     this.inlineText.set(text);
     this.valueChange.emit(text);
     this.modalVisible.set(false);
+  }
+
+  protected variableHint(v: SpelVariableSuggestion): string {
+    return spelVariableSuggestionDetail(v);
   }
 
   insertVariableRef(v: SpelVariableSuggestion): void {

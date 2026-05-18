@@ -20,6 +20,7 @@ import {
     BpmProcessInstanceDto,
     CamundaHistoricVariableInstance,
 } from '../service/process-instance.service';
+import { CustomInputsPanel } from './custom-inputs/custom-inputs-panel';
 import { CustomOutputsPanel } from './custom-outputs/custom-outputs-panel';
 import { PanelHeader } from './panel-header';
 import { ProcessInstanceVariablesListComponent } from './process-instance-variables-list.component';
@@ -45,13 +46,17 @@ function variableCreateTimeMs(v: CamundaHistoricVariableInstance): number {
     selector: 'bpm-properties-panel',
     templateUrl: 'properties-panel.html',
     styleUrls: ['properties-panel.css'],
-    imports: [CommonModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroupEdit, PropertyGroupReadonly, CustomOutputsPanel, ProcessInstanceVariablesListComponent],
+    imports: [CommonModule, NzTabsModule, PanelHeader, NzCollapseModule, PropertyGroupEdit, PropertyGroupReadonly, CustomInputsPanel, CustomOutputsPanel, ProcessInstanceVariablesListComponent],
     standalone: true,
 })
 export class BpmPropertiesPanel implements OnInit {
     private readonly processInstanceService = inject(ProcessInstanceService);
 
     bpmnModeler = input.required<Viewer>();
+    /** 当前编辑中的流程定义 id（流程选择器排除自调用） */
+    currentProcessId = input<string | null | undefined>(null);
+    /** 当前流程所属项目（缩小可选子流程列表） */
+    projectId = input<string | null | undefined>(null);
     /** 流程实例查看：只展示运行时变量，不加载建模属性 */
     viewMode = input(false);
     processInstance = input<BpmProcessInstanceDto>(undefined as unknown as BpmProcessInstanceDto);
@@ -115,10 +120,16 @@ export class BpmPropertiesPanel implements OnInit {
         return (tab.name ?? '') === '输出';
     }
 
+    isInputTab(tab: PropertyTab): boolean {
+        return (tab.name ?? '') === '输入';
+    }
+
     showCustomOutputs = computed(() => {
         const type = this.element()?.type;
         return type === 'bpmn:ServiceTask' || type === 'bpmn:CallActivity';
     });
+
+    showCustomInputs = computed(() => this.element()?.type === 'bpmn:CallActivity');
 
     /** 存在流程实例 id 时展示流程变量折叠区与「流程变量」Tab */
     isProcessInstanceContext = computed(() => {

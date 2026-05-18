@@ -1,5 +1,7 @@
 import { inject, Injectable } from "@angular/core";
 import { Element } from "bpmn-js/lib/model/Types";
+import { ElementModel } from "../design/extension/element-model";
+import { isCallActivityProcessPick } from "./call-activity-bindings";
 import { ComponentService } from "./component-service";
 import {
     PropertyDescription,
@@ -12,6 +14,7 @@ import {
 export class ComponentPropertyProvider implements PropertyProvider {
 
     private componentService = inject(ComponentService);
+    private elementModel = inject(ElementModel);
 
     getProperties(element: Element): PropertyTab[] {
 
@@ -53,7 +56,9 @@ export class ComponentPropertyProvider implements PropertyProvider {
         const tabs: PropertyTab[] = [
             { name: "基础信息", groups: bindingGroups },
         ];
-        if (inputTabGroups.length > 0) {
+        const showInputTab =
+            inputTabGroups.length > 0 || element.type === "bpmn:CallActivity";
+        if (showInputTab) {
             tabs.push({ name: "输入", groups: inputTabGroups });
         }
         tabs.push({ name: "输出", groups: outputTabGroups });
@@ -62,6 +67,25 @@ export class ComponentPropertyProvider implements PropertyProvider {
 
     private buildBindingGroups(element: Element): { name: string; properties: PropertyDescription[]; important?: boolean }[] {
         if (element.type === "bpmn:CallActivity") {
+            if (isCallActivityProcessPick(element, this.elementModel)) {
+                return [
+                    {
+                        name: "流程",
+                        properties: [
+                            {
+                                key: "processId",
+                                name: "选择流程",
+                                htmlType: "process-selector",
+                                namespace: PropertyNamespace.element,
+                                defaultValue: "",
+                                example: "",
+                                required: true,
+                            },
+                        ],
+                        important: true,
+                    },
+                ];
+            }
             return [
                 {
                     name: "流程",

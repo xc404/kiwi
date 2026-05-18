@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FieldType, FieldTypeConfig, FormlyFieldProps } from '@ngx-formly/core';
 import { JuelExpressionEditorComponent } from '@app/shared/components/juel-expression-editor/juel-expression-editor.component';
-import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
 
 interface JuelExpressionProps extends FormlyFieldProps {
   /** 与 SpEL 编辑器共用：图中引用变量 + 上游输出（Camunda 仍用 ${name} 引用） */

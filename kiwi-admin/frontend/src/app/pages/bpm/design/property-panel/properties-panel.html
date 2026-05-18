@@ -19,11 +19,23 @@
                                 } @else {
                                 <property-group-edit [element]="element()" [bpmnModeler]="bpmnModeler()"
                                     [properties]="group.properties"
-                                    [variables]="activityVariables()"></property-group-edit>
+                                    [variables]="activityVariables()"
+                                    [currentProcessId]="currentProcessId()"
+                                    [projectId]="projectId()"></property-group-edit>
                                 }
                             </div>
                         </nz-collapse-panel>
 
+                        }
+
+                        @if (isInputTab(tab) && showCustomInputs()) {
+                        <nz-collapse-panel nzHeader="自定义输入" [nzActive]="true" nzShowArrow="true">
+                            <div style="width: 100%;">
+                                <bpm-custom-inputs-panel [element]="element()" [bpmnModeler]="bpmnModeler()"
+                                    [viewMode]="viewMode()" [variables]="activityVariables()"
+                                ></bpm-custom-inputs-panel>
+                            </div>
+                        </nz-collapse-panel>
                         }
 
                         @if (isOutputTab(tab) && showCustomOutputs()) {

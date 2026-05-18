@@ -16,11 +16,42 @@ export type BpmProcessSaveBody = {
 })
 export class ProcessDesignService {
   private apiUrl = '/bpm/process';
+  private readonly processDisplayNameById = new Map<string, string>();
 
   constructor(private http: BaseHttpService) {}
 
+  /** 缓存流程 id → 显示名（流程选择器等列表加载后写入） */
+  cacheProcessDisplayNames(processes: BpmProcess[]): void {
+    for (const p of processes) {
+      const id = (p.id ?? '').trim();
+      if (!id) {
+        continue;
+      }
+      const name = (p.name ?? '').trim();
+      this.processDisplayNameById.set(id, name || id);
+    }
+  }
+
+  resolveProcessDisplayName(processId: string): string | undefined {
+    const id = processId.trim();
+    return id ? this.processDisplayNameById.get(id) : undefined;
+  }
+
   getProcessList(): Observable<unknown> {
     return this.http.get(`${this.apiUrl}/list`);
+  }
+
+  /** 当前用户可见的流程定义（分页 `content`） */
+  listVisibleProcesses(query?: { projectId?: string; page?: number; size?: number }): Observable<BpmProcess[]> {
+    const page = query?.page ?? 0;
+    const size = query?.size ?? 500;
+    const params: Record<string, string | number> = { page, size };
+    if (query?.projectId) {
+      params['projectId'] = query.projectId;
+    }
+    return this.http.get<{ content?: BpmProcess[] }>(this.apiUrl, params).pipe(
+      map((res) => res?.content ?? []),
+    );
   }
 
   getProcessById(id: string): Observable<BpmProcess> {

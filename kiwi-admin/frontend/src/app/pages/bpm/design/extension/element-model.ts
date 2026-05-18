@@ -133,4 +133,18 @@ export abstract class ElementModel {
     /** 删除单个 outputParameter（按 name）；默认无实现 */
     removeOutputParameter(_bpmnModeler: BaseViewer, _element: Element, _key: string): void {
     }
+
+    /** CallActivity：extension 下 camunda:In 的 target（子流程入参变量名） */
+    getCallActivityInTargets(_element: Element): string[] {
+        return [];
+    }
+
+    /** CallActivity：extension 下 camunda:Out 的 source（父流程变量名） */
+    getCallActivityOutSources(_element: Element): string[] {
+        return [];
+    }
+
+    /** CallActivity：默认开启 propagate all variables（Camunda 子类实现） */
+    ensurePropagateAllVariables(_bpmnModeler: BaseViewer, _element: Element): void {
+    }
 }

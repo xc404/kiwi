@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FieldType, FieldTypeConfig, FormlyFieldProps } from '@ngx-formly/core';
 import { SpelExpressionEditorComponent } from '@app/shared/components/spel-expression-editor/spel-expression-editor.component';
-import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
 
 interface SpelExpressionProps extends FormlyFieldProps {
   /** 来自属性面板：图中引用变量 + 上游输出 */

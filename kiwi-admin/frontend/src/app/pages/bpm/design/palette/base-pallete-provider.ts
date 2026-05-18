@@ -1,10 +1,13 @@
 import  BpmnModeler  from 'bpmn-js/lib/Modeler';
-import { Injectable } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
+import { ElementModel } from "../extension/element-model";
 import { PaletteGroup, PaletteItem, PaletteProvider } from "./palette-provider";
 import { Element } from 'bpmn-js/lib/model/Types';
 
 @Injectable()
 export default class BasePaletteProvider implements PaletteProvider {
+
+    private readonly elementModel = inject(ElementModel);
 
     getName(): string {
         return "基本元素";
@@ -87,7 +90,9 @@ export default class BasePaletteProvider implements PaletteProvider {
     }
 
     initElement(bpmnModeler: BpmnModeler, element: Element, item: PaletteItem): void {
-
+        if (element.type === 'bpmn:CallActivity') {
+            this.elementModel.ensurePropagateAllVariables(bpmnModeler, element);
+        }
     }
 
 }

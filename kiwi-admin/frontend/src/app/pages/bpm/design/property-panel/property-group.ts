@@ -3,8 +3,7 @@ import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { FieldEditorConfig, toFormlyConfig } from "@app/shared/components/field/field-editor";
 import { FormlyModule } from "@ngx-formly/core";
 import { Element } from "bpmn-js/lib/model/Types";
-import { ComponentService } from "../../flow-elements/component-service";
-import { buildSpelVariableSuggestions } from "../expression/bpm-spel-variable-context";
+import { BpmExpressionVariableService } from "../expression/bpm-expression-variable.service";
 import { ElementModel } from '../extension/element-model';
 import { ElementModelProxyHandler } from './element-model-proxy';
 import {
@@ -27,7 +26,7 @@ import BaseViewer from "bpmn-js/lib/BaseViewer";
 export class PropertyGroup {
 
     elementModel = inject(ElementModel);
-    private readonly componentService = inject(ComponentService);
+    private readonly expressionVariableService = inject(BpmExpressionVariableService);
     properties = input([] as PropertyDescription[]);
     bpmnModeler = input.required<BaseViewer>();
     element = input.required<Element>();
@@ -44,14 +43,12 @@ export class PropertyGroup {
             this.properties(), this.viewMode(), this.variables()));
     });
 
-    /** SpEL 编辑器：`$` 补全用的变量（图中引用 + 上游输出） */
+    /** SpEL 编辑器：`$` 补全用的变量（上游 input/output + 组件声明 output） */
     private spelVariableSuggestions = computed(() => {
         try {
-            return buildSpelVariableSuggestions(
+            return this.expressionVariableService.buildSuggestions(
                 this.bpmnModeler(),
-                this.elementModel,
-                this.componentService,
-                this.element()
+                this.element(),
             );
         } catch {
             return [];

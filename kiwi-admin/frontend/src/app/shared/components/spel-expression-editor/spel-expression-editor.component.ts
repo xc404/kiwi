@@ -10,7 +10,10 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/bpm-spel-variable-context';
+import {
+  SpelVariableSuggestion,
+  spelVariableSuggestionDetail,
+} from '@app/pages/bpm/design/expression/expression-variable';
 import { autocompletion, closeBrackets, CompletionContext, completionKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
@@ -51,7 +54,7 @@ export function buildSpelVariableCompletion(getVariables: () => SpelVariableSugg
           .filter((v) => !partial || v.key.startsWith(partial))
           .map((v) => ({
             label: v.key,
-            detail: v.source === 'upstream' ? '上游输出' : '图中引用',
+            detail: spelVariableSuggestionDetail(v),
             apply: v.key,
             type: 'variable',
           })),
@@ -69,7 +72,7 @@ export function buildSpelVariableCompletion(getVariables: () => SpelVariableSugg
           .filter((v) => !partial || v.key.startsWith(partial))
           .map((v) => ({
             label: v.key,
-            detail: v.source === 'upstream' ? '上游输出' : '图中引用',
+            detail: spelVariableSuggestionDetail(v),
             apply: `\${${v.key}}`,
             type: 'variable',
           })),
@@ -83,7 +86,7 @@ export function buildSpelVariableCompletion(getVariables: () => SpelVariableSugg
         from: loneDollar.from,
         options: variables.map((v) => ({
           label: v.key,
-          detail: v.source === 'upstream' ? '上游输出' : '图中引用',
+          detail: spelVariableSuggestionDetail(v),
           apply: `\${${v.key}}`,
           type: 'variable',
         })),
@@ -185,6 +188,10 @@ export class SpelExpressionEditorComponent implements OnDestroy {
     const text = this.modalEditorView.state.doc.toString();
     this.inlineText.set(text);
     this.valueChange.emit(text);
+  }
+
+  protected variableHint(v: SpelVariableSuggestion): string {
+    return spelVariableSuggestionDetail(v);
   }
 
   insertVariableRef(v: SpelVariableSuggestion): void {
