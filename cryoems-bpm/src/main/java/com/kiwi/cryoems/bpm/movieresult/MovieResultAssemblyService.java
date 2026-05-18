@@ -39,7 +39,8 @@ public class MovieResultAssemblyService {
                 thumbnailsDirectoryResolver.resolve(motionNoDwMrc, WorkflowVariableReader.resolveWorkDir(execution));
         Files.createDirectories(thumbnailsDir);
 
-        motionSection.process(result, motionNoDwMrc, motionVersion, thumbnailsDir);
+        Double predictDose = WorkflowVariableReader.resolvePredictDose(execution);
+        motionSection.process(result, motionNoDwMrc, motionVersion, thumbnailsDir, predictDose);
 
         String fileName = ctfPathResolver.resolveFileName(ctfOutputFile);
         ctfSection.process(result, ctfOutputFile, fileName, thumbnailsDir, microscope);

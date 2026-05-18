@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MotionResultApplier {
 
-    public void apply(MovieResult result, MotionPaths paths) {
+    public void apply(MovieResult result, MotionPaths paths, Double predictDose) {
         MotionResult motion = new MotionResult();
         motion.setNo_dw(new MrcFile(paths.noDwMrc()));
         motion.setDw(new MrcFile(paths.dwMrc()));
@@ -18,6 +18,7 @@ public class MotionResultApplier {
         motion.setLocal_motion(new MotionFile(paths.localLog()));
         motion.setRigid_motion(new MotionFile(paths.rigidLog()));
         motion.setSubtarctionOutput(paths.subtarctionMrc());
+        motion.setPredict_dose(predictDose);
         result.setMotion(motion);
         result.addImage(new MovieImage(MovieImage.Type.motion_mrc, paths.mrcImage()));
         result.addImage(new MovieImage(MovieImage.Type.patch_log, paths.patchLogImage()));

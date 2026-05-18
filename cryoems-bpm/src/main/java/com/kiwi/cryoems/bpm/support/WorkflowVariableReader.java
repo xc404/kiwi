@@ -76,6 +76,28 @@ public final class WorkflowVariableReader {
         return firstNonBlank(readText(execution, "microscope"), readFromMap(task, "microscope"));
     }
 
+    /** 读取 {@code predictDose} / {@code predict_dose}，由 {@code cyroemsPredictDoseActivity} 等节点写入。 */
+    public static Double resolvePredictDose(DelegateExecution execution) {
+        for (String key : new String[] {"predictDose", "predict_dose"}) {
+            Object value = execution.getVariable(key);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof Number n) {
+                return n.doubleValue();
+            }
+            String text = value.toString().trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(key + " 不是合法数字: " + value, e);
+            }
+        }
+        return null;
+    }
 
     private static String firstNonBlank(String... values) {
         for (String value : values) {

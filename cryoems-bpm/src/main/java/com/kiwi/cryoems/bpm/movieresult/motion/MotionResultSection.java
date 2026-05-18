@@ -19,12 +19,17 @@ public class MotionResultSection {
     private final MotionResultApplier applier;
     private final MotionResultValidator validator;
 
-    public void process(MovieResult result, String motionNoDwMrc, String motionVersion, Path thumbnailsDir)
+    public void process(
+            MovieResult result,
+            String motionNoDwMrc,
+            String motionVersion,
+            Path thumbnailsDir,
+            Double predictDose)
             throws Exception {
         MotionPaths paths = pathResolver.resolve(motionNoDwMrc, motionVersion, thumbnailsDir);
         thumbnailGenerator.generate(paths);
         patchLogThumbnailGenerator.generate(paths);
-        applier.apply(result, paths);
+        applier.apply(result, paths, predictDose);
         validator.validate(result);
     }
 }
