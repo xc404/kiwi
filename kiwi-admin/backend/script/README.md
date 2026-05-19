@@ -1,8 +1,8 @@
 # kiwi-admin 远程部署脚本
 
-`deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **Maven** 将 kiwi-admin 后端构建产物**构建并上传到远程主机**。连接与部署选项均写在 **`conf/remote.local.yaml`**（`ssh`、`deploy` 块），见 `conf/remote.example.yaml`。
+`deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **Maven** 将 kiwi-admin 后端构建产物**构建并上传到远程主机**。连接与部署选项均写在 **`conf/build.local.yaml`**（`ssh`、`deploy` 块），见 `conf/build.example.yaml`。
 
-构建与仓库根 [README](../../README.md) 一致：在 **kiwi 仓库根**执行 `mvn -pl kiwi-admin/backend -am package -DskipTests`，以按顺序编译 **kiwi-common**、**kiwi-bpmn-*** 等依赖模块。产物为 **应用 thin jar**（项目类）与 **依赖 lib jar**（shade 合并）。请使用完整克隆的仓库，勿只拷贝 `kiwi-admin` 子目录。
+构建与仓库根 [README](../../README.md) 一致：在 **kiwi 仓库根**执行 `mvn -pl kiwi-admin/backend -am package -DskipTests`，以按顺序编译 **kiwi-common**、**kiwi-bpmn-*** 等依赖模块。Maven 输出在 `target/`，`deploy.py` 会将其同步到 **`backend/bin/`**（应用 jar + 依赖 lib jar）再上传。请使用完整克隆的仓库，勿只拷贝 `kiwi-admin` 子目录。
 
 ## 前置条件
 
@@ -17,7 +17,7 @@
 1. 复制并编辑配置（勿提交含真实密码的副本；`conf/.gitignore` 已忽略常见本地文件名）：
 
    ```bash
-   cp conf/remote.example.yaml conf/remote.local.yaml
+   cp conf/build.example.yaml conf/build.local.yaml
    # 编辑 ssh.*、deploy.*
    ```
 
@@ -28,7 +28,7 @@
    python deploy.py
    ```
 
-仅上传已有产物、跳过构建：在 `remote.local.yaml` 中设置 `deploy.skip_build: true`。
+仅上传已有产物、跳过构建：在 `build.local.yaml` 中设置 `deploy.skip_build: true`。
 
 ## 部署策略
 
@@ -59,8 +59,10 @@
 
 | 字段 | 说明 |
 |------|------|
-| `app_jar` | 应用 jar 路径（`local_jar` 为兼容别名） |
-| `lib_jar` | 依赖 lib jar |
+| `spring_profiles_active` | Spring profile（默认 `dev`）；同步 `application.yml`、`application-<profile>.yml` 到 `bin/config/` 并上传远端 `config/` |
+| `app_jar` | 部署用应用 jar（默认 `bin/kiwi-admin.jar`；`local_jar` 为兼容别名） |
+| `lib_jar` | 部署用依赖 lib jar（默认 `bin/kiwi-admin-lib.jar`） |
+| `config_dir` | 本地配置目录（默认与 `app_jar` 同级的 `config/`） |
 | `remote_dir` | 远端目录（默认：`/opt/kiwi-admin`） |
 | `remote_app_name` | 远端应用 jar 名（默认：`kiwi-admin.jar`） |
 | `remote_lib_name` | 远端 lib jar 名（默认：`kiwi-admin-lib.jar`） |
@@ -74,18 +76,20 @@
 ## 增量细节（`incremental: true`）
 
 - **构建**：每次部署均执行 `mvn package`（除非 `skip_build: true`）。
-- **上传**：仅比较并上传应用 jar 的 SHA256。
+- **上传**：应用 jar 按 SHA256 增量；`config/` 与 `restart.sh`/`stop.sh` 在远端不存在时直接上传，内容不一致时会提示确认是否覆盖。
 - **全量触发**：`incremental: false`，远端缺少 lib jar，或本地 lib jar 早于反应堆 POM 修改时间。
 
 ## 文件布局
 
 ```
-script/
-├── README.md
-├── deploy.py
-├── requirements-remote.txt
-├── stop.sh / restart.sh      # 远端启停（-cp lib:app）
-└── conf/
-    ├── remote.example.yaml
-    └── .gitignore
+backend/
+├── bin/                      # deploy.py 同步的部署产物（已 gitignore）
+└── script/
+    ├── README.md
+    ├── deploy.py
+    ├── requirements-remote.txt
+    ├── restart.sh、stop.sh      # 由 deploy 上传至远端部署目录
+    └── conf/
+        ├── build.example.yaml
+        └── .gitignore
 ```

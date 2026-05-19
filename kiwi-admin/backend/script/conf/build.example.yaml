@@ -1,5 +1,5 @@
-# Kiwi 远程上传配置（ssh + deploy）
-# 复制为 remote.local.yaml 后按需修改，勿提交含密码的副本。
+# Kiwi 构建与远程部署配置（ssh + deploy）
+# 复制为 build.local.yaml 后按需修改，勿提交含密码的副本。
 #
 # 用法（在 script/ 目录）：
 #   python deploy.py
@@ -25,9 +25,13 @@ ssh:
   strict_host_key_checking: accept-new
 
 deploy:
-  # 本地产物（相对路径以 backend/ 为根）
-  app_jar: target/kiwi-admin-1.0.0.jar
-  lib_jar: target/kiwi-admin-1.0.0-lib.jar
+  # Spring 激活的 profile（默认 dev）；会复制 application.yml、application-<profile>.yml 到 bin/config/
+  spring_profiles_active: dev
+
+  # 部署用产物（相对路径以 backend/ 为根；mvn 后由脚本从 target/ 同步到此）
+  app_jar: bin/kiwi-admin.jar
+  lib_jar: bin/kiwi-admin-lib.jar
+  # config_dir: bin/config
 
   remote_dir: /opt/kiwi-admin
   remote_app_name: kiwi-admin.jar

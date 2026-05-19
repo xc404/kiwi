@@ -3,9 +3,10 @@
 经 SSH/scp 将 kiwi-admin 后端构建产物上传到远程主机。
 
 在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
-连接与部署选项来自 conf/remote.local.yaml（`ssh`、`deploy` 块），见 conf/remote.example.yaml。
-构建产物为应用 thin jar + 依赖 lib jar。incremental 为 true 时通常只构建/上传应用 jar；
-为 false（或依赖 lib 过期）时上传应用 jar 与 lib jar。远端由 restart.sh 以 -cp 启动。
+连接与部署选项来自 conf/build.local.yaml（`ssh`、`deploy` 块），见 conf/build.example.yaml。
+构建产物为应用 thin jar + 依赖 lib jar；mvn 输出在 target/，脚本会同步到 backend/bin/ 再上传。
+incremental 为 true 时通常只构建/上传应用 jar；
+为 false（或依赖 lib 过期）时上传应用 jar 与 lib jar；并同步 config/、restart.sh、stop.sh（不一致时交互确认覆盖）。
 auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见同目录 requirements-remote.txt）。
 
 依赖：在本脚本目录执行 pip install -r requirements-remote.txt
@@ -43,11 +44,18 @@ BACKEND_POM = BACKEND_ROOT / "pom.xml"
 REPO_ROOT = KIWI_ADMIN_ROOT.parent
 ROOT_POM = REPO_ROOT / "pom.xml"
 MAVEN_PL_BACKEND = "kiwi-admin/backend"
-DEFAULT_CONFIG_PATH = SCRIPT_DIR / "conf" / "remote.local.yaml"
+DEFAULT_CONFIG_PATH = SCRIPT_DIR / "conf" / "build.local.yaml"
 ARTIFACT_VERSION = "1.0.0"
 ARTIFACT_BASENAME = f"kiwi-admin-{ARTIFACT_VERSION}"
-DEFAULT_APP_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}.jar"
-DEFAULT_LIB_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}-lib.jar"
+BIN_DIR = BACKEND_ROOT / "bin"
+MAVEN_APP_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}.jar"
+MAVEN_LIB_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}-lib.jar"
+DEFAULT_APP_JAR = BIN_DIR / "kiwi-admin.jar"
+DEFAULT_LIB_JAR = BIN_DIR / "kiwi-admin-lib.jar"
+SPRING_RESOURCES_DIR = BACKEND_ROOT / "src" / "main" / "resources"
+DEFAULT_CONFIG_DIR = BIN_DIR / "config"
+DEFAULT_SPRING_PROFILE = "dev"
+DEPLOY_SHELL_SCRIPTS = ("restart.sh", "stop.sh")
 
 
 @dataclass(frozen=True)
@@ -71,6 +79,8 @@ class DeploySettings:
 
     app_jar: Path
     lib_jar: Path
+    config_dir: Path
+    spring_profiles_active: str
     remote_dir: str
     remote_app_name: str
     remote_lib_name: str
@@ -248,8 +258,10 @@ def _sftp_put_progress_cb():
     return cb
 
 
-def _scp_upload_paramiko(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
-    remote_path = f"{remote_dir.rstrip('/')}/{remote_jar_name}"
+def _scp_upload_paramiko(
+    c: Conn, local_jar: Path, remote_dir: str, remote_rel_path: str
+) -> None:
+    remote_path = _remote_rel_path(remote_dir, remote_rel_path)
     total = local_jar.stat().st_size
     print(
         f"正在通过 SFTP 上传 {local_jar.name}（{_human_bytes(total)}）→ "
@@ -480,12 +492,20 @@ fi
     return None
 
 
-def remote_prepare_dir_and_backup(c: Conn, remote_dir: str, remote_file_name: str) -> None:
+def _remote_rel_path(remote_dir: str, remote_rel_path: str) -> str:
+    return f"{remote_dir.rstrip('/')}/{remote_rel_path}"
+
+
+def remote_prepare_dir_and_backup(c: Conn, remote_dir: str, remote_rel_path: str) -> None:
+    esc_target = _remote_rel_path(remote_dir, remote_rel_path).replace("'", "'\\''")
+    esc_parent = str(Path(remote_rel_path).parent).replace("'", "'\\''")
     esc_dir = remote_dir.replace("'", "'\\''")
-    esc_name = remote_file_name.replace("'", "'\\''")
     script = f"""set -euo pipefail
 mkdir -p '{esc_dir}'
-TARGET='{esc_dir}/{esc_name}'
+if [[ '{esc_parent}' != '.' ]]; then
+  mkdir -p '{esc_dir}/{esc_parent}'
+fi
+TARGET='{esc_target}'
 if [[ -f "$TARGET" ]]; then
   cp -a "$TARGET" "$TARGET.bak"
 fi
@@ -500,22 +520,98 @@ def lib_jar_stale(settings: DeploySettings) -> bool:
     return settings.lib_jar.stat().st_mtime < _reactor_pom_mtimes()
 
 
-def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
+def _confirm_overwrite(message: str) -> bool:
+    """交互确认是否覆盖远端已有且内容不一致的文件。"""
+    if not sys.stdin.isatty():
+        print(f"非交互终端，跳过覆盖：{message}", file=sys.stderr)
+        return False
+    try:
+        answer = input(f"{message} [y/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print(file=sys.stderr)
+        return False
+    return answer in ("y", "yes")
+
+
+def _upload_file_to_remote(
+    c: Conn,
+    local_path: Path,
+    remote_rel_path: str,
+    *,
+    label: str,
+) -> None:
+    remote_dir = c.remote_dir
+    remote_path = _remote_rel_path(remote_dir, remote_rel_path)
+    remote_prepare_dir_and_backup(c, remote_dir, remote_rel_path)
+    scp_upload(c, local_path, remote_dir, remote_rel_path)
+    print(f"已上传 {label} 至 {c.ssh_label}:{remote_path}")
+
+
+def _deploy_upload_managed_file(
+    c: Conn,
+    local_path: Path,
+    remote_rel_path: str,
+    *,
+    label: str,
+) -> bool:
+    """
+    用于 config、shell 脚本等文本产物：
+    远端不存在则直接上传；存在且 SHA256 一致则跳过；不一致时询问是否覆盖。
+    """
+    remote_path = _remote_rel_path(c.remote_dir, remote_rel_path)
+    local_hash = _local_file_sha256(local_path)
+
+    if not remote_file_exists(c, remote_path):
+        print(f"远端尚无 {label}，将上传。")
+        _upload_file_to_remote(c, local_path, remote_rel_path, label=label)
+        return True
+
+    remote_hash = remote_jar_sha256(c, remote_path)
+    if remote_hash is not None and remote_hash == local_hash:
+        print(f"{label} 与远端一致，跳过上传。")
+        return False
+
+    if remote_hash is None:
+        print(f"无法校验远端 {label} 的 SHA256。")
+    else:
+        print(f"远端 {label} 与本地内容不一致。")
+
+    if not _confirm_overwrite(f"是否覆盖远端 {remote_path}？"):
+        print(f"已跳过 {label}。")
+        return False
+
+    _upload_file_to_remote(c, local_path, remote_rel_path, label=label)
+    return True
+
+
+def remote_chmod_executable(c: Conn, remote_dir: str, script_names: tuple[str, ...]) -> None:
+    if not script_names:
+        return
+    esc_dir = remote_dir.rstrip("/").replace("'", "'\\''")
+    args = " ".join(f"'{n}'" for n in script_names)
+    script = f"""set -euo pipefail
+cd '{esc_dir}'
+chmod +x {args}
+"""
+    run_remote_bash(c, script)
+
+
+def scp_upload(c: Conn, local_path: Path, remote_dir: str, remote_rel_path: str) -> None:
     if _password_uses_paramiko(c):
-        _scp_upload_paramiko(c, local_jar, remote_dir, remote_jar_name)
+        _scp_upload_paramiko(c, local_path, remote_dir, remote_rel_path)
         return
     cmd, host, env = scp_cmd(c)
-    dest = f"{host}:{remote_dir}/{remote_jar_name}"
-    full_cmd = cmd + [str(local_jar), dest]
-    size = local_jar.stat().st_size
+    dest = f"{host}:{_remote_rel_path(remote_dir, remote_rel_path)}"
+    full_cmd = cmd + [str(local_path), dest]
+    size = local_path.stat().st_size
     print(
-        f"正在通过 scp 上传 {local_jar.name}（{_human_bytes(size)}）→ {dest} …",
+        f"正在通过 scp 上传 {local_path.name}（{_human_bytes(size)}）→ {dest} …",
         file=sys.stderr,
     )
     _run_scp_subprocess_with_progress(
         full_cmd,
         env,
-        label=local_jar.name,
+        label=local_path.name,
         dest_display=dest,
     )
     print("  scp 上传完成。", file=sys.stderr)
@@ -524,13 +620,12 @@ def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) 
 def _deploy_upload_artifact(
     c: Conn,
     local_path: Path,
-    remote_file_name: str,
+    remote_rel_path: str,
     *,
     incremental: bool,
     label: str,
 ) -> bool:
-    remote_dir = c.remote_dir
-    remote_path = f"{remote_dir}/{remote_file_name}"
+    remote_path = _remote_rel_path(c.remote_dir, remote_rel_path)
     local_hash = _local_file_sha256(local_path)
     if incremental:
         remote_hash = remote_jar_sha256(c, remote_path)
@@ -539,10 +634,89 @@ def _deploy_upload_artifact(
             return False
         if remote_hash is None:
             print(f"远端尚无 {label} 或无法校验，将执行上传。")
-    remote_prepare_dir_and_backup(c, remote_dir, remote_file_name)
-    scp_upload(c, local_path, remote_dir, remote_file_name)
-    print(f"已上传 {label} 至 {c.ssh_label}:{remote_path}")
+    _upload_file_to_remote(c, local_path, remote_rel_path, label=label)
     return True
+
+
+def sync_spring_config_to_bin(settings: DeploySettings) -> None:
+    """将 src/main/resources 下 Spring 配置复制到 bin/config/。"""
+    profile = settings.spring_profiles_active
+    dest = settings.config_dir
+    dest.mkdir(parents=True, exist_ok=True)
+
+    base_yml = SPRING_RESOURCES_DIR / "application.yml"
+    profile_yml = SPRING_RESOURCES_DIR / f"application-{profile}.yml"
+    if not base_yml.is_file():
+        print(f"未找到 Spring 配置: {base_yml}", file=sys.stderr)
+        sys.exit(1)
+
+    shutil.copy2(base_yml, dest / "application.yml")
+    if profile_yml.is_file():
+        shutil.copy2(profile_yml, dest / profile_yml.name)
+    else:
+        print(
+            f"警告：未找到 {profile_yml}，仅同步 application.yml。",
+            file=sys.stderr,
+        )
+
+    props = dest / "application.properties"
+    props.write_text(
+        f"spring.profiles.active={profile}\n",
+        encoding="utf-8",
+    )
+    names = ", ".join(p.name for p in sorted(dest.iterdir()) if p.is_file())
+    print(f"已同步 Spring 配置至 {dest}（profile={profile}）：{names}")
+
+
+def deploy_config_files(c: Conn, settings: DeploySettings) -> bool:
+    """上传 bin/config/ 至远端 config/ 目录（不一致时确认覆盖）。"""
+    config_dir = settings.config_dir
+    if not config_dir.is_dir():
+        print(f"本地配置目录不存在: {config_dir}", file=sys.stderr)
+        sys.exit(1)
+    uploaded = False
+    for path in sorted(config_dir.iterdir()):
+        if not path.is_file():
+            continue
+        rel = f"config/{path.name}"
+        if _deploy_upload_managed_file(c, path, rel, label=rel):
+            uploaded = True
+    return uploaded
+
+
+def deploy_shell_scripts(c: Conn, settings: DeploySettings) -> bool:
+    """上传 script/ 下的 restart.sh、stop.sh 至远端部署目录（不一致时确认覆盖）。"""
+    uploaded = False
+    chmod_names: list[str] = []
+    for name in DEPLOY_SHELL_SCRIPTS:
+        local = SCRIPT_DIR / name
+        if not local.is_file():
+            print(f"警告：未找到本地脚本 {local}，跳过。", file=sys.stderr)
+            continue
+        if _deploy_upload_managed_file(c, local, name, label=name):
+            uploaded = True
+            chmod_names.append(name)
+    if chmod_names:
+        remote_chmod_executable(c, settings.remote_dir, tuple(chmod_names))
+    return uploaded
+
+
+def sync_maven_outputs_to_bin(settings: DeploySettings) -> None:
+    """将 target/ 下 Maven 产物复制到 bin/（或 YAML 配置的 app_jar、lib_jar 路径）。"""
+    if not MAVEN_APP_JAR.is_file():
+        print(f"Maven 未生成应用 JAR: {MAVEN_APP_JAR}", file=sys.stderr)
+        sys.exit(1)
+    if not MAVEN_LIB_JAR.is_file():
+        print(f"Maven 未生成依赖 lib JAR: {MAVEN_LIB_JAR}", file=sys.stderr)
+        sys.exit(1)
+    settings.app_jar.parent.mkdir(parents=True, exist_ok=True)
+    settings.lib_jar.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MAVEN_APP_JAR, settings.app_jar)
+    shutil.copy2(MAVEN_LIB_JAR, settings.lib_jar)
+    print(
+        f"已同步至 {settings.app_jar.parent}: "
+        f"{settings.app_jar.name}、{settings.lib_jar.name}",
+    )
 
 
 def _maybe_run_mvn(settings: DeploySettings, mvn_override: str | None) -> None:
@@ -550,6 +724,7 @@ def _maybe_run_mvn(settings: DeploySettings, mvn_override: str | None) -> None:
         return
     print("执行 mvn package …")
     run_mvn_package(mvn_override)
+    sync_maven_outputs_to_bin(settings)
 
 
 def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
@@ -567,6 +742,9 @@ def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
             print("增量：检测到依赖 lib 可能过期（POM 变更），转为全量部署（应用 jar + lib jar）。")
 
     _maybe_run_mvn(settings, mvn_override)
+    sync_spring_config_to_bin(settings)
+    uploaded_config = deploy_config_files(c, settings)
+    uploaded_scripts = deploy_shell_scripts(c, settings)
 
     if not settings.app_jar.is_file():
         print(f"本地应用 JAR 不存在: {settings.app_jar}", file=sys.stderr)
@@ -590,15 +768,16 @@ def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
             incremental=False,
             label="应用 JAR",
         )
-        return uploaded_lib or uploaded_app
+        return uploaded_lib or uploaded_app or uploaded_config or uploaded_scripts
 
-    return _deploy_upload_artifact(
+    uploaded_app = _deploy_upload_artifact(
         c,
         settings.app_jar,
         settings.remote_app_name,
         incremental=True,
         label="应用 JAR",
     )
+    return uploaded_app or uploaded_config or uploaded_scripts
 
 
 def _bool_from_yaml(value: object | None, default: bool) -> bool:
@@ -620,6 +799,9 @@ def _ssh_dict_from_raw(raw: dict) -> dict:
         "local_jar",
         "app_jar",
         "lib_jar",
+        "config_dir",
+        "spring_profiles_active",
+        "spring.profiles.active",
         "remote_dir",
         "remote_jar_name",
         "remote_app_name",
@@ -647,6 +829,9 @@ def _deploy_dict_from_raw(raw: dict) -> dict:
         "local_jar",
         "app_jar",
         "lib_jar",
+        "config_dir",
+        "spring_profiles_active",
+        "spring.profiles.active",
         "remote_dir",
         "remote_jar_name",
         "remote_app_name",
@@ -688,9 +873,15 @@ def _build_deploy_settings_from_dict(deploy: dict) -> DeploySettings:
     else:
         incremental = _bool_from_yaml(deploy.get("incremental"), True)
     app_raw = deploy.get("app_jar", deploy.get("local_jar"))
+    app_jar = _resolve_backend_path(app_raw, DEFAULT_APP_JAR)
+    profile_raw = deploy.get("spring_profiles_active", deploy.get("spring.profiles.active"))
+    spring_profile = str(profile_raw).strip() if profile_raw else DEFAULT_SPRING_PROFILE
+    config_default = app_jar.parent / "config"
     return DeploySettings(
-        app_jar=_resolve_backend_path(app_raw, DEFAULT_APP_JAR),
+        app_jar=app_jar,
         lib_jar=_resolve_backend_path(deploy.get("lib_jar"), DEFAULT_LIB_JAR),
+        config_dir=_resolve_backend_path(deploy.get("config_dir"), config_default),
+        spring_profiles_active=spring_profile,
         remote_dir=remote_dir,
         remote_app_name=remote_app_name,
         remote_lib_name=remote_lib_name,
@@ -770,10 +961,10 @@ def main() -> None:
     _ensure_utf8_stdio()
     cfg_path = DEFAULT_CONFIG_PATH.resolve()
     if not cfg_path.is_file():
-        example = SCRIPT_DIR / "conf" / "remote.example.yaml"
+        example = SCRIPT_DIR / "conf" / "build.example.yaml"
         print(
             f"配置文件不存在: {cfg_path}\n"
-            f"请复制 {example} 为 conf/remote.local.yaml，并编辑 ssh、deploy 块。",
+            f"请复制 {example} 为 conf/build.local.yaml，并编辑 ssh、deploy 块。",
             file=sys.stderr,
         )
         sys.exit(1)

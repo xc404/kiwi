@@ -58,3 +58,5 @@ cryoems-bpm/target/
 kiwi-bpmn/kiwi-bpmn-component/target/
 kiwi-admin/backend/script/conf/remote.dev.yaml
 kiwi-admin/backend/script/__pycache__/
+kiwi-admin/**/*.jar
+kiwi-admin/backend/bin/config/

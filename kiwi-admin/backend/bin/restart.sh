@@ -43,9 +43,9 @@ if [[ ! -f "$JAR" ]]; then
   exit 1
 fi
 
+# spring.profiles.active 由 config/application.properties 指定（deploy 同步）
 nohup java \
   -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
-  -Dspring.profiles.active=dev \
   -cp "${LIB_JAR}:${JAR}" \
   com.kiwi.framework.springboot.Application >>"$LOG_FILE" 2>&1 &
 
