@@ -8,7 +8,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
@@ -17,9 +16,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * 使用主库 MongoDB（{@code mongoTemplate}）持久化 Sa-Token 会话，替代 Redis。
+ * 使用主库 MongoDB（{@code mongoTemplate}）持久化 Sa-Token 会话。
  */
-@Component
 public class SaTokenMongoDao implements SaTokenDao {
 
     private final MongoTemplate mongoTemplate;

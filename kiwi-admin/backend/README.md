@@ -10,8 +10,8 @@
 |------|------|
 | 运行时 | Java 17、Spring Boot 3.4.x |
 | Web / 文档 | Spring Web、SpringDoc OpenAPI（Swagger UI） |
-| 鉴权 | Sa-Token（MongoDB 持久化会话） |
-| 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB |
+| 鉴权 | Sa-Token（`kiwi.sa-token.storage`：`mongodb` 默认，或 `redis`） |
+| 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；可选 Redis（仅 Sa-Token 为 redis 时） |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
 | AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描，助手前端动作来自 `AssistantNavigationTools` / `AssistantDesignerTools` 的 `@Tool` 合并注册） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
@@ -22,7 +22,7 @@
 
 - **JDK 17**
 - **Maven 3.8+**
-- 运行期：**MySQL**、**MongoDB**（连接信息与库名以 `application.yml` 为准）
+- 运行期：**MySQL**、**MongoDB**；若 `kiwi.sa-token.storage=redis`，另需 **Redis**
 
 ## 快速开始
 
@@ -46,7 +46,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 
 | 项 | 说明 |
 |----|------|
-| 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、Camunda、`app.cors`、AI/MCP 等） |
+| 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、`kiwi.sa-token.storage`、Camunda、`app.cors`、AI/MCP 等） |
 | MCP 端点 | `spring.ai.mcp.server.sse-endpoint`、`spring.ai.mcp.server.sse-message-endpoint`（及 `SPRING_AI_MCP_SERVER_*` 环境变量）；助手回环基址 `kiwi.ai.mcp.loopback-base-url` |
 | 本地覆盖 | 复制 `application-local.example.yml` 为 `application-local.yml` 填写真实连接信息；**勿提交** `application-local.yml`（已在 `.gitignore`） |
 | CORS | `app.cors.allowed-origins`，生产环境用环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置实际前端 Origin |

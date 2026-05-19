@@ -18,6 +18,9 @@ kiwi:
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
       warmup-backoff-ms: ${KIWI_AI_MCP_WARMUP_BACKOFF_MS:150}
   # 用户在「个人设置」签发的长期访问令牌（PAT）；需经兑换接口换取短期 Sa-Token 后调用业务 API
+  # Sa-Token 会话存储：mongodb（默认）| redis（需同时配置 spring.data.redis）
+  sa-token:
+    storage: ${KIWI_SA_TOKEN_STORAGE:mongodb}
   personal-access-token:
     max-per-user: ${KIWI_PERSONAL_ACCESS_TOKEN_MAX:30}
     # PAT 本身有效期（秒）；仍兼容旧环境变量 KIWI_INTEGRATION_API_TOKEN_TIMEOUT
@@ -38,6 +41,10 @@ app:
     allowOverwrite: false
 
 spring:
+  autoconfigure:
+    # 由 SaTokenDaoConfiguration 按 kiwi.sa-token.storage 注册唯一 SaTokenDao
+    exclude:
+      - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate
   ai:
     dashscope:
       api-key: ${KIWI_AI_API_KEY:${DASHSCOPE_API_KEY:}}
@@ -65,6 +72,12 @@ spring:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
       database: ${SPRING_DATA_MONGODB_DATABASE:x404}
       auto-index-creation: true
+    # 仅当 kiwi.sa-token.storage=redis 时需要；mongodb 模式下可省略
+    redis:
+      database: ${SPRING_DATA_REDIS_DATABASE:1}
+      host: ${SPRING_DATA_REDIS_HOST:}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
 
 # CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
 
