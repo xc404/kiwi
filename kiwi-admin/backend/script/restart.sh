@@ -21,7 +21,6 @@ stop_existing() {
     fi
     rm -f "$PID_FILE"
   fi
-  # 若无 pid 文件但仍有同 jar 进程，一并结束（便于手工启动后的重启）
   if pgrep -f "${JAR}" >/dev/null 2>&1; then
     pkill -f "${JAR}" 2>/dev/null || true
     sleep 1
@@ -30,8 +29,12 @@ stop_existing() {
 
 stop_existing
 
+# 工作目录设为部署目录后，Spring Boot 会自动加载本目录下的 config/（官方约定，无需额外参数）
+cd "$DIR"
+
 nohup java \
-  -Dspring.profiles.active=local,dev \
+  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
+  -Dspring.profiles.active=dev \
   -jar "$JAR" >>"$LOG_FILE" 2>&1 &
 
 echo $! >"$PID_FILE"

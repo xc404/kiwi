@@ -18,7 +18,7 @@
 |------|------|
 | 后端 | Java 17、Spring Boot 3.4.x、Spring Data MongoDB、MyBatis、Sa-Token |
 | 流程 | Camunda Platform 7.24（Spring Boot Starter、REST、Web 控制台、External Task Client） |
-| 数据 | MongoDB、MySQL（Camunda/业务数据源）、Redis |
+| 数据 | MongoDB、MySQL（Camunda/业务数据源） |
 | 前端 | Angular 21、ng-zorro-antd、BPMN.js（流程设计相关页面） |
 
 ## 仓库结构
@@ -51,13 +51,13 @@ kiwi/
 - **JDK 17**
 - **Maven 3.8+**
 - **Node.js**（建议 LTS，与 Angular 21 兼容的版本）
-- 运行期依赖：**MongoDB**、**MySQL**、**Redis**（具体库名与用途以 `application.yml` 为准）
+- 运行期依赖：**MongoDB**、**MySQL**（具体库名与用途以 `application.yml` 为准）
 
 ## 配置说明
 
 1. **后端**  
    - 主配置：`kiwi-admin/backend/src/main/resources/application.yml`（默认不含真实密钥，敏感项使用环境变量占位，如 `SPRING_DATASOURCE_PASSWORD`、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD` 等）。  
-   - 本地覆盖：复制 `application-local.example.yml` 为 `application-local.yml`，填写数据库与 Redis 等；**`application-local.yml` 已加入 `.gitignore`，勿提交。** 启动时建议：`--spring.profiles.active=local,dev`（`dev` 可选，用于开启 MyBatis SQL 输出到控制台，仅调试用）。  
+   - 本地覆盖：复制 `application-local.example.yml` 为 `application-local.yml`，填写数据库等；**`application-local.yml` 已加入 `.gitignore`，勿提交。** 启动时建议：`--spring.profiles.active=local,dev`（`dev` 可选，用于开启 MyBatis SQL 输出到控制台，仅调试用）。  
    - **CORS**：由 `app.cors.allowed-origins` 配置（逗号分隔）。本地默认包含 `http://localhost:4201` 等；**生产环境**请通过环境变量 `APP_CORS_ALLOWED_ORIGINS` 设置为实际前端 Origin，勿使用 `*`。
 
 2. **前端 API**  
@@ -86,7 +86,7 @@ cd kiwi-admin/backend
 mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
 ```
 
-确保 MySQL、MongoDB、Redis 已按配置可用，否则启动会失败。
+确保 MySQL、MongoDB 已按配置可用，否则启动会失败。
 
 ### 2. 启动前端
 

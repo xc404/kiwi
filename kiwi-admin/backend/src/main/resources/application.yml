@@ -65,11 +65,6 @@ spring:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
       database: ${SPRING_DATA_MONGODB_DATABASE:x404}
       auto-index-creation: true
-    redis:
-      database: ${SPRING_DATA_REDIS_DATABASE:1}
-      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
 
 # CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
 

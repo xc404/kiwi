@@ -15,10 +15,6 @@ cryoems:
   mongodb:
     uri: mongodb://127.0.0.1:27017/cryoems?authSource=admin
     database: cryoems
-    redis:
-      host: 127.0.0.1
-      port: 6379
-      password:
 
 camunda.bpm:
   admin-user:
