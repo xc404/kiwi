@@ -33,5 +33,3 @@ if pgrep -f "${JAR}" >/dev/null 2>&1; then
   echo "仍有 kiwi-admin 相关进程运行，请检查：pgrep -af kiwi-admin.jar" >&2
   exit 1
 fi
-
-echo "kiwi-admin 已停止。"
