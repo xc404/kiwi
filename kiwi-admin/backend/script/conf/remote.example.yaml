@@ -1,8 +1,8 @@
-# Kiwi 远程上传配置（ssh）
+# Kiwi 远程上传配置（ssh + deploy）
 # 复制为 remote.local.yaml 后按需修改，勿提交含密码的副本。
 #
-# 用法：
-#   python ../deploy.py --config ../conf/remote.local.yaml
+# 用法（在 script/ 目录）：
+#   python deploy.py
 
 ssh:
   # 展示名（日志与提示，可选）
@@ -23,3 +23,20 @@ ssh:
   # password: "your-secret"
 
   strict_host_key_checking: accept-new
+
+deploy:
+  # 本地产物（相对路径以 backend/ 为根）
+  app_jar: target/kiwi-admin-1.0.0.jar
+  lib_jar: target/kiwi-admin-1.0.0-lib.jar
+
+  remote_dir: /opt/kiwi-admin
+  remote_app_name: kiwi-admin.jar
+  remote_lib_name: kiwi-admin-lib.jar
+
+  # 可选：Maven 可执行文件（默认从 PATH / MAVEN_HOME / MVN 解析）
+  # mvn: C:\apache-maven\bin\mvn.cmd
+
+  skip_build: false
+  # true：通常只上传应用 jar；false：上传应用 jar + lib jar
+  # 远端尚无 lib jar 或 POM 依赖变更时也会自动上传 lib jar
+  incremental: true

@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-经 SSH/scp 将 kiwi-admin 后端 JAR 上传到远程主机。
+经 SSH/scp 将 kiwi-admin 后端构建产物上传到远程主机。
 
 在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
-连接信息来自结构化 YAML（--config），见本脚本同目录下 conf/remote.example.yaml（`ssh` 块）。
+连接与部署选项来自 conf/remote.local.yaml（`ssh`、`deploy` 块），见 conf/remote.example.yaml。
+构建产物为应用 thin jar + 依赖 lib jar。incremental 为 true 时通常只构建/上传应用 jar；
+为 false（或依赖 lib 过期）时上传应用 jar 与 lib jar。远端由 restart.sh 以 -cp 启动。
 auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见同目录 requirements-remote.txt）。
 
 依赖：在本脚本目录执行 pip install -r requirements-remote.txt
 """
 from __future__ import annotations
 
-import argparse
 import hashlib
 import os
 import shutil
@@ -38,12 +39,15 @@ except ImportError:
     sys.exit(1)
 
 BACKEND_POM = BACKEND_ROOT / "pom.xml"
-BACKEND_SRC_MAIN = BACKEND_ROOT / "src" / "main"
 # 仓库根（kiwi/）：与根 README 一致，在此执行 mvn -pl kiwi-admin/backend -am 以编依赖模块
 REPO_ROOT = KIWI_ADMIN_ROOT.parent
 ROOT_POM = REPO_ROOT / "pom.xml"
 MAVEN_PL_BACKEND = "kiwi-admin/backend"
-DEFAULT_LOCAL_JAR = BACKEND_ROOT / "target" / "kiwi-admin-1.0.0.jar"
+DEFAULT_CONFIG_PATH = SCRIPT_DIR / "conf" / "remote.local.yaml"
+ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_BASENAME = f"kiwi-admin-{ARTIFACT_VERSION}"
+DEFAULT_APP_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}.jar"
+DEFAULT_LIB_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}-lib.jar"
 
 
 @dataclass(frozen=True)
@@ -62,12 +66,25 @@ class SshTarget:
 
 
 @dataclass(frozen=True)
+class DeploySettings:
+    """部署选项（由 YAML 的 deploy 块解析）。"""
+
+    app_jar: Path
+    lib_jar: Path
+    remote_dir: str
+    remote_app_name: str
+    remote_lib_name: str
+    mvn: str | None
+    skip_build: bool
+    incremental: bool
+
+
+@dataclass(frozen=True)
 class Conn:
     target: SshTarget
     ssh_label: str
-    local_jar: Path
     remote_dir: str
-    remote_jar_name: str
+    settings: DeploySettings
 
 
 def _ssh_prefix_and_env(t: SshTarget) -> tuple[list[str], dict[str, str]]:
@@ -367,7 +384,7 @@ def resolve_mvn_executable(override: str | None) -> str:
 
     print(
         "未找到 Maven（mvn）。请安装 Maven 并加入 PATH，或设置环境变量 MAVEN_HOME / MVN，"
-        "或使用 --mvn 指定 mvn.cmd（Windows）或 mvn 的完整路径。",
+        "或在 YAML deploy.mvn 中指定 mvn.cmd（Windows）或 mvn 的完整路径。",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -378,23 +395,28 @@ def run_mvn_package(mvn_override: str | None) -> None:
     exe = resolve_mvn_executable(mvn_override)
     if not ROOT_POM.is_file():
         print(
-            f"未找到仓库根 POM：{ROOT_POM}。remote_run.py 需放在 kiwi-admin/backend/script/ 下，"
+            f"未找到仓库根 POM：{ROOT_POM}。deploy.py 需放在 kiwi-admin/backend/script/ 下，"
             "且应在完整克隆的 kiwi 仓库中使用。",
             file=sys.stderr,
         )
         sys.exit(1)
-    subprocess.run(
-        [
-            exe,
-            "-pl",
-            MAVEN_PL_BACKEND,
-            "-am",
-            "package",
-            "-DskipTests",
-        ],
-        cwd=str(REPO_ROOT),
-        check=True,
-    )
+    cmd = [
+        exe,
+        "-pl",
+        MAVEN_PL_BACKEND,
+        "-am",
+        "package",
+        "-DskipTests",
+    ]
+    try:
+        subprocess.run(cmd, cwd=str(REPO_ROOT), check=True)
+    except subprocess.CalledProcessError as exc:
+        print(
+            f"\nmvn package 失败（退出码 {exc.returncode}）。"
+            "请查看上方 Maven 编译/依赖错误；常见原因：未使用 JDK 25、或 reactor 模块编译失败。",
+            file=sys.stderr,
+        )
+        sys.exit(exc.returncode if exc.returncode else 1)
 
 
 def _local_file_sha256(path: Path) -> str:
@@ -425,38 +447,13 @@ def _reactor_pom_mtimes() -> float:
     return mt
 
 
-def _reactor_src_newest_mtime() -> float:
-    """kiwi-common / kiwi-bpmn* / backend 的 src/main 下最新修改时间。"""
-    mt = 0.0
-    roots: list[Path] = []
-    cm = REPO_ROOT / "kiwi-common" / "src" / "main"
-    if cm.is_dir():
-        roots.append(cm)
-    if BACKEND_SRC_MAIN.is_dir():
-        roots.append(BACKEND_SRC_MAIN)
-    bpmn = REPO_ROOT / "kiwi-bpmn"
-    if bpmn.is_dir():
-        for child in bpmn.iterdir():
-            if child.is_dir():
-                sm = child / "src" / "main"
-                if sm.is_dir():
-                    roots.append(sm)
-    for root in roots:
-        for f in root.rglob("*"):
-            if f.is_file():
-                mt = max(mt, f.stat().st_mtime)
-    return mt
-
-
-def _reactor_inputs_newest_mtime() -> float:
-    return max(_reactor_pom_mtimes(), _reactor_src_newest_mtime())
-
-
-def should_skip_mvn(local_jar: Path) -> bool:
-    """本地 JAR 不早于反应堆相关 POM/源码 → 跳过 mvn。"""
-    if not local_jar.is_file():
-        return False
-    return local_jar.stat().st_mtime >= _reactor_inputs_newest_mtime()
+def remote_file_exists(c: Conn, remote_file_path: str) -> bool:
+    esc = remote_file_path.replace("'", "'\\''")
+    script = f"""set -euo pipefail
+if [[ -f '{esc}' ]]; then exit 0; else exit 1; fi
+"""
+    code, _, _ = run_remote_capture(c, script)
+    return code == 0
 
 
 def remote_jar_sha256(c: Conn, remote_jar_path: str) -> str | None:
@@ -483,15 +480,24 @@ fi
     return None
 
 
-def remote_prepare_dir_and_backup(c: Conn, remote_dir: str, remote_jar_name: str) -> None:
+def remote_prepare_dir_and_backup(c: Conn, remote_dir: str, remote_file_name: str) -> None:
+    esc_dir = remote_dir.replace("'", "'\\''")
+    esc_name = remote_file_name.replace("'", "'\\''")
     script = f"""set -euo pipefail
-mkdir -p '{remote_dir}'
-JAR='{remote_dir}/{remote_jar_name}'
-if [[ -f "$JAR" ]]; then
-  cp -a "$JAR" "$JAR.bak"
+mkdir -p '{esc_dir}'
+TARGET='{esc_dir}/{esc_name}'
+if [[ -f "$TARGET" ]]; then
+  cp -a "$TARGET" "$TARGET.bak"
 fi
 """
     run_remote_bash(c, script)
+
+
+def lib_jar_stale(settings: DeploySettings) -> bool:
+    """依赖 lib jar 是否可能过期（POM 变更后需全量部署）。"""
+    if not settings.lib_jar.is_file():
+        return True
+    return settings.lib_jar.stat().st_mtime < _reactor_pom_mtimes()
 
 
 def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) -> None:
@@ -515,73 +521,195 @@ def scp_upload(c: Conn, local_jar: Path, remote_dir: str, remote_jar_name: str) 
     print("  scp 上传完成。", file=sys.stderr)
 
 
-def cmd_deploy(
+def _deploy_upload_artifact(
     c: Conn,
+    local_path: Path,
+    remote_file_name: str,
     *,
-    skip_build: bool,
     incremental: bool,
-    mvn_override: str | None,
+    label: str,
 ) -> bool:
-    local_jar = c.local_jar
     remote_dir = c.remote_dir
-    remote_jar_name = c.remote_jar_name
-    remote_jar_path = f"{remote_dir}/{remote_jar_name}"
-
-    if not skip_build:
-        if incremental and should_skip_mvn(local_jar):
-            print(
-                "增量：本地 JAR 不早于反应堆相关 POM（含根父 POM、kiwi-common/kiwi-bpmn 等）"
-                "与 src/main 修改时间，跳过 mvn package。",
-            )
-        else:
-            if not incremental:
-                print("全量：执行 mvn package …")
-            run_mvn_package(mvn_override)
-
-    if not local_jar.is_file():
-        print(f"本地 JAR 不存在: {local_jar}", file=sys.stderr)
-        sys.exit(1)
-
-    local_hash = _local_file_sha256(local_jar)
-    remote_hash: str | None = None
+    remote_path = f"{remote_dir}/{remote_file_name}"
+    local_hash = _local_file_sha256(local_path)
     if incremental:
-        remote_hash = remote_jar_sha256(c, remote_jar_path)
+        remote_hash = remote_jar_sha256(c, remote_path)
         if remote_hash is not None and remote_hash == local_hash:
-            print("增量：本地与远端 JAR 的 SHA256 一致，跳过备份与上传。")
+            print(f"增量：本地与远端 {label} 的 SHA256 一致，跳过备份与上传。")
             return False
         if remote_hash is None:
-            print("远端尚无同名 JAR 或无法校验，将执行完整上传。")
-
-    remote_prepare_dir_and_backup(c, remote_dir, remote_jar_name)
-    scp_upload(c, local_jar, remote_dir, remote_jar_name)
-    print(f"已上传至 {c.ssh_label}:{remote_dir}/{remote_jar_name}")
+            print(f"远端尚无 {label} 或无法校验，将执行上传。")
+    remote_prepare_dir_and_backup(c, remote_dir, remote_file_name)
+    scp_upload(c, local_path, remote_dir, remote_file_name)
+    print(f"已上传 {label} 至 {c.ssh_label}:{remote_path}")
     return True
+
+
+def _maybe_run_mvn(settings: DeploySettings, mvn_override: str | None) -> None:
+    if settings.skip_build:
+        return
+    print("执行 mvn package …")
+    run_mvn_package(mvn_override)
+
+
+def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
+    settings = c.settings
+    remote_lib_path = f"{settings.remote_dir.rstrip('/')}/{settings.remote_lib_name}"
+    remote_lib_missing = (
+        settings.incremental and not remote_file_exists(c, remote_lib_path)
+    )
+    lib_stale = lib_jar_stale(settings)
+    full_deploy = not settings.incremental or lib_stale or remote_lib_missing
+    if settings.incremental and full_deploy:
+        if remote_lib_missing:
+            print("增量：远端尚无 lib jar，转为全量部署（应用 jar + lib jar）。")
+        elif lib_stale:
+            print("增量：检测到依赖 lib 可能过期（POM 变更），转为全量部署（应用 jar + lib jar）。")
+
+    _maybe_run_mvn(settings, mvn_override)
+
+    if not settings.app_jar.is_file():
+        print(f"本地应用 JAR 不存在: {settings.app_jar}", file=sys.stderr)
+        sys.exit(1)
+
+    if full_deploy:
+        if not settings.lib_jar.is_file():
+            print(f"本地依赖 lib JAR 不存在: {settings.lib_jar}", file=sys.stderr)
+            sys.exit(1)
+        uploaded_lib = _deploy_upload_artifact(
+            c,
+            settings.lib_jar,
+            settings.remote_lib_name,
+            incremental=False,
+            label="依赖 lib JAR",
+        )
+        uploaded_app = _deploy_upload_artifact(
+            c,
+            settings.app_jar,
+            settings.remote_app_name,
+            incremental=False,
+            label="应用 JAR",
+        )
+        return uploaded_lib or uploaded_app
+
+    return _deploy_upload_artifact(
+        c,
+        settings.app_jar,
+        settings.remote_app_name,
+        incremental=True,
+        label="应用 JAR",
+    )
+
+
+def _bool_from_yaml(value: object | None, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "yes", "1", "on")
+    return bool(value)
 
 
 def _ssh_dict_from_raw(raw: dict) -> dict:
     """支持 `ssh:` 嵌套；兼容旧版平铺（仅 ssh 相关键）。"""
     if "ssh" in raw and isinstance(raw["ssh"], dict):
         return dict(raw["ssh"])
-    reserved = {"spring"}
-    return {k: v for k, v in raw.items() if k not in reserved}
+    reserved = {"spring", "deploy"}
+    deploy_keys = {
+        "local_jar",
+        "app_jar",
+        "lib_jar",
+        "remote_dir",
+        "remote_jar_name",
+        "remote_app_name",
+        "remote_lib_name",
+        "mvn",
+        "skip_build",
+        "incremental",
+        "no_incremental",
+        "package",
+        "local_war",
+        "bundle_zip",
+        "remote_bundle_name",
+    }
+    return {
+        k: v
+        for k, v in raw.items()
+        if k not in reserved and k not in deploy_keys
+    }
 
 
-def _build_ssh_target_from_dict(
-    ssh: dict,
-    *,
-    override_hostname: str | None,
-    override_user: str | None,
-    override_port: int | None,
-) -> SshTarget:
-    hostname = override_hostname or ssh.get("hostname")
-    user = override_user or ssh.get("user")
-    port = override_port if override_port is not None else ssh.get("port", 22)
+def _deploy_dict_from_raw(raw: dict) -> dict:
+    if "deploy" in raw and isinstance(raw["deploy"], dict):
+        return dict(raw["deploy"])
+    keys = (
+        "local_jar",
+        "app_jar",
+        "lib_jar",
+        "remote_dir",
+        "remote_jar_name",
+        "remote_app_name",
+        "remote_lib_name",
+        "mvn",
+        "skip_build",
+        "incremental",
+        "no_incremental",
+    )
+    return {k: raw[k] for k in keys if k in raw}
+
+
+def _resolve_backend_path(raw: object | None, default: Path) -> Path:
+    if raw is None:
+        return default.resolve()
+    p = Path(str(raw).strip())
+    if not p.is_absolute():
+        p = BACKEND_ROOT / p
+    return p.resolve()
+
+
+def _build_deploy_settings_from_dict(deploy: dict) -> DeploySettings:
+    if deploy.get("package") not in (None, "jar"):
+        legacy = str(deploy.get("package")).strip().lower()
+        if legacy == "zip":
+            print("提示：deploy.package=zip 已废弃，请删除该字段（现统一为 jar 分包部署）。", file=sys.stderr)
+        elif legacy == "war":
+            print("提示：deploy.package=war 已不再支持。", file=sys.stderr)
+    remote_dir = str(deploy.get("remote_dir") or "/opt/kiwi-admin")
+    remote_app_name = str(
+        deploy.get("remote_app_name") or deploy.get("remote_jar_name") or "kiwi-admin.jar"
+    )
+    remote_lib_name = str(deploy.get("remote_lib_name") or "kiwi-admin-lib.jar")
+    mvn_raw = deploy.get("mvn")
+    mvn = str(mvn_raw).strip() if mvn_raw else None
+    skip_build = _bool_from_yaml(deploy.get("skip_build"), False)
+    if "no_incremental" in deploy:
+        incremental = not _bool_from_yaml(deploy.get("no_incremental"), False)
+    else:
+        incremental = _bool_from_yaml(deploy.get("incremental"), True)
+    app_raw = deploy.get("app_jar", deploy.get("local_jar"))
+    return DeploySettings(
+        app_jar=_resolve_backend_path(app_raw, DEFAULT_APP_JAR),
+        lib_jar=_resolve_backend_path(deploy.get("lib_jar"), DEFAULT_LIB_JAR),
+        remote_dir=remote_dir,
+        remote_app_name=remote_app_name,
+        remote_lib_name=remote_lib_name,
+        mvn=mvn,
+        skip_build=skip_build,
+        incremental=incremental,
+    )
+
+
+def _build_ssh_target_from_dict(ssh: dict) -> SshTarget:
+    hostname = ssh.get("hostname")
+    user = ssh.get("user")
+    port = ssh.get("port", 22)
     auth = (ssh.get("auth") or "key").strip().lower()
     if auth not in ("key", "password"):
         print("ssh.auth 必须是 key 或 password。", file=sys.stderr)
         sys.exit(1)
     if not hostname or not user:
-        print("YAML 中 ssh.hostname、ssh.user 为必填（或通过命令行覆盖）。", file=sys.stderr)
+        print("YAML 中 ssh.hostname、ssh.user 为必填。", file=sys.stderr)
         sys.exit(1)
     if not isinstance(port, int):
         port = int(port)
@@ -609,106 +737,14 @@ def _build_ssh_target_from_dict(
     )
 
 
-def load_remote_config(
-    path: Path,
-    *,
-    override_hostname: str | None,
-    override_user: str | None,
-    override_port: int | None,
-) -> SshTarget:
+def load_deploy_config(path: Path) -> tuple[SshTarget, DeploySettings]:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         print("YAML 根节点必须是映射。", file=sys.stderr)
         sys.exit(1)
     ssh = _ssh_dict_from_raw(raw)
-    return _build_ssh_target_from_dict(
-        ssh,
-        override_hostname=override_hostname,
-        override_user=override_user,
-        override_port=override_port,
-    )
-
-
-def add_connection_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument(
-        "--config",
-        type=Path,
-        required=True,
-        metavar="PATH",
-        help="结构化 YAML（见 kiwi-admin/backend/script/conf/remote.example.yaml：ssh）",
-    )
-    p.add_argument(
-        "--hostname",
-        default=None,
-        help="覆盖 YAML 中的 hostname",
-    )
-    p.add_argument(
-        "--user",
-        default=None,
-        help="覆盖 YAML 中的 user",
-    )
-    p.add_argument(
-        "--port",
-        type=int,
-        default=None,
-        help="覆盖 YAML 中的 port",
-    )
-    p.add_argument(
-        "--local-jar",
-        type=Path,
-        default=DEFAULT_LOCAL_JAR,
-        help=f"本地 JAR 路径（默认：{DEFAULT_LOCAL_JAR.relative_to(KIWI_ADMIN_ROOT)}）",
-    )
-    p.add_argument(
-        "--remote-dir",
-        default="/opt/kiwi-admin",
-        help="远端部署目录（默认：/opt/kiwi-admin）",
-    )
-    p.add_argument(
-        "--remote-jar-name",
-        default="kiwi-admin.jar",
-        help="远端 JAR 文件名（默认：kiwi-admin.jar）",
-    )
-    p.add_argument(
-        "--mvn",
-        default=None,
-        metavar="PATH",
-        help="Maven 可执行文件（默认：从 PATH 查找 mvn / mvn.cmd，或 MAVEN_HOME、环境变量 MVN）",
-    )
-    p.add_argument(
-        "--skip-build",
-        action="store_true",
-        help="跳过 mvn package",
-    )
-    p.add_argument(
-        "--no-incremental",
-        action="store_true",
-        help="关闭增量：始终 mvn（除非 --skip-build）并始终上传",
-    )
-
-
-def build_parser() -> argparse.ArgumentParser:
-    ex_yaml = SCRIPT_DIR / "conf" / "remote.example.yaml"
-    p = argparse.ArgumentParser(
-        description="Kiwi-admin 远程 JAR 上传（SSH + scp + 可选 mvn 构建）。",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
-增量更新（默认开启）：
-  · 未指定 --skip-build 时：若本地 JAR 已存在且不早于根 POM、backend 与各依赖模块 POM
-    及 kiwi-common / kiwi-bpmn* / backend 下 src/main 的最新修改时间，则跳过 mvn package。
-  · 构建命令与仓库根 README 一致：在仓库根执行 mvn -pl kiwi-admin/backend -am package -DskipTests。
-  · 上传前：比较本地与远端 JAR 的 SHA256；一致则跳过备份与 scp。
-
-全量：使用 --no-incremental 将始终执行 mvn（在未 --skip-build 时）并始终上传。
-
-密码认证：YAML 中 auth: password，并配置 password 或 password_env / KIWI_SSH_PASSWORD。
-  优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见 {REQUIREMENTS_REMOTE_TXT}）。
-
-配置示例：{ex_yaml}
-""".strip(),
-    )
-    add_connection_args(p)
-    return p
+    deploy = _deploy_dict_from_raw(raw)
+    return _build_ssh_target_from_dict(ssh), _build_deploy_settings_from_dict(deploy)
 
 
 def _ensure_utf8_stdio() -> None:
@@ -721,41 +757,30 @@ def _ensure_utf8_stdio() -> None:
                 pass
 
 
-def _conn_from_ns(ns: argparse.Namespace) -> Conn:
-    cfg_path = Path(ns.config).expanduser().resolve()
-    if not cfg_path.is_file():
-        print(f"配置文件不存在: {cfg_path}", file=sys.stderr)
-        sys.exit(1)
-    target = load_remote_config(
-        cfg_path,
-        override_hostname=ns.hostname,
-        override_user=ns.user,
-        override_port=ns.port,
-    )
-
+def _conn_from_config(target: SshTarget, settings: DeploySettings) -> Conn:
     return Conn(
         target=target,
         ssh_label=target.label,
-        local_jar=Path(ns.local_jar).resolve(),
-        remote_dir=ns.remote_dir,
-        remote_jar_name=ns.remote_jar_name,
+        remote_dir=settings.remote_dir,
+        settings=settings,
     )
 
 
-def main(argv: list[str] | None = None) -> None:
+def main() -> None:
     _ensure_utf8_stdio()
-    argv = argv if argv is not None else sys.argv[1:]
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    c = _conn_from_ns(args)
+    cfg_path = DEFAULT_CONFIG_PATH.resolve()
+    if not cfg_path.is_file():
+        example = SCRIPT_DIR / "conf" / "remote.example.yaml"
+        print(
+            f"配置文件不存在: {cfg_path}\n"
+            f"请复制 {example} 为 conf/remote.local.yaml，并编辑 ssh、deploy 块。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    target, settings = load_deploy_config(cfg_path)
+    c = _conn_from_config(target, settings)
     _ensure_password_backend(c)
-    incremental = not args.no_incremental
-    cmd_deploy(
-        c,
-        skip_build=args.skip_build,
-        incremental=incremental,
-        mvn_override=args.mvn,
-    )
+    cmd_deploy(c, mvn_override=settings.mvn)
 
 
 if __name__ == "__main__":
