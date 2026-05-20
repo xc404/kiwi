@@ -1,0 +1,17 @@
+# Sa-Token 使用 Redis 持久化时激活：--spring.profiles.active=...,redis
+# 会覆盖 application.yml 中的 Redis 自动配置排除项，并启用 spring.data.redis
+
+spring:
+  autoconfigure:
+    exclude:
+      - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate
+  data:
+    redis:
+      database: ${SPRING_DATA_REDIS_DATABASE:1}
+      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+kiwi:
+  sa-token:
+    storage: redis

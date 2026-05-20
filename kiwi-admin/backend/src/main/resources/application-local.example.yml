@@ -10,15 +10,9 @@ spring:
   data:
     mongodb:
       uri: mongodb://127.0.0.1:27017/x404?authSource=admin
-    # 使用 Redis 缓存 Sa-Token 时取消注释并填写（同时设置 kiwi.sa-token.storage=redis）
-    # redis:
-    #   host: 127.0.0.1
-    #   port: 6379
-    #   password:
-
-# kiwi:
-#   sa-token:
-#     storage: redis
+    # 使用 Redis 缓存 Sa-Token：增加 profile redis（见 application-redis.yml），例如
+    #   --spring.profiles.active=local,dev,redis
+    # 并在 application-local.yml 或环境变量中设置 SPRING_DATA_REDIS_HOST 等
 
 cryoems:
   mongodb:

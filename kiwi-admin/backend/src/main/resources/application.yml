@@ -42,9 +42,11 @@ app:
 
 spring:
   autoconfigure:
-    # 由 SaTokenDaoConfiguration 按 kiwi.sa-token.storage 注册唯一 SaTokenDao
+    # 由 SaTokenDaoConfiguration 按 kiwi.sa-token.storage 注册唯一 SaTokenDao；mongodb 为默认时不启用 Redis
     exclude:
       - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   ai:
     dashscope:
       api-key: ${KIWI_AI_API_KEY:${DASHSCOPE_API_KEY:}}
@@ -72,12 +74,6 @@ spring:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
       database: ${SPRING_DATA_MONGODB_DATABASE:x404}
       auto-index-creation: true
-    # 仅当 kiwi.sa-token.storage=redis 时需要；mongodb 模式下可省略
-    redis:
-      database: ${SPRING_DATA_REDIS_DATABASE:1}
-      host: ${SPRING_DATA_REDIS_HOST:}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
 
 # CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
 
@@ -94,6 +90,8 @@ camunda.bpm:
     firstName: Demo
   filter:
     create: All tasks
+  database:
+    schema-update: true
   generic-properties:
     properties:
       skip-isolation-level-check: true
