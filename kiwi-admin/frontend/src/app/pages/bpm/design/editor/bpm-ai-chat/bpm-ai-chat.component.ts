@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
 import { ChatComponent } from '@shared/components/chat/chat.component';
 import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
@@ -7,6 +7,7 @@ import {
   createBpmDesignerAssistantHandlers,
   type BpmDesignerAssistantDeps,
 } from '../../assistant/bpm-designer-assistant.handlers';
+import { ComponentProvider } from '../../../flow-elements/component-provider';
 import { BpmEditorAppendService } from '../../service/bpm-editor-append.service';
 import { BpmDesignerToolbarService } from '../../toolbar/bpm-designer-toolbar.service';
 import type { BpmDesignerToolbarContext } from '../../toolbar/bpm-designer-toolbar.types';
@@ -22,13 +23,19 @@ import { BpmEditorToken } from '../bpm-editor-token';
 export class BpmAiChatComponent {
   private readonly editor = inject(BpmEditorToken);
   private readonly append = inject(BpmEditorAppendService);
+  private readonly componentProvider = inject(ComponentProvider);
   private readonly toolbarService = inject(BpmDesignerToolbarService);
 
   readonly getToolbarContext = input.required<() => BpmDesignerToolbarContext | undefined>();
 
+  readonly bpmProcessId = computed(() => {
+    const process = this.editor.getBpmProcess();
+    return this.editor.getBpmnId() || process?.id || '';
+  });
+
   private readonly assistantDeps: BpmDesignerAssistantDeps = {
-    importBpmnXml: (xml) => this.editor.importBpmnXml(xml),
-    appendComponentForAi: (componentId, sourceElementId) =>
+    importBpmnXmlAndSave: (xml) => this.editor.importBpmnXmlAndSave(xml),
+    applyMatchedComponent: (componentId, sourceElementId) =>
       this.append.appendComponentForAi(componentId, sourceElementId),
     runToolbarCommand: (command, options) => this.runToolbarCommand(command, options),
   };
@@ -71,17 +78,34 @@ export class BpmAiChatComponent {
     }
     const selectedId = this.editor.getSelectedElementId();
     const lines = [
-      '你正在 Kiwi BPM 流程设计器中协助用户。请结合下列上下文回答；若需改图，请通过 assistant_designer_* 工具登记客户端动作。',
+      '你正在 Kiwi BPM 流程设计器中协助用户。',
+      '加组件：assistant_designer_match_component(componentId)；画布追加与锚点由前端处理。',
+      '改图分工：仅下列意图用 assistant_designer_toolbar（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export/saveAsComponent 等）；其余一律 assistant_designer_bpmn_xml(完整 definitions)，前端会自动 import 并保存到当前流程。',
+      '须走 bpmn_xml 的示例：改节点参数/复制它流程配置/增删改连线或节点/移除或删除组件/批量改名；删除：从当前 XML 去掉目标 serviceTask 与相关 sequenceFlow、BPMNDI 后 assistant_designer_bpmn_xml；复制：bpmPd_get → 合并 extensionElements → assistant_designer_bpmn_xml；仅有流程名时用 bpmPd_aiPage 查 id。',
+      '禁止未调用 assistant_designer_bpmn_xml 却声称已修改或已保存。',
       `processId: ${processId}`,
       process?.name ? `processName: ${process.name}` : '',
-      selectedId ? `selectedElementId: ${selectedId}` : 'selectedElementId: （无单选元素）',
+      selectedId ? `selectedElementId: ${selectedId}` : 'selectedElementId: （无单选元素；追加组件建议 sourceElementId=StartEvent_1）',
       `可用 toolbar 命令: ${this.toolbarService.listAiCommandIds().join(', ')}`,
-      'appendComponent 参数: componentId（组件库 id）、sourceElementId（可选）',
+      'matchComponent：assistant_designer_match_component 的 componentId 必须来自下列组件库列表；若无法确定追加锚点，请让用户在画布选中节点或回复元素 id',
+      this.buildComponentCatalogLine(),
       '当前 BPMN XML:',
       '```xml',
       xmlBlock || '（空）',
       '```',
     ].filter(Boolean);
     return { role: 'system', content: lines.join('\n') };
+  }
+
+  private buildComponentCatalogLine(): string {
+    const list = this.componentProvider.components();
+    if (!list.length) {
+      return '组件库 componentId|name: （尚未加载）';
+    }
+    const max = 60;
+    const slice = list.slice(0, max);
+    const catalog = slice.map((c) => `${c.id}|${c.name}`).join('; ');
+    const suffix = list.length > max ? `; …共 ${list.length} 个` : '';
+    return `组件库 componentId|name: ${catalog}${suffix}`;
   }
 }

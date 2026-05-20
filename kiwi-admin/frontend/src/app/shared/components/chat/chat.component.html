@@ -1,102 +1,158 @@
-<div
-  id="chats"
-  class="chat-dock"
-  [class.embedded]="embed()"
-  [ngClass]="{
-    show: embed() || show,
-    'compact-mode': $themeStyle() === 'compact',
-    'aliyun-mode': $themeStyle() === 'aliyun'
-  }"
->
-  <div
-    #chatPanel
-    class="chat-wrap"
-    [style.width.px]="embed() ? null : panelWidth()"
-    [style.height.px]="panelHeight()"
-  >
-    @if (embed() || show) {
-      <button
-        type="button"
-        class="chat-resize-handle"
-        aria-label="拖动调整大小"
-        (mousedown)="onResizeStart($event)"
-      >
-        <i nz-icon nzType="column-width" nzTheme="outline"></i>
-      </button>
-    }
-    <nz-card [nzActions]="[inputTpl]" [nzBodyStyle]="{ padding: 0 }" [nzExtra]="extraTemplate" [nzTitle]="titleTemplate">
-      <div #scrollMe class="flex chart-content">
-        <span class="text-center sp-12 m-b-5" nz-typography nzType="secondary">Kiwi · AI</span>
-        <div nz-row>
-          <nz-avatar class="m-r-8" nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/logo.svg"></nz-avatar>
-          <div class="m-t-0 p-8" nz-col nz-result-content nzFlex="1">
-            请
-            <span nz-typography nzType="danger">一句话</span>
-            描述你的问题，由大模型协助回答（需后端配置 Spring AI 阿里云 DashScope / 通义）。
-          </div>
-          <div nz-col nzFlex="30px"></div>
-        </div>
-        @for (item of messageArray; track item; let last = $last) {
-          @if (item.dir === 'left') {
-            <div class="m-t-20" nz-row>
-              <nz-avatar class="m-r-8" nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/logo.svg"></nz-avatar>
-              <div class="m-t-0 p-8" nz-col nz-result-content nzFlex="1">
-                {{ item.msg }}
-              </div>
-              <div nz-col nzFlex="30px"></div>
-              {{ last ? scrollToBottom() : '' }}
-            </div>
-          }
-
-          @if (item.dir === 'right') {
-            <div class="m-t-20" nz-row>
-              <div nz-col nzFlex="30px"></div>
-              <div class="flex flex-column" nz-col nzFlex="1">
-                <div class="m-t-0 p-8 text-break" nz-result-content>
-                  <span nz-typography>{{ item.msg }}</span>
-                  {{ last ? scrollToBottom() : '' }}
-                </div>
-                <span class="sp-12 text-right m-t-5" nz-typography nzType="secondary">{{
-                  item.isReaded ? '已读' : '未读'
-                }}</span>
-              </div>
-
-              <div nz-col nzFlex="8px"></div>
-              <nz-avatar nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/default_face.png"></nz-avatar>
-            </div>
-          }
-        }
-      </div>
-    </nz-card>
-  </div>
-</div>
-<ng-template #extraTemplate>
-  @if (!embed()) {
-    <i
-      class="hand-model"
-      nz-icon
-      nzTheme="outline"
-      [nzType]="show ? 'shrink' : 'arrows-alt'"
-      (click)="show = !show"
-    ></i>
-    <i class="hand-model m-l-8" nz-icon nzTheme="outline" nzType="close" (click)="close()"></i>
-  }
-</ng-template>
-<ng-template #titleTemplate>
-  <span class="sp-14">{{ isSending ? '对方正在输入中...' : 'AI 助手' }}</span>
-</ng-template>
-<ng-template #inputTpl>
-  <form [formGroup]="validateForm">
-    <textarea
-      #msgInput
-      id="remark"
-      name="question"
-      formControlName="question"
-      nz-input
-      placeholder="输入问题，Enter 发送，Shift+Enter 换行"
-      rows="4"
-      style="resize: none"
-      (keydown)="onTextareaKeydown($event, msgInput.value)"
-    ></textarea>
-  </form>
-</ng-template>
+<div
+  id="chats"
+  class="chat-dock"
+  [class.embedded]="embed()"
+  [ngClass]="{
+    show: embed() || show,
+    'compact-mode': $themeStyle() === 'compact',
+    'aliyun-mode': $themeStyle() === 'aliyun'
+  }"
+>
+  <div
+    #chatPanel
+    class="chat-wrap"
+    [style.width.px]="embed() ? null : panelWidth()"
+    [style.height.px]="panelHeight()"
+  >
+    @if (embed() || show) {
+      <button
+        type="button"
+        class="chat-resize-handle"
+        aria-label="拖动调整大小"
+        (mousedown)="onResizeStart($event)"
+      >
+        <i nz-icon nzType="column-width" nzTheme="outline"></i>
+      </button>
+    }
+    <nz-card [nzActions]="[inputTpl]" [nzBodyStyle]="{ padding: 0 }" [nzExtra]="extraTemplate" [nzTitle]="titleTemplate">
+      <div #scrollMe class="flex chart-content">
+        <span class="text-center sp-12 m-b-5" nz-typography nzType="secondary">Kiwi · AI</span>
+        @if (messageArray.length === 0) {
+          <div nz-row>
+            <nz-avatar class="m-r-8" nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/logo.svg"></nz-avatar>
+            <div class="m-t-0 p-8" nz-col nz-result-content nzFlex="1">
+              请
+              <span nz-typography nzType="danger">一句话</span>
+              描述你的问题，由大模型协助回答（需后端配置 Spring AI 阿里云 DashScope / 通义）。
+            </div>
+            <div nz-col nzFlex="30px"></div>
+          </div>
+        }
+        @for (item of messageArray; track $index; let last = $last) {
+          @if (item.dir === 'left') {
+            <div class="m-t-20" nz-row>
+              <nz-avatar class="m-r-8" nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/logo.svg"></nz-avatar>
+              <div class="m-t-0 p-8" nz-col nz-result-content nzFlex="1">
+                {{ item.msg }}
+              </div>
+              <div nz-col nzFlex="30px"></div>
+              {{ last ? scrollToBottom() : '' }}
+            </div>
+          }
+
+          @if (item.dir === 'right') {
+            <div class="m-t-20" nz-row>
+              <div nz-col nzFlex="30px"></div>
+              <div class="flex flex-column" nz-col nzFlex="1">
+                <div class="m-t-0 p-8 text-break" nz-result-content>
+                  <span nz-typography>{{ item.msg }}</span>
+                  {{ last ? scrollToBottom() : '' }}
+                </div>
+                <span class="sp-12 text-right m-t-5" nz-typography nzType="secondary">{{
+                  item.isReaded ? '已读' : '未读'
+                }}</span>
+              </div>
+
+              <div nz-col nzFlex="8px"></div>
+              <nz-avatar nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/default_face.png"></nz-avatar>
+            </div>
+          }
+        }
+      </div>
+    </nz-card>
+  </div>
+</div>
+<ng-template #extraTemplate>
+  <span class="chat-extra-actions">
+    <button
+      type="button"
+      nz-button
+      nzType="text"
+      nzSize="small"
+      class="chat-session-btn"
+      nz-dropdown
+      [nzDropdownMenu]="sessionMenu"
+      nzTrigger="click"
+      [nzDisabled]="sessionsLoading()"
+    >
+      <i nz-icon nzType="history" nzTheme="outline"></i>
+    </button>
+    <button type="button" nz-button nzType="text" nzSize="small" class="chat-session-btn" (click)="startNewConversation()">
+      <i nz-icon nzType="plus" nzTheme="outline"></i>
+    </button>
+    @if (conversationId()) {
+      <button
+        type="button"
+        nz-button
+        nzType="text"
+        nzSize="small"
+        class="chat-session-btn"
+        nz-popconfirm
+        nzPopconfirmTitle="删除当前会话？"
+        (nzOnConfirm)="deleteCurrentConversation()"
+      >
+        <i nz-icon nzType="delete" nzTheme="outline"></i>
+      </button>
+    }
+    @if (!embed()) {
+      <i
+        class="hand-model"
+        nz-icon
+        nzTheme="outline"
+        [nzType]="show ? 'shrink' : 'arrows-alt'"
+        (click)="show = !show"
+      ></i>
+      <i class="hand-model m-l-8" nz-icon nzTheme="outline" nzType="close" (click)="close()"></i>
+    }
+  </span>
+</ng-template>
+<nz-dropdown-menu #sessionMenu="nzDropdownMenu">
+  <ul nz-menu class="chat-session-menu">
+    @if (conversationSummaries().length === 0) {
+      <li nz-menu-item nzDisabled>暂无历史会话</li>
+    }
+    @for (c of conversationSummaries(); track c.id) {
+      <li
+        nz-menu-item
+        [nzSelected]="c.id === conversationId()"
+        (click)="selectConversation(c.id!)"
+      >
+        <span class="chat-session-title">{{ c.title || '未命名' }}</span>
+        @if (c.lastMessagePreview) {
+          <span class="chat-session-preview" nz-typography nzType="secondary">{{ c.lastMessagePreview }}</span>
+        }
+      </li>
+    }
+  </ul>
+</nz-dropdown-menu>
+<ng-template #titleTemplate>
+  <span class="chat-title-bar sp-14" [title]="currentConversationTitle()">
+    {{ isSending ? '对方正在输入中...' : currentConversationTitle() }}
+  </span>
+</ng-template>
+<ng-template #inputTpl>
+  <form [formGroup]="validateForm">
+    <textarea
+      #msgInput
+      id="remark"
+      name="question"
+      formControlName="question"
+      nz-input
+      placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+      rows="4"
+      style="resize: none"
+      (keydown)="onTextareaKeydown($event, msgInput.value)"
+    ></textarea>
+  </form>
+</ng-template>
+

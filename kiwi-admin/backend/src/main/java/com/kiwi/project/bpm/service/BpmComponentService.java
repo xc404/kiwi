@@ -219,7 +219,6 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return fillComponentProperties(c);
     }
 
-
     @Override
     public void afterPropertiesSet() throws Exception {
 

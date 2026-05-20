@@ -10,6 +10,7 @@
     { "key": "sa:user:list", "description": "查看用户列表" },
     { "key": "sa:user:view", "description": "查看用户详情" },
     { "key": "sa:user:update", "description": "更新用户" },
-    { "key": "sa:user:delete", "description": "删除用户" }
+    { "key": "sa:user:delete", "description": "删除用户" },
+    { "key": "ai:conversation:audit", "description": "查看全部用户的 AI 会话（审计）" }
   ]
 }

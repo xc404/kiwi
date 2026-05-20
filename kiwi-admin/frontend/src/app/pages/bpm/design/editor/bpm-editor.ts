@@ -187,14 +187,45 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     const trimmed = typeof xml === 'string' ? xml.trim() : '';
     return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection()).then(
       () => {
-        const process = this.bpmProcess();
-        if (process) {
-          this.bpmProcess.set({ ...process, bpmnXml: trimmed });
-        }
-        const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
-        canvas.resized?.();
+        this.syncLocalBpmnXml(trimmed);
       },
     );
+  }
+
+  importBpmnXmlAndSave(xml: string): Promise<void> {
+    const trimmed = typeof xml === 'string' ? xml.trim() : '';
+    const processId = this.bpmProcess()?.id;
+    if (!processId) {
+      return Promise.reject(new Error('流程未加载，无法保存'));
+    }
+    return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection(), {
+      notifySuccess: false,
+    })
+      .then(() => this.bpmnModeler.saveXML({ format: true }))
+      .then((bpmn: { xml?: string }) =>
+        new Promise<void>((resolve, reject) => {
+          this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
+            next: (data: BpmProcess) => {
+              this.bpmProcess.set(data);
+              this.stackIdx = this.commandStack._stackIdx;
+              this.refreshRecentComponentUsages();
+              const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
+              canvas.resized?.();
+              resolve();
+            },
+            error: (err: unknown) => reject(err),
+          });
+        }),
+      );
+  }
+
+  private syncLocalBpmnXml(trimmed: string): void {
+    const process = this.bpmProcess();
+    if (process) {
+      this.bpmProcess.set({ ...process, bpmnXml: trimmed });
+    }
+    const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
+    canvas.resized?.();
   }
 
   getBpmnId(): string {

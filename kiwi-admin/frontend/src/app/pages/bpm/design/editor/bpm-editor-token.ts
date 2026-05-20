@@ -14,8 +14,11 @@ export abstract class BpmEditorToken {
 
   abstract getBpmProcess(): BpmProcess | null;
 
-  /** AI / 导入：替换当前画布 BPMN（未保存到服务器） */
+  /** 导入 BPMN 到画布（不写入服务器） */
   abstract importBpmnXml(xml: string): Promise<void>;
+
+  /** AI：导入 BPMN 并保存到当前流程定义 */
+  abstract importBpmnXmlAndSave(xml: string): Promise<void>;
 
   bpmnModeler!: BpmnModeler;
 

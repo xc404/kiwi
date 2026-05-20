@@ -218,7 +218,7 @@
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
         </dependency>
-        <!-- Spring AI MCP Server（WebMVC + SSE）；工具 = OpenAPI 扫描 + AssistantNavigationTools/AssistantDesignerTools @Tool 合并 -->
+        <!-- Spring AI MCP Server（WebMVC + SSE）；MCP 工具 = OpenAPI 扫描；assistant_* @Tool 见 KiwiAssistantInProcessToolsConfiguration -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>

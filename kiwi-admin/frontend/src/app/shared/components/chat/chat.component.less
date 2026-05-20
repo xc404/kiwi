@@ -96,8 +96,52 @@
     .ant-card-head-title {
       padding: 0;
       padding-left: 28px;
+      overflow: hidden;
     }
   }
+}
+
+.chat-title-bar {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.chat-extra-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.chat-session-btn {
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.chat-session-menu {
+  max-height: 280px;
+  overflow-y: auto;
+  min-width: 220px;
+}
+
+.chat-session-title {
+  display: block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-session-preview {
+  display: block;
+  font-size: 12px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .desc-wrap {

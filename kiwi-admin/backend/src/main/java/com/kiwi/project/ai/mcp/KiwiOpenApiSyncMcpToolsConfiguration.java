@@ -9,10 +9,8 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.method.MethodToolCallback;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,7 +24,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,11 +31,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * MCP 工具来源合并：
- * <ol>
- *   <li>各 {@link RestController} 上 {@link Operation}（{@code operationId} + {@code summary}）→ OpenAPI 扫描</li>
- *   <li>容器内 {@code com.kiwi.project} 包下、带 {@link Tool} 标注方法的 Spring bean（助手前端动作等），由 {@link MethodToolCallbackProvider} 生成回调</li>
- * </ol>
+ * MCP Server 工具来源：各 {@link RestController} 上 {@link Operation}（{@code operationId} + {@code summary}）→ OpenAPI 扫描。
+ * <p>
+ * {@code assistant_navigate}、{@code assistant_designer_*} 等写 {@link com.kiwi.project.ai.AssistantClientActionContext}
+ * 的工具由 {@link KiwiAssistantInProcessToolsConfiguration} 挂在 {@code kiwiChatClient} 进程内执行，不在此注册。
  * 再经 {@link McpToolUtils#toSyncToolSpecifications(ToolCallback...)} 转为 MCP 规格。
  */
 @Configuration
@@ -49,56 +45,7 @@ public class KiwiOpenApiSyncMcpToolsConfiguration {
             ApplicationContext applicationContext,
             ObjectMapper objectMapper) {
         ToolCallback[] openapi = new OpenApiBasedToolCallbacks(applicationContext, objectMapper).getToolCallbacks();
-        Object[] assistantBeans = collectBeansWithSpringAiToolMethods(applicationContext);
-        ToolCallback[] assistant = assistantBeans.length == 0
-                ? new ToolCallback[0]
-                : MethodToolCallbackProvider.builder()
-                        .toolObjects(assistantBeans)
-                        .build()
-                        .getToolCallbacks();
-        ToolCallback[] merged = Stream.concat(Stream.of(openapi), Stream.of(assistant)).toArray(ToolCallback[]::new);
-        return McpToolUtils.toSyncToolSpecifications(merged);
-    }
-
-    /**
-     * {@link MethodToolCallbackProvider} 不接收 {@link ApplicationContext}；Spring AI 也未在 MCP 工具合并处提供「自动扫容器」的专用 API。
-     * 此处按 {@link Tool} 元数据发现 bean，与 {@link OpenApiBasedToolCallbacks} 的扫描方式一致。
-     */
-    private Object[] collectBeansWithSpringAiToolMethods(ApplicationContext applicationContext) {
-        List<Object> beans = new ArrayList<>();
-        for (String beanName : applicationContext.getBeanDefinitionNames()) {
-            Class<?> type = applicationContext.getType(beanName);
-            if (type == null || ToolCallbackProvider.class.isAssignableFrom(type)) {
-                continue;
-            }
-            Class<?> userClass = ClassUtils.getUserClass(type);
-            if (!userClass.getPackageName().startsWith("com.kiwi.project")) {
-                continue;
-            }
-            if (userClass.getPackageName().contains(".integration.")) {
-                continue;
-            }
-            if (!hasSpringAiToolAnnotatedMethod(userClass)) {
-                continue;
-            }
-            beans.add(applicationContext.getBean(beanName));
-        }
-        beans.sort(Comparator.comparing(b -> ClassUtils.getUserClass(b.getClass()).getName()));
-        return beans.toArray();
-    }
-
-    private boolean hasSpringAiToolAnnotatedMethod(Class<?> userClass) {
-        for (Class<?> c = userClass; c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Method m : c.getDeclaredMethods()) {
-                if (!Modifier.isPublic(m.getModifiers()) || m.isBridge() || m.isSynthetic()) {
-                    continue;
-                }
-                if (AnnotationUtils.findAnnotation(m, Tool.class) != null) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return McpToolUtils.toSyncToolSpecifications(openapi);
     }
 
     private static final class OpenApiBasedToolCallbacks implements ToolCallbackProvider {

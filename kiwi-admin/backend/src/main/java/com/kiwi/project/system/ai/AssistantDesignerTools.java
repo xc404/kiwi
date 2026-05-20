@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.project.ai.AssistantClientActionContext;
 import com.kiwi.project.ai.ClientAction;
+import com.kiwi.project.bpm.model.BpmComponent;
+import com.kiwi.project.bpm.service.BpmComponentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
@@ -28,11 +30,13 @@ public class AssistantDesignerTools {
 
     private final AssistantClientActionContext assistantClientActionContext;
     private final BpmDesignerXmlValidator xmlValidator;
+    private final BpmComponentService bpmComponentService;
     private final ObjectMapper objectMapper;
 
     @Tool(
             name = "assistant_designer_toolbar",
-            description = "当用户讨论 BPMN/流程图编辑且需驱动画布工具栏时调用。command 为设计器约定命令字；"
+            description = "仅用于设计器已实现的 toolbar 能力（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export 等）。"
+                    + "改节点参数、复制配置、增删连线/节点等须用 assistant_designer_bpmn_xml，不要用 toolbar 代替。"
                     + "toolbarOptionsJson 可选，为 JSON 对象字符串。")
     public String designerToolbar(String command, String toolbarOptionsJson) {
         if (command == null || command.isBlank()) {
@@ -54,7 +58,8 @@ public class AssistantDesignerTools {
 
     @Tool(
             name = "assistant_designer_bpmn_xml",
-            description = "登记 BPMN XML 替换建议；服务端校验可解析且根元素为 definitions。")
+            description = "【设计器改 BPMN 必调】登记完整 BPMN 2.0 definitions XML：凡 toolbar 无法完成的编辑（改参数、复制它流程配置、删除/移除节点、增删连线等）均须调用；"
+                    + "前端将自动 import 并保存到当前流程。服务端校验可解析且根为 definitions。")
     public String designerBpmnXml(String xml) {
         if (xml == null || xml.isBlank()) {
             return "xml 不能为空。";
@@ -69,16 +74,28 @@ public class AssistantDesignerTools {
     }
 
     @Tool(
-            name = "assistant_designer_append_component",
-            description = "登记从组件库追加组件到画布。componentId 与组件库 id 一致；sourceElementId 可选，表示相对哪个画布元素追加。")
-    public String designerAppendComponent(String componentId, String sourceElementId) {
+            name = "assistant_designer_match_component",
+            description = "【加组件必调】用户要在流程图追加业务组件时调用。"
+                    + "componentId 必须从对话上下文中「组件库 componentId|name」列表选取精确 id（由大模型根据用户描述匹配）；"
+                    + "不要传画布元素 id，锚点由前端决定。")
+    public String designerMatchComponent(String componentId) {
         if (componentId == null || componentId.isBlank()) {
             return "componentId 不能为空。";
         }
-        assistantClientActionContext.addClientAction(ClientAction.appendComponent(componentId, sourceElementId));
-        return "已登记追加组件建议：componentId=" + componentId.trim()
-                + (sourceElementId != null && !sourceElementId.isBlank() ? "，sourceElementId=" + sourceElementId.trim() : "")
-                + "。";
+        BpmComponent component = bpmComponentService.resolveComponentById(componentId.trim());
+        if (component == null) {
+            return "组件库中不存在 componentId=" + componentId.trim()
+                    + "，请根据上下文组件列表重新选择精确 id。";
+        }
+        return registerMatchComponent(component);
+    }
+
+    private String registerMatchComponent(BpmComponent component) {
+        assistantClientActionContext.addClientAction(
+                ClientAction.matchComponent(component.getId(), component.getName()));
+        return "已匹配组件：componentId=" + component.getId()
+                + (component.getName() != null ? "，name=" + component.getName() : "")
+                + "。画布追加由前端执行；若需指定锚点请让用户选中节点或说明元素 id。";
     }
 
     private Map<String, Object> parseToolbarOptionsJson(String toolbarOptionsJson) {

@@ -13,7 +13,7 @@
 | 鉴权 | Sa-Token（`kiwi.sa-token.storage`：`mongodb` 默认，或 `redis`） |
 | 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；可选 Redis（仅 Sa-Token 为 redis 时） |
 | 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描，助手前端动作来自 `AssistantNavigationTools` / `AssistantDesignerTools` 的 `@Tool` 合并注册） |
+| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描；`assistant_*` 前端动作为 ChatClient 进程内 `@Tool`） |
 | 其他 | Hutool、Velocity（代码生成模板）等 |
 
 模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
@@ -99,7 +99,7 @@ mvn -pl kiwi-admin/backend -am clean package
 ## MCP 与 AI 工具
 
 - **MCP Server**：`spring-ai-starter-mcp-server-webmvc`；工具由 **`KiwiOpenApiSyncMcpToolsConfiguration`** 根据控制器 **`@Operation(operationId, summary)`** 经 `McpToolUtils` 转为 `SyncToolSpecification`。
-- **助手**：`ChatClient` 通过本机 `McpSyncClient`（`kiwi.ai.mcp.loopback-base-url` + `spring.ai.mcp.server.sse-endpoint`）与 MCP 对齐工具。
+- **助手**：`ChatClient` 对 OpenAPI 业务工具经本机 `McpSyncClient` 回环 MCP；`assistant_navigate`、`assistant_designer_*` 经进程内 `MethodToolCallback`（`KiwiAssistantInProcessToolsConfiguration`），与 `AssistantClientActionContext` 同线程登记 `actions`。
 
 ## 相关文档
 

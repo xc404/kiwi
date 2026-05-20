@@ -1,6 +1,9 @@
 <div class="bpm-ai-chat">
   <app-chat
+    conversationScope="bpm-designer"
+    [scopeRef]="bpmProcessId()"
     [actionHandlers]="assistantHandlers"
     [messagesEnricher]="enrichDesignerMessages"
+    [defaultOpen]="true"
   />
 </div>

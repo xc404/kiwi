@@ -17,6 +17,10 @@ public class ClientAction {
     public static final String TYPE_TOOLBAR = "toolbar";
     public static final String TYPE_BPMN_XML = "bpmnXml";
     public static final String TYPE_APPEND_COMPONENT = "appendComponent";
+    /** 服务端仅返回匹配到的组件；画布追加与锚点由前端处理 */
+    public static final String TYPE_MATCH_COMPONENT = "matchComponent";
+
+    public static final String PARAM_COMPONENT_NAME = "componentName";
 
     public static final String PARAM_PATH = "path";
     public static final String PARAM_QUERY_PARAMS = "queryParams";
@@ -74,5 +78,18 @@ public class ClientAction {
             params.put(PARAM_SOURCE_ELEMENT_ID, sourceElementId.trim());
         }
         return of(TYPE_APPEND_COMPONENT, params);
+    }
+
+    /** 仅登记组件匹配结果，不含 sourceElementId */
+    public static ClientAction matchComponent(String componentId, String componentName) {
+        if (componentId == null || componentId.isBlank()) {
+            throw new IllegalArgumentException("componentId 不能为空。");
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_COMPONENT_ID, componentId.trim());
+        if (componentName != null && !componentName.isBlank()) {
+            params.put(PARAM_COMPONENT_NAME, componentName.trim());
+        }
+        return of(TYPE_MATCH_COMPONENT, params);
     }
 }
