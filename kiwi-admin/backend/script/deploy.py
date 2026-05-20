@@ -5,8 +5,8 @@
 在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
 连接与部署选项来自 conf/build.local.yaml（`ssh`、`deploy` 块），见 conf/build.example.yaml。
 构建产物为应用 thin jar + 依赖 lib jar；mvn 输出在 target/，脚本会同步到 backend/bin/ 再上传。
-incremental 为 true 时通常只构建/上传应用 jar；
-为 false（或依赖 lib 过期）时上传应用 jar 与 lib jar；并同步 config/、restart.sh、stop.sh（不一致时交互确认覆盖）。
+incremental 为 true 且远端 lib 未过期时通常只构建/上传应用 jar（mvn 使用 -P!lib-jar 跳过 shade-lib）；
+为 false（或依赖 lib 过期、远端无 lib）时构建并上传应用 jar 与 lib jar；并同步 config/、restart.sh、stop.sh（不一致时交互确认覆盖）。
 auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见同目录 requirements-remote.txt）。
 
 依赖：在本脚本目录执行 pip install -r requirements-remote.txt
@@ -402,7 +402,7 @@ def resolve_mvn_executable(override: str | None) -> str:
     sys.exit(1)
 
 
-def run_mvn_package(mvn_override: str | None) -> None:
+def run_mvn_package(mvn_override: str | None, *, build_lib_jar: bool = True) -> None:
     """在仓库根执行 reactor 构建，与根 README 中 mvn -pl kiwi-admin/backend -am 一致。"""
     exe = resolve_mvn_executable(mvn_override)
     if not ROOT_POM.is_file():
@@ -420,6 +420,8 @@ def run_mvn_package(mvn_override: str | None) -> None:
         "package",
         "-DskipTests",
     ]
+    if not build_lib_jar:
+        cmd.append("-P!lib-jar")
     try:
         subprocess.run(cmd, cwd=str(REPO_ROOT), check=True)
     except subprocess.CalledProcessError as exc:
@@ -513,10 +515,10 @@ fi
     run_remote_bash(c, script)
 
 
-def lib_jar_stale(settings: DeploySettings) -> bool:
+def lib_jar_stale(settings: DeploySettings, *, remote_lib_present: bool) -> bool:
     """依赖 lib jar 是否可能过期（POM 变更后需全量部署）。"""
     if not settings.lib_jar.is_file():
-        return True
+        return not remote_lib_present
     return settings.lib_jar.stat().st_mtime < _reactor_pom_mtimes()
 
 
@@ -701,47 +703,62 @@ def deploy_shell_scripts(c: Conn, settings: DeploySettings) -> bool:
     return uploaded
 
 
-def sync_maven_outputs_to_bin(settings: DeploySettings) -> None:
+def sync_maven_outputs_to_bin(settings: DeploySettings, *, sync_lib: bool) -> None:
     """将 target/ 下 Maven 产物复制到 bin/（或 YAML 配置的 app_jar、lib_jar 路径）。"""
     if not MAVEN_APP_JAR.is_file():
         print(f"Maven 未生成应用 JAR: {MAVEN_APP_JAR}", file=sys.stderr)
         sys.exit(1)
-    if not MAVEN_LIB_JAR.is_file():
-        print(f"Maven 未生成依赖 lib JAR: {MAVEN_LIB_JAR}", file=sys.stderr)
-        sys.exit(1)
     settings.app_jar.parent.mkdir(parents=True, exist_ok=True)
-    settings.lib_jar.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(MAVEN_APP_JAR, settings.app_jar)
-    shutil.copy2(MAVEN_LIB_JAR, settings.lib_jar)
-    print(
-        f"已同步至 {settings.app_jar.parent}: "
-        f"{settings.app_jar.name}、{settings.lib_jar.name}",
-    )
+    if sync_lib:
+        if not MAVEN_LIB_JAR.is_file():
+            print(f"Maven 未生成依赖 lib JAR: {MAVEN_LIB_JAR}", file=sys.stderr)
+            sys.exit(1)
+        settings.lib_jar.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(MAVEN_LIB_JAR, settings.lib_jar)
+        print(
+            f"已同步至 {settings.app_jar.parent}: "
+            f"{settings.app_jar.name}、{settings.lib_jar.name}",
+        )
+    else:
+        print(f"已同步至 {settings.app_jar.parent}: {settings.app_jar.name}")
 
 
-def _maybe_run_mvn(settings: DeploySettings, mvn_override: str | None) -> None:
+def _maybe_run_mvn(
+    settings: DeploySettings,
+    mvn_override: str | None,
+    *,
+    build_lib_jar: bool,
+) -> None:
     if settings.skip_build:
         return
-    print("执行 mvn package …")
-    run_mvn_package(mvn_override)
-    sync_maven_outputs_to_bin(settings)
+    if build_lib_jar:
+        print("执行 mvn package …")
+    else:
+        print("执行 mvn package（跳过依赖 lib JAR 构建，-P!lib-jar）…")
+    run_mvn_package(mvn_override, build_lib_jar=build_lib_jar)
+    sync_maven_outputs_to_bin(settings, sync_lib=build_lib_jar)
 
 
 def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
     settings = c.settings
-    remote_lib_path = f"{settings.remote_dir.rstrip('/')}/{settings.remote_lib_name}"
-    remote_lib_missing = (
-        settings.incremental and not remote_file_exists(c, remote_lib_path)
-    )
-    lib_stale = lib_jar_stale(settings)
-    full_deploy = not settings.incremental or lib_stale or remote_lib_missing
-    if settings.incremental and full_deploy:
-        if remote_lib_missing:
+    if settings.incremental:
+        remote_lib_path = f"{settings.remote_dir.rstrip('/')}/{settings.remote_lib_name}"
+        remote_lib_present = remote_file_exists(c, remote_lib_path)
+        remote_lib_missing = not remote_lib_present
+        lib_stale = lib_jar_stale(settings, remote_lib_present=remote_lib_present)
+        build_lib_jar = remote_lib_missing or lib_stale
+        if not build_lib_jar:
+            print("增量：远端 lib jar 可用且未过期，跳过 lib JAR 构建与上传。")
+        elif remote_lib_missing:
             print("增量：远端尚无 lib jar，转为全量部署（应用 jar + lib jar）。")
         elif lib_stale:
             print("增量：检测到依赖 lib 可能过期（POM 变更），转为全量部署（应用 jar + lib jar）。")
+    else:
+        build_lib_jar = True
+        print("全量部署（incremental: false）：构建并上传应用 jar 与 lib jar（覆盖远端）。")
 
-    _maybe_run_mvn(settings, mvn_override)
+    _maybe_run_mvn(settings, mvn_override, build_lib_jar=build_lib_jar)
     sync_spring_config_to_bin(settings)
     uploaded_config = deploy_config_files(c, settings)
     uploaded_scripts = deploy_shell_scripts(c, settings)
@@ -750,7 +767,7 @@ def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
         print(f"本地应用 JAR 不存在: {settings.app_jar}", file=sys.stderr)
         sys.exit(1)
 
-    if full_deploy:
+    if build_lib_jar:
         if not settings.lib_jar.is_file():
             print(f"本地依赖 lib JAR 不存在: {settings.lib_jar}", file=sys.stderr)
             sys.exit(1)
@@ -765,7 +782,7 @@ def cmd_deploy(c: Conn, *, mvn_override: str | None) -> bool:
             c,
             settings.app_jar,
             settings.remote_app_name,
-            incremental=False,
+            incremental=settings.incremental,
             label="应用 JAR",
         )
         return uploaded_lib or uploaded_app or uploaded_config or uploaded_scripts
@@ -786,7 +803,12 @@ def _bool_from_yaml(value: object | None, default: bool) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.strip().lower() in ("true", "yes", "1", "on")
+        normalized = value.strip().lower()
+        if normalized in ("true", "yes", "1", "on"):
+            return True
+        if normalized in ("false", "no", "0", "off"):
+            return False
+        return False
     return bool(value)
 
 
@@ -868,10 +890,12 @@ def _build_deploy_settings_from_dict(deploy: dict) -> DeploySettings:
     mvn_raw = deploy.get("mvn")
     mvn = str(mvn_raw).strip() if mvn_raw else None
     skip_build = _bool_from_yaml(deploy.get("skip_build"), False)
-    if "no_incremental" in deploy:
+    if "incremental" in deploy:
+        incremental = _bool_from_yaml(deploy.get("incremental"), True)
+    elif "no_incremental" in deploy:
         incremental = not _bool_from_yaml(deploy.get("no_incremental"), False)
     else:
-        incremental = _bool_from_yaml(deploy.get("incremental"), True)
+        incremental = True
     app_raw = deploy.get("app_jar", deploy.get("local_jar"))
     app_jar = _resolve_backend_path(app_raw, DEFAULT_APP_JAR)
     profile_raw = deploy.get("spring_profiles_active", deploy.get("spring.profiles.active"))

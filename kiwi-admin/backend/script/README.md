@@ -35,7 +35,7 @@
 | `incremental` | 上传内容 |
 |---------------|----------|
 | **true**（默认） | 通常仅 **应用 jar**；远端尚无 lib jar、或本地 lib jar 因 POM 变更过期时，自动上传 **应用 jar + lib jar** |
-| **false** | 始终上传 **应用 jar + lib jar** |
+| **false** | 始终构建并上传 **应用 jar + lib jar**（覆盖远端，不做 lib 过期判断） |
 
 远端启动见 `restart.sh`：使用 `-cp lib:app` 启动（需已存在 lib jar；首次部署在增量模式下也会自动补传 lib jar）。
 
@@ -75,9 +75,9 @@
 
 ## 增量细节（`incremental: true`）
 
-- **构建**：每次部署均执行 `mvn package`（除非 `skip_build: true`）。
+- **构建**：每次部署均执行 `mvn package`（除非 `skip_build: true`）。若远端已有 lib jar 且本地 lib 未因 POM 过期，则使用 `-P!lib-jar` **跳过 shade-lib**（不生成 `*-lib.jar`，缩短构建时间）。
 - **上传**：应用 jar 按 SHA256 增量；`config/` 与 `restart.sh`/`stop.sh` 在远端不存在时直接上传，内容不一致时会提示确认是否覆盖。
-- **全量触发**：`incremental: false`，远端缺少 lib jar，或本地 lib jar 早于反应堆 POM 修改时间。
+- **全量触发**：`incremental: false`，远端缺少 lib jar，或本地 lib jar 早于反应堆 POM 修改时间（本地无 lib 但远端有时视为未过期，仍跳过 lib 构建）。
 
 ## 文件布局
 

@@ -27,7 +27,7 @@ public class Application extends SpringBootServletInitializer
 
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(Application.class);
-        app.run();
+        app.run(args);
         try {
             Thread.currentThread().join();
         } catch( InterruptedException e ) {
