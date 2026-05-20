@@ -31,7 +31,7 @@ public class UserAccountCtl {
 
     @PutMapping("/psd")
     @SaCheckLogin
-    @Operation(summary = "修改密码（仅允许修改当前登录用户）")
+    @Operation(operationId = "account_changePassword", summary = "修改密码（仅允许修改当前登录用户）")
     public void changePassword(@RequestBody ChangePasswordRequest body) {
         if (body == null || StringUtils.isAnyBlank(body.getOldPassword(), body.getNewPassword())) {
             throw new RuntimeException("原密码与新密码不能为空");
@@ -54,7 +54,7 @@ public class UserAccountCtl {
 
     @PutMapping("/update")
     @SaCheckLogin
-    @Operation(summary = "更新基本资料（仅允许修改当前登录用户，字段与 SysUser 一致）")
+    @Operation(operationId = "account_updateProfile", summary = "更新基本资料（仅允许修改当前登录用户，字段与 SysUser 一致）")
     public void updateProfile(@RequestBody UpdateProfileRequest body) {
         if (body == null) {
             throw new RuntimeException("请求体不能为空");

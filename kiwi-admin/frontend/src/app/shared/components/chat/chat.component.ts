@@ -15,7 +15,8 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs/operators';
+import { from, of } from 'rxjs';
+import { finalize, switchMap } from 'rxjs/operators';
 
 import { ThemeService } from '@store/common-store/theme.service';
 import { AiChatMessage, AiChatService } from '@services/ai-chat/ai-chat.service';
@@ -58,6 +59,10 @@ export class ChatComponent implements OnInit, OnDestroy {
   readonly embed = input(false);
   /** 每嵌入点可选的额外动作处理器（与内置 navigate 等合并编排） */
   readonly actionHandlers = input<AssistantActionHandler[]>([]);
+  /** 发送前合并上下文（如 BPM 设计器注入 processId / BPMN XML） */
+  readonly messagesEnricher = input<
+    ((messages: AiChatMessage[]) => AiChatMessage[] | Promise<AiChatMessage[]>) | undefined
+  >(undefined);
 
   validateForm!: FormGroup;
   messageArray: Array<{ msg: string; dir: 'left' | 'right'; isReaded: boolean }> = [];
@@ -126,9 +131,16 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.isSending = true;
     this.cdr.markForCheck();
 
-    this.aiChat
-      .assistant({ messages: this.buildAiMessages() })
+    from(Promise.resolve(this.buildAiMessages()))
       .pipe(
+        switchMap(msgs => {
+          const enricher = this.messagesEnricher();
+          if (!enricher) {
+            return of(msgs);
+          }
+          return from(Promise.resolve(enricher(msgs)));
+        }),
+        switchMap(messages => this.aiChat.assistant({ messages })),
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
           this.isSending = false;

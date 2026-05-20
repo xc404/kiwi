@@ -7,6 +7,8 @@ import com.kiwi.project.bpm.dto.BpmProcessInstanceBatchIdsRequest;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceStateDto;
 import com.kiwi.project.bpm.service.BpmProcessInstanceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.ManagementService;
@@ -46,6 +48,7 @@ import java.util.stream.Collectors;
 @SaCheckLogin
 @RestController
 @RequestMapping("/bpm/process-instance")
+@Tag(name = "BPM 流程实例", description = "实例分页、状态查询与 incident 恢复")
 public class BpmProcessInstanceCtl extends BaseCtl {
 
     private final ProcessEngine processEngine;
@@ -63,6 +66,10 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     /**
      * @param unfinished 已弃用，请改用 {@code instanceState}；若传入则优先于 {@code instanceState}（true→运行中，false→全部）
      */
+    @Operation(
+            operationId = "bpmInst_page",
+            summary = "分页查询流程实例",
+            description = "instanceState：running（默认）| completed | all；unfinished 已弃用。")
     @GetMapping
     @ResponseBody
     public Page<BpmProcessInstanceDto> page(
@@ -92,6 +99,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     /**
      * 供 cryoEMS 等查询流程实例。
      */
+    @Operation(operationId = "bpmInst_get", summary = "按实例 id 获取流程实例详情")
     @GetMapping("{instanceId}")
     public BpmProcessInstanceDto get(@PathVariable String instanceId) {
 
@@ -108,6 +116,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     /**
      * 轻量状态（机机轮询）：含 incident 导致的 ERROR 时返回 {@code errorReason} 与错误节点字段。
      */
+    @Operation(operationId = "bpmInst_getState", summary = "获取流程实例轻量状态（供轮询）")
     @GetMapping("{instanceId}/state")
     @ResponseBody
     public BpmProcessInstanceStateDto getState(@PathVariable String instanceId) {
@@ -118,6 +127,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     /**
      * 批量查询流程实例状态；顺序与请求体 {@code instanceIds} 一致（服务端去重，上限 {@link BpmProcessInstanceService#MAX_INSTANCE_IDS_PER_BATCH}）。
      */
+    @Operation(operationId = "bpmInst_batchStates", summary = "批量查询流程实例状态")
     @PostMapping("states")
     @ResponseBody
     public List<BpmProcessInstanceStateDto> batchStates(
@@ -135,6 +145,10 @@ public class BpmProcessInstanceCtl extends BaseCtl {
      *
      * @param retries 写入的重试次数，默认 3，范围 1～100
      */
+    @Operation(
+            operationId = "bpmInst_recover",
+            summary = "对运行中实例的 OPEN incident 一键恢复",
+            description = "retries 默认 3，范围 1～100。")
     @PostMapping("{instanceId}/recover")
     public BpmInstanceRecoverResultDto recover(
             @PathVariable String instanceId,

@@ -26,12 +26,27 @@
           nzTheme="light"
           nzNoAnimation
         >
-        <bpm-properties-panel
-          [bpmnModeler]="bpmnModeler"
-          [usedHeight]="50"
-          [currentProcessId]="bpmnId()"
-          [projectId]="bpmProcess()?.projectId ?? null"
-        ></bpm-properties-panel>
+          <nz-tabs class="bpm-editor-right-tabs" nzSize="small">
+            <nz-tab nzTitle="属性">
+              <div class="bpm-editor-properties-scroll">
+                <bpm-properties-panel
+                  [bpmnModeler]="bpmnModeler"
+                  [usedHeight]="50"
+                  [currentProcessId]="bpmnId()"
+                  [projectId]="bpmProcess()?.projectId ?? null"
+                ></bpm-properties-panel>
+              </div>
+            </nz-tab>
+            <nz-tab nzTitle="AI 助手">
+              <div class="bpm-editor-ai-scroll">
+                <app-chat
+                  [embed]="true"
+                  [actionHandlers]="bpmAssistantHandlers"
+                  [messagesEnricher]="enrichDesignerMessages"
+                />
+              </div>
+            </nz-tab>
+          </nz-tabs>
         </nz-sider>
       </nz-layout>
     </nz-content>

@@ -54,6 +54,7 @@ public class BpmComponentCtl extends BaseCtl
      * 快照值已合并进 {@link BpmComponent#getInputParameters()}/{@link BpmComponent#getOutputParameters()} 的默认值；
      * 响应为 {@link BpmComponentRecentUsageService.RecentBpmComponent}（含 {@code lastUsedFromProcessAt}）。
      */
+    @Operation(operationId = "bpmComp_recentUsage", summary = "当前用户最近使用的 BPM 组件（不落库）")
     @GetMapping("recent-usage")
     @ResponseBody
     public List<BpmComponentRecentUsageService.RecentBpmComponent> getRecentComponentUsage() {

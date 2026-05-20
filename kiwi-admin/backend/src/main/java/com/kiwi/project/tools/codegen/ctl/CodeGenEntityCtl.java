@@ -52,6 +52,7 @@ public class CodeGenEntityCtl {
         public String tableComment;
     }
 
+    @Operation(operationId = "codeEnt_page", summary = "分页查询代码生成实体配置")
     @SaCheckPermission("gen:entity:list")
     @GetMapping("")
     public Page<GenEntity> tables(GenTableQuery query, Pageable pageable) {
@@ -93,6 +94,7 @@ public class CodeGenEntityCtl {
         genTabledao.deleteById(id);
     }
 
+    @Operation(operationId = "codeEnt_importJavaFile", summary = "从 Java 源文件导入表结构到代码生成")
     @SaCheckPermission("gen:entity:import")
     @PostMapping("import/javaFile")
     public void importTable(@RequestParam("file") MultipartFile javaFile) {

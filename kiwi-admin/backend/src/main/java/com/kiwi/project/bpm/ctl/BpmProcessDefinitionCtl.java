@@ -116,6 +116,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
 
 
 
+    @Operation(operationId = "bpmPd_page", summary = "分页查询流程定义")
     @GetMapping()
     @ResponseBody
     public Page<BpmProcess> page(QueryInput queryInput, Pageable pageable) {

@@ -1,104 +1,78 @@
 package com.kiwi.project.ai;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Data;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 前端可执行的动作（多态）。JSON 与历史扁平结构兼容：顶层 {@code type} 为 discriminator，
- * 其余字段由各子类型独占，不再混在一个「万能」对象里。
+ * 前端可执行的动作。{@code type} 与 {@code params} 键名由前后端约定（如 navigate、toolbar、bpmnXml、appendComponent）。
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", visible = true)
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = ClientAction.NavigateClientAction.class, name = "navigate"),
-    @JsonSubTypes.Type(value = ClientAction.ToolbarClientAction.class, name = "toolbar"),
-    @JsonSubTypes.Type(value = ClientAction.BpmnXmlClientAction.class, name = "bpmnXml"),
-    @JsonSubTypes.Type(value = ClientAction.AppendComponentClientAction.class, name = "appendComponent")
-})
-public sealed interface ClientAction permits ClientAction.NavigateClientAction,
-        ClientAction.ToolbarClientAction,
-        ClientAction.BpmnXmlClientAction,
-        ClientAction.AppendComponentClientAction {
+@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ClientAction {
 
-    /** 不参与序列化；JSON 的 {@code type} 由 Jackson 子类型机制写入。 */
-    @JsonIgnore
-    ClientActionType actionType();
+    public static final String TYPE_NAVIGATE = "navigate";
+    public static final String TYPE_TOOLBAR = "toolbar";
+    public static final String TYPE_BPMN_XML = "bpmnXml";
+    public static final String TYPE_APPEND_COMPONENT = "appendComponent";
 
-    static NavigateClientAction navigate(String path, Map<String, String> queryParams) {
-        Map<String, String> q = queryParams != null ? new LinkedHashMap<>(queryParams) : new LinkedHashMap<>();
-        return new NavigateClientAction(path != null ? path.trim() : "", q);
+    public static final String PARAM_PATH = "path";
+    public static final String PARAM_QUERY_PARAMS = "queryParams";
+    public static final String PARAM_TOOLBAR_COMMAND = "toolbarCommand";
+    public static final String PARAM_TOOLBAR_OPTIONS = "toolbarOptions";
+    public static final String PARAM_XML = "xml";
+    public static final String PARAM_COMPONENT_ID = "componentId";
+    public static final String PARAM_SOURCE_ELEMENT_ID = "sourceElementId";
+
+    private String type;
+    private Map<String, Object> params;
+
+    public static ClientAction of(String type, Map<String, Object> params) {
+        ClientAction action = new ClientAction();
+        action.setType(type);
+        action.setParams(params != null ? new LinkedHashMap<>(params) : new LinkedHashMap<>());
+        return action;
     }
 
-    static AppendComponentClientAction appendComponent(String componentId, String sourceElementId) {
-        String cid = componentId != null ? componentId.trim() : "";
-        String sid = sourceElementId != null && !sourceElementId.isBlank() ? sourceElementId.trim() : null;
-        return new AppendComponentClientAction(cid, sid);
+    public static ClientAction navigate(String path, Map<String, String> queryParams) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_PATH, path != null ? path.trim() : "");
+        params.put(PARAM_QUERY_PARAMS,
+                queryParams != null ? new LinkedHashMap<>(queryParams) : new LinkedHashMap<>());
+        return of(TYPE_NAVIGATE, params);
     }
 
-    record NavigateClientAction(String path, Map<String, String> queryParams) implements ClientAction {
-
-        public NavigateClientAction {
-            if (path == null) {
-                throw new IllegalArgumentException("path 不能为空。");
-            }
-            queryParams = queryParams != null ? new LinkedHashMap<>(queryParams) : new LinkedHashMap<>();
+    public static ClientAction toolbar(String toolbarCommand, Map<String, Object> toolbarOptions) {
+        if (toolbarCommand == null || toolbarCommand.isBlank()) {
+            throw new IllegalArgumentException("toolbarCommand 不能为空。");
         }
-
-        @Override
-        @JsonIgnore
-        public ClientActionType actionType() {
-            return ClientActionType.NAVIGATE;
-        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_TOOLBAR_COMMAND, toolbarCommand.trim());
+        params.put(PARAM_TOOLBAR_OPTIONS,
+                toolbarOptions != null ? new LinkedHashMap<>(toolbarOptions) : new LinkedHashMap<>());
+        return of(TYPE_TOOLBAR, params);
     }
 
-    record ToolbarClientAction(String toolbarCommand, Map<String, Object> toolbarOptions) implements ClientAction {
-
-        public ToolbarClientAction {
-            if (toolbarCommand == null || toolbarCommand.isBlank()) {
-                throw new IllegalArgumentException("toolbarCommand 不能为空。");
-            }
-            toolbarOptions = toolbarOptions != null ? new LinkedHashMap<>(toolbarOptions) : new LinkedHashMap<>();
+    public static ClientAction bpmnXml(String xml) {
+        if (xml == null || xml.isBlank()) {
+            throw new IllegalArgumentException("xml 不能为空。");
         }
-
-        @Override
-        @JsonIgnore
-        public ClientActionType actionType() {
-            return ClientActionType.TOOLBAR;
-        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_XML, xml);
+        return of(TYPE_BPMN_XML, params);
     }
 
-    record BpmnXmlClientAction(String xml) implements ClientAction {
-
-        public BpmnXmlClientAction {
-            if (xml == null || xml.isBlank()) {
-                throw new IllegalArgumentException("xml 不能为空。");
-            }
+    public static ClientAction appendComponent(String componentId, String sourceElementId) {
+        if (componentId == null || componentId.isBlank()) {
+            throw new IllegalArgumentException("componentId 不能为空。");
         }
-
-        @Override
-        @JsonIgnore
-        public ClientActionType actionType() {
-            return ClientActionType.BPMN_XML;
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_COMPONENT_ID, componentId.trim());
+        if (sourceElementId != null && !sourceElementId.isBlank()) {
+            params.put(PARAM_SOURCE_ELEMENT_ID, sourceElementId.trim());
         }
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    record AppendComponentClientAction(String componentId, String sourceElementId) implements ClientAction {
-
-        public AppendComponentClientAction {
-            if (componentId == null || componentId.isBlank()) {
-                throw new IllegalArgumentException("componentId 不能为空。");
-            }
-        }
-
-        @Override
-        @JsonIgnore
-        public ClientActionType actionType() {
-            return ClientActionType.APPEND_COMPONENT;
-        }
+        return of(TYPE_APPEND_COMPONENT, params);
     }
 }

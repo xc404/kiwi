@@ -39,6 +39,7 @@ public class CommonCtl {
         return dictService.getDictGroups();
     }
 
+    @Operation(operationId = "common_dictList", summary = "分页查询某字典分组下的字典项")
     @GetMapping("/common/dict/{groupCode}")
     public Page<Dict> getDictList(@PathVariable("groupCode") String groupCode, String pattern, Pageable pageable) {
         return dictService.getDictList(groupCode, pattern, pageable);
@@ -59,6 +60,7 @@ public class CommonCtl {
         return getDictList(groupCode, pattern, PageRequest.of(p, s));
     }
 
+    @Operation(operationId = "common_tree", summary = "获取字典树形数据")
     @GetMapping("/common/tree/{groupCode}/{parentId}")
     public List<Node> getTree(@PathVariable("groupCode") String groupCode,
                               @PathVariable(value = "parentId", required = false) String parentId,

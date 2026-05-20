@@ -46,6 +46,7 @@ public class AuthCtl {
     private final PermissionService permissionService;
     private final SysMenuDao sysMenuDao;
 
+    @Operation(operationId = "auth_signin", summary = "用户登录（返回 Sa-Token）")
     @PostMapping("/auth/signin")
     @ResponseBody
     public LoginOutput signin(@RequestBody LoginInput input) {
@@ -55,6 +56,7 @@ public class AuthCtl {
         return new LoginOutput(StpUtil.getTokenValue());
     }
 
+    @Operation(operationId = "auth_signout", summary = "用户登出")
     @PostMapping("/auth/signout")
     @ResponseBody
     public void signout() {

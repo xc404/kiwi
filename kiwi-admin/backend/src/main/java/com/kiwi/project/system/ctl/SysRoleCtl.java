@@ -33,6 +33,7 @@ public class SysRoleCtl {
         return sysRoleDao.insert(role);
     }
 
+    @Operation(operationId = "role_page", summary = "分页查询角色列表")
     @GetMapping
     @SaCheckPermission("sa:role:view")
     public Page<SysRole> page(QueryInput queryInput, Pageable pageable) {

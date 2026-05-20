@@ -48,6 +48,7 @@ public class CodeGenFieldCtl {
         return this.genFieldDao.findBy(params);
     }
 
+    @Operation(operationId = "codeFld_page", summary = "分页查询代码生成字段配置")
     @SaCheckPermission("gen:field:list")
     @GetMapping("")
     public Page<GenField> page(SearchInput searchInput, Pageable pageable) {

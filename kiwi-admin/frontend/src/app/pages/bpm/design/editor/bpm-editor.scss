@@ -207,6 +207,27 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  app-chat {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+  }
+}
+
+/* 侧栏内嵌 AI：占满 tab 内容区，避免固定右下角布局 */
+:host ::ng-deep .bpm-editor-ai-scroll .chat-wrap.embedded {
+  max-width: none;
+  margin: 0;
+  height: 100%;
+
+  .chart-content {
+    width: 100%;
+    height: 100%;
+    min-height: 240px;
+    max-height: none;
+  }
 }
 
 /* bpmn-js / diagram-js：去掉画布根容器上的外框（动态注入的 DOM 需 ::ng-deep） */

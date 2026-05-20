@@ -13,13 +13,16 @@ export class NavigateAssistantActionHandler implements AssistantActionHandler {
   ) {}
 
   supports(action: AiClientAction): boolean {
-    return action.type === 'navigate' && !!action.path?.trim();
+    const path = action.params?.['path'];
+    return action.type === 'navigate' && typeof path === 'string' && !!path.trim();
   }
 
   handle(action: AiClientAction, _ctx: AssistantActionContext): boolean {
-    const raw = action.path!.replace(/^\/+/, '');
+    const path = String(action.params?.['path'] ?? '');
+    const queryParams = (action.params?.['queryParams'] as Record<string, string> | undefined) ?? {};
+    const raw = path.replace(/^\/+/, '');
     const segments = raw.split('/').filter(Boolean);
-    void this.router.navigate(segments, { queryParams: action.queryParams ?? {} }).catch(() => {
+    void this.router.navigate(segments, { queryParams }).catch(() => {
       this.nzMessage.warning('无法打开目标页面');
     });
     return true;

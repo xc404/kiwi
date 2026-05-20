@@ -48,7 +48,7 @@ public class AssistantDesignerTools {
         } catch (IllegalArgumentException ex) {
             return ex.getMessage();
         }
-        assistantClientActionContext.addClientAction(new ClientAction.ToolbarClientAction(cmd, options));
+        assistantClientActionContext.addClientAction(ClientAction.toolbar(cmd, options));
         return "已登记设计器工具栏动作：" + cmd + "。";
     }
 
@@ -64,7 +64,7 @@ public class AssistantDesignerTools {
         } catch (IllegalArgumentException ex) {
             return ex.getMessage();
         }
-        assistantClientActionContext.addClientAction(new ClientAction.BpmnXmlClientAction(xml));
+        assistantClientActionContext.addClientAction(ClientAction.bpmnXml(xml));
         return "已登记 BPMN XML 更新建议（长度=" + xml.length() + "）。";
     }
 

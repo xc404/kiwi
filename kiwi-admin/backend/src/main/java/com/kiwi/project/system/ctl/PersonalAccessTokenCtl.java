@@ -35,7 +35,7 @@ public class PersonalAccessTokenCtl {
 
     @GetMapping
     @SaCheckLogin
-    @Operation(summary = "列出当前用户的长期访问令牌")
+    @Operation(operationId = "pat_list", summary = "列出当前用户的长期访问令牌")
     public List<PersonalAccessTokenListItem> listMine() {
         String userId = StpUtil.getLoginId().toString();
         return personalAccessTokenService.listMine(userId).stream().map(PersonalAccessTokenListItem::from).toList();
@@ -43,7 +43,7 @@ public class PersonalAccessTokenCtl {
 
     @PostMapping
     @SaCheckLogin
-    @Operation(summary = "新建长期访问令牌（明文仅返回一次）")
+    @Operation(operationId = "pat_create", summary = "新建长期访问令牌（明文仅返回一次）")
     public CreatePersonalAccessTokenResponse create(@RequestBody(required = false) CreatePersonalAccessTokenRequest body) {
         String userId = StpUtil.getLoginId().toString();
         String name = body != null ? body.getName() : null;
@@ -53,13 +53,13 @@ public class PersonalAccessTokenCtl {
 
     @DeleteMapping("{id}")
     @SaCheckLogin
-    @Operation(summary = "删除并吊销指定长期访问令牌")
+    @Operation(operationId = "pat_revoke", summary = "删除并吊销指定长期访问令牌")
     public void revoke(@PathVariable String id) {
         personalAccessTokenService.revoke(StpUtil.getLoginId().toString(), id);
     }
 
     @PostMapping("/exchange")
-    @Operation(summary = "使用个人访问令牌兑换短期 Sa-Token（无需登录）")
+    @Operation(operationId = "pat_exchange", summary = "使用个人访问令牌兑换短期 Sa-Token（无需登录）")
     public ExchangeSaTokenResponse exchange(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody(required = false) ExchangePersonalAccessTokenRequest body) {

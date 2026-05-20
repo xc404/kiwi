@@ -15,16 +15,13 @@ export interface AiChatResponse {
   content: string;
 }
 
-/** 与后端 AiAssistantResponse.actions 项对齐；含 BPM 设计器工具产生的扩展字段。 */
+/**
+ * 与后端 ClientAction 对齐：type 为动作语义，params 键名由前后端约定。
+ * 例如 navigate → { path, queryParams? }；toolbar → { toolbarCommand, toolbarOptions? }。
+ */
 export interface AiClientAction {
   type: string;
-  path?: string;
-  queryParams?: Record<string, string>;
-  toolbarCommand?: string;
-  toolbarOptions?: Record<string, unknown>;
-  xml?: string;
-  componentId?: string;
-  sourceElementId?: string;
+  params?: Record<string, unknown>;
 }
 
 export interface AiAssistantResponse {

@@ -47,6 +47,7 @@ public class ConnectionCtl {
         return this.connectionSettingsDao.findById(id).orElseThrow();
     }
 
+    @Operation(operationId = "conn_page", summary = "分页查询 JDBC 连接配置")
     @GetMapping()
     @SaCheckPermission("tools:connectionSettings:view")
     @ResponseBody

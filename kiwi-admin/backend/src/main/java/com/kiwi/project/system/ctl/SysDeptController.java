@@ -35,6 +35,7 @@ public class SysDeptController {
     @Autowired
     private SysDeptDao sysDeptDao;
 
+    @Operation(operationId = "dept_page", summary = "分页查询部门")
     @SaCheckPermission("system:dept:view")
     @GetMapping("")
     @ResponseBody

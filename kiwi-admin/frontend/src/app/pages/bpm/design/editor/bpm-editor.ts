@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
+import { ChatComponent } from '@shared/components/chat/chat.component';
+import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
@@ -10,7 +12,6 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import type { Element } from 'bpmn-js/lib/model/Types';
 import gridModule from 'diagram-js-grid';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { finalize } from 'rxjs/operators';
@@ -27,17 +28,14 @@ import replaceComponentModule from '../context-pad/replace-component-module';
 import customContextPadModule from '../context-pad/index';
 import { ProcessDesignService } from '../service/process-design.service';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
-import type {
-  BpmSaveAsComponentModalData,
-  SaveAsComponentFormPayload,
-} from '../toolbar/bpm-save-as-component-modal/bpm-save-as-component-modal.component';
 import { BpmEditorAppendService } from '../service/bpm-editor-append.service';
 import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
 import { ComponentService } from '../../flow-elements/component-service';
 import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
 import { BpmEditorToken } from './bpm-editor-token';
-import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
 import type { BpmProcess } from '../../types/bpm-process';
+import { createBpmDesignerAssistantHandlers } from '../assistant/bpm-designer-assistant.handlers';
+import { BpmDesignerToolbarService } from '../toolbar/bpm-designer-toolbar.service';
 
 export { BpmExpressionVariableService } from '../expression/bpm-expression-variable.service';
 export { ExpressionVariableContext } from '../expression/expression-variable-context';
@@ -63,6 +61,7 @@ export { BpmEditorToken };
     NzTabsModule,
     NzSpinModule,
     BpmEditorProcessMetaComponent,
+    ChatComponent,
   ],
   standalone: true,
 })
@@ -75,8 +74,14 @@ export class BpmEditor implements OnInit, BpmEditorToken {
   private readonly append = inject(BpmEditorAppendService);
   private readonly replace = inject(BpmEditorReplaceService);
   private readonly componentService = inject(ComponentService);
-  private readonly message = inject(NzMessageService);
-  private readonly startVariables = inject(BpmStartVariablesService);
+  private readonly toolbarService = inject(BpmDesignerToolbarService);
+
+  @ViewChild(BpmToolbar) private toolbar?: BpmToolbar;
+
+  readonly bpmAssistantHandlers: AssistantActionHandler[] = createBpmDesignerAssistantHandlers(
+    this,
+    () => this.toolbar,
+  );
 
   recentComponentUsages = signal<ComponentDescription[]>([]);
 
@@ -184,6 +189,14 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     selection.select(null);
   }
 
+  getBpmnId(): string {
+    return this.bpmnId();
+  }
+
+  getBpmProcess(): BpmProcess | null {
+    return this.bpmProcess();
+  }
+
   deploy(): Promise<any> {
     return this.save().then(() => {
       if (!this.depolyVersionBehind()) {
@@ -214,98 +227,6 @@ export class BpmEditor implements OnInit, BpmEditorToken {
       });
   }
 
-  importBpmnXml(xml: string): Promise<void> {
-    const trimmed = typeof xml === 'string' ? xml.trim() : '';
-    if (!trimmed) {
-      this.message.warning('BPMN XML 为空');
-      return Promise.reject(new Error('empty xml'));
-    }
-    return this.bpmnModeler
-      .importXML(trimmed)
-      .then(({ warnings }) => {
-        const canvas = this.bpmnModeler.get('canvas') as { zoom: (v: string) => void };
-        canvas.zoom('fit-viewport');
-        this.clearSelection();
-        if (warnings?.length) {
-          console.warn('BPMN import warnings:', warnings);
-          this.message.warning(
-            `已导入，存在 ${warnings.length} 条解析提示（详见控制台），请检查后保存`,
-          );
-        } else {
-          this.message.success('已导入 BPMN XML，尚未保存到服务器');
-        }
-      })
-      .catch((err: unknown) => {
-        const msg =
-          err && typeof err === 'object' && 'message' in err
-            ? String((err as { message: unknown }).message)
-            : String(err);
-        this.message.error(`导入失败：${msg}`);
-        return Promise.reject(err);
-      });
-  }
-
-  start(variables?: Record<string, unknown> | string): Promise<unknown> {
-    let resolved: Record<string, unknown>;
-    try {
-      resolved = this.startVariables.resolve(this.bpmnId(), variables);
-    } catch (e) {
-      if ((e as Error)?.message === 'INVALID_SHAPE') {
-        this.message.warning('启动变量须为 JSON 对象');
-      } else {
-        this.message.error('启动变量 JSON 无效');
-      }
-      return Promise.reject(e);
-    }
-    return this.startProcessWithVariables(resolved);
-  }
-
-  getSaveAsComponentModalDefaults(): BpmSaveAsComponentModalData {
-    const process = this.bpmProcess();
-    return {
-      defaultName: process?.name || '流程',
-      defaultDescription: '',
-      defaultVersion: '1.0',
-    };
-  }
-
-  submitSaveAsComponent(payload: SaveAsComponentFormPayload): Promise<void> {
-    return this.deploy()
-      .then(() => {
-        const processId = this.bpmProcess()?.id as string;
-        if (!processId) {
-          this.message.error('流程未加载');
-          return Promise.reject(new Error('no process'));
-        }
-        return firstValueFrom(
-          this.processDefinitionService.saveAsComponent(processId, {
-            name: payload.name,
-            description: payload.description,
-            version: payload.version,
-          }),
-        );
-      })
-      .then(() => {
-        this.message.success('已保存到组件库');
-      })
-      .catch((err: unknown) => {
-        const e = err as { error?: { message?: string }; message?: string };
-        const msg = e?.error?.message || e?.message || '保存失败';
-        this.message.error(msg);
-        return Promise.reject(err);
-      });
-  }
-
-  getStartProcessModalInitialText(): string {
-    const id = this.bpmnId();
-    const cached = id ? this.startVariables.load(id) : undefined;
-    return cached !== undefined ? JSON.stringify(cached, null, 2) : '{}';
-  }
-
-  submitStartProcessFromModal(variables: Record<string, unknown>): Promise<unknown> {
-    return this.startProcessWithVariables(variables);
-  }
-
   private refreshRecentComponentUsages(): void {
     this.processDefinitionService.getRecentComponentUsages().subscribe({
       next: (list) =>
@@ -323,21 +244,62 @@ export class BpmEditor implements OnInit, BpmEditorToken {
     this.append.appendComponentForAi(componentId, sourceElementId);
   }
 
-  private startProcessWithVariables(variables: Record<string, unknown>): Promise<unknown> {
-    const id = this.bpmnId();
-    if (!id) {
-      this.message.error('流程 ID 不存在');
-      return Promise.reject(new Error('no bpmn id'));
+  runToolbarCommand(command: string, options?: Record<string, unknown>): void {
+    if (!this.toolbar) {
+      throw new Error('工具栏未就绪');
     }
-    this.startVariables.persist(id, variables);
-    return this.deploy().then(
-      () =>
-        new Promise<unknown>((resolve, reject) => {
-          this.processDefinitionService.startProcess(id, { variables }).subscribe({
-            next: (data: unknown) => resolve(data),
-            error: (err: unknown) => reject(err),
-          });
-        }),
-    );
+    this.toolbarService.run(command, this.toolbar, options);
   }
+
+  enrichDesignerMessages = (messages: AiChatMessage[]): Promise<AiChatMessage[]> => {
+    return this.buildDesignerContextMessage().then((ctx) => [ctx, ...messages]);
+  };
+
+  private async buildDesignerContextMessage(): Promise<AiChatMessage> {
+    const process = this.bpmProcess();
+    const processId = this.bpmnId() || process?.id || '';
+    let xml = process?.bpmnXml ?? '';
+    if (this.bpmnModeler) {
+      try {
+        const saved = await this.bpmnModeler.saveXML({ format: false });
+        if (saved.xml) {
+          xml = saved.xml;
+        }
+      } catch {
+        /* 保留流程定义上的 XML */
+      }
+    }
+    const maxLen = 48_000;
+    let xmlBlock = xml;
+    if (xmlBlock.length > maxLen) {
+      xmlBlock = `${xmlBlock.slice(0, maxLen)}\n<!-- …已截断，完整图请保存后重试… -->`;
+    }
+    const selectedId = this.getSelectedElementId();
+    const lines = [
+      '你正在 Kiwi BPM 流程设计器中协助用户。请结合下列上下文回答；若需改图，请通过 assistant_designer_* 工具登记客户端动作。',
+      `processId: ${processId}`,
+      process?.name ? `processName: ${process.name}` : '',
+      selectedId ? `selectedElementId: ${selectedId}` : 'selectedElementId: （无单选元素）',
+      `可用 toolbar 命令: ${this.toolbarService.listAiCommandIds().join(', ')}`,
+      'appendComponent 参数: componentId（组件库 id）、sourceElementId（可选）',
+      '当前 BPMN XML:',
+      '```xml',
+      xmlBlock || '（空）',
+      '```',
+    ].filter(Boolean);
+    return { role: 'system', content: lines.join('\n') };
+  }
+
+  private getSelectedElementId(): string | null {
+    if (!this.bpmnModeler) {
+      return null;
+    }
+    const selection = this.bpmnModeler.get('selection') as { get: () => Element[] };
+    const selected = selection.get?.() ?? [];
+    if (selected.length !== 1) {
+      return null;
+    }
+    return selected[0].id ?? null;
+  }
+
 }

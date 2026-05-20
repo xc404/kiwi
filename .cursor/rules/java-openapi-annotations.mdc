@@ -1,0 +1,50 @@
+---
+description: 生成 REST 接口时自动补充 OpenAPI 3（springdoc）注解
+globs: kiwi-admin/backend/src/main/java/**/*Ctl.java,kiwi-admin/backend/src/main/java/**/*Controller.java,kiwi-admin/backend/src/main/java/**/dto/**/*.java
+alwaysApply: false
+---
+
+# REST 接口 OpenAPI 注解（kiwi-admin）
+
+在 **新增或修改** `kiwi-admin/backend` 的 REST 接口时，**必须**同步补充 [OpenAPI 3](https://springdoc.org/) 注解（`io.swagger.v3.oas.annotations.*`），与现有 Controller 风格一致。未标注的接口不会进入 Swagger UI，且 **`@Operation` 缺失时无法被 MCP OpenAPI 工具同步**（见 `KiwiOpenApiSyncMcpToolsConfiguration`）。
+
+## Controller 类
+
+- 在 `@RestController` 上添加 **`@Tag(name = "…", description = "…")`**（`description` 可选）。
+- `name` 用中文业务名，与模块一致（如「系统菜单」「BPM 组件」）。
+
+## 每个公开端点方法
+
+- 添加 **`@Operation`**，且 **必须** 包含：
+  - **`operationId`**：全局唯一、稳定，供 MCP / 前端 codegen 引用；格式 **`{前缀}_{动作}`**，前缀为控制器简称（camelCase），例如 `menu_get`、`bpmComp_page`、`dict_addDict`、`codeEnt_create`、`auth_userInfo`。
+  - **`summary`**：一句中文，说明接口做什么。
+- 分页、查询条件、请求体字段等非显而易见时，补充 **`description`**（中文，写清默认值与约束，如「page 从 0 开始，size 默认 20、最大 100」）。
+- `@Operation` 放在映射注解（`@GetMapping` 等）**上方**，与现有代码一致。
+
+## 路径 / 查询 / 请求体参数
+
+- **`@PathVariable` / `@RequestParam`**：语义不清时加 **`@Parameter(description = "…")`**。
+- **`@RequestBody`**：需要说明字段时，使用 **`io.swagger.v3.oas.annotations.parameters.RequestBody`**（勿与 Spring 的 `@RequestBody` 混淆）；Spring 绑定仍用 **`org.springframework.web.bind.annotation.RequestBody`**。
+
+## 请求 / 响应 DTO（`dto` 包或 Controller 内嵌类）
+
+- 类上：**`@Schema(description = "…")`**。
+- 对外暴露、含义不直观的字段：**`@Schema(description = "…")`**（必要时 `example`、`requiredMode`）。
+
+## 示例（与 `SysMenuCtl` 一致）
+
+```java
+@Tag(name = "系统菜单", description = "菜单 CRUD 与树")
+public class SysMenuCtl {
+
+    @Operation(operationId = "menu_get", summary = "按 id 获取菜单详情")
+    @GetMapping("{id}")
+    public SysMenu menu(@PathVariable("id") String id) { ... }
+}
+```
+
+## 禁止 / 注意
+
+- **不要** 只写 Spring MVC 映射而不写 `@Operation`（除非明确为内部、非文档化端点，且团队确认不需要 Swagger/MCP）。
+- **不要** 省略 `operationId` 或随意改名（会破坏 MCP 工具与已有集成）。
+- 使用 **OpenAPI 3** 注解包名 `io.swagger.v3.oas.annotations`，**不要** 使用已废弃的 Swagger 2 `io.swagger.annotations`。

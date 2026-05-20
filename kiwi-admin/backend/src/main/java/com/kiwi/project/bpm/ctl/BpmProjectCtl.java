@@ -32,6 +32,7 @@ public class BpmProjectCtl extends BaseCtl {
     private final BpmProjectDao bpmProjectDao;
     private final BpmProcessDefinitionDao bpmProcessDefinitionDao;
 
+    @Operation(operationId = "bpmProj_list", summary = "分页查询 BPM 项目/文件夹")
     @GetMapping("")
     @ResponseBody
     public Page<BpmProject> getProjects(Pageable pageable) {

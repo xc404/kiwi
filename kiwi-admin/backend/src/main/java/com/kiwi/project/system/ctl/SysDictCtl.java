@@ -42,6 +42,7 @@ public class SysDictCtl {
         public String groupName;
     }
 
+    @Operation(operationId = "dict_listGroup", summary = "分页查询字典分类（字典组）")
     @GetMapping("/group")
     @SaCheckPermission("system:dict:view")
     @ResponseBody
@@ -81,6 +82,7 @@ public class SysDictCtl {
         return sysDict;
     }
 
+    @Operation(operationId = "dict_updateDictGroup", summary = "按 id 修改字典分类（字典组）")
     @SaCheckPermission("system:dict:edit")
     @PutMapping("/group/{id}")
     @ResponseBody
@@ -90,6 +92,7 @@ public class SysDictCtl {
         return sysDict;
     }
 
+    @Operation(operationId = "dict_deleteDictGroup", summary = "按 id 删除字典分类（字典组）")
     @SaCheckPermission("system:dict:delete")
     @DeleteMapping("/group/{id}")
     @ResponseBody
@@ -118,6 +121,7 @@ public class SysDictCtl {
         return sysDict;
     }
 
+    @Operation(operationId = "dict_editDict", summary = "按 id 修改字典项")
     @SaCheckPermission("system:dict:edit")
     @PutMapping("{id}")
     @ResponseBody
@@ -127,6 +131,7 @@ public class SysDictCtl {
         return sysDict;
     }
 
+    @Operation(operationId = "dict_deleteDict", summary = "按 id 删除字典项")
     @SaCheckPermission("system:dict:delete")
     @DeleteMapping("{id}")
     @ResponseBody
