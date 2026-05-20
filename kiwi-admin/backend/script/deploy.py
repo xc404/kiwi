@@ -685,11 +685,11 @@ def deploy_config_files(c: Conn, settings: DeploySettings) -> bool:
 
 
 def deploy_shell_scripts(c: Conn, settings: DeploySettings) -> bool:
-    """上传 script/ 下的 restart.sh、stop.sh 至远端部署目录（不一致时确认覆盖）。"""
+    """上传 backend/bin/ 下的 restart.sh、stop.sh 至远端部署目录（不一致时确认覆盖）。"""
     uploaded = False
     chmod_names: list[str] = []
     for name in DEPLOY_SHELL_SCRIPTS:
-        local = SCRIPT_DIR / name
+        local = BIN_DIR / name
         if not local.is_file():
             print(f"警告：未找到本地脚本 {local}，跳过。", file=sys.stderr)
             continue

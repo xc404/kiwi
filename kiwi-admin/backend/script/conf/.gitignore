@@ -1,5 +1,5 @@
 # 本地私密配置，勿提交
 build.local.yaml
 remote.yaml
-build.local.yaml
 *.local.yaml
+*.local2.yaml

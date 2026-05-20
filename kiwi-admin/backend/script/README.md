@@ -83,12 +83,14 @@
 
 ```
 backend/
-├── bin/                      # deploy.py 同步的部署产物（已 gitignore）
+├── bin/
+│   ├── restart.sh、stop.sh   # 由 deploy 上传至远端部署目录
+│   ├── kiwi-admin.jar、kiwi-admin-lib.jar  # Maven 同步产物（本地生成，勿提交）
+│   └── config/               # Spring 配置同步目录（见仓库根 .gitignore）
 └── script/
     ├── README.md
     ├── deploy.py
     ├── requirements-remote.txt
-    ├── restart.sh、stop.sh      # 由 deploy 上传至远端部署目录
     └── conf/
         ├── build.example.yaml
         └── .gitignore
