@@ -68,7 +68,7 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:change-me}
-    type: com.mysql.cj.jdbc.MysqlDataSource
+    type: com.zaxxer.hikari.HikariDataSource
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
