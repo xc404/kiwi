@@ -13,7 +13,6 @@ import { BpmEditorToken } from '../editor/bpm-editor-token';
 import { ProcessDesignService } from '../service/process-design.service';
 import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
 import { buildToolbarSegments, type ToolbarSegment } from './build-toolbar-segments';
-import { importBpmnXmlToModeler } from './bpm-canvas-import.utils';
 import { BpmDesignerToolbarService } from './bpm-designer-toolbar.service';
 import type {
   BpmDesignerToolbarCommand,
@@ -94,7 +93,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
   }
 
   importBpmnXml(xml: string): Promise<void> {
-    return importBpmnXmlToModeler(this.modeler, xml, this.message, () => this.editor.clearSelection());
+    return this.editor.importBpmnXml(xml);
   }
 
   getSaveAsComponentModalDefaults(): BpmSaveAsComponentModalData {

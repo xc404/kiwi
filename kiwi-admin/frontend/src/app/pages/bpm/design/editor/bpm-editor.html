@@ -26,29 +26,18 @@
           nzTheme="light"
           nzNoAnimation
         >
-          <nz-tabs class="bpm-editor-right-tabs" nzSize="small">
-            <nz-tab nzTitle="属性">
-              <div class="bpm-editor-properties-scroll">
-                <bpm-properties-panel
-                  [bpmnModeler]="bpmnModeler"
-                  [usedHeight]="50"
-                  [currentProcessId]="bpmnId()"
-                  [projectId]="bpmProcess()?.projectId ?? null"
-                ></bpm-properties-panel>
-              </div>
-            </nz-tab>
-            <nz-tab nzTitle="AI 助手">
-              <div class="bpm-editor-ai-scroll">
-                <app-chat
-                  [embed]="true"
-                  [actionHandlers]="bpmAssistantHandlers"
-                  [messagesEnricher]="enrichDesignerMessages"
-                />
-              </div>
-            </nz-tab>
-          </nz-tabs>
+          <div class="bpm-editor-properties-scroll">
+            <bpm-properties-panel
+              [bpmnModeler]="bpmnModeler"
+              [usedHeight]="50"
+              [currentProcessId]="bpmnId()"
+              [projectId]="bpmProcess()?.projectId ?? null"
+            ></bpm-properties-panel>
+          </div>
         </nz-sider>
       </nz-layout>
     </nz-content>
   </nz-layout>
+
+  <bpm-ai-chat [getToolbarContext]="getToolbarContextFn" />
 </div>

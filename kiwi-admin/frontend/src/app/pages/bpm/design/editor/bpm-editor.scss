@@ -119,7 +119,7 @@
 }
 
 /* nz-sider 实际把子节点包在 .ant-layout-sider-children 里；此处不做纵向 flex 时，
-   内部 nz-tabs / bpm-editor-properties-scroll 上 flex:1 1 0 会得到 0 高度，属性侧栏空白 */
+   内部 bpm-editor-properties-scroll 上 flex:1 1 0 会得到 0 高度，属性侧栏空白 */
 :host ::ng-deep .bpm-editor-properties-sider > .ant-layout-sider-children {
   display: flex;
   flex-direction: column;
@@ -145,89 +145,11 @@
    * 与 properties-panel 中 max-height 对齐：从视口顶到 collapse 滚动区顶的合计（见各组件样式）。
    * 48px  layout @layout-header-height（styles/themes/base.less）
    * 64px  .bpm-editor-process-meta：min-height 44px + padding 10px×2
-   * 40px  侧栏外层 nz-tabs nzSize=small 导航条
    * 55px  bpm-panel-header：padding 16px×2 + 单行标题 + border（property-panel/panel-header.scss）
    * 46px  属性区内层 nz-tabs 默认导航（未设 nzSize）
    * 8px   间隙
    */
-  --bpm-collapse-vh-offset: calc(48px + 64px + 40px + 55px + 46px + 8px);
-}
-
-.bpm-editor-right-tabs {
-  flex: 1 1 0;
-  min-height: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 右侧「属性」外层 nz-tabs：填满侧栏并形成纵向 flex 链 */
-:host ::ng-deep .bpm-editor-properties-sider nz-tabs.bpm-editor-right-tabs {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-/*
- * 仅作用于侧栏「属性」最外层 nz-tabs（带 class bpm-editor-right-tabs）。
- * 勿用 .bpm-editor-right-tabs .ant-tabs-tabpane 后代选择器，否则会命中属性面板内嵌 nz-tabs，
- * 内层 tabpane 被 flex:1 1 0 + overflow:hidden 压扁 → nz-collapse-panel 不显示。
- *
- * nz-tabs 宿主可能是 content-holder 的父节点，也可能中间有一层 .ant-tabs 包装。
- */
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs-content-holder,
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs > .ant-tabs-content-holder {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs-content-holder > .ant-tabs-content,
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs > .ant-tabs-content-holder > .ant-tabs-content {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane,
-:host ::ng-deep nz-tabs.bpm-editor-right-tabs > .ant-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane {
-  flex: 1 1 0;
-  min-height: 0;
-  height: auto !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.bpm-editor-ai-scroll {
-  height: 100%;
-  min-height: 280px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  app-chat {
-    display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-    flex-direction: column;
-  }
-}
-
-/* 侧栏内嵌 AI：占满 tab 内容区，避免固定右下角布局 */
-:host ::ng-deep .bpm-editor-ai-scroll .chat-wrap.embedded {
-  max-width: none;
-  margin: 0;
-  height: 100%;
-
-  .chart-content {
-    width: 100%;
-    height: 100%;
-    min-height: 240px;
-    max-height: none;
-  }
+  --bpm-collapse-vh-offset: calc(48px + 64px + 55px + 46px + 8px);
 }
 
 /* bpmn-js / diagram-js：去掉画布根容器上的外框（动态注入的 DOM 需 ::ng-deep） */

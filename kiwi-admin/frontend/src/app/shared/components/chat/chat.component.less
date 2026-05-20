@@ -1,37 +1,101 @@
-.chat-wrap {
+@chat-default-width: 420px;
+@chat-default-height: 560px;
+@chat-min-width: 300px;
+@chat-min-height: 380px;
+@chat-max-width: 960px;
+/* 收起时仍露出标题栏，便于点击展开（对齐改版前 bottom 负偏移的“露头”效果） */
+@chat-collapsed-peek: 36px;
+
+.chat-dock {
   position: fixed;
   z-index: 998;
   right: 30px;
-  bottom: -537px;
-  width: 320px;
-  transition: bottom 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  bottom: 0;
+  transform: translateY(calc(100% - @chat-collapsed-peek));
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+
+  &.show {
+    transform: translateY(0);
+  }
+}
+
+.chat-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: @chat-default-width;
+  height: @chat-default-height;
+  min-width: @chat-min-width;
+  min-height: @chat-min-height;
+  max-width: min(90vw, @chat-max-width);
+  max-height: 90vh;
+  overflow: hidden;
 
   .chart-content {
     overflow: auto;
+    flex: 1;
     flex-direction: column;
-    width: 320px;
-    height: 415px;
+    width: 100%;
+    min-height: 0;
     padding: 24px;
   }
+}
 
-  &.compact-mode {
-    bottom: -510px;
+.chat-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 0 0 6px 0;
+  background: rgb(0 0 0 / 0.04);
+  color: rgb(0 0 0 / 0.45);
+  cursor: nwse-resize;
+  line-height: 1;
+
+  &:hover {
+    background: rgb(0 0 0 / 0.08);
+    color: rgb(0 0 0 / 0.65);
+  }
+}
+
+:host ::ng-deep .chat-wrap .ant-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+
+  .ant-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  &.aliyun-mode {
-    bottom: -528px;
+  .ant-card-actions {
+    flex-shrink: 0;
   }
 }
 
 :host ::ng-deep .ant-card-head {
   height: 32px;
   min-height: 32px;
+  flex-shrink: 0;
 
   .ant-card-head-wrapper {
     height: 32px;
 
     .ant-card-head-title {
       padding: 0;
+      padding-left: 28px;
     }
   }
 }
@@ -40,20 +104,26 @@
   color: rgb(0 0 0 / 0.45);
 }
 
-.show {
-  bottom: -1px !important;
-}
-
-.chat-wrap.embedded {
+.chat-dock.embedded {
   position: relative;
   right: auto;
-  bottom: auto !important;
+  bottom: auto;
   width: 100%;
-  max-width: 720px;
+  max-width: 880px;
   margin: 0 auto;
+  transform: none;
+  transition: none;
+
+  .chat-wrap {
+    width: 100%;
+    max-width: 880px;
+    height: min(62vh, 600px);
+    min-height: 420px;
+  }
 
   .chart-content {
+    flex: 1;
     width: 100%;
-    height: min(58vh, 520px);
+    min-height: 0;
   }
 }

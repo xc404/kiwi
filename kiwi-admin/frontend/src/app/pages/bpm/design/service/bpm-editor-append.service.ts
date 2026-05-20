@@ -69,6 +69,18 @@ export class BpmEditorAppendService {
       autoPlace.append(sourceElement, shape);
     } else if (event) {
       this.create.start(event, shape, { source: sourceElement });
+    } else {
+      const modeling = this.modeler.get('modeling') as {
+        appendShape: (
+          source: Element,
+          shape: Element,
+          position?: { x: number; y: number },
+        ) => Element;
+      };
+      const bounds = sourceElement as Element & { x?: number; y?: number; width?: number };
+      const x = (bounds.x ?? 0) + (bounds.width ?? 100) + 80;
+      const y = bounds.y ?? 0;
+      modeling.appendShape(sourceElement, shape, { x, y });
     }
   }
 }

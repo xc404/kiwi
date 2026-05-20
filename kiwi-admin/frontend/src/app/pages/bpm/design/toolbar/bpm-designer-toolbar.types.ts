@@ -53,7 +53,7 @@ export interface BpmDesignerToolbarCommand {
   icon: string;
   group: BpmDesignerToolbarGroup;
   run: (ctx: BpmDesignerToolbarContext, options?: Record<string, unknown>) => void | Promise<void>;
-  /** 默认 true：AI / runToolbarCommand 可执行 */
+  /** 默认 true：AI 助手可通过 toolbar service 执行 */
   aiExposed?: boolean;
   /** 默认 true：出现在 Toolbar 按钮 */
   showInToolbar?: boolean;

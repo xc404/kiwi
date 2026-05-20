@@ -1,4 +1,5 @@
 import BpmnModeler from 'bpmn-js/lib/Modeler';
+import type { Element } from 'bpmn-js/lib/model/Types';
 
 import type { BpmProcess } from '../../types/bpm-process';
 
@@ -13,15 +14,20 @@ export abstract class BpmEditorToken {
 
   abstract getBpmProcess(): BpmProcess | null;
 
-  /**
-   * AI 助手：按组件库 id 追加节点（锚点优先 sourceElementId，否则当前选中，否则根流程）。
-   */
-  abstract appendComponentForAi(componentId: string, sourceElementId?: string | null): void;
-
-  /**
-   * AI / 助手：执行与工具栏一致的白名单命令（见后端 AssistantDesignerTools）。
-   */
-  abstract runToolbarCommand(command: string, options?: Record<string, unknown>): void;
+  /** AI / 导入：替换当前画布 BPMN（未保存到服务器） */
+  abstract importBpmnXml(xml: string): Promise<void>;
 
   bpmnModeler!: BpmnModeler;
+
+  getSelectedElementId(): string | null {
+    if (!this.bpmnModeler) {
+      return null;
+    }
+    const selection = this.bpmnModeler.get('selection') as { get: () => Element[] };
+    const selected = selection.get?.() ?? [];
+    if (selected.length !== 1) {
+      return null;
+    }
+    return selected[0].id ?? null;
+  }
 }

@@ -11,6 +11,7 @@ import {
   viewChild,
   computed,
   input,
+  signal,
   DestroyRef
 } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -32,6 +33,12 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
+
+const CHAT_PANEL_MIN_WIDTH = 300;
+const CHAT_PANEL_MIN_HEIGHT = 380;
+const CHAT_PANEL_MAX_WIDTH = 960;
+const CHAT_PANEL_DEFAULT_WIDTH = 420;
+const CHAT_PANEL_DEFAULT_HEIGHT = 560;
 
 @Component({
   selector: 'app-chat',
@@ -55,8 +62,12 @@ import { NzTypographyModule } from 'ng-zorro-antd/typography';
 export class ChatComponent implements OnInit, OnDestroy {
   readonly myScrollContainer = viewChild.required<ElementRef>('scrollMe');
   readonly changeShows = output<boolean>();
+  readonly panelWidth = signal(CHAT_PANEL_DEFAULT_WIDTH);
+  readonly panelHeight = signal(CHAT_PANEL_DEFAULT_HEIGHT);
   /** 嵌入页面（如仪表盘路由）时为 true，不再使用右下角 fixed 布局 */
   readonly embed = input(false);
+  /** 浮动模式初始是否展开（如 BPM 设计器无全局入口，宜默认展开） */
+  readonly defaultOpen = input(false);
   /** 每嵌入点可选的额外动作处理器（与内置 navigate 等合并编排） */
   readonly actionHandlers = input<AssistantActionHandler[]>([]);
   /** 发送前合并上下文（如 BPM 设计器注入 processId / BPMN XML） */
@@ -79,9 +90,70 @@ export class ChatComponent implements OnInit, OnDestroy {
   });
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
+  private resizeActive = false;
+  private resizeStartX = 0;
+  private resizeStartY = 0;
+  private resizeStartW = 0;
+  private resizeStartH = 0;
+  private resizeMoveListener: ((e: MouseEvent) => void) | null = null;
+  private resizeUpListener: (() => void) | null = null;
 
   ngOnDestroy(): void {
-    console.log('客服功能销毁了');
+    this.teardownResizeListeners();
+  }
+
+  onResizeStart(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.teardownResizeListeners();
+    this.resizeActive = true;
+    this.resizeStartX = event.clientX;
+    this.resizeStartY = event.clientY;
+    this.resizeStartW = this.panelWidth();
+    this.resizeStartH = this.panelHeight();
+
+    this.resizeMoveListener = (e: MouseEvent) => this.onResizeMove(e);
+    this.resizeUpListener = () => this.onResizeEnd();
+    document.addEventListener('mousemove', this.resizeMoveListener);
+    document.addEventListener('mouseup', this.resizeUpListener);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'nwse-resize';
+  }
+
+  private onResizeMove(event: MouseEvent): void {
+    if (!this.resizeActive) {
+      return;
+    }
+    const dw = this.resizeStartX - event.clientX;
+    const dh = this.resizeStartY - event.clientY;
+    const maxW = Math.min(window.innerWidth * 0.9, CHAT_PANEL_MAX_WIDTH);
+    const maxH = window.innerHeight * 0.9;
+    this.panelWidth.set(
+      Math.min(maxW, Math.max(CHAT_PANEL_MIN_WIDTH, this.resizeStartW + dw)),
+    );
+    this.panelHeight.set(
+      Math.min(maxH, Math.max(CHAT_PANEL_MIN_HEIGHT, this.resizeStartH + dh)),
+    );
+    this.cdr.markForCheck();
+  }
+
+  private onResizeEnd(): void {
+    this.resizeActive = false;
+    this.teardownResizeListeners();
+    this.cdr.markForCheck();
+  }
+
+  private teardownResizeListeners(): void {
+    if (this.resizeMoveListener) {
+      document.removeEventListener('mousemove', this.resizeMoveListener);
+      this.resizeMoveListener = null;
+    }
+    if (this.resizeUpListener) {
+      document.removeEventListener('mouseup', this.resizeUpListener);
+      this.resizeUpListener = null;
+    }
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
   }
 
   close(): void {
@@ -168,6 +240,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (!this.embed() && this.defaultOpen()) {
+      this.show = true;
+    }
     this.validateForm = this.fb.group({
       question: [null]
     });

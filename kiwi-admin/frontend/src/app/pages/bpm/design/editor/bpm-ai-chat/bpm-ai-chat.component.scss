@@ -1,0 +1,13 @@
+:host {
+  display: contents;
+}
+
+/* 使用 app-chat 默认右下角 fixed 布局（见 chat.component.less） */
+.bpm-ai-chat {
+  display: contents;
+  pointer-events: none;
+
+  app-chat {
+    pointer-events: auto;
+  }
+}
