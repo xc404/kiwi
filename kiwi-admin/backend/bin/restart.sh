@@ -2,6 +2,13 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Java 可执行文件路径（留空则使用 PATH 中的 java）
+# 示例：JAVA_BIN=/usr/lib/jvm/java-17-openjdk-amd64/bin/java
+JAVA_BIN=""
+
+JAVA="${JAVA_BIN:-java}"
+
 # 与 deploy.py 远端命名一致；全量部署后应有应用 jar + lib jar（incremental 仅更新应用 jar）
 JAR="${DIR}/kiwi-admin.jar"
 LIB_JAR="${DIR}/kiwi-admin-lib.jar"
@@ -44,7 +51,7 @@ if [[ ! -f "$JAR" ]]; then
 fi
 
 # spring.profiles.active 由 config/application.properties 指定（deploy 同步）
-nohup java \
+nohup "${JAVA}" \
   -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
   -cp "${LIB_JAR}:${JAR}" \
   com.kiwi.framework.springboot.Application >>"$LOG_FILE" 2>&1 &
