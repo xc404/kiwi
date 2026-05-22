@@ -35,6 +35,17 @@ public class SlurmProperties {
     private int threadPoolSize = 5;
 
     /**
+     * 应用层全局并发上限：{@link SlurmExternalTaskHandler} 在调用 {@code sbatch} 之前，
+     * 根据 Mongo 集合 {@code slurm_job} 中 {@code status=Running} 的条数判断当前并发；
+     * 达到或超过该阈值时直接拒绝本次提交（抛出 {@link SlurmOverloadedException}），
+     * 由 {@code ExternalTaskRetryPlanner} 在过载分支按退避周期回退至外部任务队列。
+     * <p>
+     * 值 {@code <= 0} 表示禁用该闸门（行为与未引入限流时完全等价）。
+     * 配置键：{@code kiwi.bpm.slurm.max-concurrent-jobs}。
+     */
+    private int maxConcurrentJobs = 50;
+
+    /**
      * 默认 Slurm 分区名；流程变量 {@code slurm_partition} 未传入或为空时使用。
      * 配置键：{@code kiwi.bpm.slurm.partition}。
      */

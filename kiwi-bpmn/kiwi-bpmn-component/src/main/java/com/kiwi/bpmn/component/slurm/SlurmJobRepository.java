@@ -18,6 +18,17 @@ public interface SlurmJobRepository extends MongoRepository<SlurmJob, String> {
     List<SlurmJob> findByStatusAndExpirationGreaterThanEqual(SlurmJobStatus status, Date now);
 
     /**
+     * 应用层并发闸门使用的当前在跑作业计数。
+     * <p>
+     * Spring Data 派生方法，底层走 Mongo {@code count} 命令；{@code status} 字段已被既有
+     * {@code findByStatusAndExpiration*} 查询使用，索引已具备。
+     *
+     * @see SlurmExternalTaskHandler
+     * @see SlurmProperties#getMaxConcurrentJobs()
+     */
+    long countByStatus(SlurmJobStatus status);
+
+    /**
      * 乐观并发：仅当 {@link SlurmJobStatus#Running} 且未持锁（{@link SlurmJob#getCompleteProcessLock()} 非 true）时
      * 原子置 {@code completeProcessLock=true}；返回修改行数（0 表示未抢到）。
      */

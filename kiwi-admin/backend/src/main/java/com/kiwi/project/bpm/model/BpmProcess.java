@@ -25,4 +25,11 @@ public class BpmProcess extends BaseEntity<String>
      * null 或 0 表示不限制。
      */
     private Integer maxProcessInstances;
+
+    /**
+     * 是否为「入口流程」：勾选后该流程会出现在 cryoEMS 等下游系统的工作流选择列表
+     * （{@code GET /bpm/process/entries}）中。默认 {@code false}，避免历史流程或仅用于 Call Activity
+     * 复用的子流程被错误地暴露给下游业务侧。
+     */
+    private boolean entry;
 }

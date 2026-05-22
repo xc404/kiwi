@@ -22,6 +22,8 @@ import org.camunda.bpm.engine.rest.dto.runtime.ProcessInstanceDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.getNewProcessId;
@@ -88,6 +91,8 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         private String bpmnXml;
         /** 运行中实例数量上限；0 表示不限制；不传则不修改原值 */
         private Integer maxProcessInstances;
+        /** 是否为入口流程；不传则不修改原值 */
+        private Boolean entry;
     }
 
     /** 启动流程实例时传入的流程变量（可选）。 */
@@ -237,9 +242,29 @@ public class BpmProcessDefinitionCtl extends BaseCtl
             }
             bpmProcess.setMaxProcessInstances(saveInput.maxProcessInstances);
         }
+        if( saveInput.entry != null ) {
+            bpmProcess.setEntry(saveInput.entry);
+        }
 
         this.bpmProcessDefinitionDao.updateSelective(bpmProcess);
         return bpmProcess;
+    }
+
+    /**
+     * 「入口流程」清单：仅返回已部署且被显式标记为 {@code entry=true} 的流程，供 cryoEMS
+     * 等下游系统在创建任务时选择。子流程（{@code entry=false}）与未部署的流程不会出现。
+     */
+    @Operation(operationId = "bpmPd_entries", summary = "查询已部署的入口流程清单（供下游系统选择）")
+    @GetMapping("entries")
+    @ResponseBody
+    public List<BpmProcess> listEntries(@RequestParam(required = false) String projectId) {
+        Criteria criteria = Criteria.where("entry").is(true)
+                .and("deployedVersion").gt(0)
+                .and("deployedAt").ne(null);
+        if( StringUtils.isNotBlank(projectId) ) {
+            criteria.and("projectId").is(projectId);
+        }
+        return this.bpmProcessDefinitionDao.findBy(new Query(criteria));
     }
 
     @Operation(operationId = "bpmPd_saveAs", summary = "将流程另存为新 id 的流程")

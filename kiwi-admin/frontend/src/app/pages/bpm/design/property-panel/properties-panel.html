@@ -15,7 +15,8 @@
                                 @if (viewMode() || isOutputTab(tab)) {
                                 <property-group-readonly [element]="element()" [bpmnModeler]="bpmnModeler()"
                                     [properties]="group.properties"
-                                    [variables]="activityVariables()"></property-group-readonly>
+                                    [variables]="activityVariables()"
+                                    [runtimeWarningEnabled]="viewMode() && (isInputTab(tab) || isOutputTab(tab))"></property-group-readonly>
                                 } @else {
                                 <property-group-edit [element]="element()" [bpmnModeler]="bpmnModeler()"
                                     [properties]="group.properties"

@@ -29,6 +29,11 @@ import type { BpmnRuntimeVariable } from "./bpmn-runtime-variable.model";
 export class ReadonlyPropertyRowComponent {
     propertyDescription = input.required<PropertyDescription>();
     variables = input<BpmnRuntimeVariable[]>([]);
+    /**
+     * 是否启用「配置值非空但运行时值缺失」的告警。
+     * 仅应在流程实例查看场景下的输入/输出 Tab 中开启，避免对设计态或其他只读场景误报。
+     */
+    runtimeWarningEnabled = input<boolean>(false);
 
     protected readonly displayName = computed(() => {
         const p = this.propertyDescription();
@@ -98,5 +103,25 @@ export class ReadonlyPropertyRowComponent {
             return JSON.stringify(v);
         }
         return String(v);
+    });
+
+    /**
+     * 由父级显式开启（仅输入/输出 Tab）时，配置值非空但运行时值缺失（null/undefined/空字符串）则告警。
+     */
+    protected readonly hasRuntimeMissingWarning = computed(() => {
+        if (!this.runtimeWarningEnabled()) {
+            return false;
+        }
+        if (this.configuredValue().length === 0) {
+            return false;
+        }
+        const v = this.runtimeRaw();
+        if (v === undefined || v === null) {
+            return true;
+        }
+        if (typeof v === "string" && v.length === 0) {
+            return true;
+        }
+        return false;
     });
 }

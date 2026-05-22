@@ -24,7 +24,8 @@ public class MotionFile implements Serializable
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class Meta {
+    public static class Meta implements Serializable {
+        private static final long serialVersionUID = 1L;
         private int frame_start;
         private int frame_end;
         private int zero_shift_frame;

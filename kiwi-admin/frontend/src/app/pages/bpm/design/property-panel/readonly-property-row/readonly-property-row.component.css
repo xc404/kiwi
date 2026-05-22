@@ -23,6 +23,27 @@
   color: #1890ff;
 }
 
+.warning-trigger {
+  margin-left: auto;
+  margin-right: 6px;
+  color: #faad14;
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.warning-trigger + .detail-trigger {
+  margin-left: 0;
+}
+
+.readonly-property-row__input-group--warning {
+  border-color: #faad14 !important;
+  background-color: #fffbe6;
+}
+
+.readonly-property-row__input-group--warning input[nz-input]:disabled {
+  background-color: #fffbe6;
+}
+
 .detail-body {
   width: min(360px, calc(100vw - 48px));
   max-width: 360px;

@@ -36,7 +36,12 @@ public class ExternalTaskRetryAutoConfiguration {
     public ExternalTaskRetryPlanner externalTaskRetryPlanner(
             JobRetryExceptionClassifier classifier,
             ExternalTaskRetryCycleResolver retryCycleResolver,
-            @Qualifier("externalTaskRetryEngineDefaultCycle") String engineDefaultCycle) {
-        return new ExternalTaskRetryPlanner(classifier, retryCycleResolver, engineDefaultCycle);
+            @Qualifier("externalTaskRetryEngineDefaultCycle") String engineDefaultCycle,
+            ExternalTaskRetryProperties props) {
+        return new ExternalTaskRetryPlanner(
+                classifier,
+                retryCycleResolver,
+                engineDefaultCycle,
+                props.getNonDecreasingRetryCycle());
     }
 }

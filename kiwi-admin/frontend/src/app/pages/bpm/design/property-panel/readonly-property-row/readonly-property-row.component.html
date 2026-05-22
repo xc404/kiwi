@@ -17,6 +17,7 @@
   <nz-form-control class="app-formly-vertical-item__control">
     <nz-input-group
       class="readonly-property-row__input-group"
+      [class.readonly-property-row__input-group--warning]="hasRuntimeMissingWarning()"
       [nzSuffix]="detailSuffixTpl"
     >
       <input
@@ -30,6 +31,17 @@
     </nz-input-group>
   </nz-form-control>
   <ng-template #detailSuffixTpl>
+    @if (hasRuntimeMissingWarning()) {
+      <span
+        class="warning-trigger"
+        nz-icon
+        nzType="exclamation-circle"
+        nzTheme="fill"
+        nz-tooltip
+        nzTooltipTitle="已配置值，但运行时未生效（变量为空）"
+        aria-label="运行时值缺失告警"
+      ></span>
+    }
     <span
       class="detail-trigger"
       nz-icon

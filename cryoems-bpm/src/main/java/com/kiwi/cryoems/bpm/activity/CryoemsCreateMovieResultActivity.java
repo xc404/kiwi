@@ -48,11 +48,6 @@ import org.springframework.stereotype.Component;
                         description = "MovieResult 文档 id",
                         schema = @Schema(defaultValue = "movieResultId")),
                 @ComponentParameter(
-                        key = "movieResultCreated",
-                        name = "movieResultCreated",
-                        description = "本次是否新建文档",
-                        schema = @Schema(defaultValue = "movieResultCreated")),
-                @ComponentParameter(
                         key = "movieResult",
                         name = "movieResult",
                         description = "MovieResult 对象（供后续节点使用）",
@@ -92,7 +87,7 @@ public class CryoemsCreateMovieResultActivity implements JavaDelegate {
         movieResult = movieResultRepository.save(movieResult);
 
         execution.setVariable("movieResultId", movieResult.getId());
-//        execution.setVariable("movieResult", movieResult);
+        execution.setVariable("movieResult", movieResult);
 
     }
 }

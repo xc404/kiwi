@@ -60,6 +60,7 @@ export { BpmEditorToken };
     BpmEditorProcessMetaComponent,
     BpmAiChatComponent,
   ],
+
   standalone: true,
 })
 export class BpmEditor extends BpmEditorToken implements OnInit {

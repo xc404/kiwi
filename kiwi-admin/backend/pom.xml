@@ -16,6 +16,8 @@
         <spring-boot.version>3.5.8</spring-boot.version>
         <!-- Spring AI Alibaba（DashScope / 通义），BOM 与 starter 版本对齐 -->
         <spring-ai-alibaba.version>1.0.0.4</spring-ai-alibaba.version>
+        <!-- Camunda Spin：自 7.22 起与 camunda BPM 引擎版本号统一，必须与 ${camunda.version} 一致 -->
+        <camunda-spin.version>${camunda.version}</camunda-spin.version>
     </properties>
     <parent>
         <groupId>com.kiwi</groupId>
@@ -64,6 +66,22 @@
                     <artifactId>commons-io</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!--
+            Camunda Spin：把流程变量的默认序列化格式从 Java 原生序列化切到 JSON（Jackson）。
+            配合 application.yml 中 camunda.bpm.default-serialization-format=application/json 生效；
+            领域对象（如 MovieResult）不再需要实现 Serializable，避免 ENGINE-02042 序列化失败。
+            自 Camunda 7.22 起 Spin 版本号已与 BPM 引擎统一（${camunda.version}）。
+        -->
+        <dependency>
+            <groupId>org.camunda.bpm</groupId>
+            <artifactId>camunda-engine-plugin-spin</artifactId>
+            <version>${camunda.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.camunda.spin</groupId>
+            <artifactId>camunda-spin-dataformat-json-jackson</artifactId>
+            <version>${camunda-spin.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>

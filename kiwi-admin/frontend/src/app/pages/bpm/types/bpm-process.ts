@@ -16,6 +16,11 @@ export interface BpmProcess {
    * 该流程在引擎中允许同时存在的运行中实例数上限；null 或 0 表示不限制。
    */
   maxProcessInstances?: number | null;
+  /**
+   * 是否为「入口流程」：勾选后该流程会出现在 cryoEMS 等下游系统的工作流选择列表
+   * （`GET /bpm/process/entries`）中。默认 `false`。
+   */
+  entry?: boolean;
   createdBy?: string;
   createdTime?: string | Date;
   updatedBy?: string;

@@ -27,6 +27,7 @@ function modelValueToConfiguredText(value: unknown): string | undefined {
       <bpm-readonly-property-row
         [propertyDescription]="p"
         [variables]="variables()"
+        [runtimeWarningEnabled]="runtimeWarningEnabled()"
       />
     }
     `,
@@ -39,6 +40,8 @@ export class PropertyGroupReadonly {
     bpmnModeler = input.required<BaseViewer>();
     element = input.required<Element>();
     variables = input<BpmnRuntimeVariable[]>([]);
+    /** 仅在输入/输出 Tab 的运行时查看场景下开启「运行时值缺失」告警 */
+    runtimeWarningEnabled = input<boolean>(false);
 
     /** 从元素模型填充 `valueText`，只读行再与 `variables` 合并展示（与原 Proxy + Formly 行为对齐） */
     enrichedProperties = computed(() => {

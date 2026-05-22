@@ -92,6 +92,11 @@ camunda.bpm:
     create: All tasks
   database:
     schema-update: true
+  # 流程变量对象的默认序列化格式：JSON（Jackson，via Camunda Spin）
+  # 切换后：setVariable("xxx", pojo) 不再要求 Serializable，避免 ENGINE-02042
+  # 注意：已存在的 Java 序列化历史变量仍按写入时的格式反序列化；只影响新写入
+  # 回退：环境变量设 CAMUNDA_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
+  default-serialization-format: ${CAMUNDA_DEFAULT_SERIALIZATION_FORMAT:application/json}
   generic-properties:
     properties:
       skip-isolation-level-check: true

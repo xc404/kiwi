@@ -275,18 +275,28 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
     private final SlurmService slurmService;
+    private final SlurmProperties slurmProperties;
+    private final SlurmJobRepository slurmJobRepository;
     /**
      * @param shellActivityBehavior 无 Slurm 集成时的回退执行器
      * @param slurmService          可选；用于路径解析等，与 {@link SlurmTaskManager} 独立注入
      * @param slurmTaskManager      可选；缺失时表示未装配 Slurm 提交能力，本处理器仅走 Shell 回退
+     * @param slurmProperties       可选；提供应用层并发闸门阈值（{@link SlurmProperties#getMaxConcurrentJobs()}）；
+     *                              与 {@link SlurmTaskManager} 同源装配，二者通常同时存在
+     * @param slurmJobRepository    可选；用于并发闸门按 {@code status=Running} 统计当前在跑作业数；
+     *                              缺失或阈值 {@code <= 0} 时跳过闸门
      */
     public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
                                     @Autowired(required = false) SlurmService slurmService,
-                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager) {
+                                    @Autowired(required = false) SlurmTaskManager slurmTaskManager,
+                                    @Autowired(required = false) SlurmProperties slurmProperties,
+                                    @Autowired(required = false) SlurmJobRepository slurmJobRepository) {
         this.shellActivityBehavior = shellActivityBehavior;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
         this.slurmService = slurmService;
+        this.slurmProperties = slurmProperties;
+        this.slurmJobRepository = slurmJobRepository;
     }
 
     /**
@@ -308,18 +318,20 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
             return CompletableFuture.completedFuture(ExternalTaskAsyncResult.updateVariablesOnly());
         }
 
-        SbatchConfig sbatchConfig = sbatchConfigBuilder.build(execution);
-        String taskType =
-                ExecutionUtils.getStringInputVariable(execution, "taskType")
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .orElseGet(() -> firstCommandToken(sbatchConfig.getCommand()));
         String externalTaskId = null;
         String workerId = null;
         if (execution instanceof ExternalTaskExecution ext) {
             externalTaskId = ext.getExternalTask().getId();
             workerId = ext.getExternalTask().getWorkerId();
         }
+        enforceConcurrencyGate(execution, externalTaskId);
+
+        SbatchConfig sbatchConfig = sbatchConfigBuilder.build(execution);
+        String taskType =
+                ExecutionUtils.getStringInputVariable(execution, "taskType")
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .orElseGet(() -> firstCommandToken(sbatchConfig.getCommand()));
         log.info(
                 "提交 Slurm 作业：processInstanceId={}, activityId={}, externalTaskId={}, jobName={}, partition={}, taskType={}, command={}",
                 processInstanceId,
@@ -364,6 +376,47 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
     }
 
 
+
+    /**
+     * 应用层并发闸门：在调用 {@code sbatch} 之前比对 Mongo {@code slurm_job{status:Running}} 的条数与
+     * {@link SlurmProperties#getMaxConcurrentJobs()}。达到或超过阈值时抛 {@link SlurmOverloadedException}，
+     * 由统一失败路径走 {@code handleFailure} 并按独立退避周期重排。
+     * <p>
+     * 短路条件：未注入 properties / repository、阈值 {@code <= 0}、或计数查询本身异常时均放行
+     * （拒绝提交比放行提交风险更高；计数异常需通过其他通道告警，而非堵在主链路上）。
+     */
+    private void enforceConcurrencyGate(DelegateExecution execution, String externalTaskId) {
+        if (slurmProperties == null || slurmJobRepository == null) {
+            return;
+        }
+        int max = slurmProperties.getMaxConcurrentJobs();
+        if (max <= 0) {
+            return;
+        }
+        long running;
+        try {
+            running = slurmJobRepository.countByStatus(SlurmJobStatus.Running);
+        } catch (Exception ex) {
+            log.warn("Slurm overload gate count failed, bypass: error={}", ex.toString());
+            return;
+        }
+        if (running < max) {
+            return;
+        }
+        String businessKey = execution.getBusinessKey();
+        String processInstanceId = execution.getProcessInstanceId();
+        String activityId = execution.getCurrentActivityId();
+        log.warn(
+                "Slurm overloaded, refusing sbatch: runningCount={}, maxConcurrentJobs={}, processInstanceId={}, activityId={}, externalTaskId={}, businessKey={}",
+                running,
+                max,
+                processInstanceId,
+                activityId,
+                externalTaskId,
+                businessKey);
+        throw new SlurmOverloadedException(
+                "Slurm overloaded: running=" + running + ", max=" + max);
+    }
 
     /** @return 是否具备 sbatch 提交与监听能力（由 {@link SlurmTaskManager} Bean 是否存在决定） */
     private boolean supportSlurm() {

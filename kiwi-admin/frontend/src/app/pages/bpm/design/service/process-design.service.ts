@@ -9,6 +9,8 @@ export type BpmProcessSaveBody = {
   name?: string;
   bpmnXml?: string;
   maxProcessInstances?: number;
+  /** 是否为入口流程；不传则不修改原值 */
+  entry?: boolean;
 };
 
 @Injectable({

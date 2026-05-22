@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
+import { FieldType } from '@app/shared/components/field/field';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { ColumnToken } from '@app/shared/components/table/column';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -288,6 +289,13 @@ export class BpmProjectProcess implements OnInit {
     ],
     fields: [
       { name: '名称', dataIndex: 'name' },
+      {
+        name: '入口流程',
+        dataIndex: 'entry',
+        type: FieldType.Boolean,
+        description: '勾选后该流程会出现在 cryoEMS 等下游系统的工作流选择列表中'
+       
+      },
       {
         name: '项目ID',
         dataIndex: 'projectId',

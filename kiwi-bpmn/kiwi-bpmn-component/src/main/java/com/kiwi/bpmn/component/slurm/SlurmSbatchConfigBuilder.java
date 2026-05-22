@@ -24,7 +24,7 @@ final class SlurmSbatchConfigBuilder {
         String cpu_per_task = ExecutionUtils.getStringInputVariable(execution, "slurm_cpu_per_task").orElse(null);
         String jobName = nonBlankOrElse(
                 ExecutionUtils.getStringInputVariable(execution, "slurm_job_name"),
-                defaultSlurmJobName(execution));
+                defaultSlurmJobName(command, execution));
         String errorFile = nonBlankOrElse(
                 ExecutionUtils.getStringInputVariable(execution, "slurm_error_file"),
                 jobName + ".err");
@@ -109,12 +109,12 @@ final class SlurmSbatchConfigBuilder {
     }
 
     /**
-     * 默认作业名：当前活动名 + 执行 ID，并做 Slurm job-name 允许的字符与长度裁剪。
+     * 默认作业名：取 {@code command} 的开头（第一个 token，通常是可执行程序或脚本名，
+     * 去除目录与扩展名）+ 执行 ID，并做 Slurm job-name 允许的字符与长度裁剪。
      */
-    private static String defaultSlurmJobName(DelegateExecution execution) {
-        String activityName = execution.getCurrentActivityName();
+    private static String defaultSlurmJobName(String command, DelegateExecution execution) {
         String execId = execution.getId();
-        String namePart = (activityName != null && !activityName.isBlank()) ? activityName.trim() : "activity";
+        String namePart = extractCommandHead(command);
         String idPart = (execId != null && !execId.isBlank()) ? execId.trim() : "unknown";
         String raw = namePart + "_" + idPart;
         String sanitized = raw.replaceAll("[^a-zA-Z0-9_-]", "_");
@@ -122,5 +122,24 @@ final class SlurmSbatchConfigBuilder {
             sanitized = sanitized.substring(0, 64);
         }
         return sanitized.isEmpty() ? "kiwi-slurm" : sanitized;
+    }
+
+    /**
+     * 从命令字符串中提取首个 token 作为作业名前缀：截掉参数、目录前缀与扩展名。
+     */
+    private static String extractCommandHead(String command) {
+        if (command == null || command.isBlank()) {
+            return "command";
+        }
+        String first = command.trim().split("\\s+", 2)[0];
+        int slash = Math.max(first.lastIndexOf('/'), first.lastIndexOf('\\'));
+        if (slash >= 0 && slash < first.length() - 1) {
+            first = first.substring(slash + 1);
+        }
+        int dot = first.indexOf('.');
+        if (dot > 0) {
+            first = first.substring(0, dot);
+        }
+        return first.isEmpty() ? "command" : first;
     }
 }
