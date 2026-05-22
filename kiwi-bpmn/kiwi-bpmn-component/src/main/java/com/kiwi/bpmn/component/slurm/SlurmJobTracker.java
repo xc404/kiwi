@@ -1,6 +1,7 @@
 package com.kiwi.bpmn.component.slurm;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -41,11 +42,21 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean
     /**
      * 将已提交作业写入库，供 sacct 轮询直至终态。
      */
-    public void saveTrackedJob(SlurmJob job) {
-        if( job == null
-                || job.getJobId() == null
-                || job.getExternalTaskId() == null ) {
-            return;
+    /**
+     * @return {@code true} 表示已写入 Mongo（集合 {@code slurm_job}）
+     */
+    public boolean saveTrackedJob(SlurmJob job) {
+        if( job == null || StringUtils.isBlank(job.getJobId()) ) {
+            log.warn("Skip Slurm job Mongo persist: job or jobId is missing");
+            return false;
+        }
+        if( StringUtils.isBlank(job.getExternalTaskId()) ) {
+            log.warn(
+                    "Skip Slurm job Mongo persist: externalTaskId is blank (jobId={}, processInstanceId={}, activityId={})",
+                    job.getJobId(),
+                    job.getProcessInstanceId(),
+                    job.getActivityId());
+            return false;
         }
         job.setId(job.getJobId());
         if( job.getCreatedTime() == null ) {
@@ -55,7 +66,13 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean
             job.setStatus(SlurmJobStatus.Running);
         }
         slurmJobRepository.save(job);
-        log.debug("Slurm job persisted for sacct tracking: jobId={}, externalTaskId={}", job.getJobId(), job.getExternalTaskId());
+        log.info(
+                "Slurm job persisted for sacct tracking: collection=slurm_job, jobId={}, externalTaskId={}, processInstanceId={}, activityId={}",
+                job.getJobId(),
+                job.getExternalTaskId(),
+                job.getProcessInstanceId(),
+                job.getActivityId());
+        return true;
     }
 
     @Override

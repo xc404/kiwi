@@ -8,17 +8,19 @@ import {
   inject,
   signal
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { interval } from 'rxjs';
 import { filter, map as mapOp } from 'rxjs/operators';
 import {
   BpmActivityVisualState,
+  BpmInstanceRecoverResultDto,
   BpmProcessInstanceDto,
   CamundaHistoricActivityInstance,
   ProcessInstanceService
@@ -26,6 +28,11 @@ import {
 import { BpmPropertiesPanel } from "../property-panel/properties-panel";
 import { BPM_ACTIVITY_MARKER_NAMES, BpmActivityMarkerName } from './bpm-activity-markers';
 import { BpmViewerHeaderComponent } from './bpm-viewer-header.component';
+import {
+  buildCalledProcessInstanceMap,
+  clearCallActivityLinkOverlays,
+  syncCallActivityLinkOverlays,
+} from './bpm-viewer-call-activity-links';
 import { ElementModel } from '../extension/element-model';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
 @Component({
@@ -40,7 +47,9 @@ export class BpmViewer implements OnInit, OnDestroy {
   private static readonly AUTO_REFRESH_INTERVAL_MS = 3_000;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly processInstanceService = inject(ProcessInstanceService);
+  private readonly message = inject(NzMessageService);
 
   @ViewChild('canvasHost', { static: true }) canvasHost!: ElementRef<HTMLElement>;
 
@@ -53,7 +62,12 @@ export class BpmViewer implements OnInit, OnDestroy {
   processInstanceId = signal<string | undefined>(undefined);
   processActivities = signal<CamundaHistoricActivityInstance[]>([]);
   activityStates = signal<Map<string, CamundaHistoricActivityInstance>>(new Map());
+  /** CallActivity activityId -> 子流程实例 ID */
+  calledProcessInstanceMap = signal<Map<string, string>>(new Map());
   bpmnXml = signal<string | undefined>(undefined);
+
+  /** 一键恢复请求中（避免重复点击；用于按钮 loading 态） */
+  protected readonly recovering = signal(false);
 
 
   /** 最近一次 importXML 已成功，可与 processActivities 叠加打标 */
@@ -110,6 +124,12 @@ export class BpmViewer implements OnInit, OnDestroy {
       this.processInstance();
       this.markActivityState();
     });
+
+    effect(() => {
+      this.bpmnImportReady();
+      this.calledProcessInstanceMap();
+      this.syncSubprocessLinkOverlays();
+    });
   }
 
   ngOnInit(): void {
@@ -142,6 +162,7 @@ export class BpmViewer implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.viewer) {
+      clearCallActivityLinkOverlays(this.viewer);
       this.viewer.off('selection.changed', this.onSelectionChanged);
       this.viewer.destroy();
     }
@@ -211,8 +232,35 @@ export class BpmViewer implements OnInit, OnDestroy {
       next: (activities) => {
         this.processActivities.set(activities);
         this.activityStates.set(this.buildActivityStateMap(activities));
+        this.calledProcessInstanceMap.set(buildCalledProcessInstanceMap(activities));
       }
     });
+  }
+
+  private syncSubprocessLinkOverlays(): void {
+    if (!this.bpmnImportReady() || !this.viewer) {
+      if (this.viewer) {
+        clearCallActivityLinkOverlays(this.viewer);
+      }
+      return;
+    }
+    syncCallActivityLinkOverlays(
+      this.viewer,
+      this.calledProcessInstanceMap(),
+      (childId) => this.openChildProcessInstanceViewer(childId),
+    );
+  }
+
+  private openChildProcessInstanceViewer(childProcessInstanceId: string): void {
+    const id = childProcessInstanceId.trim();
+    if (!id) {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.hash = this.router.serializeUrl(
+      this.router.createUrlTree(['/bpm/process-instance', id]),
+    );
+    window.open(url.toString(), '_blank', 'noopener,noreferrer');
   }
 
   /** 轮询时仅刷新实例状态与活动历史，不重复加载 BPMN 定义 */
@@ -222,6 +270,37 @@ export class BpmViewer implements OnInit, OnDestroy {
     }
     this.loadProcessInstance();
     this.loadProcessActivities();
+  }
+
+  /**
+   * 一键恢复：调用 POST /bpm/process-instance/{id}/recover，重置 OPEN incident 关联的
+   * Job / External Task retries；成功后立即拉取一次最新状态以反馈结果。
+   */
+  protected onRecoverRequested(): void {
+    const id = this.processInstanceId();
+    if (!id || this.recovering()) {
+      return;
+    }
+    this.recovering.set(true);
+    this.processInstanceService.recoverProcessInstance(id).subscribe({
+      next: (res) => {
+        this.recovering.set(false);
+        this.message.success(this.formatRecoverResult(res));
+        this.refreshRuntimeData();
+      },
+      error: (err) => {
+        this.recovering.set(false);
+        console.error('一键恢复失败', err);
+        this.message.error('一键恢复失败，请稍后重试');
+      },
+    });
+  }
+
+  private formatRecoverResult(res: BpmInstanceRecoverResultDto): string {
+    return (
+      `已恢复：Job ${res.jobsRetried} 个、External Task ${res.externalTasksRetried} 个` +
+      `（OPEN incident ${res.openIncidentCount}，跳过 ${res.incidentsSkipped}，retries=${res.retriesApplied}）`
+    );
   }
 
   /** 与工具栏状态「运行中」一致：未结束、未挂起、无 open incident 且非 ERROR。 */

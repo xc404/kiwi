@@ -4,7 +4,6 @@ import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.cryoems.bpm.dao.MovieResultRepository;
-import com.kiwi.cryoems.bpm.model.MrcMetadata;
 import com.kiwi.cryoems.bpm.model.MovieResult;
 import com.kiwi.cryoems.bpm.movieresult.MovieResultAssemblyService;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,15 +15,15 @@ import org.camunda.bpm.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
 /**
- * 创建并持久化 {@link MovieResult}；motion / ctf / vfm 业务分别由对应 Section 处理。
+ * 创建并持久化 {@link MovieResult}；motion / ctf 由对应 Section 处理，VFM 由 {@link CryoemsApplyVfmMovieResultActivity} 单独写入。
  */
 @ComponentDescription(
         name = "CryoEMS 创建 MovieResult",
         group = "CryoEM",
-        version = "1.4",
+        version = "1.5",
         description =
-                "仅需 motionNoDwMrc、ctfOutputFile、vfmLogFile；motion/ctf/vfm 三段业务分别推断路径、"
-                        + "生成缩略图并写入 MovieResult。",
+                "仅需 motionNoDwMrc、ctfOutputFile；motion/ctf 推断路径、生成缩略图并写入 MovieResult。"
+                        + "VFM 请使用「CryoEMS 应用 VFM 到 MovieResult」节点。",
         inputs = {
                 @ComponentParameter(
                         key = "motionVersion",
@@ -40,12 +39,7 @@ import org.springframework.stereotype.Component;
                         key = "ctfOutputFile",
                         name = "CTFFIND5 输出 MRC",
                         description = "CTFFIND5 *_freq.mrc 路径",
-                        required = true),
-                @ComponentParameter(
-                        key = "vfmLogFile",
-                        name = "VFM 日志",
-                        description = "VFM *_predicted_boxes.txt 路径；未跑 VFM 时可省略",
-                        required = false)
+                        required = true)
         },
         outputs = {
                 @ComponentParameter(

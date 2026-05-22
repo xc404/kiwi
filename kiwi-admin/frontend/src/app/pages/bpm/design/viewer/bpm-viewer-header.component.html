@@ -10,6 +10,23 @@
       }
     </div>
     <nz-tag [nzColor]="statusColor()" class="instance-toolbar__status">{{ statusLabel() }}</nz-tag>
+    @if (canRecover()) {
+    <button
+      nz-button
+      nzType="primary"
+      nzDanger
+      nzSize="small"
+      class="instance-toolbar__recover"
+      nz-popconfirm
+      nzPopconfirmTitle="将为该实例下所有 OPEN incident 重置 retries 并恢复执行，是否继续？"
+      nzPopconfirmPlacement="bottomRight"
+      [nzLoading]="recovering()"
+      (nzOnConfirm)="recoverRequested.emit()"
+    >
+      <span nz-icon nzType="reload"></span>
+      一键恢复
+    </button>
+    }
   </div>
   <div class="instance-toolbar__details" [class.instance-toolbar__details--no-error]="!showErrorStrip()">
     <div>

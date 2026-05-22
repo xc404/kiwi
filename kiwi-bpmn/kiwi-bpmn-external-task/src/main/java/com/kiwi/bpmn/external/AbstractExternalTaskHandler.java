@@ -35,6 +35,16 @@ public abstract class AbstractExternalTaskHandler implements JavaDelegate, Exter
 
     @Override
     public void execute(ExternalTask externalTask, ExternalTaskService externalTaskService) {
+        if (isRetryAttempt(externalTask)) {
+            log.info(
+                    "Retrying external task, topic={}, id={}, activityId={}, processInstanceId={}, retriesLeft={}, previousError={}",
+                    externalTask.getTopicName(),
+                    externalTask.getId(),
+                    externalTask.getActivityId(),
+                    externalTask.getProcessInstanceId(),
+                    externalTask.getRetries(),
+                    externalTask.getErrorMessage());
+        }
         ExternalTaskExecution externalTaskExecution = new ExternalTaskExecution(externalTask, externalTaskService);
         try {
             Date lockExpirationTime = externalTaskExecution.getLockExpirationTime();
@@ -82,9 +92,26 @@ public abstract class AbstractExternalTaskHandler implements JavaDelegate, Exter
                 retries = plan.nextRetries();
                 retryTimeoutMs = plan.retryTimeoutMs();
             }
+            if (retries > 0) {
+                log.warn(
+                        "External task failed, scheduling retry, topic={}, id={}, nextRetries={}, retryTimeoutMs={}, error={}",
+                        externalTask.getTopicName(),
+                        externalTask.getId(),
+                        retries,
+                        retryTimeoutMs,
+                        errorMessage);
+            }
             externalTaskService.handleFailure(
                     externalTask, errorMessage, errorDetails, retries, retryTimeoutMs);
         }
+    }
+
+    /**
+     * 与 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner} 中 {@code firstFailure} 判定互补：
+     * 此前已 {@code handleFailure} 或人工重置过 retries 时，worker 再次拉取到该任务视为重试执行。
+     */
+    private static boolean isRetryAttempt(ExternalTask task) {
+        return task.getRetries() != null || task.getErrorMessage() != null;
     }
 
     /**

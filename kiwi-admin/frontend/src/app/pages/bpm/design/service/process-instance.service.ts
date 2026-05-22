@@ -80,6 +80,8 @@ export interface CamundaHistoricActivityInstance {
   canceled?: boolean;
   /** 关联的未关闭 incident id 列表（存在时表示该活动处于异常态） */
   incidentIds?: string[] | null;
+  /** CallActivity 被调用的子流程实例 ID（Camunda history/activity-instance） */
+  calledProcessInstanceId?: string | null;
   completed: boolean;
   active: boolean;
 }
@@ -87,6 +89,20 @@ export interface CamundaHistoricActivityInstance {
 /** 流程定义 XML（GET /process-definition/{id}/xml） */
 export interface CamundaProcessDefinitionXml {
   bpmn20Xml: string;
+}
+
+/** 与后端 BpmInstanceRecoverResultDto 一致：一键恢复 OPEN incident 的结果摘要 */
+export interface BpmInstanceRecoverResultDto {
+  /** 调用时该实例上处于 OPEN 的 incident 数量 */
+  openIncidentCount: number;
+  /** 已对其执行 setJobRetries 的去重后 Job 数量 */
+  jobsRetried: number;
+  /** 已对其执行 external task setRetries 的去重后 External Task 数量 */
+  externalTasksRetried: number;
+  /** 本次未处理（类型不支持或 configuration 为空）的 incident 数量 */
+  incidentsSkipped: number;
+  /** 实际写入的重试次数 */
+  retriesApplied: number;
 }
 
 @Injectable({
@@ -160,6 +176,21 @@ export class ProcessInstanceService {
    * Camunda 返回变量实例数组；映射为与 GET /process-instance/{id}/variables 相近的 Record（name -> { type, value }）。
    * 同名变量多次出现时后者覆盖前者（与历史 API 列表顺序一致）。
    */
+  /**
+   * 一键恢复运行中实例上所有 OPEN 的 incident：
+   * {@code POST /bpm/process-instance/{instanceId}/recover?retries={n}}（默认 3，范围 1～100）。
+   */
+  recoverProcessInstance(
+    processInstanceId: string,
+    retries?: number,
+  ): Observable<BpmInstanceRecoverResultDto> {
+    const query = retries != null ? `?retries=${encodeURIComponent(String(retries))}` : '';
+    return this.baseHttp.post<BpmInstanceRecoverResultDto>(
+      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}/recover${query}`,
+      null,
+    );
+  }
+
   getProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
     return this.http
       .get<CamundaHistoricVariableInstance[]>(`${this.engineRestRoot()}/history/variable-instance`, {

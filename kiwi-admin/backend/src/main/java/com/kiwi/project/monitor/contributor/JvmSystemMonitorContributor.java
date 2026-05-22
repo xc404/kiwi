@@ -50,7 +50,7 @@ public class JvmSystemMonitorContributor implements MonitorContributor {
                     .unit("%")
                     .build());
             }
-            double sysCpu = sun.getSystemCpuLoad();
+            double sysCpu = sun.getCpuLoad();
             if (sysCpu >= 0) {
                 m.add(MonitorMetricDto.builder()
                     .id("system-cpu")
@@ -60,8 +60,8 @@ public class JvmSystemMonitorContributor implements MonitorContributor {
                     .unit("%")
                     .build());
             }
-            long free = sun.getFreePhysicalMemorySize();
-            long total = sun.getTotalPhysicalMemorySize();
+            long free = sun.getFreeMemorySize();
+            long total = sun.getTotalMemorySize();
             if (total > 0) {
                 double usedPct = 100.0 * (total - free) / total;
                 m.add(MonitorMetricDto.builder()

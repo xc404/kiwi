@@ -3,6 +3,7 @@ package com.kiwi.bpmn.component.slurm;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -165,6 +166,10 @@ public class SlurmService implements InitializingBean
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        if (StringUtils.isBlank(slurmProperties.getWorkDirectory())) {
+            throw new IllegalStateException(
+                    "kiwi.bpm.slurm.work-directory is required when kiwi.bpm.slurm.enabled=true");
+        }
         this.shellFileDir = new File(slurmProperties.getWorkDirectory());
         if (!this.shellFileDir.exists()) {
             this.shellFileDir.mkdirs();

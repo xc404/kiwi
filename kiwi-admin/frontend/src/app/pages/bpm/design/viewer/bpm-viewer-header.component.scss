@@ -55,6 +55,13 @@
   flex-shrink: 0;
 }
 
+.instance-toolbar__recover {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .instance-toolbar__details {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.2fr);

@@ -3,8 +3,8 @@ package com.kiwi.bpmn.component.slurm;
 import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.bpmn.external.ExternalTaskExecution;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -22,14 +22,14 @@ public class SlurmTaskManager implements InitializingBean {
 
     private final SlurmProperties slurmProperties;
     private final SlurmService slurmService;
-    private final ObjectProvider<SlurmJobTracker> slurmJobTracker;
+    private final SlurmJobTracker slurmJobTracker;
 
     private ThreadPoolTaskExecutor taskExecutor;
 
     public SlurmTaskManager(
             SlurmProperties slurmProperties,
             SlurmService slurmService,
-            ObjectProvider<SlurmJobTracker> slurmJobTracker) {
+            SlurmJobTracker slurmJobTracker) {
         this.slurmProperties = slurmProperties;
         this.slurmService = slurmService;
         this.slurmJobTracker = slurmJobTracker;
@@ -45,13 +45,7 @@ public class SlurmTaskManager implements InitializingBean {
         log.info("SlurmTaskManager thread pool initialized: core=max={}", poolSize);
         if (slurmProperties.isFlagListenerEnabled()) {
             log.warn(
-                    "kiwi.bpm.slurm.flag-listener-enabled=true is ignored: legacy .flag file watcher has been removed; use sacct (kiwi.bpm.slurm.sacct.enabled).");
-        }
-        if (slurmProperties.getSacct() != null
-                && slurmJobTracker.getIfAvailable() == null) {
-            log.warn(
-                    "Slurm sacct tracking unavailable (no SlurmJobTracker): "
-                            + "configure Mongo / Spring Data MongoDB so SlurmJobRepository is registered for job completion tracking.");
+                    "kiwi.bpm.slurm.flag-listener-enabled=true is ignored: legacy .flag file watcher has been removed; use sacct tracking.");
         }
     }
 
@@ -60,26 +54,54 @@ public class SlurmTaskManager implements InitializingBean {
      */
     public CompletableFuture<SlurmJob> submitSlurmJob(String taskType,
             DelegateExecution execution, SbatchConfig sbatchConfig) {
+        return submitSlurmJob(taskType, execution, sbatchConfig, null, null);
+    }
+
+    /**
+     * @param externalTaskId Camunda 外部任务 id；由 {@link SlurmExternalTaskHandler} 显式传入，避免仅依赖 {@code instanceof} 推断
+     * @param workerId       外部任务 workerId，可为 null
+     */
+    public CompletableFuture<SlurmJob> submitSlurmJob(String taskType,
+            DelegateExecution execution,
+            SbatchConfig sbatchConfig,
+            String externalTaskId,
+            String workerId) {
         File sbatchFile = slurmService.createSbatchFile(execution.getId() + ".sbatch", sbatchConfig);
 
+        String resolvedExternalTaskId = externalTaskId;
+        String resolvedWorkerId = workerId;
+        if (StringUtils.isBlank(resolvedExternalTaskId) && execution instanceof ExternalTaskExecution ext) {
+            resolvedExternalTaskId = ext.getExternalTask().getId();
+            resolvedWorkerId = ext.getExternalTask().getWorkerId();
+        }
+
         log.info(
-                "Preparing Slurm submit: processInstanceId={}, activityId={}, executionId={}, jobName={}, sbatchFile={}",
+                "Preparing Slurm submit: processInstanceId={}, activityId={}, executionId={}, externalTaskId={}, jobName={}, sbatchFile={}",
                 execution.getProcessInstanceId(),
                 execution.getCurrentActivityId(),
                 execution.getId(),
+                resolvedExternalTaskId,
                 sbatchConfig.getJobName(),
                 sbatchFile.getAbsolutePath());
 
-        String externalTaskId = null;
-        String workerId = null;
-        if (execution instanceof ExternalTaskExecution ext) {
-            externalTaskId = ext.getExternalTask().getId();
-            workerId = ext.getExternalTask().getWorkerId();
+        if (StringUtils.isBlank(resolvedExternalTaskId)) {
+            log.warn(
+                    "Slurm submit without externalTaskId; Mongo sacct tracking cannot persist: processInstanceId={}, activityId={}, executionId={}, executionClass={}",
+                    execution.getProcessInstanceId(),
+                    execution.getCurrentActivityId(),
+                    execution.getId(),
+                    execution.getClass().getName());
         }
-        final String tid = externalTaskId;
-        final String wid = workerId;
+        final String tid = resolvedExternalTaskId;
+        final String wid = resolvedWorkerId;
+        final String processInstanceId = execution.getProcessInstanceId();
+        final String activityId = execution.getCurrentActivityId();
+        final String executionId = execution.getId();
         return taskExecutor.submitCompletable(() -> {
             SlurmJob job = submitSbatch(sbatchFile);
+            job.setProcessInstanceId(processInstanceId);
+            job.setActivityId(activityId);
+            job.setExecutionId(executionId);
             job.setJobName(sbatchConfig.getJobName());
             job.setCommand(sbatchConfig.getCommand());
             job.setTaskType(taskType);
@@ -94,7 +116,16 @@ public class SlurmTaskManager implements InitializingBean {
             // 与 SlurmService#getExternalTaskLockExtensionDurationMs 同源基准（±delta 仅作用于 extendLock）
             long trackMs = slurmService.getSlurmJobMaxDuration(execution);
             job.setExpiration(new Date(created.getTime() + trackMs));
-            slurmJobTracker.ifAvailable(t -> t.saveTrackedJob(job));
+            if (!slurmJobTracker.saveTrackedJob(job)) {
+                throw new IllegalStateException(
+                        "Slurm sbatch succeeded but Mongo tracking was not persisted (jobId="
+                                + job.getJobId()
+                                + ", externalTaskId="
+                                + job.getExternalTaskId()
+                                + ", processInstanceId="
+                                + processInstanceId
+                                + ")");
+            }
             return job;
         });
     }

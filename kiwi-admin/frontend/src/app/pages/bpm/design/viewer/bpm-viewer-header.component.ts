@@ -1,5 +1,8 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 import { BpmProcessInstanceDto } from '../service/process-instance.service';
@@ -15,7 +18,15 @@ export interface BpmViewerToolbarErrorLine {
   selector: 'bpm-viewer-header',
   templateUrl: './bpm-viewer-header.component.html',
   styleUrl: './bpm-viewer-header.component.scss',
-  imports: [DatePipe, NgClass, NzTagModule, NzTypographyModule],
+  imports: [
+    DatePipe,
+    NgClass,
+    NzButtonModule,
+    NzIconModule,
+    NzPopconfirmModule,
+    NzTagModule,
+    NzTypographyModule,
+  ],
   standalone: true,
 })
 export class BpmViewerHeaderComponent {
@@ -25,7 +36,32 @@ export class BpmViewerHeaderComponent {
   /** 已有实例 ID 且仍在拉取详情时展示加载文案。 */
   readonly loading = input(false);
 
+  /** 一键恢复按钮处于请求中（避免重复点击与提示动画） */
+  readonly recovering = input(false);
+
+  /** 用户确认一键恢复 OPEN incident。 */
+  @Output() readonly recoverRequested = new EventEmitter<void>();
+
   readonly activityMarkerLegend = BPM_ACTIVITY_MARKER_LEGEND;
+
+  /** 仅在异常态（state=ERROR 或存在 OPEN incident）下展示恢复按钮 */
+  readonly canRecover = computed(() => {
+    const v = this.processInstance();
+    if (!v?.id) {
+      return false;
+    }
+    if (v.ended) {
+      return false;
+    }
+    const state = String(v.state ?? '')
+      .trim()
+      .toUpperCase();
+    if (state === 'COMPLETED' || state === 'CANCELED') {
+      return false;
+    }
+    const hasOpenIncidents = (v.openIncidents?.length ?? 0) > 0;
+    return state === 'ERROR' || hasOpenIncidents;
+  });
 
   readonly statusLabel = computed(() => {
     const v = this.processInstance();

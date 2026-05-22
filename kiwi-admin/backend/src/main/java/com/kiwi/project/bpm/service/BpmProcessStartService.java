@@ -33,10 +33,10 @@ public class BpmProcessStartService {
         ProcessInstance processInstance;
         if (variables == null || variables.isEmpty()) {
             processInstance = processEngine.getRuntimeService()
-                    .startProcessInstanceById(deployedProcessDefinitionId);
+                    .startProcessInstanceByKey(bpmProcessId);
         } else {
             processInstance = processEngine.getRuntimeService()
-                    .startProcessInstanceById(deployedProcessDefinitionId, variables);
+                    .startProcessInstanceByKey(bpmProcessId, variables);
         }
         return new ProcessInstanceDto(processInstance);
     }

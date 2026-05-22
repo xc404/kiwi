@@ -314,15 +314,24 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
                         .map(String::trim)
                         .filter(s -> !s.isEmpty())
                         .orElseGet(() -> firstCommandToken(sbatchConfig.getCommand()));
+        String externalTaskId = null;
+        String workerId = null;
+        if (execution instanceof ExternalTaskExecution ext) {
+            externalTaskId = ext.getExternalTask().getId();
+            workerId = ext.getExternalTask().getWorkerId();
+        }
         log.info(
-                "提交 Slurm 作业：processInstanceId={}, activityId={}, jobName={}, partition={}, taskType={}, command={}",
+                "提交 Slurm 作业：processInstanceId={}, activityId={}, externalTaskId={}, jobName={}, partition={}, taskType={}, command={}",
                 processInstanceId,
                 activityId,
+                externalTaskId,
                 sbatchConfig.getJobName(),
                 sbatchConfig.getPartition(),
                 taskType,
                 sbatchConfig.getCommand());
-        return this.slurmTaskManager.submitSlurmJob(taskType, execution, sbatchConfig).thenApply(slurmJob -> {
+        return this.slurmTaskManager
+                .submitSlurmJob(taskType, execution, sbatchConfig, externalTaskId, workerId)
+                .thenApply(slurmJob -> {
             log.info(
                     "Slurm 作业已提交：processInstanceId={}, activityId={}, slurmJobId={}",
                     processInstanceId,

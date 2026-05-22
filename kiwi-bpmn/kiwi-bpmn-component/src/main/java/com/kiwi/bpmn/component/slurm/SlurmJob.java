@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
@@ -17,9 +17,19 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Document(collection = "slurm_job")
 public class SlurmJob extends BaseEntity<String> implements Cloneable{
 
     private String jobId;
+
+    /** Camunda 流程实例 id，便于在 Mongo 中按流程检索。 */
+    private String processInstanceId;
+
+    /** BPMN 活动 id（如 {@code Activity_095vcnd}）。 */
+    private String activityId;
+
+    /** Camunda execution id（与 sbatch 文件名后缀一致）。 */
+    private String executionId;
     private String jobName;
 
     /** 提交的作业命令（如 sbatch 行或实际执行的命令）。 */

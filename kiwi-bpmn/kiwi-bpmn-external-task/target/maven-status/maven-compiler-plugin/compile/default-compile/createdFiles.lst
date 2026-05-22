@@ -1,0 +1,14 @@
+com\kiwi\bpmn\external\AbstractExternalTaskHandler.class
+com\kiwi\bpmn\external\config\ClientProperties.class
+com\kiwi\bpmn\external\LocalExternalTaskClientBuild.class
+com\kiwi\bpmn\external\config\PropertiesAwareClientFactory.class
+com\kiwi\bpmn\external\utils\DtoUtils.class
+com\kiwi\bpmn\external\retry\ExternalTaskRetryCycleResolver.class
+com\kiwi\bpmn\external\ExternalTaskExecution.class
+com\kiwi\bpmn\external\ExternalTaskAsyncResult.class
+com\kiwi\bpmn\external\config\PropertiesAwareSpringTopicSubscription.class
+com\kiwi\bpmn\external\LocalEngineClient.class
+com\kiwi\bpmn\external\config\ExternalTaskRetryProperties.class
+com\kiwi\bpmn\external\retry\ExternalTaskRetryPlanner.class
+com\kiwi\bpmn\external\config\ClientAutoConfiguration.class
+com\kiwi\bpmn\external\config\ExternalTaskRetryAutoConfiguration.class

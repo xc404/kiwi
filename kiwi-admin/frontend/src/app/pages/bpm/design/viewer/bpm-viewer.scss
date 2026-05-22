@@ -148,3 +148,38 @@
   stroke-width: 3px !important;
   filter: drop-shadow(0 0 6px rgba(114, 46, 209, 0.5));
 }
+
+/* CallActivity 子流程实例链接（diagram-js overlay） */
+:host ::ng-deep .kiwi-bpmn-subprocess-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #91caff;
+  border-radius: 4px;
+  background: #e6f4ff;
+  color: #1677ff;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+:host ::ng-deep .kiwi-bpmn-subprocess-link:hover {
+  background: #bae0ff;
+  border-color: #69b1ff;
+  color: #0958d9;
+}
+
+:host ::ng-deep .kiwi-bpmn-subprocess-link:focus-visible {
+  outline: 2px solid #1677ff;
+  outline-offset: 1px;
+}
+
+:host ::ng-deep .kiwi-bpmn-subprocess-link__icon {
+  display: inline-flex;
+  font-size: 12px;
+}

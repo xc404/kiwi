@@ -1,5 +1,9 @@
 <section class="page-content bpm-viewer-page">
-  <bpm-viewer-header [processInstance]="processInstance()" [loading]="!!processInstanceId() && !processInstance()" />
+  <bpm-viewer-header
+    [processInstance]="processInstance()"
+    [loading]="!!processInstanceId() && !processInstance()"
+    [recovering]="recovering()"
+    (recoverRequested)="onRecoverRequested()" />
   <nz-layout class="full-height bpm-viewer-layout">
     <nz-content class="flex flex-column bpm-viewer-main-content">
       <nz-layout class="bpm-viewer-workspace">

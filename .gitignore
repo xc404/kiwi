@@ -53,9 +53,5 @@ kiwi-admin/frontend/dist/
 kiwi-admin/script/__pycache__/
 kiwi-bpmn/kiwi-bpmn-core/target/
 kiwi-common/target/
-kiwi-bpmn/kiwi-bpmn-external-task/target/
-cryoems-bpm/target/
-kiwi-bpmn/kiwi-bpmn-component/target/
-kiwi-admin/backend/script/conf/remote.dev.yaml
-kiwi-admin/backend/script/__pycache__/
+kiwi-bpmn/**/target/
 /data/

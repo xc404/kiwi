@@ -20,10 +20,14 @@ public class SlurmProperties {
     private long expirationExternalTaskLockDeltaMs = 60_000L;
 
     /**
-     * 是否启用 Slurm 集成（sbatch、外部任务监听、工作目录清理等）。
-     * 为唯一总开关：仅当为 true 且配置了 {@link #workDirectory} 时加载 Slurm 相关 Bean。
-     * 若不在配置文件中设置该项，默认为 true，与历史上仅配置 {@code work-directory} 的行为一致；
-     * 显式设为 {@code false} 可关闭 Slurm。
+     * 是否启用 Slurm 集成（sbatch、外部任务监听、sacct/Mongo 跟踪、工作目录清理等）。
+     * <p>
+     * 为唯一总开关，默认 {@code true}。为 {@code true} 时启动期校验：
+     * <ul>
+     *   <li>必须配置非空的 {@link #workDirectory}</li>
+     *   <li>必须能装配 {@link SlurmJobRepository} / {@link SlurmJobTracker}（需 {@code spring.data.mongodb}）</li>
+     * </ul>
+     * 不满足则应用启动失败。不需要 Slurm 的环境请显式设为 {@code false}。
      */
     private boolean enabled = true;
 
