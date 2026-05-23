@@ -9,15 +9,19 @@ import com.kiwi.project.bpm.dto.BpmProcessInstanceStateDto;
 import com.kiwi.project.bpm.service.BpmProcessInstanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
 import org.camunda.bpm.engine.ExternalTaskService;
 import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.ManagementService;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.TaskService;
 import org.camunda.bpm.engine.history.HistoricProcessInstance;
 import org.camunda.bpm.engine.history.HistoricProcessInstanceQuery;
 import org.camunda.bpm.engine.runtime.Incident;
+import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.task.Task;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,12 +60,20 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     private final HistoryService historyService;
     private final BpmProcessInstanceService bpmProcessInstanceService;
     private final RuntimeService runtimeService;
+    private final TaskService taskService;
 
     public BpmProcessInstanceCtl(ProcessEngine processEngine, BpmProcessInstanceService bpmProcessInstanceService) {
         this.processEngine = processEngine;
         this.historyService = processEngine.getHistoryService();
         this.bpmProcessInstanceService = bpmProcessInstanceService;
         this.runtimeService = processEngine.getRuntimeService();
+        this.taskService = processEngine.getTaskService();
+    }
+
+    /** 完成 UserTask / 推动 ManualTask 时透传的流程变量（可选）。 */
+    @Data
+    public static class CompleteTaskInput {
+        private Map<String, Object> variables;
     }
 
     /**
@@ -202,6 +215,102 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         out.setIncidentsSkipped(skipped);
         out.setRetriesApplied(retriesApplied);
         return out;
+    }
+
+    /**
+     * 按 {@code instanceId} 与 {@code taskKey} 定位唯一等待节点并推进流程：
+     * <ol>
+     *   <li>优先按 {@code taskDefinitionKey} 查 active UserTask（{@link TaskService#complete(String, Map)}）；</li>
+     *   <li>未命中则按 {@code activityId} 查 async-continuation Job（覆盖 ManualTask {@code asyncBefore="true"}
+     *       等以 Job 形式停泊的等待节点）：先写入变量再 {@link ManagementService#executeJob(String)}。</li>
+     * </ol>
+     * <p>典型用例：cryoEMS 等外部系统在满足业务前置条件后，主动完成 BPMN 中作为"等待"节点的
+     * UserTask / ManualTask 推动流程。
+     *
+     * @return 推动成功后查询到的轻量状态；失败按 HTTP 语义：404=实例不存在/已结束、409=无匹配或多条匹配。
+     */
+    @Operation(
+            operationId = "bpmInst_completeTask",
+            summary = "按 instance + taskKey 推动等待节点（UserTask 或 ManualTask asyncBefore Job）",
+            description = "供机机集成（如 cryoEMS）推动 BPMN 等待节点；404=实例不存在/已结束；409=无匹配或多条匹配。")
+    @PostMapping("{instanceId}/tasks/{taskKey}/complete")
+    @ResponseBody
+    public BpmProcessInstanceStateDto complete(
+            @PathVariable String instanceId,
+            @PathVariable String taskKey,
+            @RequestBody(required = false) CompleteTaskInput body) {
+
+        if (!StringUtils.hasText(instanceId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "instanceId is required");
+        }
+        if (!StringUtils.hasText(taskKey)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "taskKey is required");
+        }
+
+        String pid = instanceId.trim();
+        String key = taskKey.trim();
+
+        ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+                .processInstanceId(pid)
+                .singleResult();
+        if (pi == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "process instance not found or already ended: " + instanceId);
+        }
+
+        Map<String, Object> variables = body != null && body.getVariables() != null
+                ? body.getVariables()
+                : Map.of();
+
+        // 1) UserTask 路径：taskService.complete
+        List<Task> userTasks = taskService.createTaskQuery()
+                .processInstanceId(pid)
+                .taskDefinitionKey(key)
+                .active()
+                .list();
+        if (userTasks.size() > 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "ambiguous: multiple active user tasks with key '" + taskKey + "' on instance '" + instanceId + "'");
+        }
+        if (userTasks.size() == 1) {
+            taskService.complete(userTasks.get(0).getId(), variables);
+            return loadStateAfterComplete(pid);
+        }
+
+        // 2) ManualTask / asyncBefore-Job 路径：managementService.executeJob
+        ManagementService managementService = processEngine.getManagementService();
+        List<Job> jobs = managementService.createJobQuery()
+                .processInstanceId(pid)
+                .activityId(key)
+                .list();
+        if (jobs.size() > 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "ambiguous: multiple async-continuation jobs with activity id '" + taskKey
+                            + "' on instance '" + instanceId + "'");
+        }
+        if (jobs.size() == 1) {
+            Job job = jobs.get(0);
+            if (!variables.isEmpty() && StringUtils.hasText(job.getExecutionId())) {
+                runtimeService.setVariables(job.getExecutionId(), variables);
+            }
+            managementService.executeJob(job.getId());
+            return loadStateAfterComplete(pid);
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "no active user task and no async-continuation job with key '" + taskKey
+                        + "' on instance '" + instanceId + "'");
+    }
+
+    private BpmProcessInstanceStateDto loadStateAfterComplete(String processInstanceId) {
+        return bpmProcessInstanceService.findStateDto(processInstanceId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "process instance state unavailable after complete: " + processInstanceId));
     }
 
     private static InstanceState resolveInstanceState(Boolean unfinishedLegacy, String instanceStateParam) {

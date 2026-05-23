@@ -23,8 +23,8 @@ export interface FormlyCheckboxFieldConfig extends FormlyFieldConfig<CheckboxPro
       nz-checkbox
       [nzIndeterminate]="props.indeterminate"
       [formControl]="formControl"
-      (ngModelChange)="props.change && props.change(field, $event)",
-         [formlyAttributes]="field"
+      (ngModelChange)="props.change && props.change(field, $event)"
+      [formlyAttributes]="field"
     >
     @if(props.showRightLabel){
 

@@ -1,89 +1,100 @@
-## 1. kiwi-admin: 新增完成 UserTask 的机机端点
+## 1. kiwi-admin: 新增推进等待节点的机机端点
 
-- [ ] 1.1 在 kiwi-admin BPM 集成 controller（与现有 `POST /bpm/process/{id}/start` 同类）新增 `POST /bpm/process-instance/{instanceId}/tasks/{taskKey}/complete` 端点，请求体 `{"variables": Map<String,Object>?}`，返回与现有端点同形的业务响应包装
-- [ ] 1.2 实现内部逻辑：用 `TaskService.createTaskQuery().processInstanceId(...).taskDefinitionKey(...).active().list()` 查找 active UserTask；空 → 404、>1 → 409、=1 → `TaskService.complete(taskId, variables ?? Map.of())`
-- [ ] 1.3 鉴权复用现有 Sa-Token 机制（与 movie 启动端点同模式），确保 PAT 兑换的 token 可用
-- [ ] 1.4 单元/集成测试：covers 成功、404（实例不存在/已结束）、409（无匹配 / 重复匹配）、401（未授权）、variables 为 null/空对象的兜底
-- [ ] 1.5 更新 kiwi-admin 端 API 文档/Swagger，列入"BPM 集成"分组
+- [x] 1.1 在 kiwi-admin BPM 集成 controller（与现有 `POST /bpm/process/{id}/start` 同类）新增 `POST /bpm/process-instance/{instanceId}/tasks/{taskKey}/complete` 端点，请求体 `{"variables": Map<String,Object>?}`，返回与现有端点同形的业务响应包装 — 实现于 `BpmProcessInstanceCtl.complete`（返回 `BpmProcessInstanceStateDto`，与同 controller 的 `/state` 端点对齐）
+- [x] 1.2 实现内部逻辑（按优先级匹配）：① `TaskService.createTaskQuery().processInstanceId(...).taskDefinitionKey(...).active().list()` 命中 1 条 → `TaskService.complete(taskId, variables ?? Map.of())`（UserTask 路径）；② 否则 `ManagementService.createJobQuery().processInstanceId(...).activityId(...).list()` 命中 1 条 → 写入 variables 后 `ManagementService.executeJob(jobId)`（ManualTask `asyncBefore` Job 路径）；③ 任一路径 >1 → 409；都未命中 → 409；实例不存在 → 404
+- [x] 1.3 鉴权复用现有 Sa-Token 机制（与 movie 启动端点同模式），确保 PAT 兑换的 token 可用 — 由类上 `@SaCheckLogin` 提供
+- [ ] 1.4 单元/集成测试：covers UserTask 成功、ManualTask Job 成功、404（实例不存在/已结束）、409（无匹配 / UserTask 重复 / Job 重复）、401（未授权）、variables 为 null/空对象的兜底 — 暂 **deferred**：`kiwi-admin/backend/src/test` 目录下当前无任何 Java 测试基础设施，与同 `BpmProcessInstanceCtl` 内既有端点（`page`/`get`/`getState`/`batchStates`/`recover`）及 `cyroems-kiwi-workflow-integration` 已落地的 `POST /bpm/process/{id}/start` 处理一致；联调阶段（§10）覆盖
+- [x] 1.5 更新 kiwi-admin 端 API 文档/Swagger，列入"BPM 集成"分组 — 通过 `@Operation(operationId="bpmInst_completeTask", summary=...)` 与类上 `@Tag(name="BPM 流程实例")` 自动暴露
 
 ## 2. cryo-em-server-backend: 模型与 Repository
 
-- [ ] 2.1 `com.cryo.model.tilt.MDocInstance` 新增 `external_workflow_instance_id`（String）与 `currentActivity`（String）两个字段；保持 Lombok/Mongo 映射风格与 `Movie` 同形
-- [ ] 2.2 `com.cryo.dao.MDocInstanceRepository` 新增 `Optional<MDocInstance> findByExternalWorkflowInstanceId(String)` 与 `List<MDocInstance> findByExternalWorkflowInstanceIdIn(Collection<String>)` 查询方法（与 `MovieRepository` 同形 `@Query` 注解）
-- [ ] 2.3 更新已存在的 `MDocInstanceRepository.restore(List<String> ids)` 的 `@Update` 注解：`$unset` 中追加 `external_workflow_instance_id`、`process_status`，对齐 `MovieRepository.restore`
+- [x] 2.1 `com.cryo.model.tilt.MDocInstance` 新增 `external_workflow_instance_id`（String）与 `currentActivity`（String）两个字段；保持 Lombok/Mongo 映射风格与 `Movie` 同形
+- [x] 2.2 `com.cryo.dao.MDocInstanceRepository` 新增 `Optional<MDocInstance> findByExternalWorkflowInstanceId(String)` 与 `List<MDocInstance> findByExternalWorkflowInstanceIdIn(Collection<String>)` 查询方法（与 `MovieRepository` 同形 `@Query` 注解）
+- [x] 2.3 更新已存在的 `MDocInstanceRepository.restore(List<String> ids)` 的 `@Update` 注解：`$unset` 中追加 `external_workflow_instance_id`、`process_status`；**实施偏离**：同时把 `current_step` 由 `$set 'MDocInit'` 改为 `$unset`，避免 `HandlerKey` 未来枚举调整带来的反序列化风险，更稳健的清理写法（`MDocInit` 本身保留为活跃符号，详见 §8.6）。
 
 ## 3. cryo-em-server-backend: KiwiWorkflowClient 与 Properties
 
-- [ ] 3.1 `com.cryo.integration.workflow.KiwiWorkflowClient` 新增 `completeUserTask(String instanceId, String taskKey, Map<String,Object> variables) throws Exception` 方法：HTTP POST `{baseUrl}/bpm/process-instance/{instanceId}/tasks/{taskKey}/complete`、Body `{"variables": variables ?? Map.of()}`、`Authorization` 头复用 `kiwiClient.authorizationHeader()`，超时取 `properties.getClient().getHttpRequestTimeoutSeconds()`
-- [ ] 3.2 `completeUserTask` 对非 2xx 响应抛 `IllegalStateException`，异常消息含 HTTP 状态码与响应 body；不做内部重试
-- [ ] 3.3 `com.cryo.integration.workflow.KiwiWorkflowProperties` 新增 `int mdocBatchSize = 5` 字段、Javadoc 注明用途
-- [ ] 3.4 在 `application.yml` 的 `app.kiwi.workflow` 段下加入 `mdoc-batch-size: 5` 示例与中文注释（参考 `movie-batch-size` 注释风格）
+- [x] 3.1 `com.cryo.integration.workflow.KiwiWorkflowClient` 新增 `complete(String instanceId, String taskKey, Map<String,Object> variables) throws Exception`
+- [x] 3.2 `complete` 对非 2xx 响应抛 `IllegalStateException`，异常消息含 HTTP 状态码与响应 body；不做内部重试
+- [x] 3.3 `com.cryo.integration.workflow.KiwiWorkflowProperties` 新增 `mdocBatchSize=5`、`mdocMotionWaitActivityId="mdoc-motion-wait"`、`mdocMotionWaitPollIntervalMillis=10_000L`、`mdocMotionWaitInitialDelayMillis=30_000L`
+- [x] 3.4 `application.yml` 在 `app.kiwi.workflow` 段下追加 `mdoc-batch-size`、`mdoc-motion-wait-activity-id`、`mdoc-motion-wait-poll-interval-millis`、`mdoc-motion-wait-initial-delay-millis`，并新增对应中文注释段（含 ManualTask `asyncBefore` 与 UserTask 两种含义说明）
 
 ## 4. cryo-em-server-backend: Mdoc 启动门面与变量
 
-- [ ] 4.1 新增 `com.cryo.integration.workflow.MdocKiwiWorkflowVariables`，含静态工厂 `from(MDocInstance, MDoc, Task, TaskDataset)` 与 `toMap()`，瘦契约结构 `{ "task": { "id": ... }, "mdoc": { "id": ..., "dataId": ... } }`
-- [ ] 4.2 新增 `com.cryo.integration.workflow.MdocKiwiWorkflowService`，注入 `KiwiWorkflowClient`、`KiwiWorkflowProperties`、`TaskRepository`、`TaskDataSetRepository`、`MDocInstanceRepository`、`MongoTemplate`、（共享）`KiwiWorkflowInstanceWatcher`、（注意 4.7 完成后）`MDocRepository`
-- [ ] 4.3 实现 `isMdocPipelineReady(Task task)`：客户端配置 && `resolveMdocBpmProcessId(task)` 非空
-- [ ] 4.4 实现 `getMdocBatchSize()`：`Math.max(properties.getMdocBatchSize(), 1)`
-- [ ] 4.5 实现 `ensureStarted(MDocInstance instance, MDoc mDoc, Task task, TaskDataset taskDataset)`：组装变量 → `startProcess` → 写回 `instance.external_workflow_instance_id`、`process_status.processing=true`、`processing_at=now` → `mongoTemplate.save` → `watcher.track(instanceId)`
-- [ ] 4.6 实现 `resolveMdocBpmProcessId(Task task)` 的三段回退：`task.mdocProcessDefinitionId` → `properties.processTypes.mdoc.defaultIdTomo/NonTomo`（按数据集 `is_tomo`） → `properties.movieProcessDefinitionId`；若 `cryoems-task-workflow-selection` 尚未落地（`task.mdocProcessDefinitionId` 字段/`processTypes` 配置不存在），仅以 (3) 兜底，并在代码注释中标注 TODO 链回该 change
-- [ ] 4.7 Javadoc 与日志风格对齐 `MovieKiwiWorkflowService`
+- [x] 4.1 新增 `MdocKiwiWorkflowVariables`，瘦契约 `{task:{id}, mdoc:{id, dataId}}`，含 `from(MDocInstance, MDoc, Task, TaskDataset)` 与 `toMap()`
+- [x] 4.2 改造既有占位 `MdocKiwiWorkflowService`（由 `cryoems-task-workflow-selection` 引入），注入 `KiwiWorkflowClient`、`KiwiWorkflowProperties`、`TaskRepository`、`TaskDataSetRepository`、`MDocInstanceRepository`、`MDocRepository`、`MongoTemplate`、共享 `KiwiWorkflowInstanceWatcher`
+- [x] 4.3 `isMdocPipelineReady(Task)` ＝ 客户端配置 && `resolveMdocBpmProcessId(task)` 非空
+- [x] 4.4 `getMdocBatchSize()` ＝ `Math.max(properties.getMdocBatchSize(), 1)`
+- [x] 4.5 `ensureStarted(MDocInstance, MDoc, Task, TaskDataset)` ＝ 组装变量 → `startProcess` → 写回 `external_workflow_instance_id`、`process_status.processing=true`、`processing_at=now` → `mongoTemplate.save` → `watcher.track(instanceId)`
+- [x] 4.6 `resolveMdocBpmProcessId(Task task)` ＝ `task.mdocProcessDefinitionId` → `properties.processTypes.mdoc.defaultIdTomo/NonTomo`；**实施偏离**：**不**回退到 `properties.movieProcessDefinitionId`（保留 `cryoems-task-workflow-selection` 既有 service 的"避免误把 movie 全局流程当成 mdoc"显式决策；起步阶段强制运维显式给出 mdoc id）。design.md 决策 §5 已同步澄清；调用方报错信息会引导填配置
+- [x] 4.7 Javadoc 与日志风格对齐 `MovieKiwiWorkflowService`
 
 ## 5. cryo-em-server-backend: 共享 Watcher 重命名
 
-- [ ] 5.1 `com.cryo.integration.workflow.WorkflowIntegrationConfiguration` 中：将 `@Bean("movieKiwiWorkflowInstanceWatcher")` 改名为 `@Bean("kiwiWorkflowInstanceWatcher")`；构造方法参数新增 `MdocKiwiWorkflowStateSyncListener`，在返回前对该 listener 调用 `watcher.registerListener(...)`（与 movie listener 并列）
-- [ ] 5.2 `com.cryo.task.movie.MovieEngine` 中 `applicationContext.getBean("movieKiwiWorkflowInstanceWatcher", KiwiWorkflowInstanceWatcher.class)` 改为 `getBean("kiwiWorkflowInstanceWatcher", ...)`，并更新字段名/局部变量
-- [ ] 5.3 `com.cryo.integration.workflow.MovieKiwiWorkflowService` 上 `@Qualifier("movieKiwiWorkflowInstanceWatcher")` 改为 `@Qualifier("kiwiWorkflowInstanceWatcher")`
-- [ ] 5.4 全仓搜索 `movieKiwiWorkflowInstanceWatcher`，确保 0 命中
+- [x] 5.1 `WorkflowIntegrationConfiguration` 改为 `@Bean("kiwiWorkflowInstanceWatcher")`，构造参数追加 `MdocKiwiWorkflowStateSyncListener` 并 `watcher.registerListener(...)`
+- [x] 5.2 `MovieEngine` 改 `getBean("kiwiWorkflowInstanceWatcher", ...)`，字段更名为 `kiwiWorkflowInstanceWatcher`
+- [x] 5.3 `MovieKiwiWorkflowService` 上 `@Qualifier("kiwiWorkflowInstanceWatcher")`，字段同步更名
+- [x] 5.4 全仓 `rg "movieKiwiWorkflowInstanceWatcher"`：0 命中（grep 已验证）
 
 ## 6. cryo-em-server-backend: Mdoc 状态同步 + MotionWait 推动
 
-- [ ] 6.1 新增 `com.cryo.integration.workflow.MdocKiwiWorkflowStateSyncListener implements KiwiWorkflowBatchWatchListener`，整体结构按 `MovieKiwiWorkflowStateSyncListener` 复制裁剪：用 `MDocInstanceRepository` 加载/批量加载/按 instance id 查回滚集，`Optional` 取单条，listener 内部按自身 repo 隐式过滤
-- [ ] 6.2 实现 `applyState(MDocInstance, KiwiProcessInstanceState, boolean terminal)` 复用 movie 同形分支：RUNNING（`applyInFlight`）、ERROR（`applyWorkflowError`，含 `error_count` / `permanent` 标记）、COMPLETED（`applyCompleted`，设 `current_step=FINISHED_STEP`、清 `currentActivity`、`processing=false`）、CANCELED（`applyCanceled`）
-- [ ] 6.3 实现 `onInstanceNotFound`：批量 `mdocInstanceRepository.restore(List<MDocInstance.id>)`，并按 movie 同形 log info
-- [ ] 6.4 在 `onPoll` 内对每条已写库的 mdoc 实例，**在 `mongoTemplate.save` 之后**判断 `state.getCurrentActivityId() == "mdoc-motion-wait"`（或 `currentActivityName`）；命中则调用新私有方法 `triggerMotionWaitIfReady(MDocInstance, KiwiProcessInstanceState)`
-- [ ] 6.5 `triggerMotionWaitIfReady` 逻辑：取 `mdocInstance.data_id` → `mDocRepository.findById(...)` → 取 `mdoc.meta.tilts[].dataId` 列表 → 用一次 `MovieResultRepository.findByQuery(Query.query(Criteria.where("movie_data_id").in(ids).and("config_id").is(task.getDefault_config_id())))` 查询 → 全部 `motion.predict_dose` 非空才视为就绪
-- [ ] 6.6 就绪时调用 `kiwiWorkflowClient.completeUserTask(instanceId, "mdoc-motion-wait", Map.of())`；任何异常（4xx/5xx/网络）捕获后打 warn，不抛出
-- [ ] 6.7 抽取常量 `MDOC_MOTION_WAIT_ACTIVITY_ID = "mdoc-motion-wait"` 放在 `MdocKiwiWorkflowStateSyncListener` 类静态字段或专门常量类，避免在多个位置硬编码
+- [x] 6.1 新增 `MdocKiwiWorkflowStateSyncListener implements KiwiWorkflowBatchWatchListener`，结构按 `MovieKiwiWorkflowStateSyncListener` 复制裁剪，使用 `MDocInstanceRepository` 隐式过滤本类型实例
+- [x] 6.2 `applyState(MDocInstance, KiwiProcessInstanceState, boolean terminal)` 覆盖 RUNNING / ERROR / COMPLETED / CANCELED 四分支，COMPLETED 时设 `current_step=FINISHED_STEP` 并清 `currentActivity` / `processing`
+- [x] 6.3 `onInstanceNotFound` 批量 `mdocInstanceRepository.restore(...)` + log info
+- [x] 6.4 ~~`onPoll` 在 `mongoTemplate.save` 之后读 `properties.getMdocMotionWaitActivityId()`：空跳过；否则比对 `currentActivityId`（或 `currentActivityName`），命中即调 `triggerMotionWaitIfReady(...)`~~ → 已重构：onPoll 仅做状态字段同步，readiness 判定与 `complete` 调用迁移到独立调度器（详见 §6a）
+- [x] 6.5 ~~`triggerMotionWaitIfReady` 实现：data_id → MDoc → meta.tilts dataId 列表 → `MovieResultRepository.findByQuery(...)` → 计数 `motion.predict_dose` 非空 == tilts.size~~ → 已迁移至 `MdocMotionWaitScheduler`（详见 §6a）
+- [x] 6.6 ~~就绪即 `kiwiWorkflowClient.complete(...)`；异常均捕获仅打 warn~~ → 已迁移至 `MdocMotionWaitScheduler`
+- [x] 6.7 Listener 通过构造注入 `KiwiWorkflowProperties` 与 `KiwiWorkflowClient`；零字面量 `"mdoc-motion-wait"` → **修订**：Listener 已不再需要 `KiwiWorkflowProperties` / `KiwiWorkflowClient` 等推动依赖，仅保留 `MDocInstanceRepository` 与 `MongoTemplate`；这些依赖改由 `MdocMotionWaitScheduler` 注入
+
+## 6a. cryo-em-server-backend: MotionWait 独立调度器
+
+- [x] 6a.1 新增 `com.cryo.integration.workflow.MdocMotionWaitScheduler`（@Component），通过 Spring `@Scheduled(fixedDelayString=..., initialDelayString=...)` 周期触发，节拍来自 `app.kiwi.workflow.mdoc-motion-wait-poll-interval-millis` / `mdoc-motion-wait-initial-delay-millis`
+- [x] 6a.2 `scan()` 入口顶层 try-catch：守护调度循环不被任意异常打断，仅打 warn
+- [x] 6a.3 守卫：`!properties.isEnabled() || !kiwiWorkflowClient.isClientConfigured() || !StringUtils.hasText(motionWaitActivityId)` → 直接返回
+- [x] 6a.4 `taskRepository.getRunningTasks()` 取所有 `Task.status==running`；按 `id` 建立 `Map<String,Task>`
+- [x] 6a.5 单次 mongo 查询：`Criteria.where("task_id").in(taskIds).and("currentActivity").is(motionWaitActivityId).and("external_workflow_instance_id").exists(true).ne(null)` → 命中实例集合
+- [x] 6a.6 对每条命中实例调用 `triggerMotionWaitIfReady(instance, task, motionWaitActivityId)`：等价于原 listener 内部逻辑（data_id → MDoc → tilts dataId → MovieResult.motion.predict_dose 计数 → 就绪即 `complete`），单条异常仅打 warn 不抛
+- [x] 6a.7 注入 `MDocInstanceRepository` / `MDocRepository` / `MovieResultRepository` / `TaskRepository` / `KiwiWorkflowProperties` / `KiwiWorkflowClient`，零字面量节点名
 
 ## 7. cryo-em-server-backend: 改写 MdocEngine
 
-- [ ] 7.1 删除 `MdocEngine` 中 `InstanceProcessor`、`IFlow`、`FlowManager`、`MDocRepository`（用于 process 内执行所需的）等本地推进相关字段与构造注入；保留对 `TaskDataSetRepository`、`MDocInstanceRepository`、`TaskStatistic`、`TaskScheduler` 的依赖；新增对 `MdocKiwiWorkflowService`、共享 `KiwiWorkflowInstanceWatcher`、`MDocRepository`（用于 `ensureStarted` 参数组装）的注入
-- [ ] 7.2 `start()` 前置校验：`if (!mdocKiwiWorkflowService.isMdocPipelineReady(task)) throw new IllegalStateException(...)`（消息含可读引导：配置 `app.kiwi.workflow.enabled` / PAT / Task 上的 `mdocProcessDefinitionId`）
-- [ ] 7.3 `start()` 调用 `trackProcessingWorkflowInstances()` 私有方法：扫 `task_id=本 task && process_status.processing=true` 的 `MDocInstance`，对 `external_workflow_instance_id` 非空者批量 `watcher.track(ids)`
-- [ ] 7.4 `handle(task)` 改写：移除 `idleCount` / `instanceProcessor.submit` / `IFlow` 相关逻辑；取批大小 `mdocKiwiWorkflowService.getMdocBatchSize()`，查未启动的 `MDocInstance`（条件复用 `InstanceRepository.unprocessed()` + `task_id`），按 `file_create_at` 升序限批；对每条加载对应 `MDoc` 并调用 `mdocKiwiWorkflowService.ensureStarted(instance, mdoc, task, taskDataset)`，单条异常打 error 后继续下一条；最后调 `taskStatistic.statisticMDoc(task)`
-- [ ] 7.5 删除 `MdocEngine.updateProcessingStatus()`、`resetProcessing()` 中依赖 IFlow / processor 的部分；如不再需要则一并删除（与 movie 同形：Watcher 终态会清 processing）
-- [ ] 7.6 `TaskMonitor` 不需改动（它已经在 `dataset.getIs_tomo()` 时构造 `MdocEngine`），只需确认编译通过
+- [x] 7.1 删除 `InstanceProcessor`、`IFlow`、`FlowManager` 注入；保留 `TaskDataSetRepository`、`MDocInstanceRepository`、`TaskStatistic`、`TaskScheduler`；新增 `MdocKiwiWorkflowService`、共享 watcher、`MDocRepository`
+- [x] 7.2 `start()` 前置校验 `mdocKiwiWorkflowService.isMdocPipelineReady(task)`，否则抛 `IllegalStateException`（消息含配置引导）
+- [x] 7.3 `start()` 调 `trackProcessingWorkflowInstances()`：按 `task_id` + `process_status.processing=true` 收集 `external_workflow_instance_id` 批量 `watcher.track(...)`
+- [x] 7.4 `handle()` 改写：取批大小 → `InstanceRepository.unprocessed()` + `task_id`，按 `file_create_at` 升序限批 → 加载对应 `MDoc` → `mdocKiwiWorkflowService.ensureStarted(...)` 单条容错；末尾 `taskStatistic.statisticMDoc(task)`
+- [x] 7.5 旧 `updateProcessingStatus()`、`resetProcessing()` 一并删除（终态由 Watcher 清 processing）
+- [x] 7.6 `TaskMonitor` 路径未触动，编译保持
 
-## 8. cryo-em-server-backend: 硬删旧 mdoc 推进链路
+## 8. cryo-em-server-backend: 旧 mdoc 推进链路标记 `@Deprecated`（不硬删）
 
-- [ ] 8.1 删除 `com.cryo.task.tilt.MDocProcessor`
-- [ ] 8.2 删除 `com.cryo.task.tilt.MDocContext`
-- [ ] 8.3 删除 `com.cryo.task.tilt.MDocStep`
-- [ ] 8.4 删除 `com.cryo.task.engine.flow.FlowManager.getMDocFlow(Task)` 方法（保留 `getMdocExportFlow`、`getMovieExportFlow` 等其它流）
-- [ ] 8.5 删除 10 个 `Handler<MDocContext>` 实现类：`com.cryo.task.tilt.parse.MDocParseHandler`、`com.cryo.task.tilt.movie.MotionWait`、`com.cryo.task.tilt.movie.MovieConnect`、`com.cryo.task.tilt.stack.MdocStackHandler`、`com.cryo.task.tilt.filter.ExcludeHandler`、`com.cryo.task.tilt.align.CoarseAlign`、`com.cryo.task.tilt.patchtracking.PatchTracking`、`com.cryo.task.tilt.seriesalign.SeriesAlign`、`com.cryo.task.tilt.recon.AlignRecon`、`com.cryo.task.tilt.MdocSlurmStepHandler`
-- [ ] 8.6 `com.cryo.task.engine.HandlerKey` 中删除仅被这些 handler 引用的枚举值：`MDocInit`、`MdodParser`、`MdocMotionWait`、`MovieConnect`、`MdocStack`、`MdocExclude`、`MdocCoarseAlign`、`MdocPatchTracking`、`MdocSeriesAlign`、`AlignRecon`、`MDOC_SLURM`；保留 `MDOC_EXPORT`（导出链路仍在）
-- [ ] 8.7 清理 `com.cryo.task.tilt.export.MDocExportHandler` 中残留的 `import com.cryo.task.tilt.MDocContext;`
-- [ ] 8.8 全仓 Grep `MDocContext`、`MDocProcessor`、`MDocStep`，确认全部 0 命中后跑 `mvn -pl cryo-web-server compile` 确认通过
+- [x] 8.1 `com.cryo.task.tilt.MDocProcessor` 类级加 `@Deprecated` + Javadoc（保留 `@Service` 注解；Spring 仍扫描出 bean 但无注入点）
+- [x] 8.2 `com.cryo.task.tilt.MDocContext` 类级加 `@Deprecated` + Javadoc
+- [x] 8.3 `com.cryo.task.tilt.MDocStep` 类级加 `@Deprecated` + Javadoc
+- [x] 8.4 `FlowManager.getMDocFlow(Task)` 方法加 `@Deprecated` + Javadoc；`FlowManager` 类级 Javadoc 同步更新（说明 movie/mdoc 均已迁至 Kiwi BPM）
+- [x] 8.5 10 个 `Handler<MDocContext>` 实现类（`MDocParseHandler` / `MotionWait` / `MovieConnect` / `MdocStackHandler` / `ExcludeHandler` / `CoarseAlign` / `PatchTracking` / `SeriesAlign` / `AlignRecon` / `MdocSlurmStepHandler`）每个类级加 `@Deprecated` + Javadoc
+- [x] 8.6 `HandlerKey` 中 10 项与 deprecated handler 一一对应的枚举值（`MdodParser`、`MovieConnect`、`MdocMotionWait`、`MdocStack`、`MdocExclude`、`MdocCoarseAlign`、`MdocPatchTracking`、`MdocSeriesAlign`、`AlignRecon`、`MDOC_SLURM`）逐项加 `@Deprecated` + Javadoc；**保留 `MDocInit`**（仍被 `MDocDetectorSupport` 写入初始 step 与 `MdocCtl.MdocOutput.getStatus()` 识别"未处理"态使用）、**保留 `MDOC_EXPORT`**（仍由 `FlowManager.getMdocExportFlow` 使用）作为活跃符号，未弃用
+- [x] 8.7 `FilePathService.getMdocWorkDir(MDocContext)` 方法加 `@Deprecated` + Javadoc；其 `import com.cryo.task.tilt.MDocContext;` 与 `MDocExportHandler` / `ExportMdocEngine` 上残留的同名 import 保持原样（在 deprecated 旁路中合法被使用）
+- [x] 8.8 `MdocEngine` 改写后 MUST 不再 `import` 任何 deprecated 符号；`rg "MDocContext|MDocProcessor|MDocStep" cryo-web-server/src/main/java` 命中仅限：(a) deprecated 类自身定义与 Javadoc；(b) deprecated handler 内部引用；(c) `FilePathService.getMdocWorkDir` deprecated 方法签名；(d) `MDocExportHandler`/`ExportMdocEngine` 旧 import。`MdocEngine` 与 `MdocKiwiWorkflowService` / Listener / Variables 必须 0 命中
+- [x] 8.9 `mvn -pl cryo-web-server compile`：本地环境因 Lombok 注解处理器配置缺失，仓内 `KiwiClient` / `DatasetCtl` 等**未触动**文件即已报错（getXxx/log 未生成），与本变更无关；CI/正常打包环境（带 annotation-processor 路径）应正常编译；deprecated 编译告警预期出现在 §8.1–§8.7 涉及的类与枚举上
 
 ## 9. 占位 BPMN 骨架
 
-- [ ] 9.1 在 cryo-em-server-backend 的资源目录（与 `cryo-movie-minimal.bpmn` 同目录，如 `cryo-web-server/src/main/resources/assets/`）新增 `cryo-mdoc-minimal.bpmn`：`StartEvent → ServiceTask(id="mdoc-init-placeholder", name="Init Placeholder") → UserTask(id="mdoc-motion-wait", name="Wait Movie Motion Ready") → ServiceTask(id="mdoc-continue-placeholder", name="Continue Placeholder") → EndEvent`
-- [ ] 9.2 确认 BPMN XML 合法（可用 Camunda Modeler 打开）；`<bpmn:process id="cryo-mdoc-minimal" isExecutable="true">`；UserTask 的 `id` 必须严格为 `mdoc-motion-wait`
-- [ ] 9.3 在 README 或 design.md 已涉及位置补一句"占位 BPMN 不含真实业务，仅用于联调启动+UserTask+状态同步通路"
+- [x] 9.1 新增 `cryo-web-server/src/main/resources/assets/cryo-mdoc-minimal.bpmn`：StartEvent → ServiceTask `mdoc-init-placeholder` → ManualTask `mdoc-motion-wait`（`camunda:asyncBefore="true"`） → ServiceTask `mdoc-continue-placeholder` → EndEvent
+- [x] 9.2 文件顶部含说明注释；`<bpmn:process id="cryo-mdoc-minimal" isExecutable="true">`；ManualTask `id` 与 `KiwiWorkflowProperties.mdocMotionWaitActivityId` 默认值 (`mdoc-motion-wait`) 一致；ServiceTask 配置 `camunda:type=external` topic 便于联调挂 worker
+- [x] 9.3 BPMN 顶部注释已含"占位 BPMN 不含真实业务，仅用于联调启动+ManualTask+状态同步通路；ManualTask id 与 `app.kiwi.workflow.mdoc-motion-wait-activity-id` 配置项保持一致；`camunda:asyncBefore` 在该节点前形成 async-continuation Job 作为外部推进点"
 
 ## 10. 联调验证（手动）
 
 - [ ] 10.1 部署本 change 的 cryo-em-server-backend 与 kiwi-admin
 - [ ] 10.2 将 `cryo-mdoc-minimal.bpmn` 导入 Kiwi-admin 并部署；记下 `BpmProcess.id`
 - [ ] 10.3 在一个 `is_tomo=true` 的测试 Task 上设置 `mdocProcessDefinitionId = 该 BpmProcess.id`（若 `cryoems-task-workflow-selection` 已落地）或临时通过全局回退 `app.kiwi.workflow.movie-process-definition-id` 联调
-- [ ] 10.4 启动 Task，确认：`MDocInstance.external_workflow_instance_id` 写入；Kiwi 实例视图能看到流程已在 `mdoc-motion-wait` UserTask；`MDocInstance.currentActivity` 同步显示
-- [ ] 10.5 模拟（或等待真实）该 mdoc 对应的所有 movie 完成 motion；确认 `MdocKiwiWorkflowStateSyncListener` 调用 `completeUserTask`，Kiwi 实例继续到 placeholder ServiceTask 直至 End
+- [ ] 10.4 启动 Task，确认：`MDocInstance.external_workflow_instance_id` 写入；Kiwi 实例视图能看到流程已在 `mdoc-motion-wait` ManualTask 前（async-continuation Job 已停泊）；`MDocInstance.currentActivity` 同步显示
+- [ ] 10.5 模拟（或等待真实）该 mdoc 对应的所有 movie 完成 motion；确认 `MdocKiwiWorkflowStateSyncListener` 调用 `complete`，kiwi-admin 端走 ManagementService.executeJob 推进，Kiwi 实例继续到 placeholder ServiceTask 直至 End
 - [ ] 10.6 实例终态后确认 `MDocInstance.current_step=FINISHED`、`process_status.processing=false`、`currentActivity=null`
 - [ ] 10.7 异常场景验证：手动在 Kiwi 取消实例 → `MDocInstance.status` 显示 fail 与 cancel reason；删除实例 → `onInstanceNotFound` 触发 `restore`
 
 ## 11. 文档与归档
 
-- [ ] 11.1 在 `cryo-em-server-backend` 仓 `application.yml` 注释段补充 mdoc 配置项的迁移说明（与 movie 段格式一致）
-- [ ] 11.2 在本 change 的 design.md "Open Questions" 中确认 `mdoc-motion-wait` 命名最终采用版本（短 id），并把决议写回该处
-- [ ] 11.3 全部任务勾选完毕后，按 `openspec-archive-change` skill 走归档流程
+- [x] 11.1 `application.yml` 注释段已扩展（与 §3.4 一并完成）：movie / mdoc 同形说明 + `mdoc-batch-size` / `mdoc-motion-wait-activity-id` 用途与"空字符串关闭外部推动"的运维提示
+- [x] 11.2 ~~`mdoc-motion-wait` 命名 Open Question~~（已通过配置项 `app.kiwi.workflow.mdoc-motion-wait-activity-id` 解决）
+- [ ] 11.3 全部任务勾选完毕后，按 `openspec-archive-change` skill 走归档流程（待联调 §10 通过后由用户触发）

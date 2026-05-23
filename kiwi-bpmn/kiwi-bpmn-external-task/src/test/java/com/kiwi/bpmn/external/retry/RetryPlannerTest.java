@@ -49,7 +49,7 @@ class RetryPlannerTest
                         Mockito.mock(JobRetryExceptionClassifier.class),
                         Mockito.mock(ExternalTaskRetryCycleResolver.class),
                         "R5/PT1M",
-                        "R5/PT30S");
+                        "PT30S");
 
         RetryPlan plan = planner.plan(task, new FakeOverloadException("overloaded"));
 
@@ -61,7 +61,7 @@ class RetryPlannerTest
     }
 
     @Test
-    void nonDecreasingIRetry_firstFailureUsesCycleRetriesAsInitial() {
+    void nonDecreasingIRetry_firstFailureUsesInitialOne() {
         ExternalTask task = Mockito.mock(ExternalTask.class);
         when(task.getRetries()).thenReturn(null);
         when(task.getErrorMessage()).thenReturn(null);
@@ -71,11 +71,30 @@ class RetryPlannerTest
                         Mockito.mock(JobRetryExceptionClassifier.class),
                         Mockito.mock(ExternalTaskRetryCycleResolver.class),
                         "R5/PT1M",
-                        "R5/PT30S");
+                        "PT30S");
 
         RetryPlan plan = planner.plan(task, new FakeOverloadException("overloaded"));
 
-        assertEquals(5, plan.nextRetries());
+        assertEquals(1, plan.nextRetries());
+    }
+
+    @Test
+    void nonDecreasingIRetry_invalidDurationFallsBackTo30s() {
+        ExternalTask task = Mockito.mock(ExternalTask.class);
+        when(task.getRetries()).thenReturn(null);
+        when(task.getErrorMessage()).thenReturn(null);
+
+        ExternalTaskRetryPlanner planner =
+                new ExternalTaskRetryPlanner(
+                        Mockito.mock(JobRetryExceptionClassifier.class),
+                        Mockito.mock(ExternalTaskRetryCycleResolver.class),
+                        "R5/PT1M",
+                        "bad-duration");
+
+        RetryPlan plan = planner.plan(task, new FakeOverloadException("overloaded"));
+
+        assertEquals(1, plan.nextRetries());
+        assertEquals(30_000L, plan.retryTimeoutMs());
     }
 
     @Test
@@ -89,7 +108,7 @@ class RetryPlannerTest
         when(resolver.resolveFromBpmn(task)).thenReturn(java.util.Optional.empty());
 
         ExternalTaskRetryPlanner planner =
-                new ExternalTaskRetryPlanner(classifier, resolver, "R5/PT1M", "R5/PT30S");
+                new ExternalTaskRetryPlanner(classifier, resolver, "R5/PT1M", "PT30S");
 
         RetryPlan plan = planner.plan(task, new FakeDecreasingRetryException("normal"));
 

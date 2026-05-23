@@ -6,8 +6,9 @@ import { PropertyDescription, PropertyProvider, PropertyTab } from "./types";
 export class BasePropertyProvider implements PropertyProvider {
 
     getProperties(element: Element): PropertyTab[] {
+        const idEditable = element.type === 'bpmn:ManualTask';
         const commonProperties: PropertyDescription[] = [
-            { key: "id", name: "ID", htmlType: "Text", defaultValue: "", readonly: true, example: "", required: true },
+            { key: "id", name: "ID", htmlType: idEditable ? "input" : "Text", defaultValue: "", readonly: !idEditable, example: "", required: true },
             { key: "name", name: "名称", htmlType: "input", defaultValue: "", example: "" }
         ];
         if (element.type === 'bpmn:SequenceFlow') {

@@ -12,7 +12,7 @@ kiwi:
     enabled: ${KIWI_AI_ENABLED:true}
     # 助手 ChatClient 回环 MCP 的 HTTP 基址；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
     mcp:
-      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8088}}
+      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8000}}
       # WebServer 已开始监听后再触发 MCP 回环 warmup，避免启动早期 ConnectException / SSE connection error
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
@@ -30,7 +30,7 @@ kiwi:
 
 app:
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4201,http://localhost:8088}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4201,http://localhost:8000}
   password:
     secret: ${APP_PASSWORD_SECRET:change-me-generate-a-long-random-secret}
   gen:

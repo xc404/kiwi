@@ -45,6 +45,12 @@ export default class BasePaletteProvider implements PaletteProvider {
                         title: "服务任务",
                         icon: "bpmn-icon86",
                         options: {}
+                    },
+                    {
+                        id: "ManualTask",
+                        title: "手工任务",
+                        icon: "bpmn-hand",
+                        options: {}
                     }
                 ]
             },

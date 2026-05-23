@@ -29,12 +29,18 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 @Slf4j
 public class CryoemsMongoModule {
 
-    /** CryoEMS 业务库 Repository 扫描包，供 {@link MongoModule} exclude 复用。 */
-    public static final String REPOSITORY_BASE_PACKAGE = "com.kiwi.cryoems.bpm.dao";
+    /**
+     * CryoEMS 业务库 Repository 扫描包，供 {@link MongoModule} exclude 复用。
+     *
+     * <p>历史路径为 {@code com.kiwi.cryoems.bpm.dao}；按 movie / mdoc 拆包后实际位于
+     * {@code com.kiwi.cryoems.bpm.movie.dao}（以及未来的 {@code com.kiwi.cryoems.bpm.mdoc.dao}），
+     * 这里改用更宽的根包 {@code com.kiwi.cryoems.bpm} 让 Spring Data 自动发现所有 cryoems 子包下的 Repository。</p>
+     */
+    public static final String REPOSITORY_BASE_PACKAGE = "com.kiwi.cryoems.bpm";
 
     /** 主库 {@link MongoModule} 排除 CryoEMS Repository 用的正则（无需 AspectJ）。 */
     public static final String REPOSITORY_SCAN_EXCLUDE_REGEX =
-            "com\\.kiwi\\.cryoems\\.bpm\\.dao\\..*";
+            "com\\.kiwi\\.cryoems\\.bpm\\..*";
 
     @Bean("cryoemsMongoTemplate")
     public KiwiMongoTemplate cryoemsMongoTemplate(

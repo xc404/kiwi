@@ -25,11 +25,11 @@ public final class ExternalTaskRetryPlanner {
     /** ??Job ???????????parse ??????????????Job ?? 3 ????*/
     private static final int FALLBACK_RETRIES_WHEN_UNPARSED = 3;
 
-    /** 非递减重试分支退避周期解析失败 / 配置缺失时的兜底 retryTimeoutMs。 */
+    /** 非递减重试分支退避 duration 解析失败 / 配置缺失时的兜底 retryTimeoutMs。 */
     private static final long NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS = 30_000L;
 
-    /** 非递减重试分支首次失败（task.retries == null）时若 cycle 解析失败的兜底 retries 初值。 */
-    private static final int NON_DECREASING_FALLBACK_INITIAL_RETRIES = 5;
+    /** 非递减重试分支首次失败（{@code task.getRetries() == null}）时使用的 retries 初值。 */
+    private static final int NON_DECREASING_INITIAL_RETRIES = 1;
 
     private final JobRetryExceptionClassifier classifier;
     private final ExternalTaskRetryCycleResolver retryCycleResolver;
@@ -50,8 +50,10 @@ public final class ExternalTaskRetryPlanner {
 
     /**
      * @param nonDecreasingRetryCycle 当异常链上的 {@link IRetry#decreaseRetries()} 返回 {@code false} 时
-     *                                使用的退避周期（ISO-8601）；为空时回退到 BPMN / 引擎默认 cycle 的第一个间隔；
+     *                                使用的退避 duration（纯 ISO-8601，如 {@code PT30S}）；
+     *                                为空时回退到 BPMN / 引擎默认 cycle 的第一个间隔；
      *                                解析失败兜底为 {@link #NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS}。
+     *                                注意：不再支持 {@code R../P..} cycle 写法，retries 计数已与本配置解耦。
      */
     public ExternalTaskRetryPlanner(
             JobRetryExceptionClassifier classifier,
@@ -97,37 +99,55 @@ public final class ExternalTaskRetryPlanner {
     }
 
     /**
-     * 非递减重试分支：保留当前 {@code retries}（不消耗业务重试次数），按 {@link #nonDecreasingRetryCycle} 解析退避；
-     * cycle 为空时回退到 BPMN / 引擎默认 cycle 的第一个间隔；解析失败兜底为
-     * {@link #NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS}，初值兜底为 {@link #NON_DECREASING_FALLBACK_INITIAL_RETRIES}。
+     * 非递减重试分支：不消耗业务重试预算。
+     * <ul>
+     *   <li>{@code nextRetries}：沿用 {@code task.getRetries()}；首次失败（{@code null}）固定为
+     *       {@link #NON_DECREASING_INITIAL_RETRIES}。</li>
+     *   <li>{@code retryTimeoutMs}：优先使用 {@link #nonDecreasingRetryCycle}（纯 ISO-8601 duration），
+     *       为空时回退到 BPMN / 引擎默认 cycle 的第一个间隔；解析失败兜底为
+     *       {@link #NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS}。</li>
+     * </ul>
      */
     private RetryPlan planNonDecreasing(ExternalTask task) {
-        String cycleExpr =
-                nonDecreasingRetryCycle != null ? nonDecreasingRetryCycle : resolveCycle(task);
-        FailedJobRetryConfiguration cfg =
-                cycleExpr == null ? null : ParseUtil.parseRetryIntervals(cycleExpr);
-        List<String> intervals = cfg == null ? null : cfg.getRetryIntervals();
-        int cycleRetries =
-                cfg == null ? NON_DECREASING_FALLBACK_INITIAL_RETRIES : cfg.getRetries();
-
         Integer currentRetries = task.getRetries();
-        int nextRetries = currentRetries != null ? currentRetries : cycleRetries;
+        int nextRetries =
+                currentRetries != null ? currentRetries : NON_DECREASING_INITIAL_RETRIES;
 
-        long retryTimeoutMs = NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS;
-        if (intervals != null && !intervals.isEmpty()) {
-            String first = intervals.get(0);
-            try {
-                DurationHelper durationHelper = new DurationHelper(first);
-                Date next = durationHelper.getDateAfter();
-                if (next != null) {
-                    retryTimeoutMs =
-                            Math.max(0L, next.getTime() - ClockUtil.getCurrentTime().getTime());
-                }
-            } catch (Exception ignored) {
-                // 保留兜底值
+        long retryTimeoutMs = resolveNonDecreasingBackoffMs(task);
+        return new RetryPlan(Math.max(0, nextRetries), retryTimeoutMs);
+    }
+
+    /**
+     * 解析非递减分支退避时长（毫秒）。
+     * <p>
+     * 优先以 {@link #nonDecreasingRetryCycle} 作为纯 ISO-8601 duration（如 {@code PT30S}）解析；
+     * 配置为空时，从 BPMN / 引擎默认 cycle 的第一个 interval 提取；任何解析异常或为 {@code null} 时，
+     * 兜底为 {@link #NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS}。
+     */
+    private long resolveNonDecreasingBackoffMs(ExternalTask task) {
+        String durationExpr = nonDecreasingRetryCycle;
+        if (durationExpr == null) {
+            String fallbackCycle = resolveCycle(task);
+            FailedJobRetryConfiguration cfg =
+                    fallbackCycle == null ? null : ParseUtil.parseRetryIntervals(fallbackCycle);
+            List<String> intervals = cfg == null ? null : cfg.getRetryIntervals();
+            if (intervals != null && !intervals.isEmpty()) {
+                durationExpr = intervals.get(0);
             }
         }
-        return new RetryPlan(Math.max(0, nextRetries), retryTimeoutMs);
+        if (durationExpr == null) {
+            return NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS;
+        }
+        try {
+            DurationHelper durationHelper = new DurationHelper(durationExpr);
+            Date next = durationHelper.getDateAfter();
+            if (next != null) {
+                return Math.max(0L, next.getTime() - ClockUtil.getCurrentTime().getTime());
+            }
+        } catch (Exception ignored) {
+            // 保留兜底值
+        }
+        return NON_DECREASING_FALLBACK_RETRY_TIMEOUT_MS;
     }
 
     public RetryPlan plan(String failedJobRetryTimeCycle, ExternalTask task) {

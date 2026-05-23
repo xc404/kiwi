@@ -58,12 +58,16 @@ export class ComponentService {
 
         this.setComponentId(bpmnModeler, element, item);
         item.inputParameters?.forEach((p: PropertyDescription) => {
+            const defaultValue =
+                p.defaultValue !== undefined && p.defaultValue !== null && p.defaultValue !== ''
+                    ? p.defaultValue
+                    : '${' + p.key + '}';
             this.elementModel.setValue(
                 bpmnModeler,
                 element,
                 p.namespace || inputNamespace,
                 p.key,
-                p.defaultValue ??  ''
+                defaultValue
             );
         });
 
