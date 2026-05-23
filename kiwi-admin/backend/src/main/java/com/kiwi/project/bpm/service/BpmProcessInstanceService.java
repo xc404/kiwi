@@ -149,7 +149,7 @@ public class BpmProcessInstanceService {
             bpmnModel = bpmnCache.computeIfAbsent(defId, this::loadBpmnModel);
         }
         List<BpmOpenIncidentDto> openRows = mapOpenIncidents(incidents, bpmnModel);
-        fillErrorSummary(dto, openRows);
+        fillErrorSummary(dto, incidents, bpmnModel, bpmnCache);
         fillCurrentActivityForState(dto, hip.getId(), defId, bpmnModel);
 
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
@@ -208,23 +208,87 @@ public class BpmProcessInstanceService {
         dto.setCurrentActivityName(activityName);
     }
 
-    private static void fillErrorSummary(BpmProcessInstanceStateDto dto, List<BpmOpenIncidentDto> openRows) {
-        if (openRows.isEmpty()) {
+    /**
+     * 写入 errorActivityId/Name（取首个父侧 incident 的节点）与 errorReason。
+     * <p>
+     * 当父侧 incident 是来自 CallActivity 的传播 incident（自身 message 为空、
+     * {@link Incident#getRootCauseIncidentId()} 指向子流程上的真正根因）时，
+     * 通过 runtime 查询根因 incident，将 errorReason 拼装为
+     * {@code "<父节点名> -> <子节点名>: <根因 message>"} 的形式。
+     * 多 incident 时各段以 {@code "; "} 拼接。
+     */
+    private void fillErrorSummary(
+            BpmProcessInstanceStateDto dto,
+            List<Incident> openIncidents,
+            BpmnModelInstance parentBpmnModel,
+            Map<String, BpmnModelInstance> bpmnCache) {
+        if (openIncidents.isEmpty()) {
             dto.setErrorReason(null);
             dto.setErrorActivityId(null);
             dto.setErrorActivityName(null);
             return;
         }
-        BpmOpenIncidentDto first = openRows.get(0);
-        dto.setErrorActivityId(first.getActivityId());
-        dto.setErrorActivityName(first.getActivityName());
-        if (openRows.size() == 1) {
-            dto.setErrorReason(first.getMessage());
-        } else {
-            dto.setErrorReason(openRows.stream()
-                    .map(BpmOpenIncidentDto::getMessage)
-                    .filter(StringUtils::hasText)
-                    .collect(Collectors.joining("; ")));
+        Incident firstParent = openIncidents.get(0);
+        dto.setErrorActivityId(firstParent.getActivityId());
+        dto.setErrorActivityName(resolveActivityName(parentBpmnModel, firstParent.getActivityId()));
+
+        List<String> segments = new ArrayList<>(openIncidents.size());
+        for (Incident parent : openIncidents) {
+            String seg = composeIncidentReason(parent, parentBpmnModel, bpmnCache);
+            if (StringUtils.hasText(seg)) {
+                segments.add(seg);
+            }
+        }
+        dto.setErrorReason(segments.isEmpty() ? null : String.join("; ", segments));
+    }
+
+    private String composeIncidentReason(
+            Incident parent, BpmnModelInstance parentBpmnModel, Map<String, BpmnModelInstance> bpmnCache) {
+        String parentActivityName = resolveActivityName(parentBpmnModel, parent.getActivityId());
+        String parentLabel = StringUtils.hasText(parentActivityName) ? parentActivityName : parent.getActivityId();
+
+        Incident root = resolveRootCause(parent);
+        boolean isPropagated = root != null && !root.getId().equals(parent.getId());
+
+        String rootMessage = root != null && StringUtils.hasText(root.getIncidentMessage())
+                ? root.getIncidentMessage()
+                : parent.getIncidentMessage();
+
+        if (isPropagated) {
+            BpmnModelInstance rootBpmn = StringUtils.hasText(root.getProcessDefinitionId())
+                    ? bpmnCache.computeIfAbsent(root.getProcessDefinitionId(), this::loadBpmnModel)
+                    : null;
+            String rootActivityName = resolveActivityName(rootBpmn, root.getActivityId());
+            String rootLabel = StringUtils.hasText(rootActivityName) ? rootActivityName : root.getActivityId();
+            String message = StringUtils.hasText(rootMessage) ? rootMessage : "<no message>";
+            if (StringUtils.hasText(parentLabel) && StringUtils.hasText(rootLabel)) {
+                return parentLabel + " -> " + rootLabel + ": " + message;
+            }
+            String label = StringUtils.hasText(parentLabel) ? parentLabel : rootLabel;
+            return StringUtils.hasText(label) ? label + ": " + message : message;
+        }
+
+        if (StringUtils.hasText(parentLabel) && StringUtils.hasText(rootMessage)) {
+            return parentLabel + ": " + rootMessage;
+        }
+        return StringUtils.hasText(rootMessage) ? rootMessage : parentLabel;
+    }
+
+    /**
+     * 沿 {@link Incident#getRootCauseIncidentId()} 向下找根因 incident；
+     * 父侧传播 incident 通常带空 message，根因挂在子流程实例上。
+     * <p>未配置 rootCauseIncidentId、自身即为根因，或根因已不在 runtime（极少数场景）时返回入参自身。
+     */
+    private Incident resolveRootCause(Incident incident) {
+        String rootId = incident.getRootCauseIncidentId();
+        if (!StringUtils.hasText(rootId) || rootId.equals(incident.getId())) {
+            return incident;
+        }
+        try {
+            Incident root = runtimeService.createIncidentQuery().incidentId(rootId).singleResult();
+            return root != null ? root : incident;
+        } catch (RuntimeException ignored) {
+            return incident;
         }
     }
 

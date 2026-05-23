@@ -417,6 +417,7 @@ def run_mvn_package(mvn_override: str | None, *, build_lib_jar: bool = True) -> 
         "-pl",
         MAVEN_PL_BACKEND,
         "-am",
+        "clean",
         "package",
         "-DskipTests",
     ]

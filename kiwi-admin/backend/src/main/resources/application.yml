@@ -112,10 +112,11 @@ camunda.bpm:
 kiwi.bpm:
   juel-null-for-missing-variables: ${KIWI_BPM_JUEL_NULL_FOR_MISSING_VARIABLES:true}
 
-# External Task 统一重试（AbstractExternalTaskHandler）：需在引擎进程启用；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
+# External Task 统一重试（AbstractExternalTaskHandler）：默认开启；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
 # kiwi.bpm.external-task-retry:
-#   enabled: false
-#   # default-time-cycle: R5/PT1M   # 省略则与上方 camunda generic failedJobRetryTimeCycle 一致（活动未配 cycle 时）
+#   enabled: true                     # 默认 true；如需关闭显式设为 false（关闭后失败将以 retries=0 直接创建 incident）
+#   # default-time-cycle: R5/PT1M     # 省略则与上方 camunda generic failedJobRetryTimeCycle 一致（活动未配 cycle 时）
+#   # non-decreasing-retry-cycle: PT30S  # 非递减重试（IRetry.decreaseRetries()=false，如 SlurmOverloadedException）的退避 duration
 
 sa-token:
   token-name: Authorization

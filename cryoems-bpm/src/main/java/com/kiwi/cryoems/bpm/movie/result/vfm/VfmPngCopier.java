@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * 对齐 cyroems {@code VFMSupport} 将 VFM PNG 复制到 thumbnails 目录。
@@ -22,6 +23,6 @@ public class VfmPngCopier {
             return;
         }
         Files.createDirectories(target.getParent());
-        Files.copy(source, target);
+        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
     }
 }

@@ -5,15 +5,17 @@ import com.kiwi.bpmn.external.retry.ExternalTaskRetryCycleResolver;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import org.camunda.bpm.engine.RepositoryService;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 @Configuration
-@ConditionalOnProperty(prefix = "kiwi.bpm.external-task-retry", name = "enabled", havingValue = "true")
-@ConditionalOnBean(RepositoryService.class)
+@ConditionalOnProperty(
+        prefix = "kiwi.bpm.external-task-retry",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class ExternalTaskRetryAutoConfiguration {
 
     @Bean

@@ -11,10 +11,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ExternalTaskRetryProperties {
 
     /**
-     * 为 true 时注册 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner}（含 BPMN 周期解析与失败规划），
+     * 是否注册 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner}（含 BPMN 周期解析与失败规划），
      * {@link com.kiwi.bpmn.external.AbstractExternalTaskHandler} 失败路径走统一重试。
+     * <p>
+     * 默认 {@code true}：未启用时 {@code AbstractExternalTaskHandler} 失败回调会以
+     * {@code retries=0} 直接创建 incident；显式关闭请设 {@code kiwi.bpm.external-task-retry.enabled=false}。
      */
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     /**
      * 非空时作为 External Task 的全局默认 ISO 周期（当 BPMN 活动未配置 {@code failedJobRetryTimeCycle} 时使用）；

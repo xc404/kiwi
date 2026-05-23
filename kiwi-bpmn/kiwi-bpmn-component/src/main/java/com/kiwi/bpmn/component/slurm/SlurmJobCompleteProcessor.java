@@ -317,16 +317,19 @@ public class SlurmJobCompleteProcessor
             SlurmJob job, SlurmJobResult slurmJobResult, ExternalTask engineTask) {
         String errorFilePath = job.getErrorFilePath();
         String errorFileContent = readErrorFileContent(errorFilePath);
-        Map<String, Object> contextVariables = Map.of();
+        Map<String, Object> contextVariables;
         if( engineTask != null ) {
             contextVariables = safeExecutionVariables(engineTask.getExecutionId());
+        } else {
+            contextVariables = Map.of();
         }
 
         SlurmExternalTaskFailureResolver handler =
                 Optional.ofNullable(handlerForTaskType(job.getTaskType()))
                         .orElse(defaultFailureResolver);
         try {
-            return handler.resolve(job, errorFileContent, contextVariables);
+            return Optional.ofNullable(handler.resolve(job, errorFileContent, contextVariables))
+                    .orElseGet(() -> defaultFailureResolver.resolve(job, errorFileContent, contextVariables));
         } catch( Exception ex ) {
             log.warn("SlurmExternalTaskFailureResolver failed, using default: {}", ex.toString());
             return defaultFailureResolver.resolve(job, errorFileContent, contextVariables);
