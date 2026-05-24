@@ -177,7 +177,46 @@ public class SlurmJobTracker implements InitializingBean, DisposableBean
                 "Slurm sacct tracking window expired (Mongo expiration reached before terminal state): jobId={}, expiration={}",
                 job.getJobId(),
                 job.getExpiration());
-        slurmJobCompleteProcessor.complete(parsed, jobResult);
+        try {
+            slurmJobCompleteProcessor.complete(parsed, jobResult);
+        } catch( Throwable ex ) {
+            // 防御性：complete 自身已捕获 Camunda 异常并降级返回；这里仅兜底
+            log.warn(
+                    "Camunda report during tracking-expired threw unexpectedly: jobId={}, error={}",
+                    job.getJobId(),
+                    ex.toString());
+        }
+        forceFinalizeAfterTimeout(job, jobResult);
+    }
+
+    /**
+     * 跟踪窗口到期的兜底落库：不论 Camunda 上报是否成功，文档必须脱离 {@link SlurmJobStatus#Running}，
+     * 否则下一轮 {@link #findTimedOutJobs} 会反复命中并刷屏 WARN。Camunda 路径已成功时
+     * {@link SlurmJobCompleteProcessor#setJobCompleteStatus} 已写入 {@link SlurmJobStatus#Completed}，
+     * 这里的更新条件为 {@code status=Running}，自然 no-op。
+     */
+    private void forceFinalizeAfterTimeout(SlurmJob job, SlurmJobResult jobResult) {
+        try {
+            long forced =
+                    slurmJobRepository.forceFinalizeIfStillRunning(
+                            job.getJobId(),
+                            jobResult.getSlurmState(),
+                            jobResult.getErrorMessage(),
+                            jobResult.getExitCode());
+            if( forced > 0 ) {
+                log.warn(
+                        "Slurm sacct tracking-expired: Mongo forcibly finalized after Camunda report did not succeed; "
+                                + "Camunda externalTask may still be active and require manual intervention: "
+                                + "jobId={}, externalTaskId={}, processInstanceId={}, activityId={}",
+                        job.getJobId(),
+                        job.getExternalTaskId(),
+                        job.getProcessInstanceId(),
+                        job.getActivityId());
+            }
+        } catch( Throwable ex ) {
+            log.warn(
+                    "forceFinalizeIfStillRunning failed for jobId={}: {}", job.getJobId(), ex.toString());
+        }
     }
 
     /**

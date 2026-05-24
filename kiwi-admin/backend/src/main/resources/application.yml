@@ -111,6 +111,11 @@ camunda.bpm:
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false
 kiwi.bpm:
   juel-null-for-missing-variables: ${KIWI_BPM_JUEL_NULL_FOR_MISSING_VARIABLES:true}
+  # BPM 全局变量：通过 Bean ${bpmGlobalVariables.<field>} 暴露给 BPMN EL（网关条件、Service Task 输入参数等）
+  # 字段定义见 com.kiwi.cryoems.bpm.config.BpmGlobalVariables；新增字段时 yml 用 kebab-case，Java 用 camelCase
+  global:
+    mdoc-auto-filter-enabled: ${KIWI_BPM_MDOC_AUTO_FILTER_ENABLED:false}
+    manual-rebuild-enabled: ${KIWI_BPM_MANUAL_REBUILD_ENABLED:true}
 
 # External Task 统一重试（AbstractExternalTaskHandler）：默认开启；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
 # kiwi.bpm.external-task-retry:

@@ -1,0 +1,83 @@
+---
+description: @ComponentParameter 的 key 禁止包含 "."，统一使用下划线 / 顶层扁平命名
+globs: "**/*.java"
+alwaysApply: true
+---
+
+# @ComponentParameter key 命名规则（禁止使用 "."）
+
+在所有 `@ComponentParameter` 声明的 `key` 中，**禁止使用 `.`（点号）**。
+所有用于流程变量读写的 key 必须是**顶层扁平命名**，使用下划线（`_`）替代点号。
+
+## 背景
+
+历史上为了表达“嵌套对象”的语义（如 `mdoc.id`、`task.config_id`），曾用点分路径
+作为 `@ComponentParameter#key`，并通过 `ExecutionUtils.getStringInputVariableAtPath`
+做 nested Map 解析。
+
+这种写法带来若干问题：
+
+- BPMN 引擎以及部分前端编辑器把 `.` 当作分隔符 / 非法字符处理；
+- 与 `execution.setVariable("foo.bar", ...)` 等顶层 API 行为不一致，容易引发歧义；
+- 上下游契约（HTTP JSON / BPMN 变量 / DB 字段）混用点号与下划线，难以做静态检查；
+- `getStringInputVariableAtPath` 仅在调试期掩盖了契约不清的问题。
+
+因此约定所有 `@ComponentParameter` 的 `key` 必须为扁平标识符。
+
+## 命名约定
+
+- 仅允许字符：`[a-zA-Z0-9_]`，**禁止出现 `.`**。
+- 将点号替换为下划线，例如：
+    - `mdoc.id` → `mdoc_id`
+    - `mdoc.dataId` → `mdoc_dataId`
+    - `task.id` → `task_id`
+    - `task.config_id` → `task_config_id`
+- 字段语义按现有的 camelCase / snake_case 习惯保留即可，本规则只约束 `.` 的去除。
+
+## 代码侧配套
+
+- 读取流程变量统一使用 `ExecutionUtils.getStringInputVariable(execution, "xxx")`
+  等顶层 API，**不再使用** `getStringInputVariableAtPath` / `getInputVariableAtPath`
+  这种 path 风格 API（除非有明确的嵌套对象解析需求，且已与上下游契约对齐）。
+- 抛出的异常信息、Javadoc、`description` 文案中提到的 key 也必须与
+  `@ComponentParameter#key` 完全一致，避免出现 `mdoc.id` / `mdoc_id` 混用。
+
+## 推荐示例
+
+```java
+@ComponentDescription(
+        inputs = {
+                @ComponentParameter(
+                        key = "mdoc_id",
+                        name = "MDocInstance id",
+                        required = true),
+                @ComponentParameter(
+                        key = "mdoc_dataId",
+                        name = "MDoc id",
+                        required = true)
+        })
+public class SomeActivity implements JavaDelegate {
+
+    @Override
+    public void execute(DelegateExecution execution) {
+        String instanceId = ExecutionUtils.getStringInputVariable(execution, "mdoc_id")
+                .orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_id 不能为空"));
+        // ...
+    }
+}
+```
+
+## 不推荐示例
+
+```java
+// 禁止：key 含 "."
+@ComponentParameter(key = "mdoc.id", name = "MDocInstance id", required = true)
+
+// 禁止：读取时使用 path 风格 API
+ExecutionUtils.getStringInputVariableAtPath(execution, "mdoc.id");
+```
+
+## 例外
+
+- 仅当某个 key **必须**与外部既有协议（例如第三方系统的 JSONPath / SpEL 表达式）
+  对齐而不可改名时，可在该处显式注释并标注例外，但不应作为新代码的默认做法。

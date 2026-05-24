@@ -3,6 +3,8 @@ package com.kiwi.cryoems.bpm.mdoc.activity;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
+import com.kiwi.cryoems.bpm.mdoc.dao.MDocRepository;
+import com.kiwi.cryoems.bpm.mdoc.model.MDoc;
 import com.kiwi.cryoems.bpm.mdoc.model.MdocMeta;
 import com.kiwi.cryoems.bpm.mdoc.support.MdocFileParser;
 import com.kiwi.cryoems.bpm.support.WorkflowVariableReader;
@@ -36,14 +38,11 @@ import java.util.Map;
                         key = "mdocFile",
                         name = "mdoc 文件路径",
                         description = "mdoc 文本文件绝对路径（字符串）",
-                        required = true)
-        },
-        outputs = {
+                        required = true),
                 @ComponentParameter(
-                        key = "mdocMeta",
-                        name = "mdocMeta",
-                        description = "解析得到的 MdocMeta 写入的流程变量名",
-                        schema = @Schema(defaultValue = "mdocMeta"))
+                        key = "mdoc_data_id",
+                        name = "mdoc data Id",
+                        required = true)
         })
 @Component("cyroemsMdocParserActivity")
 @RequiredArgsConstructor
@@ -51,6 +50,7 @@ import java.util.Map;
 public class MdocParser implements JavaDelegate {
 
     private final MdocFileParser mdocFileParser;
+    private final MDocRepository mDocRepository;
 
     @Override
     public void execute(DelegateExecution execution) {
@@ -69,7 +69,9 @@ public class MdocParser implements JavaDelegate {
         String mdocFile = resolveMdocFile(execution);
         log.info("开始解析 mdoc: {}", mdocFile);
         MdocMeta meta = mdocFileParser.parse(new File(mdocFile));
-        execution.setVariable("mdocMeta", meta);
+        MDoc mDoc = this.mDocRepository.findById("mdoc_data_id").orElseThrow();
+        mDoc.setMeta(meta);
+        this.mDocRepository.save(mDoc);
         log.info(
                 "mdoc 解析完成: tilts={}, binning={}, spotSize={}, voltage={}",
                 meta.getTilts() == null ? 0 : meta.getTilts().size(),

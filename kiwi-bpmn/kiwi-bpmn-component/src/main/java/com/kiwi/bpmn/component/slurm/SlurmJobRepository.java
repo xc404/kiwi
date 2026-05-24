@@ -52,4 +52,19 @@ public interface SlurmJobRepository extends MongoRepository<SlurmJob, String> {
     @Query("{ '_id': ?0, 'status': 'Running', 'completeProcessLock': { '$ne': true } }")
     @Update("{ '$set': { 'status': 'Completed' } }")
     long markCompletedIfStillActive(String jobId);
+
+    /**
+     * 跟踪窗口到期（{@link SlurmJobTracker#applyTimeout}）后的兜底收尾：仅当文档仍为
+     * {@link SlurmJobStatus#Running} 时原子置为 {@link SlurmJobStatus#Completed}、清锁，并写入
+     * {@code slurmState} / {@code errorMessage} / {@code exitCode}。
+     * <p>
+     * 不要求持有 {@code completeProcessLock}：调用方语义是"无论 Camunda 上报是否成功都必须打破 Running，
+     * 否则下一轮 {@code findByStatusAndExpirationBefore} 会重复触发死循环"。Camunda 上报路径已成功时
+     * 文档状态已是 {@code Completed}，此方法返回 0 表示 no-op，避免双写。
+     *
+     * @return 影响的文档数（0 表示已是 Completed 或不存在）
+     */
+    @Query("{ '_id': ?0, 'status': 'Running' }")
+    @Update("{ '$set': { 'status': 'Completed', 'completeProcessLock': false, 'slurmState': ?1, 'errorMessage': ?2, 'exitCode': ?3 } }")
+    long forceFinalizeIfStillRunning(String jobId, String slurmState, String errorMessage, Integer exitCode);
 }
