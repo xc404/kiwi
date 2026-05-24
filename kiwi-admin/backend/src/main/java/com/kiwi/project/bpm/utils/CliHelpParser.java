@@ -8,9 +8,11 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -41,6 +43,26 @@ public final class CliHelpParser {
      */
     private static final Pattern FLAGS_ONLY_LINE = Pattern.compile(
             "^(?:(?:-[a-zA-Z0-9#][-a-zA-Z0-9_.]*|--[a-zA-Z][-a-zA-Z0-9]*)(?:\\s*,\\s*(?:-[a-zA-Z0-9#][-a-zA-Z0-9_.]*|--[a-zA-Z][-a-zA-Z0-9]*))*)$");
+
+    /** {@link BpmComponent#getSource()}：CLI help 生成的组件来源标识，用于与 {@code classpath}/{@code xbpm} 区分 */
+    public static final String COMPONENT_SOURCE = "cli-help";
+
+    /** 隐藏的「executable 前缀」参数 key，仅在 CLI 生成的组件上出现，用于「重新生成 command」 */
+    public static final String EXECUTABLE_PARAM_KEY = "__command";
+    /** command 模板参数 key（与 shell 父组件约定） */
+    public static final String COMMAND_PARAM_KEY = "command";
+
+    /** {@link BpmComponentParameter#getAdditionalOption()} 的约定子键 */
+    public static final String OPT_PRIMARY_LONG_FLAG = "primaryLongFlag";
+    public static final String OPT_EXPECTS_VALUE = "expectsValue";
+    public static final String OPT_SHORT_FLAG = "shortFlag";
+    public static final String OPT_LONG_ID = "longId";
+    public static final String OPT_FROM_CLI_HELP = "fromCliHelp";
+
+    /** 拼装 command 时跳过的保留输入参数 key（来自 shell 父组件 + 自身控制字段） */
+    private static final Set<String> RESERVED_INPUT_KEYS = Set.of(
+            COMMAND_PARAM_KEY, EXECUTABLE_PARAM_KEY,
+            "directory", "waitFlag", "redirectError", "cleanEnv");
 
     /** help 命令最大长度（防注入滥用） */
     private static final int MAX_HELP_COMMAND_LEN = 4000;
@@ -184,18 +206,11 @@ public final class CliHelpParser {
         c.setName(name);
         c.setDescription(description);
         c.setGroup(group);
+        c.setSource(COMPONENT_SOURCE);
         c.setSourceKey(sourceKey);
         List<BpmComponentParameter> inputs = new ArrayList<>();
-        Set<String> usedKeys = new LinkedHashSet<>();
-        usedKeys.add("command");
-        usedKeys.add("directory");
-        usedKeys.add("waitFlag");
-        usedKeys.add("redirectError");
-        usedKeys.add("cleanEnv");
-        List<NamedOption> named = new ArrayList<>();
         for (ParsedOption o : options) {
             String paramKey = o.longId().replace('-', '_');
-            named.add(new NamedOption(o, paramKey));
             BpmComponentParameter p = new BpmComponentParameter();
             p.setKey(paramKey);
             p.setName(paramKey);
@@ -205,20 +220,44 @@ public final class CliHelpParser {
             if (!o.expectsValue()) {
                 p.setDefaultValue("false");
             }
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put(OPT_PRIMARY_LONG_FLAG, o.primaryLongFlag());
+            meta.put(OPT_EXPECTS_VALUE, o.expectsValue());
+            if (StringUtils.isNotBlank(o.shortFlag())) {
+                meta.put(OPT_SHORT_FLAG, o.shortFlag());
+            }
+            meta.put(OPT_LONG_ID, o.longId());
+            meta.put(OPT_FROM_CLI_HELP, true);
+            p.setAdditionalOption(meta);
             inputs.add(p);
         }
+        inputs.add(buildExecutableParam(executable));
         BpmComponentParameter command = new BpmComponentParameter();
-        command.setKey("command");
-        command.setName("command");
+        command.setKey(COMMAND_PARAM_KEY);
+        command.setName(COMMAND_PARAM_KEY);
         command.setDescription("由 CLI 选项拼装的完整命令（覆盖父组件 command；Camunda 输入中可使用 JUEL 表达式）");
         command.setGroup("脚本");
         command.setHidden(true);
         command.setImportant(false);
-        command.setDefaultValue(buildCommandTemplate(executable, named));
+        command.setDefaultValue(buildCommandTemplateFromParams(executable, inputs));
         inputs.add(command);
         c.setInputParameters(inputs);
         c.setOutputParameters(null);
         return c;
+    }
+
+    /** 构造隐藏的 {@value #EXECUTABLE_PARAM_KEY} 参数，用于「重新生成 command」时取回 executable 前缀。 */
+    public static BpmComponentParameter buildExecutableParam(String executable) {
+        BpmComponentParameter p = new BpmComponentParameter();
+        p.setKey(EXECUTABLE_PARAM_KEY);
+        p.setName(EXECUTABLE_PARAM_KEY);
+        p.setDescription("CLI 重建 command 时使用的 executable 前缀（自动维护，请勿手动修改）");
+        p.setGroup("脚本");
+        p.setHidden(true);
+        p.setReadonly(true);
+        p.setImportant(false);
+        p.setDefaultValue(executable == null ? "" : executable.trim());
+        return p;
     }
 
     static List<ParsedOption> parseOptions(String helpText) {
@@ -369,32 +408,113 @@ public final class CliHelpParser {
     record NamedOption(ParsedOption option, String paramKey) {
     }
 
-    static String buildCommandTemplate(String executable, List<NamedOption> named) {
+    /**
+     * 根据当前输入参数列表与 executable 前缀重建 JUEL 命令模板。
+     * <p>跳过 {@link #RESERVED_INPUT_KEYS} 中的保留项以及 {@link BpmComponentParameter#isHidden() 隐藏} 参数；
+     * 每个参数从 {@link BpmComponentParameter#getAdditionalOption() additionalOption} 读取
+     * {@code primaryLongFlag} / {@code expectsValue}；缺失时按 key 与默认值做兜底推断：
+     * </p>
+     * <ul>
+     *   <li>{@code primaryLongFlag} 兜底：{@code "--" + key.replace('_','-')}</li>
+     *   <li>{@code expectsValue} 兜底：{@code !"false".equalsIgnoreCase(defaultValue)}</li>
+     * </ul>
+     */
+    public static String buildCommandTemplateFromParams(String executable, List<BpmComponentParameter> inputs) {
         String exe = executable == null ? "" : executable.trim();
-        StringBuilder sb = new StringBuilder();
-        sb.append(exe);
-        for (NamedOption no : named) {
-            ParsedOption o = no.option();
-            String param = no.paramKey();
-            if (o.expectsValue()) {
-                String flagPrefix = o.primaryLongFlag();
-                if (!flagPrefix.startsWith("--") && !flagPrefix.startsWith("-")) {
-                    flagPrefix = "--" + o.longId();
-                }
-                if (flagPrefix.contains("=")) {
-                    int eq = flagPrefix.indexOf('=');
-                    String left = flagPrefix.substring(0, eq);
-                    // Camunda JUEL 将 + 视为算术运算，字符串拼接需用 concat，否则会报 Cannot coerce ... to Double
-                    sb.append(" ${not empty ").append(param).append(" ? ' ").append(left).append("='.concat(").append(param).append(") : ''}");
-                } else {
-                    sb.append(" ${not empty ").append(param).append(" ? ' ").append(flagPrefix).append(" '.concat(").append(param).append(") : ''}");
-                }
-            } else {
-                String flag = o.primaryLongFlag().strip();
-                sb.append(" ${").append(param).append(" ? ' ").append(flag).append("' : ''}");
+        StringBuilder sb = new StringBuilder(exe);
+        if (inputs == null) {
+            return sb.toString();
+        }
+        for (BpmComponentParameter p : inputs) {
+            String key = p.getKey();
+            if (StringUtils.isBlank(key) || RESERVED_INPUT_KEYS.contains(key)) {
+                continue;
             }
+            if (p.isHidden()) {
+                continue;
+            }
+            String flag = readPrimaryLongFlag(p);
+            boolean expectsValue = readExpectsValue(p);
+            appendJuelFragment(sb, key, flag, expectsValue);
         }
         return sb.toString();
+    }
+
+    /** 旧入口保留：把内部 {@link NamedOption} 列表映射为参数列表后委托到 {@link #buildCommandTemplateFromParams}。 */
+    static String buildCommandTemplate(String executable, List<NamedOption> named) {
+        List<BpmComponentParameter> inputs = new ArrayList<>();
+        for (NamedOption no : named) {
+            ParsedOption o = no.option();
+            BpmComponentParameter p = new BpmComponentParameter();
+            p.setKey(no.paramKey());
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put(OPT_PRIMARY_LONG_FLAG, o.primaryLongFlag());
+            meta.put(OPT_EXPECTS_VALUE, o.expectsValue());
+            meta.put(OPT_LONG_ID, o.longId());
+            p.setAdditionalOption(meta);
+            inputs.add(p);
+        }
+        return buildCommandTemplateFromParams(executable, inputs);
+    }
+
+    /**
+     * 从 {@link #COMMAND_PARAM_KEY} 参数 {@code defaultValue} 中截取 executable 前缀。
+     * 取字符串首个 {@code ${} 之前的内容并 {@link String#trim() 去空白}；找不到则整串 trim 返回。
+     */
+    public static String extractExecutableFromTemplate(String commandTemplate) {
+        if (commandTemplate == null) {
+            return "";
+        }
+        int idx = commandTemplate.indexOf("${");
+        String head = idx >= 0 ? commandTemplate.substring(0, idx) : commandTemplate;
+        return head.trim();
+    }
+
+    private static String readPrimaryLongFlag(BpmComponentParameter p) {
+        Map<String, Object> meta = p.getAdditionalOption();
+        if (meta != null) {
+            Object v = meta.get(OPT_PRIMARY_LONG_FLAG);
+            if (v instanceof String s && StringUtils.isNotBlank(s)) {
+                return s.trim();
+            }
+        }
+        return "--" + p.getKey().replace('_', '-');
+    }
+
+    private static boolean readExpectsValue(BpmComponentParameter p) {
+        Map<String, Object> meta = p.getAdditionalOption();
+        if (meta != null && meta.containsKey(OPT_EXPECTS_VALUE)) {
+            Object v = meta.get(OPT_EXPECTS_VALUE);
+            if (v instanceof Boolean b) {
+                return b;
+            }
+            if (v instanceof String s) {
+                return !"false".equalsIgnoreCase(s.trim());
+            }
+        }
+        return !"false".equalsIgnoreCase(StringUtils.trimToEmpty(p.getDefaultValue()));
+    }
+
+    private static void appendJuelFragment(StringBuilder sb, String param, String flagPrefixIn, boolean expectsValue) {
+        String flagPrefix = flagPrefixIn;
+        if (flagPrefix == null || flagPrefix.isBlank()) {
+            flagPrefix = "--" + param.replace('_', '-');
+        }
+        if (!flagPrefix.startsWith("-")) {
+            flagPrefix = "--" + flagPrefix;
+        }
+        if (expectsValue) {
+            if (flagPrefix.contains("=")) {
+                int eq = flagPrefix.indexOf('=');
+                String left = flagPrefix.substring(0, eq);
+                // Camunda JUEL 将 + 视为算术运算，字符串拼接需用 concat，否则会报 Cannot coerce ... to Double
+                sb.append(" ${not empty ").append(param).append(" ? ' ").append(left).append("='.concat(").append(param).append(") : ''}");
+            } else {
+                sb.append(" ${not empty ").append(param).append(" ? ' ").append(flagPrefix).append(" '.concat(").append(param).append(") : ''}");
+            }
+        } else {
+            sb.append(" ${").append(param).append(" ? ' ").append(flagPrefix.strip()).append("' : ''}");
+        }
     }
 
     private static String uniquifyKey(String base, Set<String> used) {

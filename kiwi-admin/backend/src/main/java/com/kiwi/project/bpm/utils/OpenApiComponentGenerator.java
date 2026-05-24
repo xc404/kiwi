@@ -37,6 +37,9 @@ public final class OpenApiComponentGenerator {
     private static final Set<String> SUPPORTED_METHODS =
             Set.of("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE");
 
+    /** {@link BpmComponent#getSource()}：OpenAPI/Swagger 生成的组件来源标识 */
+    public static final String COMPONENT_SOURCE = "openapi";
+
     private OpenApiComponentGenerator() {
     }
 
@@ -124,6 +127,7 @@ public final class OpenApiComponentGenerator {
         c.setParentId(httpRequestParentId);
         c.setType(BpmComponent.Type.SpringBean);
         c.setKey(buildKey(operation, path, method));
+        c.setSource(COMPONENT_SOURCE);
         c.setSourceKey(buildSourceKey(path, method, operation));
         c.setName(buildName(operation, path, method));
         c.setDescription(buildDescription(openAPI, path, method, operation));

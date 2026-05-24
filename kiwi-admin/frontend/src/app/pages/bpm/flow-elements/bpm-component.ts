@@ -386,4 +386,13 @@ export class BpmComponent implements AfterViewInit {
 
     }
 
+    /** 子组件「重新生成 command」完成后，用后端返回的最新组件刷新本地状态并提示用户 */
+    onRebuildCommand(latest: any) {
+        if (!latest) {
+            return;
+        }
+        this.selectedComponent.set(latest);
+        this.message.success('command 已重新生成');
+    }
+
 }

@@ -17,15 +17,12 @@ function hasReplaceCandidates(
   if (!kiwi || !currentComponentId) {
     return false;
   }
-  const exclude = currentComponentId;
   const recent = kiwi.getRecentUsages?.() ?? [];
-  if (recent.some((c) => c?.id && c.id !== exclude)) {
+  if (recent.some((c) => !!c?.id)) {
     return true;
   }
   const groups = kiwi.getComponentGroups?.() ?? [];
-  return groups.some((g) =>
-    (g.components ?? []).some((c) => c?.id && c.id !== exclude),
-  );
+  return groups.some((g) => (g.components ?? []).some((c) => !!c?.id));
 }
 
 function canReplaceComponent(element: Element, kiwi: KiwiReplaceComponentConfig | undefined): boolean {
@@ -96,13 +93,14 @@ KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
   const groups = kiwi.getComponentGroups() || [];
   for (const g of groups) {
     for (const c of g.components || []) {
-      if (!c?.id || c.id === currentId) {
+      if (!c?.id) {
         continue;
       }
+      const isCurrent = c.id === currentId;
       const id = 'kiwi-replace-comp-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
       entries[id] = {
         label: c.name,
-        description: c.descrition,
+        description: isCurrent ? t('当前组件 · 刷新参数') : c.descrition,
         className: c.icon || 'bpmn-icon-service-task',
         group: { id: g.group, name: g.group },
         action: () => {

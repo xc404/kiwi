@@ -87,7 +87,8 @@
             [nzTitle]="'参数配置 - ' + selectedComponent().name" (nzOnCancel)="parametersModalVisible.set(false)"
             (nzOnOk)="saveParameters()">
             <div *nzModalContent class="crud-edit-form">
-                  <app-bpm-input-output-parameters [component]="selectedComponent()">
+                  <app-bpm-input-output-parameters [component]="selectedComponent()"
+                        (rebuildCommand)="onRebuildCommand($event)">
 
                   </app-bpm-input-output-parameters>
             </div>

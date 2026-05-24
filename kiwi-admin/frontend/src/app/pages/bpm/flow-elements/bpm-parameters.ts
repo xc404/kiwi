@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, input, OnInit, output, signal } from "@angular/core";
 import { FormGroup } from "@angular/forms";
 import { BaseHttpService } from "@app/core/services/http/base-http.service";
-import { AppButton } from "@app/shared/components/button/app.button";
+import { AppButton, AppButtonConfig } from "@app/shared/components/button/app.button";
 import { CrudEditForm } from "@app/shared/components/crud/components/crud-edit-form";
 import { FieldType } from "@app/shared/components/field/field";
 import { Editor } from "@app/shared/components/field/field-editor";
@@ -38,7 +38,7 @@ import { ComponentDescription } from "./component-provider";
 
   <ng-template #toolbar>
      <div class="ant-pro-table-toolbar-option">
-        @for (item of toolbarActions; track $index) {
+        @for (item of toolbarActions(); track $index) {
           <app-button  [config]="item" class="m-l-10"></app-button>
         }
       </div>
@@ -69,13 +69,20 @@ export class BpmParameters implements OnInit {
     parameterChange = output<PropertyDescription[]>();
     editModel = "edit";
 
-    toolbarActions = [
+    /** 由外层（如 BpmInputOutputParameters）注入的额外工具栏按钮，渲染于「添加参数」右侧 */
+    extraToolbarActions = input<AppButtonConfig[]>([]);
+
+    baseToolbarActions: AppButtonConfig[] = [
         {
             name: '添加参数', handler: () => {
                 this.editParameter({}, 'add');
             }
         }
-    ]
+    ];
+
+    toolbarActions = computed<AppButtonConfig[]>(() => {
+        return [...this.baseToolbarActions, ...(this.extraToolbarActions() || [])];
+    });
     tableConfig: AppTableConfig = {
         needNoScroll: true,
 
@@ -92,6 +99,19 @@ export class BpmParameters implements OnInit {
             { name: '编辑器', dataIndex: 'htmlType', dictKey: 'field_editor' },
             { name: '示例', dataIndex: 'example', editor: Editor.TextArea },
             { name: '字典键', dataIndex: 'dictKey' },
+            {
+                name: 'CLI 标志位',
+                dataIndex: 'additionalOption.primaryLongFlag',
+                description: '拼装命令时使用的 flag 前缀，例如 --foo、-FlipGain、--out',
+                show: false,
+            },
+            // {
+            //     name: '是否带值',
+            //     dataIndex: 'additionalOption.expectsValue',
+            //     description: '勾选表示该 flag 后接参数值；不勾选表示纯开关（默认值为 "false" 时也按开关处理）',
+            //     type: FieldType.Boolean,
+            //     show: false,
+            // },
             actionColumn({
                 name: '操作',
                 fixed: true,// 是否固定单元格 （只有从最左边或最右边连续固定才有效）
@@ -164,11 +184,10 @@ export class BpmParameters implements OnInit {
 
     editParameter(record: any, model: 'edit' | 'add') {
         this.editModel = model;
-        this.editRecord.set({ ...record });
+        // 深拷贝 additionalOption，避免 Formly 表单实时写入到原参数对象，保证「取消」能丢弃未保存改动
+        const cloned = { ...record, additionalOption: { ...(record?.additionalOption || {}) } };
+        this.editRecord.set(cloned);
         this.editModalVisible.set(true);
-        if (model === 'edit') {
-
-        }
     }
 
     deleteParameter(record: any) {
@@ -182,7 +201,15 @@ export class BpmParameters implements OnInit {
     saveItem() {
 
 
-        const record = this.editRecord();
+        const record = { ...this.editRecord() };
+        // 折叠 additionalOption：空对象不持久化，保留任意已填子键
+        const meta = record.additionalOption || {};
+        const hasMeta = Object.keys(meta).some((k) => meta[k] !== undefined && meta[k] !== null && meta[k] !== '');
+        if (!hasMeta) {
+            delete record.additionalOption;
+        } else {
+            record.additionalOption = meta;
+        }
         if (this.editModel === 'add') {
             this.setParameters([...this._parameters(), record]);
         } else {
@@ -209,7 +236,9 @@ export class BpmParameters implements OnInit {
 
     selector: 'app-bpm-input-output-parameters',
     template: ` 
-        <app-bpm-parameters [name]="'输入'" [parameters]="inputParams()" (parameterChange)="saveParamters($event, 'input')"></app-bpm-parameters>
+        <app-bpm-parameters [name]="'输入'" [parameters]="inputParams()"
+            [extraToolbarActions]="inputExtraToolbarActions"
+            (parameterChange)="saveParamters($event, 'input')"></app-bpm-parameters>
 
         <app-bpm-parameters [name]="'输出'"  [parameters]="outputParams()" (parameterChange)="saveParamters($event, 'output')"></app-bpm-parameters>
      `,
@@ -221,6 +250,8 @@ export class BpmInputOutputParameters {
     component = input.required<ComponentDescription>();
     http: any = inject(BaseHttpService);
 
+    /** 重新生成 command 之后向外抛出最新组件（已由后端持久化），供宿主刷新 selectedComponent 等本地状态 */
+    rebuildCommand = output<ComponentDescription>();
 
     inputParams = computed(() => {
         return this.component().inputParameters || [];
@@ -229,6 +260,14 @@ export class BpmInputOutputParameters {
     outputParams = computed(() => {
         return this.component().outputParameters || [];
     });
+
+    inputExtraToolbarActions: AppButtonConfig[] = [
+        {
+            name: '重新生成 command',
+            tooltip: '根据当前输入参数与隐藏的 __command 前缀，由后端重写 command 的 JUEL 模板',
+            handler: () => this.rebuildCommandTemplate(),
+        },
+    ];
 
     saveParamters(parameters: PropertyDescription[], type: 'input' | 'output' = 'input') {
         let body: any = {
@@ -247,6 +286,20 @@ export class BpmInputOutputParameters {
             // 保存成功后的逻辑
         });
 
+    }
+
+    rebuildCommandTemplate() {
+        const id = this.component()?.id;
+        if (!id) {
+            return;
+        }
+        this.http
+            .post(`/bpm/component/${id}/rebuild-command`, {})
+            .subscribe((latest: ComponentDescription) => {
+                if (latest) {
+                    this.rebuildCommand.emit(latest);
+                }
+            });
     }
 
 }

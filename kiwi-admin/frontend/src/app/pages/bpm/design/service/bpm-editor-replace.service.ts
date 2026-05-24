@@ -26,7 +26,7 @@ export class BpmEditorReplaceService {
 
   replaceComponentFromContextPad(element: Element, newComponent: ComponentDescription): void {
     const oldComponent = this.componentService.getComponentForElement(element);
-    if (!oldComponent || oldComponent.id === newComponent.id) {
+    if (!oldComponent) {
       return;
     }
     if ((element as { type?: string }).type !== 'bpmn:ServiceTask') {
@@ -38,6 +38,10 @@ export class BpmEditorReplaceService {
 
     const preservedInputs = new Map<string, string>();
     for (const p of newComponent.inputParameters ?? []) {
+      if (p.hidden) {
+        console.log('hidden input parameter', p.key, p.defaultValue);
+        continue;
+      }
       const v = this.elementModel.getValue(modeler, element, PropertyNamespace.inputParameter, p.key);
       if (v != null && v !== '') {
         preservedInputs.set(p.key, String(v));
@@ -73,10 +77,9 @@ export class BpmEditorReplaceService {
       );
     }
     for (const p of inputParams) {
-      if (p.hidden || !preservedInputs.has(p.key)) {
+      if (!preservedInputs.has(p.key)) {
         continue;
       }
-      console.log('preservedInputs', preservedInputs.get(p.key));
       this.elementModel.setValue(
         modeler,
         element,

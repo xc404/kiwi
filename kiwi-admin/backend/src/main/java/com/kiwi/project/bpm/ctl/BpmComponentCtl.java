@@ -4,6 +4,7 @@ import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.dto.BpmComponentPreviewConflictItem;
 import com.kiwi.project.bpm.model.BpmComponent;
+import com.kiwi.project.bpm.model.BpmComponentParameter;
 import com.kiwi.project.bpm.service.BpmComponentRecentUsageService;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
@@ -180,6 +181,71 @@ public class BpmComponentCtl extends BaseCtl
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         }
+    }
+
+    /**
+     * 按组件当前的 {@code inputParameters} 重新生成 CLI 组件的 {@code command} JUEL 模板。
+     * <p>使用 {@link CliHelpParser#EXECUTABLE_PARAM_KEY} 隐藏参数中保存的 executable 前缀；若不存在则从
+     * 现有 {@code command} 模板的字面量部分回填一份，保证后续重建可重复执行。</p>
+     */
+    @Operation(operationId = "bpmComp_rebuildCommand",
+            summary = "按当前输入参数列表重建 CLI 组件的 command JUEL 模板")
+    @PostMapping("{id}/rebuild-command")
+    @ResponseBody
+    public BpmComponent rebuildCommand(@PathVariable String id) {
+        BpmComponent comp = bpmComponentDao.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "组件不存在: " + id));
+        List<BpmComponentParameter> inputs = comp.getInputParameters();
+        if (inputs == null) {
+            inputs = new java.util.ArrayList<>();
+            comp.setInputParameters(inputs);
+        }
+
+        BpmComponentParameter executableParam = findParameter(inputs, CliHelpParser.EXECUTABLE_PARAM_KEY);
+        BpmComponentParameter commandParam = findParameter(inputs, CliHelpParser.COMMAND_PARAM_KEY);
+        String executable;
+        if (executableParam != null && StringUtils.isNotBlank(executableParam.getDefaultValue())) {
+            executable = executableParam.getDefaultValue().trim();
+        } else {
+            String existingTemplate = commandParam == null ? "" : StringUtils.trimToEmpty(commandParam.getDefaultValue());
+            executable = CliHelpParser.extractExecutableFromTemplate(existingTemplate);
+            if (executableParam == null) {
+                BpmComponentParameter created = CliHelpParser.buildExecutableParam(executable);
+                int insertAt = commandParam == null ? inputs.size() : inputs.indexOf(commandParam);
+                inputs.add(insertAt, created);
+            } else {
+                executableParam.setDefaultValue(executable);
+            }
+        }
+
+        String newTemplate = CliHelpParser.buildCommandTemplateFromParams(executable, inputs);
+        if (commandParam == null) {
+            commandParam = new BpmComponentParameter();
+            commandParam.setKey(CliHelpParser.COMMAND_PARAM_KEY);
+            commandParam.setName(CliHelpParser.COMMAND_PARAM_KEY);
+            commandParam.setDescription("由 CLI 选项拼装的完整命令（覆盖父组件 command；Camunda 输入中可使用 JUEL 表达式）");
+            commandParam.setGroup("脚本");
+            commandParam.setHidden(true);
+            commandParam.setImportant(false);
+            inputs.add(commandParam);
+        }
+        commandParam.setDefaultValue(newTemplate);
+
+        bpmComponentDao.updateSelective(comp);
+        bpmComponentService.refresh();
+        return bpmComponentDao.findById(id).orElseThrow();
+    }
+
+    private static BpmComponentParameter findParameter(List<BpmComponentParameter> inputs, String key) {
+        if (inputs == null || key == null) {
+            return null;
+        }
+        for (BpmComponentParameter p : inputs) {
+            if (key.equals(p.getKey())) {
+                return p;
+            }
+        }
+        return null;
     }
 
     @Data
