@@ -69,7 +69,8 @@ public class MdocParser implements JavaDelegate {
         String mdocFile = resolveMdocFile(execution);
         log.info("开始解析 mdoc: {}", mdocFile);
         MdocMeta meta = mdocFileParser.parse(new File(mdocFile));
-        MDoc mDoc = this.mDocRepository.findById("mdoc_data_id").orElseThrow();
+        String mdocDataId = ExecutionUtils.getStringInputVariable(execution, "mdoc_data_id").orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_data_id 不能为空"));
+        MDoc mDoc = this.mDocRepository.findById(mdocDataId).orElseThrow();
         mDoc.setMeta(meta);
         this.mDocRepository.save(mDoc);
         log.info(

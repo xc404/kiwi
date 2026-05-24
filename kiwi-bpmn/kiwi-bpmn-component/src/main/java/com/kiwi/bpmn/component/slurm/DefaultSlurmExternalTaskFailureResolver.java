@@ -46,7 +46,7 @@ public class DefaultSlurmExternalTaskFailureResolver implements SlurmExternalTas
         }
 
         String message = prependSlurmStateLine(result, detail);
-        return new JobRetryException(clamp(message));
+        return new RuntimeException(clamp(message));
     }
 
     /**

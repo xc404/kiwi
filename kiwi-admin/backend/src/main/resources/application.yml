@@ -105,7 +105,7 @@ camunda.bpm:
       # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
       enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
       # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
-      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R5/PT1M}
+      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
 
 # Camunda JUEL：在 SpringExpressionManager 解析链末尾追加容错（缺失流程变量 → null，不影响 ${assignmentActivity} 等 Bean）
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false
