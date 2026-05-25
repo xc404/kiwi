@@ -7,11 +7,14 @@ import com.kiwi.cryoems.bpm.mdoc.dao.MDocRepository;
 import com.kiwi.cryoems.bpm.mdoc.model.MDoc;
 import com.kiwi.cryoems.bpm.mdoc.model.MdocMeta;
 import com.kiwi.cryoems.bpm.mdoc.model.MdocTiltMeta;
+import com.kiwi.cryoems.bpm.movie.dao.MovieDataSetRepository;
 import com.kiwi.cryoems.bpm.movie.dao.MovieResultRepository;
+import com.kiwi.cryoems.bpm.movie.model.MovieDataset;
 import com.kiwi.cryoems.bpm.movie.model.MovieResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
@@ -36,8 +39,11 @@ import java.util.stream.Collectors;
  * <p>核心步骤（参考 {@code MdocMotionWaitScheduler.checkMotionWaitReady}）：
  * <ol>
  *     <li>按 {@code mdoc_dataId} 加载 {@link MDoc}；空或 {@code meta.tilts} 空 → 未就绪；</li>
- *     <li>收集所有 {@link MdocTiltMeta#getDataId()}；任一为空 → 未就绪（不做 dataset 绑定 bootstrap，
- *         那是 cryo 后端的职责）；</li>
+ *     <li>若任一 {@link MdocTiltMeta#getDataId()} 缺失，先按
+ *         {@code mDoc.belonging_data + tilt.name} 反查 {@link MovieDataset} 集合做
+ *         <em>ensureMovieLoaded</em> bootstrap：全部命中则把 {@code MovieDataset.id} 回填到
+ *         {@link MdocTiltMeta#setDataId(String)} 并初始化 {@link MDoc#setMovie_data_ids(List)}；
+ *         任一缺失则视为未就绪让 BPMN 继续轮询；</li>
  *     <li>按 {@code movie_data_id IN tiltDataIds AND config_id = task_config_id} 查 {@link MovieResult}；
  *         按 movie_data_id 分组取最新（{@link MovieResult#pickNewer}）；</li>
  *     <li>统计 {@code motion.predict_dose} 非空的条数；不足 tilts 总数 → 未就绪；</li>
@@ -47,10 +53,9 @@ import java.util.stream.Collectors;
  *
  * <p>与 {@code MdocMotionWaitScheduler} 的关键差异：
  * <ul>
- *     <li>不做 {@code ensureMovieLoaded}（按 dataset_id + name 绑定 MovieDataset）——那是上游 bootstrap，
- *         BPM 端只负责"等就绪"；tilt dataId 缺失时直接当未就绪让 BPMN 继续轮询；</li>
+ *     <li>{@code dataset_id} 不再从 {@code Task.taskSettings.dataset_id} 取，而是直接读
+ *         {@link MDoc#getBelonging_data()}——避免 BPM 模块反查 Task 实体；</li>
  *     <li>不调 {@code KiwiWorkflowClient.complete}——节点自身就是 BPMN 内部，由引擎自然推进；</li>
- *     <li>不依赖 {@code Task} 对象——{@code config_id} 由流程变量 {@code task_config_id} 注入；</li>
  *     <li>不依赖 {@code MDocInstance.currentActivity} / {@code external_workflow_instance_id}——这些是
  *         外部扫描器才需要的索引字段。</li>
  * </ul>
@@ -67,7 +72,8 @@ import java.util.stream.Collectors;
         name = "CryoEMS 等待 Motion 就绪",
         group = "CryoEM",
         version = "1.0",
-        description = "检查当前 mdoc 所有 tilt 对应 MovieResult.motion.predict_dose 是否全部就绪；"
+        description = "检查当前 mdoc 所有 tilt 对应 MovieResult.motion.predict_dose 是否全部就绪："
+                + "若 tilt.dataId 缺失，先按 mDoc.belonging_data + tilt.name 反查 MovieDataset 做绑定；"
                 + "就绪时设置 all_motion_ready=true 并回写每个 tilt 的 motionResultId、输出 selectedTiltIds。"
                 + "配合排他网关 + timer intermediateCatchEvent 实现轮询等待。",
         inputs = {
@@ -79,7 +85,7 @@ import java.util.stream.Collectors;
                 @ComponentParameter(
                         key = "mdoc_dataId",
                         name = "MDoc id",
-                        description = "MDoc 主键，用于加载 tilts",
+                        description = "MDoc 主键，用于加载 tilts、belonging_data",
                         required = true),
                 @ComponentParameter(
                         key = "task_config_id",
@@ -116,6 +122,7 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
 
     private final MDocRepository mDocRepository;
     private final MovieResultRepository movieResultRepository;
+    private final MovieDataSetRepository movieDataSetRepository;
 
     @Override
     public void execute(DelegateExecution execution) {
@@ -159,19 +166,22 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
             return;
         }
 
-        // 收集 tilt.dataId；任一缺失视为未就绪（不做 ensureMovieLoaded bootstrap）
-        List<String> tiltDataIds = new ArrayList<>(tilts.size());
-        boolean dataIdMissing = false;
-        for (MdocTiltMeta t : tilts) {
-            if (t == null || !StringUtils.hasText(t.getDataId())) {
-                dataIdMissing = true;
-                continue;
-            }
-            tiltDataIds.add(t.getDataId());
+        // ensureMovieLoaded bootstrap：tilt.dataId 缺失时按 belonging_data + name 反查 MovieDataset 回填
+        if (!ensureMovieLoaded(instanceId, mDoc, tilts)) {
+            writeNotReady(execution, 0, totalCount);
+            return;
         }
-        if (dataIdMissing) {
+
+        // ensureMovieLoaded 之后 dataId 应全部就绪；这里再保险地按 dataId 收集
+        List<String> tiltDataIds = new ArrayList<>(tilts.size());
+        for (MdocTiltMeta t : tilts) {
+            if (t != null && StringUtils.hasText(t.getDataId())) {
+                tiltDataIds.add(t.getDataId());
+            }
+        }
+        if (tiltDataIds.size() < totalCount) {
             log.debug(
-                    "MotionWait not ready: instance {} mdoc {} has tilt(s) without dataId ({}/{} bound)",
+                    "MotionWait not ready: instance {} mdoc {} has tilt(s) without dataId after bind ({}/{})",
                     instanceId, mdocDataId, tiltDataIds.size(), totalCount);
             writeNotReady(execution, 0, totalCount);
             return;
@@ -224,6 +234,88 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
         log.info(
                 "MotionWait ready: instance {} mdoc {} tilts={} motionResultIdChanged={}",
                 instanceId, mdocDataId, totalCount, motionResultIdChanged);
+    }
+
+    /**
+     * 等价于原 {@code MdocMotionWaitScheduler.ensureMovieLoaded}：当 tilt.dataId 仍有缺失时，按
+     * {@code mDoc.belonging_data}（替代原来的 task.taskSettings.dataset_id）+ {@code tilt.name}
+     * 在 {@link MovieDataset} 集合内匹配，回填 {@link MdocTiltMeta#setDataId(String)} 与
+     * {@link MDoc#setMovie_data_ids(List)}，并持久化 mdoc。
+     *
+     * <p>返回 {@code true}：所有 tilt 的 dataId 已就绪可继续后续 motion 判定；返回 {@code false}：
+     * 当前仍有 movie dataset 未入库或元信息缺失，调用方应当未就绪让 BPMN 继续轮询。
+     */
+    private boolean ensureMovieLoaded(String instanceId, MDoc mDoc, List<MdocTiltMeta> tilts) {
+        boolean allBound = true;
+        List<String> names = new ArrayList<>(tilts.size());
+        for (MdocTiltMeta t : tilts) {
+            if (t == null) {
+                continue;
+            }
+            if (!StringUtils.hasText(t.getDataId())) {
+                allBound = false;
+            }
+            if (StringUtils.hasText(t.getName())) {
+                names.add(t.getName());
+            }
+        }
+        if (allBound) {
+            return true;
+        }
+        String datasetId = mDoc.getBelonging_data();
+        if (!StringUtils.hasText(datasetId)) {
+            log.warn(
+                    "MovieConnect skipped: instance {} mdoc {} has no belonging_data",
+                    instanceId, mDoc.getId());
+            return false;
+        }
+        if (names.isEmpty()) {
+            log.debug(
+                    "MovieConnect skipped: instance {} mdoc {} has no tilt names",
+                    instanceId, mDoc.getId());
+            return false;
+        }
+        // belonging_data 在不同写入路径下可能是 ObjectId 或 String，二者都加入 in 条件兼容
+        Object datasetIdCriteria;
+        try {
+            datasetIdCriteria = new ObjectId(datasetId);
+        } catch (IllegalArgumentException ex) {
+            datasetIdCriteria = datasetId;
+        }
+        Query q = Query.query(Criteria.where("belonging_data").in(datasetIdCriteria, datasetId))
+                .addCriteria(Criteria.where("name").in(names));
+        List<MovieDataset> movieDatasets = movieDataSetRepository.findBy(q);
+        if (movieDatasets.size() != names.size()) {
+            log.debug(
+                    "MovieConnect not ready: instance {} mdoc {} matched={}/{}",
+                    instanceId, mDoc.getId(), movieDatasets.size(), names.size());
+            return false;
+        }
+        Map<String, MovieDataset> datasetByName = movieDatasets.stream()
+                .collect(Collectors.toMap(MovieDataset::getName, Function.identity()));
+        for (MdocTiltMeta t : tilts) {
+            if (t == null || !StringUtils.hasText(t.getName())) {
+                continue;
+            }
+            MovieDataset md = datasetByName.get(t.getName());
+            if (md == null) {
+                log.warn(
+                        "MovieConnect inconsistency: instance {} tilt {} has no matched MovieDataset",
+                        instanceId, t.getName());
+                return false;
+            }
+            t.setDataId(md.getId());
+        }
+        if (mDoc.getMovie_data_ids() == null) {
+            mDoc.setMovie_data_ids(tilts.stream()
+                    .map(MdocTiltMeta::getDataId)
+                    .collect(Collectors.toList()));
+        }
+        mDocRepository.save(mDoc);
+        log.info(
+                "MovieConnect done: instance {} mdoc {} bound tilts={}",
+                instanceId, mDoc.getId(), tilts.size());
+        return true;
     }
 
     private static void writeNotReady(DelegateExecution execution, int readyCount, int totalCount) {

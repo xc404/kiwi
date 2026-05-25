@@ -4,7 +4,9 @@ import com.kiwi.cryoems.bpm.mdoc.dao.MDocRepository;
 import com.kiwi.cryoems.bpm.mdoc.model.MDoc;
 import com.kiwi.cryoems.bpm.mdoc.model.MdocMeta;
 import com.kiwi.cryoems.bpm.mdoc.model.MdocTiltMeta;
+import com.kiwi.cryoems.bpm.movie.dao.MovieDataSetRepository;
 import com.kiwi.cryoems.bpm.movie.dao.MovieResultRepository;
+import com.kiwi.cryoems.bpm.movie.model.MovieDataset;
 import com.kiwi.cryoems.bpm.movie.model.MovieResult;
 import com.kiwi.cryoems.bpm.movie.model.motion.MotionResult;
 import org.camunda.bpm.engine.delegate.BpmnError;
@@ -17,6 +19,7 @@ import org.springframework.data.mongodb.core.query.Query;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -37,13 +41,16 @@ class CryoemsWaitMotionReadyActivityTest {
 
     private MDocRepository mDocRepository;
     private MovieResultRepository movieResultRepository;
+    private MovieDataSetRepository movieDataSetRepository;
     private CryoemsWaitMotionReadyActivity activity;
 
     @BeforeEach
     void setUp() {
         mDocRepository = mock(MDocRepository.class);
         movieResultRepository = mock(MovieResultRepository.class);
-        activity = new CryoemsWaitMotionReadyActivity(mDocRepository, movieResultRepository);
+        movieDataSetRepository = mock(MovieDataSetRepository.class);
+        activity = new CryoemsWaitMotionReadyActivity(
+                mDocRepository, movieResultRepository, movieDataSetRepository);
     }
 
     @Test
@@ -52,8 +59,8 @@ class CryoemsWaitMotionReadyActivityTest {
         String configId = "cfg-1";
 
         MDoc mDoc = mDocWithTilts(mdocDataId,
-                tilt("tilt-A", null),
-                tilt("tilt-B", null));
+                tilt("tilt-A", "tA-name", null),
+                tilt("tilt-B", "tB-name", null));
         mDoc.setMovie_data_ids(Arrays.asList("tilt-A", "tilt-B"));
         when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
         when(movieResultRepository.findBy(any(Query.class)))
@@ -70,6 +77,8 @@ class CryoemsWaitMotionReadyActivityTest {
         assertThat(vars.get("motion_ready_count")).isEqualTo(2);
         assertThat(vars.get("motion_total_count")).isEqualTo(2);
         assertThat(vars.get("selectedTiltIds")).isEqualTo(Arrays.asList("tilt-A", "tilt-B"));
+        // 全部 tilt 已有 dataId，不应触发 MovieDataset 反查
+        verify(movieDataSetRepository, never()).findBy(any(Query.class));
     }
 
     @Test
@@ -78,8 +87,8 @@ class CryoemsWaitMotionReadyActivityTest {
         String configId = "cfg-1";
 
         MDoc mDoc = mDocWithTilts(mdocDataId,
-                tilt("tilt-A", null),
-                tilt("tilt-B", null));
+                tilt("tilt-A", "tA-name", null),
+                tilt("tilt-B", "tB-name", null));
         when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
         when(movieResultRepository.findBy(any(Query.class)))
                 .thenReturn(Arrays.asList(
@@ -99,13 +108,14 @@ class CryoemsWaitMotionReadyActivityTest {
     }
 
     @Test
-    void execute_setsAllReadyFalseWhenTiltDataIdMissing() {
+    void execute_setsAllReadyFalseWhenBelongingDataMissingAndDataIdMissing() {
         String mdocDataId = "mdoc-3";
         String configId = "cfg-1";
 
         MDoc mDoc = mDocWithTilts(mdocDataId,
-                tilt("tilt-A", null),
-                tilt(null, null));
+                tilt("tilt-A", "tA-name", null),
+                tilt(null, "tB-name", null));
+        // belonging_data 缺失，无法做 ensureMovieLoaded bootstrap
         when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
 
         Map<String, Object> vars = baseVars(mdocDataId, configId);
@@ -116,6 +126,7 @@ class CryoemsWaitMotionReadyActivityTest {
         assertThat(vars.get("all_motion_ready")).isEqualTo(false);
         assertThat(vars.get("motion_ready_count")).isEqualTo(0);
         assertThat(vars.get("motion_total_count")).isEqualTo(2);
+        verify(movieDataSetRepository, never()).findBy(any(Query.class));
         verify(movieResultRepository, never()).findBy(any(Query.class));
     }
 
@@ -136,6 +147,7 @@ class CryoemsWaitMotionReadyActivityTest {
         assertThat(vars.get("all_motion_ready")).isEqualTo(false);
         assertThat(vars.get("motion_total_count")).isEqualTo(0);
         verify(movieResultRepository, never()).findBy(any(Query.class));
+        verify(movieDataSetRepository, never()).findBy(any(Query.class));
     }
 
     @Test
@@ -143,8 +155,8 @@ class CryoemsWaitMotionReadyActivityTest {
         String mdocDataId = "mdoc-4";
         String configId = "cfg-1";
 
-        MdocTiltMeta tA = tilt("tilt-A", null);
-        MdocTiltMeta tB = tilt("tilt-B", "stale-mr-B"); // 已有旧的 → 也应被覆盖
+        MdocTiltMeta tA = tilt("tilt-A", "tA-name", null);
+        MdocTiltMeta tB = tilt("tilt-B", "tB-name", "stale-mr-B"); // 已有旧的 → 也应被覆盖
         MDoc mDoc = mDocWithTilts(mdocDataId, tA, tB);
         mDoc.setMovie_data_ids(Arrays.asList("tilt-A", "tilt-B"));
         when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
@@ -175,8 +187,8 @@ class CryoemsWaitMotionReadyActivityTest {
         String configId = "cfg-1";
 
         MDoc mDoc = mDocWithTilts(mdocDataId,
-                tilt("tilt-A", "mr-A"),
-                tilt("tilt-B", "mr-B"));
+                tilt("tilt-A", "tA-name", "mr-A"),
+                tilt("tilt-B", "tB-name", "mr-B"));
         mDoc.setMovie_data_ids(Arrays.asList("tilt-A", "tilt-B"));
         when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
         when(movieResultRepository.findBy(any(Query.class)))
@@ -191,6 +203,91 @@ class CryoemsWaitMotionReadyActivityTest {
 
         verify(mDocRepository, never()).save(any(MDoc.class));
         assertThat(vars.get("all_motion_ready")).isEqualTo(true);
+    }
+
+    @Test
+    void execute_ensureMovieLoadedBindsDataIdsThenSetsReady() {
+        String mdocDataId = "mdoc-6";
+        String configId = "cfg-1";
+        String datasetId = "ds-1";
+
+        MDoc mDoc = mDocWithTilts(mdocDataId,
+                tilt(null, "tA-name", null),
+                tilt(null, "tB-name", null));
+        mDoc.setBelonging_data(datasetId);
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+        when(movieDataSetRepository.findBy(any(Query.class)))
+                .thenReturn(Arrays.asList(
+                        movieDataset("ds-tA", "tA-name"),
+                        movieDataset("ds-tB", "tB-name")));
+        when(movieResultRepository.findBy(any(Query.class)))
+                .thenReturn(Arrays.asList(
+                        movieResult("mr-A", "ds-tA", configId, 1.0),
+                        movieResult("mr-B", "ds-tB", configId, 2.0)));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        DelegateExecution execution = stubExecution(vars);
+
+        activity.execute(execution);
+
+        // ensureMovieLoaded 完成绑定 + 第二次（motionResultId 回写）合计 mDoc.save 至少 1 次
+        verify(mDocRepository, atLeastOnce()).save(any(MDoc.class));
+        assertThat(mDoc.getMeta().getTilts())
+                .extracting(MdocTiltMeta::getDataId, MdocTiltMeta::getMotionResultId)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("ds-tA", "mr-A"),
+                        org.assertj.core.groups.Tuple.tuple("ds-tB", "mr-B"));
+        assertThat(mDoc.getMovie_data_ids()).containsExactly("ds-tA", "ds-tB");
+        assertThat(vars.get("all_motion_ready")).isEqualTo(true);
+        assertThat(vars.get("selectedTiltIds")).isEqualTo(Arrays.asList("ds-tA", "ds-tB"));
+    }
+
+    @Test
+    void execute_ensureMovieLoadedNotReadyWhenDatasetPartiallyMatched() {
+        String mdocDataId = "mdoc-7";
+        String configId = "cfg-1";
+        String datasetId = "ds-1";
+
+        MDoc mDoc = mDocWithTilts(mdocDataId,
+                tilt(null, "tA-name", null),
+                tilt(null, "tB-name", null));
+        mDoc.setBelonging_data(datasetId);
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+        when(movieDataSetRepository.findBy(any(Query.class)))
+                .thenReturn(Collections.singletonList(movieDataset("ds-tA", "tA-name")));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        DelegateExecution execution = stubExecution(vars);
+
+        activity.execute(execution);
+
+        assertThat(vars.get("all_motion_ready")).isEqualTo(false);
+        assertThat(vars.get("motion_ready_count")).isEqualTo(0);
+        assertThat(vars.get("motion_total_count")).isEqualTo(2);
+        verify(movieResultRepository, never()).findBy(any(Query.class));
+        verify(mDocRepository, never()).save(any(MDoc.class));
+    }
+
+    @Test
+    void execute_ensureMovieLoadedSkipsWhenAllTiltNamesEmpty() {
+        String mdocDataId = "mdoc-8";
+        String configId = "cfg-1";
+        String datasetId = "ds-1";
+
+        MDoc mDoc = mDocWithTilts(mdocDataId,
+                tilt(null, null, null),
+                tilt(null, null, null));
+        mDoc.setBelonging_data(datasetId);
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        DelegateExecution execution = stubExecution(vars);
+
+        activity.execute(execution);
+
+        assertThat(vars.get("all_motion_ready")).isEqualTo(false);
+        verify(movieDataSetRepository, never()).findBy(any(Query.class));
+        verify(movieResultRepository, never()).findBy(any(Query.class));
     }
 
     @Test
@@ -251,9 +348,10 @@ class CryoemsWaitMotionReadyActivityTest {
         return vars;
     }
 
-    private static MdocTiltMeta tilt(String dataId, String motionResultId) {
+    private static MdocTiltMeta tilt(String dataId, String name, String motionResultId) {
         MdocTiltMeta t = new MdocTiltMeta();
         t.setDataId(dataId);
+        t.setName(name);
         t.setMotionResultId(motionResultId);
         return t;
     }
@@ -279,6 +377,13 @@ class CryoemsWaitMotionReadyActivityTest {
             mr.setMotion(motion);
         }
         return mr;
+    }
+
+    private static MovieDataset movieDataset(String id, String name) {
+        MovieDataset md = new MovieDataset();
+        md.setId(id);
+        md.setName(name);
+        return md;
     }
 
     private static DelegateExecution stubExecution(Map<String, Object> vars) {
