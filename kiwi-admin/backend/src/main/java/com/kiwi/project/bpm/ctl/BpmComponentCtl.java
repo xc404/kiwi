@@ -131,8 +131,7 @@ public class BpmComponentCtl extends BaseCtl
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求体不能为空");
         }
-        String sk = bpmComponentService.allocateUniqueSourceKey(
-                request.getParentId(), request.getBaseSourceKey());
+        String sk = bpmComponentService.allocateUniqueSourceKey(request.getBaseSourceKey());
         AllocateSourceKeyResponse res = new AllocateSourceKeyResponse();
         res.setSourceKey(sk);
         return res;
@@ -303,7 +302,6 @@ public class BpmComponentCtl extends BaseCtl
 
     @Data
     public static class AllocateSourceKeyRequest {
-        private String parentId;
         private String baseSourceKey;
     }
 

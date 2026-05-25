@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * {@link com.kiwi.project.bpm.service.BpmComponentService#previewConflicts} 单条结果：
- * 按 {@code parentId + sourceKey} 检测与同请求内更早条目或库中已有组件的冲突。
+ * 按 {@code sourceKey} 检测与同请求内更早条目或库中已有组件的冲突。
  */
 @Data
 @NoArgsConstructor

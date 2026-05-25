@@ -349,7 +349,6 @@ export class BpmComponent implements AfterViewInit {
                 reqs.push(
                     this.http
                         .post<{ sourceKey: string }>('/bpm/component/allocate-source-key', {
-                            parentId: d.parentId,
                             baseSourceKey: d.sourceKey,
                         })
                         .pipe(

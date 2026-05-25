@@ -119,14 +119,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     }
 
     /**
-     * 空白 {@code parentId} 与 {@code null} 视为同一划分键（与 Mongo 存库一致便于匹配）。
-     */
-    public static String normalizeParentId(String parentId) {
-        return StringUtils.isBlank(parentId) ? null : parentId.trim();
-    }
-
-    /**
-     * 批量预检：按 {@code parentId + sourceKey} 判是否与库中或其它草稿冲突。
+     * 批量预检：按 {@code sourceKey} 判是否与库中或其它草稿冲突。
      */
     public List<BpmComponentPreviewConflictItem> previewConflicts(List<BpmComponent> components) {
         List<BpmComponentPreviewConflictItem> out = new ArrayList<>();
@@ -137,45 +130,38 @@ public class BpmComponentService implements InitializingBean, Refreshable
         for (int i = 0; i < components.size(); i++) {
             BpmComponent d = components.get(i);
             String sk = StringUtils.trimToNull(d != null ? d.getSourceKey() : null);
-            String pid = d != null ? normalizeParentId(d.getParentId()) : null;
             if (StringUtils.isBlank(sk)) {
                 out.add(new BpmComponentPreviewConflictItem(i, false, null, null, null, null));
                 continue;
             }
-            String composite = compositeConflictKey(pid, sk);
-            Optional<BpmComponent> inDb = bpmComponentDao.findFirstByParentIdAndSourceKey(pid, sk);
+            Optional<BpmComponent> inDb = bpmComponentDao.findFirstBySourceKey(sk);
             if (inDb.isPresent()) {
                 BpmComponent ex = inDb.get();
                 out.add(new BpmComponentPreviewConflictItem(
                         i, true, ex.getId(), ex.getName(), sk, null));
                 continue;
             }
-            if (firstBatchIndex.containsKey(composite)) {
+            if (firstBatchIndex.containsKey(sk)) {
                 out.add(new BpmComponentPreviewConflictItem(
-                        i, true, null, null, sk, firstBatchIndex.get(composite)));
+                        i, true, null, null, sk, firstBatchIndex.get(sk)));
                 continue;
             }
-            firstBatchIndex.put(composite, i);
+            firstBatchIndex.put(sk, i);
             out.add(new BpmComponentPreviewConflictItem(i, false, null, null, sk, null));
         }
         return out;
     }
 
-    private static String compositeConflictKey(String parentId, String sourceKey) {
-        return String.valueOf(parentId) + "\u0000" + sourceKey;
-    }
-
     /**
-     * 在 {@code parentId} 下生成不与库冲突的 {@code sourceKey}（用于「新增」保存）。
+     * 生成不与库冲突的 {@code sourceKey}（用于「新增」保存）。
      */
-    public String allocateUniqueSourceKey(String parentId, String baseSourceKey) {
-        String pid = normalizeParentId(parentId);
+    public String allocateUniqueSourceKey(String baseSourceKey) {
         if (StringUtils.isBlank(baseSourceKey)) {
             baseSourceKey = "generated";
         }
         String candidate = baseSourceKey;
         int n = 2;
-        while (bpmComponentDao.findFirstByParentIdAndSourceKey(pid, candidate).isPresent()) {
+        while (bpmComponentDao.findFirstBySourceKey(candidate).isPresent()) {
             candidate = baseSourceKey + "__" + n;
             n++;
         }
