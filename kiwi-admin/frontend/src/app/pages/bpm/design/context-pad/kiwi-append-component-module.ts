@@ -36,15 +36,6 @@ function canAppendComponent(element: Element): boolean {
   if (is(bo, 'bpmn:EndEvent')) {
     return false;
   }
-  if (bo.isForCompensation) {
-    return false;
-  }
-  if (isEventSubProcess(element)) {
-    return false;
-  }
-  if (isEventType(bo, 'bpmn:IntermediateThrowEvent', 'bpmn:LinkEventDefinition')) {
-    return false;
-  }
   return true;
 }
 
@@ -82,7 +73,7 @@ KiwiAppendComponentPopupProvider.prototype.getPopupMenuEntries = function (this:
       entries[id] = {
         label: c.name,
         description: c.descrition,
-        className: c.icon || 'bpmn-icon86',
+        className: c.icon || 'bpmn-icon-service-task',
         group: { id: g.group, name: g.group },
         action: (event: MouseEvent) => {
           kiwi.append(element, c, event);
@@ -150,7 +141,7 @@ KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function 
   assign(actions, {
     'append-component': {
       group: 'model',
-      className: 'bpmn-icon86',
+      className: 'bpmn-icon-service-task',
       title: translate('追加业务组件'),
       action: {
         click: (event: MouseEvent, el: Element) => {

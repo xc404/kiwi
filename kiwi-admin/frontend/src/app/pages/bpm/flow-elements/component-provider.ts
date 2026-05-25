@@ -44,7 +44,7 @@ export class ComponentProvider {
             const groups = res.content as ComponentsGroup[];
             groups.forEach(g => {
                 g.components.forEach(c => {
-                    c.icon = c.icon || 'bpmn-icon86';
+                    c.icon = c.icon || 'bpmn-icon-service-task';
                     c.inputParameters = (c.inputParameters || []).map((p) =>
                         this.normalizeInputParameter(p)
                     );

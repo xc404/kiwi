@@ -26,7 +26,7 @@ export class ComponentService {
                 ...c,
                 bpmnType: 'bpmn:CallActivity',
                 title: c.name,
-                icon: c.icon || 'bpmn-icon42',
+                icon: c.icon || 'bpmn-icon-call-activity',
                 options: {}
             };
         } else {
@@ -34,7 +34,7 @@ export class ComponentService {
                 ...c,
                 bpmnType: `bpmn:ServiceTask`,
                 title: c.name,
-                icon: c.icon || 'bpmn-icon86',
+                icon: c.icon || 'bpmn-icon-service-task',
                 options: {}
             };
         }

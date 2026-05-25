@@ -77,7 +77,3 @@ public class SomeActivity implements JavaDelegate {
 ExecutionUtils.getStringInputVariableAtPath(execution, "mdoc.id");
 ```
 
-## 例外
-
-- 仅当某个 key **必须**与外部既有协议（例如第三方系统的 JSONPath / SpEL 表达式）
-  对齐而不可改名时，可在该处显式注释并标注例外，但不应作为新代码的默认做法。

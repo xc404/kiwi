@@ -35,7 +35,7 @@
                                 (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
                             >
                                 <span class="palette-item__icon" aria-hidden="true">
-                                    <nz-icon [nzIconfont]="paletteItem.icon" />
+                                    <span [class]="paletteItem.icon"></span>
                                 </span>
                                 <span class="palette-item__name">{{ paletteItem.title }}</span>
                             </button>

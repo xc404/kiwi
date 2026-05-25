@@ -32,6 +32,11 @@ export declare type PropertyDescription = {
     group?: string;
     /** 为 false 时在「其他」页签展示；缺省或非 false 时归入按 group 划分的主分组 */
     important?: boolean;
+    /**
+     * 静态下拉选项：与 dictKey 二选一，存在时优先于字典。
+     * 与 {@link FieldEditorConfig.options} 同形；通过 {@link toEditFieldConfig} 透传给表单。
+     */
+    options?: Array<{ label: string; value: unknown }>;
 };
 
 

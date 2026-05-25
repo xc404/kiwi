@@ -118,9 +118,13 @@ export class BpmPallete implements OnInit {
     let create: Create = this.bpmnModeler.get('create');
     let elementFactory: ElementFactory = this.bpmnModeler.get('elementFactory');
     let palleteProvider = this._paletteProviders[providerIndex];
-    let { type, options } = palleteProvider.getElementOptions(item);
-    console.log(options);
+    let { type, options, eventDefinitionType } = palleteProvider.getElementOptions(item);
     const businessObject: ModdleElement = bpmnFactory.create(type, options);
+    if (eventDefinitionType) {
+      const eventDefinition: ModdleElement = bpmnFactory.create(eventDefinitionType, {});
+      (eventDefinition as any).$parent = businessObject;
+      (businessObject as any).eventDefinitions = [eventDefinition];
+    }
     var shape = elementFactory.createShape({ type: type, businessObject: businessObject });
     palleteProvider.initElement(this.bpmnModeler, shape, item);
     create.start(event, shape);

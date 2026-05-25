@@ -20,13 +20,13 @@ export default class BasePaletteProvider implements PaletteProvider {
                     {
                         id: "StartEvent",
                         title: "开始事件",
-                        icon: "bpmn-icon69",
+                        icon: "bpmn-icon-start-event-none",
                         options: {}
                     },
                     {
                         id: "EndEvent",
                         title: "结束事件",
-                        icon: "bpmn-icon56",
+                        icon: "bpmn-icon-end-event-none",
                         options: {}
                     }
                 ]
@@ -37,19 +37,51 @@ export default class BasePaletteProvider implements PaletteProvider {
                     {
                         id: "UserTask",
                         title: "用户任务",
-                        icon: "bpmn-icon24",
+                        icon: "bpmn-icon-user-task",
                         options: {}
                     },
                     {
                         id: "ServiceTask",
                         title: "服务任务",
-                        icon: "bpmn-icon86",
+                        icon: "bpmn-icon-service-task",
                         options: {}
                     },
                     {
                         id: "ManualTask",
                         title: "手工任务",
-                        icon: "bpmn-hand",
+                        icon: "bpmn-icon-manual-task",
+                        options: {}
+                    },
+                    {
+                        id: "ReceiveTask",
+                        title: "接收任务",
+                        icon: "bpmn-icon-receive-task",
+                        options: {}
+                    }
+                ]
+            },
+            {
+                group: "中间事件",
+                palettes: [
+                    {
+                        id: "IntermediateCatchEvent",
+                        title: "中间消息捕获事件",
+                        icon: "bpmn-icon-intermediate-event-catch-message",
+                        eventDefinitionType: "bpmn:MessageEventDefinition",
+                        options: {}
+                    },
+                    {
+                        id: "IntermediateCatchEvent",
+                        title: "中间定时捕获事件",
+                        icon: "bpmn-icon-intermediate-event-catch-timer",
+                        eventDefinitionType: "bpmn:TimerEventDefinition",
+                        options: {}
+                    },
+                    {
+                        id: "IntermediateCatchEvent",
+                        title: "中间信号捕获事件",
+                        icon: "bpmn-icon-intermediate-event-catch-signal",
+                        eventDefinitionType: "bpmn:SignalEventDefinition",
                         options: {}
                     }
                 ]
@@ -60,13 +92,13 @@ export default class BasePaletteProvider implements PaletteProvider {
                     {
                         id: "ExclusiveGateway",
                         title: "排他网关",
-                        icon: "bpmn-icon53",
+                        icon: "bpmn-icon-gateway-xor",
                         options: {}
                     },
                     {
                         id: "ParallelGateway",
                         title: "并行网关",
-                        icon: "bpmn-icon6",
+                        icon: "bpmn-icon-gateway-parallel",
                         options: {}
                     }
                 ]
@@ -77,7 +109,7 @@ export default class BasePaletteProvider implements PaletteProvider {
                     {
                         id: "CallActivity",
                         title: "调用活动",
-                        icon: "bpmn-icon42",
+                        icon: "bpmn-icon-call-activity",
                         options: {}
                     }
                 ]
@@ -87,11 +119,12 @@ export default class BasePaletteProvider implements PaletteProvider {
     }
 
 
-    getElementOptions(item: PaletteItem): { type: any; options: any; } {
+    getElementOptions(item: PaletteItem): { type: any; options: any; eventDefinitionType?: string } {
         let t: any = item;
         return {
             type: `bpmn:${t.id}`,
-            options: t.options || {}
+            options: t.options || {},
+            eventDefinitionType: t.eventDefinitionType,
         }
     }
 
