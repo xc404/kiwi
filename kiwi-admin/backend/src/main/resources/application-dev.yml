@@ -27,11 +27,7 @@ kiwi:
   external-task:
     lock-duration: 10000
     workerId: kiwi-admin
-APP_PASSWORD_SECRET: REDACTED
 
-OPENAI_API_KEY: REDACTED
-
-DASHSCOPE_API_KEY: REDACTED
 #camunda.bpm.client:
 #  base-url: http://localhost:8088/engine-rest # the URL pointing to the Camunda Platform Runtime REST API
 #  lock-duration: 10000 # defines how many milliseconds the External Tasks are locked until they can be fetched again
