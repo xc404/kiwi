@@ -2,8 +2,8 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 // const ip = '10.19.227.46';
-// const ip = '10.15.56.173';
-const ip = 'localhost';
+const ip = '10.15.56.173';
+// const ip = 'localhost';
 const port = '8000';
 export const localUrl = `http://${ip}:${port}`;
 

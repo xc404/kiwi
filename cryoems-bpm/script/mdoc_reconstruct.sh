@@ -124,11 +124,11 @@ mdoc_reconstruct.sh — Cryo-EM tilt-series 重建脚本
 可选 — 工具路径与环境:
     --series-align-py <path>   默认 /home/cryoems/bin/py/mdoc/tilt_series_align.py
     --align-recon-py <path>    默认 /home/cryoems/bin/py/mdoc/align_recon_v2.py
-    --conda-env <name>         默认 cryoems
+    --conda-env <name>         默认 cryoems（各步骤经 conda run -n 执行，不 source ~/.bashrc）
 
 行为开关:
     -h, --help                 打印本帮助并退出
-    --dry-run                  只回显命令不执行（便于联调）
+    --dry-run                  只打印全部计划命令并退出，不执行（默认执行前也会打印）
     -v, --verbose              开启 verbose（去掉 set -m，保留 set -euo pipefail）
 
 退出码:
@@ -215,21 +215,12 @@ if [[ "${verbose}" == "1" ]]; then
 fi
 
 # =============================================================================
-# conda 激活（与旧脚本 source ~/.bashrc + source activate cryoems 一致；
-#             支持 --conda-env 覆盖；--dry-run 时跳过；
-#             无 conda 的执行环境（如 CI 容器）静默跳过激活避免误退出）
+# conda run（与 mdoc_stack.sh 一致；避免 source ~/.bashrc 在 set -u 下触发
+#            /etc/bashrc BASHRCSOURCED 未绑定变量错误）
 # =============================================================================
 if [[ "${dry_run}" != "1" ]]; then
-    if [[ -f "${HOME}/.bashrc" ]]; then
-        # shellcheck disable=SC1091
-        source "${HOME}/.bashrc" || true
-    fi
-    if command -v conda >/dev/null 2>&1; then
-        # shellcheck disable=SC1091
-        source activate "${conda_env}"
-    else
-        echo "[mdoc_reconstruct] warn: 未检测到 conda 可执行，跳过 'source activate ${conda_env}'" >&2
-    fi
+    command -v conda >/dev/null 2>&1 \
+        || die "未检测到 conda，无法执行重建步骤（请确保 conda 在 PATH 中，或使用 --dry-run）"
 fi
 
 # =============================================================================
@@ -266,29 +257,62 @@ if [[ "${dry_run}" != "1" ]]; then
 fi
 
 # =============================================================================
-# run_step 封装：统一 started/ended 时间戳；--dry-run 下只回显
+# run_step：默认登记并打印全部命令；执行时每步输出开始/完成时间与完整命令行
 # =============================================================================
+step_labels=()
+step_cmds=()
+record_only="0"
+
+format_conda_cmd() {
+    local cmd_line="conda run --no-capture-output -n ${conda_env}"
+    local arg escaped
+    for arg in "$@"; do
+        printf -v escaped '%q' "${arg}"
+        cmd_line+=" ${escaped}"
+    done
+    printf '%s' "${cmd_line}"
+}
+
+print_command_plan() {
+    local count="${#step_labels[@]}"
+    echo "[mdoc_reconstruct] workdir=${workdir} name=${name} conda_env=${conda_env}"
+    echo "[mdoc_reconstruct] 共 ${count} 步，命令计划（$(date +'%Y-%m-%d %H:%M:%S')）："
+    local i
+    for i in "${!step_labels[@]}"; do
+        printf '%2d. [%s] %s\n' "$((i + 1))" "${step_labels[$i]}" "${step_cmds[$i]}"
+    done
+}
+
 run_step() {
     local label="$1"; shift
-    echo "${label} started at $(date +'%Y-%m-%d %H:%M:%S')"
-    if [[ "${dry_run}" == "1" ]]; then
-        # 回显命令以便联调对照（注意 IFS 默认空格连接，多空格会被压缩）
-        echo "+ $*"
-    else
-        if ! "$@"; then
-            local rc=$?
-            echo "[mdoc_reconstruct] step '${label}' failed (exit=${rc}): $*" >&2
-            exit "${rc}"
-        fi
+    local cmd_line
+    cmd_line="$(format_conda_cmd "$@")"
+
+    if [[ "${record_only}" == "1" ]]; then
+        step_labels+=("${label}")
+        step_cmds+=("${cmd_line}")
+        return 0
     fi
-    echo "${label} ended at $(date +'%Y-%m-%d %H:%M:%S')"
+
+    local ts_start ts_end
+    ts_start="$(date +'%Y-%m-%d %H:%M:%S')"
+    echo "[${ts_start}] ${label} 开始: ${cmd_line}"
+
+    if ! conda run --no-capture-output -n "${conda_env}" "$@"; then
+        local rc=$?
+        echo "[mdoc_reconstruct] step '${label}' failed (exit=${rc}): ${cmd_line}" >&2
+        exit "${rc}"
+    fi
+
+    ts_end="$(date +'%Y-%m-%d %H:%M:%S')"
+    echo "[${ts_end}] ${label} 完成"
 }
 
 # =============================================================================
-# 11 段命令（顺序与 mdoc_reconstruct_old.sh 完全一致；
+# 13 段命令（顺序与 mdoc_reconstruct_old.sh 完全一致；
 #           参数顺序对齐 cryo-em-server-backend SoftwareService 字面顺序）
 # =============================================================================
-
+run_reconstruct_pipeline() {
 # 1) tiltxcorr（粗对齐）-> prexf
 run_step "tiltxcorr" \
     tiltxcorr \
@@ -415,3 +439,20 @@ run_step "align_recon_align_recon" \
     python "${align_recon_py}" \
         -in "${full_rec}" \
         -ou "${thumb}"
+}
+
+# 先登记并打印全部命令（默认行为，便于 Slurm .out 事后查询）
+step_labels=()
+step_cmds=()
+record_only="1"
+run_reconstruct_pipeline
+print_command_plan
+
+if [[ "${dry_run}" == "1" ]]; then
+    exit 0
+fi
+
+echo "[mdoc_reconstruct] 开始执行（$(date +'%Y-%m-%d %H:%M:%S')）"
+record_only="0"
+run_reconstruct_pipeline
+echo "[mdoc_reconstruct] 全部完成（$(date +'%Y-%m-%d %H:%M:%S')）"

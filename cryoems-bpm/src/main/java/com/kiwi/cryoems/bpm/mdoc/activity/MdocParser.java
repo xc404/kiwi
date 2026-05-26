@@ -43,6 +43,14 @@ import java.util.Map;
                         key = "mdoc_data_id",
                         name = "mdoc data Id",
                         required = true)
+        },
+        outputs = {
+                @ComponentParameter(
+                        key = "mdocMeta",
+                        name = "mdocMeta",
+                        description =
+                                "MdocMeta 头部字段（不含 rawTiltMetas / tilts）写入的流程变量名",
+                        schema = @Schema(defaultValue = "mdocMeta"))
         })
 @Component("cyroemsMdocParserActivity")
 @RequiredArgsConstructor
@@ -66,19 +74,38 @@ public class MdocParser implements JavaDelegate {
     }
 
     private void doExecute(DelegateExecution execution) {
-        String mdocFile = resolveMdocFile(execution);
-        log.info("开始解析 mdoc: {}", mdocFile);
-        MdocMeta meta = mdocFileParser.parse(new File(mdocFile));
         String mdocDataId = ExecutionUtils.getStringInputVariable(execution, "mdoc_data_id").orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_data_id 不能为空"));
         MDoc mDoc = this.mDocRepository.findById(mdocDataId).orElseThrow();
-        mDoc.setMeta(meta);
-        this.mDocRepository.save(mDoc);
+        MdocMeta meta = mDoc.getMeta();
+        if(mDoc.getMeta() == null){
+            String mdocFile = resolveMdocFile(execution);
+            log.info("开始解析 mdoc: {}", mdocFile);
+            meta = mdocFileParser.parse(new File(mdocFile));
+            mDoc.setMeta(meta);
+            this.mDocRepository.save(mDoc);
+        }
+        execution.setVariable("mdocMeta", toWorkflowMeta(meta));
         log.info(
                 "mdoc 解析完成: tilts={}, binning={}, spotSize={}, voltage={}",
                 meta.getTilts() == null ? 0 : meta.getTilts().size(),
                 meta.getBinning(),
                 meta.getSpotSize(),
                 meta.getVoltage());
+    }
+
+    /** 仅保留 header 级字段，避免将 tilt 列表序列化进 Camunda 流程变量。 */
+    private MdocMeta toWorkflowMeta(MdocMeta source) {
+        MdocMeta target = new MdocMeta();
+        target.setDataMode(source.getDataMode());
+        target.setImageSize(source.getImageSize());
+        target.setImageFile(source.getImageFile());
+        target.setPixelSpacing(source.getPixelSpacing());
+        target.setTomography(source.getTomography());
+        target.setTiltAxisAngle(source.getTiltAxisAngle());
+        target.setBinning(source.getBinning());
+        target.setSpotSize(source.getSpotSize());
+        target.setVoltage(source.getVoltage());
+        return target;
     }
 
     /**

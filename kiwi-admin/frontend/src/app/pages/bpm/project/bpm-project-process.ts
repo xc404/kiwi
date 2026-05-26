@@ -11,6 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import { AddAction, toolbarAction } from '@app/shared/components/crud/actions';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { FieldType } from '@app/shared/components/field/field';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
@@ -25,6 +26,8 @@ import { finalize, tap } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 
 import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
+import { ProcessDesignService } from '../design/service/process-design.service';
+import type { BpmProcess } from '../types/bpm-process';
 import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 
@@ -105,6 +108,7 @@ export class BpmProjectProcess implements OnInit {
   private readonly http = inject(BaseHttpService);
   private readonly modalWrap = inject(NzModalWrapService);
   private readonly message = inject(NzMessageService);
+  private readonly processDesignService = inject(ProcessDesignService);
 
   projectId = signal<string | null>(null);
   readonly projectSearch = signal('');
@@ -206,6 +210,85 @@ export class BpmProjectProcess implements OnInit {
     });
   }
 
+  deployOne(record: { id?: string; name?: string }): void {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    const displayName = record.name?.trim() || id;
+    void this.runDeploy([{ id, name: displayName }]).then(result => {
+      if (result.failed.length === 0) {
+        this.message.success(`流程「${displayName}」部署成功`);
+      } else {
+        this.message.error(result.failed[0]?.message ?? `流程「${displayName}」部署失败`);
+      }
+    });
+  }
+
+  deploySelected(): void {
+    const items = this.crudPage()?.selectedItems() ?? [];
+    if (!items.length) {
+      this.message.warning('请先勾选要部署的流程');
+      return;
+    }
+    const targets = items
+      .map((item: BpmProcess) => ({
+        id: String(item.id ?? '').trim(),
+        name: item.name?.trim() || String(item.id ?? ''),
+      }))
+      .filter(t => t.id.length > 0);
+    if (!targets.length) {
+      this.message.warning('所选流程缺少有效 ID');
+      return;
+    }
+    this.modalWrap.confirm({
+      nzTitle: '部署所选流程',
+      nzContent: `将部署 ${targets.length} 个流程到 Camunda 引擎，是否继续？`,
+      nzOkText: '部署',
+      nzCancelText: '取消',
+      nzOnOk: () => this.runDeploy(targets).then(result => this.reportDeployResult(result)),
+    });
+  }
+
+  private async runDeploy(
+    targets: { id: string; name: string }[],
+  ): Promise<{ succeeded: string[]; failed: { name: string; message: string }[] }> {
+    const succeeded: string[] = [];
+    const failed: { name: string; message: string }[] = [];
+    for (const target of targets) {
+      try {
+        await firstValueFrom(this.processDesignService.deployProcess(target.id));
+        succeeded.push(target.name);
+      } catch (err: unknown) {
+        const e = err as { error?: { message?: string }; message?: string };
+        failed.push({
+          name: target.name,
+          message: e?.error?.message ?? e?.message ?? '部署失败',
+        });
+      }
+    }
+    this.crudPage()?.reloadTable();
+    return { succeeded, failed };
+  }
+
+  private reportDeployResult(result: {
+    succeeded: string[];
+    failed: { name: string; message: string }[];
+  }): void {
+    const { succeeded, failed } = result;
+    if (failed.length === 0) {
+      this.message.success(`已成功部署 ${succeeded.length} 个流程`);
+      return;
+    }
+    if (succeeded.length === 0) {
+      this.message.error(`部署失败：${failed.map(f => f.name).join('、')}`);
+      return;
+    }
+    this.message.warning(
+      `成功 ${succeeded.length} 个，失败 ${failed.length} 个（${failed.map(f => f.name).join('、')}）`,
+    );
+  }
+
   openCloneModal(record: { id?: string; name?: string }): void {
     const id = record?.id;
     if (!id) {
@@ -253,6 +336,18 @@ export class BpmProjectProcess implements OnInit {
   pageConfig: PageConfig = {
     title: '工作流',
     crud: '/bpm/process',
+    tableConfig: {
+      showCheckbox: true,
+    },
+    toolbarActions: [
+      AddAction,
+      toolbarAction({
+        name: '部署所选',
+        icon: 'cloud-upload',
+        tooltip: '部署勾选的流程到 Camunda 引擎',
+        handler: () => this.deploySelected(),
+      }),
+    ],
     columnActions: [
       {
         icon: 'right-square',
@@ -283,6 +378,16 @@ export class BpmProjectProcess implements OnInit {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record) {
             this.openCloneModal(record);
+          }
+        },
+      },
+      {
+        icon: 'cloud-upload',
+        tooltip: '部署',
+        handler: () => {
+          const record = inject(ColumnToken, { optional: true })?.getRecord();
+          if (record) {
+            this.deployOne(record);
           }
         },
       },

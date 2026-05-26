@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -327,6 +328,79 @@ class CryoemsWaitMotionReadyActivityTest {
     }
 
     @Test
+    void execute_recordsStartedAtOnFirstPollWhenNotReady() {
+        String mdocDataId = "mdoc-timeout-1";
+        String configId = "cfg-1";
+
+        MDoc mDoc = mDocWithTilts(mdocDataId,
+                tilt("tilt-A", "tA-name", null));
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+        when(movieResultRepository.findBy(any(Query.class)))
+                .thenReturn(Collections.singletonList(
+                        movieResult("mr-A", "tilt-A", configId, null)));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        DelegateExecution execution = stubExecution(vars);
+
+        long before = System.currentTimeMillis();
+        activity.execute(execution);
+        long after = System.currentTimeMillis();
+
+        assertThat(vars.get("all_motion_ready")).isEqualTo(false);
+        assertThat(vars).containsKey("motion_wait_started_at");
+        long startedAt = ((Number) vars.get("motion_wait_started_at")).longValue();
+        assertThat(startedAt).isBetween(before, after);
+    }
+
+    @Test
+    void execute_throwsMotionWaitTimeoutWhenElapsedExceedsLimit() {
+        String mdocDataId = "mdoc-timeout-2";
+        String configId = "cfg-1";
+        long timeoutSeconds = 7200L;
+
+        MDoc mDoc = mDocWithTilts(mdocDataId,
+                tilt("tilt-A", "tA-name", null));
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+        when(movieResultRepository.findBy(any(Query.class)))
+                .thenReturn(Collections.singletonList(
+                        movieResult("mr-A", "tilt-A", configId, null)));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        vars.put("motion_wait_timeout_seconds", timeoutSeconds);
+        vars.put(
+                "motion_wait_started_at",
+                System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(timeoutSeconds + 1));
+        DelegateExecution execution = stubExecution(vars);
+
+        assertThatThrownBy(() -> activity.execute(execution))
+                .isInstanceOf(BpmnError.class)
+                .extracting(e -> ((BpmnError) e).getErrorCode())
+                .isEqualTo("MOTION_WAIT_TIMEOUT");
+    }
+
+    @Test
+    void execute_clearsStartedAtWhenAllMotionReady() {
+        String mdocDataId = "mdoc-timeout-3";
+        String configId = "cfg-1";
+
+        MDoc mDoc = mDocWithTilts(mdocDataId, tilt("tilt-A", "tA-name", null));
+        mDoc.setMovie_data_ids(Collections.singletonList("tilt-A"));
+        when(mDocRepository.findById(eq(mdocDataId))).thenReturn(Optional.of(mDoc));
+        when(movieResultRepository.findBy(any(Query.class)))
+                .thenReturn(Collections.singletonList(
+                        movieResult("mr-A", "tilt-A", configId, 1.0)));
+
+        Map<String, Object> vars = baseVars(mdocDataId, configId);
+        vars.put("motion_wait_started_at", System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
+        DelegateExecution execution = stubExecution(vars);
+
+        activity.execute(execution);
+
+        assertThat(vars.get("all_motion_ready")).isEqualTo(true);
+        assertThat(vars).doesNotContainKey("motion_wait_started_at");
+    }
+
+    @Test
     void execute_throwsBpmnErrorWhenMdocNotFound() {
         when(mDocRepository.findById(anyString())).thenReturn(Optional.empty());
 
@@ -400,6 +474,10 @@ class CryoemsWaitMotionReadyActivityTest {
             vars.put(inv.getArgument(0), inv.getArgument(1));
             return null;
         }).when(execution).setVariable(anyString(), any());
+        doAnswer(inv -> {
+            vars.remove(inv.getArgument(0));
+            return null;
+        }).when(execution).removeVariable(anyString());
         return execution;
     }
 }

@@ -14,6 +14,7 @@ import com.kiwi.cryoems.bpm.movie.model.MovieResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.bson.types.ObjectId;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,6 +69,10 @@ import java.util.stream.Collectors;
  *       -> [${all_motion_ready == true}] 继续后续节点
  *       -> [default] timerIntermediateCatchEvent(PT30S) -> 回到 serviceTask
  * }</pre>
+ *
+ * <p>超时：首次进入轮询时写入 {@code motion_wait_started_at}（epoch 毫秒）；每次执行若
+ * {@code now - motion_wait_started_at >= motion_wait_timeout_seconds}（默认 7200，即 2 小时）
+ * 且仍未就绪，则抛出 {@code MOTION_WAIT_TIMEOUT}，避免网关 + 定时器无限自循环。
  */
 @ComponentDescription(
         name = "CryoEMS 等待 Motion 就绪",
@@ -91,7 +97,11 @@ import java.util.stream.Collectors;
                         key = "task_config_id",
                         name = "task_config_id",
                         description = "MovieResult 查询的 config_id 过滤条件",
-                        required = true)
+                        required = true),
+                @ComponentParameter(
+                        key = "motion_wait_timeout_seconds",
+                        name = "motion_wait_timeout_seconds",
+                        description = "等待 motion 就绪的最长秒数，超时抛 MOTION_WAIT_TIMEOUT；默认 7200（2 小时）")
         },
         outputs = {
                 @ComponentParameter(
@@ -120,6 +130,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
 
+    /** 默认等待 motion 就绪超时：2 小时。 */
+    private static final long DEFAULT_MOTION_WAIT_TIMEOUT_SECONDS = TimeUnit.HOURS.toSeconds(2);
+
+    private static final String VAR_MOTION_WAIT_STARTED_AT = "motion_wait_started_at";
+    private static final String VAR_MOTION_WAIT_TIMEOUT_SECONDS = "motion_wait_timeout_seconds";
+
     private final MDocRepository mDocRepository;
     private final MovieResultRepository movieResultRepository;
     private final MovieDataSetRepository movieDataSetRepository;
@@ -147,6 +163,9 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
         String configId = ExecutionUtils.getStringInputVariable(execution, "task_config_id")
                 .filter(StringUtils::hasText)
                 .orElseThrow(() -> new IllegalArgumentException("流程变量 task_config_id 不能为空"));
+
+        long timeoutSeconds = resolveMotionWaitTimeoutSeconds(execution);
+        assertMotionWaitNotTimedOut(execution, instanceId, mdocDataId, timeoutSeconds);
 
         MDoc mDoc = mDocRepository
                 .findById(mdocDataId)
@@ -230,6 +249,7 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
         execution.setVariable("all_motion_ready", true);
         execution.setVariable("motion_ready_count", (int) readyCount);
         execution.setVariable("selectedTiltIds", mDoc.getMovie_data_ids());
+        execution.removeVariable(VAR_MOTION_WAIT_STARTED_AT);
 
         log.info(
                 "MotionWait ready: instance {} mdoc {} tilts={} motionResultIdChanged={}",
@@ -246,6 +266,9 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
      * 当前仍有 movie dataset 未入库或元信息缺失，调用方应当未就绪让 BPMN 继续轮询。
      */
     private boolean ensureMovieLoaded(String instanceId, MDoc mDoc, List<MdocTiltMeta> tilts) {
+        if(tilts.stream().allMatch(t -> org.apache.commons.lang3.StringUtils.isNotBlank(t.getDataId()))) {
+            return true;
+        }
         boolean allBound = true;
         List<String> names = new ArrayList<>(tilts.size());
         for (MdocTiltMeta t : tilts) {
@@ -256,7 +279,7 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
                 allBound = false;
             }
             if (StringUtils.hasText(t.getName())) {
-                names.add(t.getName());
+                names.add(FilenameUtils.getBaseName(t.getName()));
             }
         }
         if (allBound) {
@@ -297,7 +320,8 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
             if (t == null || !StringUtils.hasText(t.getName())) {
                 continue;
             }
-            MovieDataset md = datasetByName.get(t.getName());
+            String baseName = FilenameUtils.getBaseName(t.getName());
+            MovieDataset md = datasetByName.get(baseName);
             if (md == null) {
                 log.warn(
                         "MovieConnect inconsistency: instance {} tilt {} has no matched MovieDataset",
@@ -322,5 +346,57 @@ public class CryoemsWaitMotionReadyActivity implements JavaDelegate {
         execution.setVariable("all_motion_ready", false);
         execution.setVariable("motion_ready_count", readyCount);
         execution.setVariable("motion_total_count", totalCount);
+    }
+
+    private long resolveMotionWaitTimeoutSeconds(DelegateExecution execution) {
+        return ExecutionUtils.getNumberInputVariable(execution, VAR_MOTION_WAIT_TIMEOUT_SECONDS)
+                .filter(v -> v > 0)
+                .map(Double::longValue)
+                .orElse(DEFAULT_MOTION_WAIT_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * 首次进入等待轮询时记录 {@link #VAR_MOTION_WAIT_STARTED_AT}；后续每次执行在就绪判定前检查是否超时。
+     */
+    private void assertMotionWaitNotTimedOut(
+            DelegateExecution execution,
+            String instanceId,
+            String mdocDataId,
+            long timeoutSeconds) {
+        long now = System.currentTimeMillis();
+        Long startedAt = readMotionWaitStartedAt(execution);
+        if (startedAt == null) {
+            execution.setVariable(VAR_MOTION_WAIT_STARTED_AT, now);
+            return;
+        }
+        long elapsedMillis = now - startedAt;
+        long timeoutMillis = TimeUnit.SECONDS.toMillis(timeoutSeconds);
+        if (elapsedMillis < timeoutMillis) {
+            return;
+        }
+        long elapsedSeconds = TimeUnit.MILLISECONDS.toSeconds(elapsedMillis);
+        String message = String.format(
+                "等待 motion 就绪超时（%ds，上限 %ds）：instance=%s mdoc=%s",
+                elapsedSeconds, timeoutSeconds, instanceId, mdocDataId);
+        log.warn(message);
+        throw new BpmnError("MOTION_WAIT_TIMEOUT", message);
+    }
+
+    private Long readMotionWaitStartedAt(DelegateExecution execution) {
+        Object raw = execution.getVariable(VAR_MOTION_WAIT_STARTED_AT);
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        if (raw instanceof String stringValue) {
+            try {
+                return Long.parseLong(stringValue.trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

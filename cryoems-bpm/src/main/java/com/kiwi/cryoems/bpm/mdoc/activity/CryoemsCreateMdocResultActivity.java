@@ -121,16 +121,16 @@ public class CryoemsCreateMdocResultActivity implements JavaDelegate {
         String instanceId = ExecutionUtils.getStringInputVariable(execution, "mdoc_id")
                 .filter(StringUtils::hasText)
                 .orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_id 不能为空"));
-        String mdocDataId = ExecutionUtils.getStringInputVariable(execution, "mdoc_dataId")
-                .filter(StringUtils::hasText)
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_dataId 不能为空"));
-
-        MDoc mDoc = mDocRepository
-                .findById(mdocDataId)
-                .orElseThrow(() -> new IllegalArgumentException("MDoc 不存在: " + mdocDataId));
+//        String mdocDataId = ExecutionUtils.getStringInputVariable(execution, "mdoc_dataId")
+//                .filter(StringUtils::hasText)
+//                .orElseThrow(() -> new IllegalArgumentException("流程变量 mdoc_dataId 不能为空"));
         MDocInstance instance = mDocInstanceRepository
                 .findById(instanceId)
                 .orElseThrow(() -> new IllegalArgumentException("MDocInstance 不存在: " + instanceId));
+        MDoc mDoc = mDocRepository
+                .findById(instance.getData_id())
+                .orElseThrow(() -> new IllegalArgumentException("MDoc 不存在: " + instance.getData_id()));
+
         if (!StringUtils.hasText(instance.getName())) {
             throw new IllegalArgumentException("MDocInstance.name 不能为空: " + instanceId);
         }

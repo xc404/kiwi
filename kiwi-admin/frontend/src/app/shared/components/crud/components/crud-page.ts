@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, contentChild, inject, input, OnInit, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 
@@ -126,7 +126,8 @@ export class CrudPage implements OnInit, CrudPageToken {
   modalService = inject(NzModalService);
   messageService = inject(NzMessageService);
 
-  readonly tableComponent = contentChild(TableComponentToken);
+  /** app-table 经 app-table-wrap 的 ng-content 投影，须用 viewChild 而非 contentChild */
+  readonly tableWrap = viewChild(AppTableWrapComponent);
   editModalVisible = signal(false);
   editTitle = signal("")
   editRecord = signal({} as any);
@@ -283,7 +284,15 @@ export class CrudPage implements OnInit, CrudPageToken {
   }
 
   selectedItems() {
-    return this.tableComponent()?.selectedItems() ?? [];
+    const wrap = this.tableWrap();
+    if (!wrap) {
+      return [];
+    }
+    try {
+      return wrap.currentTableComponent().selectedItems();
+    } catch {
+      return [];
+    }
   }
 
   toColumnField(field: CrudFieldConfig): ColumnConfig {
