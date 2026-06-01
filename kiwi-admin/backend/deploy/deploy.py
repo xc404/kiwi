@@ -13,6 +13,7 @@ auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则�
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import os
 import shutil
@@ -45,7 +46,7 @@ REPO_ROOT = KIWI_ADMIN_ROOT.parent
 ROOT_POM = REPO_ROOT / "pom.xml"
 MAVEN_PL_BACKEND = "kiwi-admin/backend"
 DEFAULT_CONFIG_PATH = SCRIPT_DIR / "conf" / "build.local.yaml"
-ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_VERSION = "1.0.0-SNAPSHOT"
 ARTIFACT_BASENAME = f"kiwi-admin-{ARTIFACT_VERSION}"
 BIN_DIR = BACKEND_ROOT / "bin"
 MAVEN_APP_JAR = BACKEND_ROOT / "target" / f"{ARTIFACT_BASENAME}.jar"
@@ -982,9 +983,34 @@ def _conn_from_config(target: SshTarget, settings: DeploySettings) -> Conn:
     )
 
 
+def _parse_args() -> argparse.Namespace:
+    default_config = DEFAULT_CONFIG_PATH.relative_to(SCRIPT_DIR).as_posix()
+    parser = argparse.ArgumentParser(
+        description="构建并部署 kiwi-admin 后端产物到远端主机。",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        default=default_config,
+        help=(
+            f"部署配置文件路径（默认: {default_config}；"
+            "相对路径按 deploy.py 所在目录解析）"
+        ),
+    )
+    return parser.parse_args()
+
+
+def _resolve_config_path(config_arg: str) -> Path:
+    config_path = Path(config_arg).expanduser()
+    if not config_path.is_absolute():
+        config_path = SCRIPT_DIR / config_path
+    return config_path.resolve()
+
+
 def main() -> None:
     _ensure_utf8_stdio()
-    cfg_path = DEFAULT_CONFIG_PATH.resolve()
+    args = _parse_args()
+    cfg_path = _resolve_config_path(args.config)
     if not cfg_path.is_file():
         example = SCRIPT_DIR / "conf" / "build.example.yaml"
         print(

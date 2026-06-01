@@ -38,3 +38,4 @@
 .DS_Store
 /bin/config/*
 /bin/*.jar
+/deploy/conf/build.prod.yaml

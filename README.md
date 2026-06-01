@@ -2,7 +2,7 @@
 
 **Kiwi 是一款面向企业的低代码开发平台**：在统一技术栈上提供可配置的管理能力、**可视化 BPMN 流程设计与运行**，以及可扩展的流程组件与外部任务集成，减少重复编码、缩短业务上线周期。
 
-实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，前端为 **Angular** 管理界面（`kiwi-admin/frontend`，由 [ng-antd-admin](https://github.com/huajian123/ng-antd-admin) 模板演进而来）。
+实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，
 
 ## 平台定位（低代码）
 
@@ -44,7 +44,15 @@ kiwi/
   - 在仓库根对父 POM 先执行一次 **`mvn install`**，或
   - 始终在根目录使用 **`mvn -pl kiwi-admin/backend -am`**（`-am` 会顺带按顺序构建 **kiwi-common**、**kiwi-bpmn-*** 等 backend 所依赖的模块）。
 
-- **本地仓库缓存**：若此前因父 POM 解析失败在 `~/.m2/repository` 中留下不完整产物，在 **relativePath 已正确** 时一般**不必**清空整个本地仓库；若仍异常，可对根 **`pom.xml`** 执行 **`mvn -U`** 强制更新元数据，或删除本地目录 **`~/.m2/repository/com/kiwi/kiwi-parent`**（对应 `com.kiwi:kiwi-parent:1.0.0`）后重试。
+- **本地仓库缓存**：若此前因父 POM 解析失败在 `~/.m2/repository` 中留下不完整产物，在 **relativePath 已正确** 时一般**不必**清空整个本地仓库；若仍异常，可对根 **`pom.xml`** 执行 **`mvn -U`** 强制更新元数据，或删除本地目录 **`~/.m2/repository/com/kiwi/kiwi-parent`**（对应 `com.kiwi:kiwi-parent:1.0.0-SNAPSHOT`）后重试。
+
+## Snapshot 开发（内部构件）
+
+内部模块与跨仓库依赖（如 `cryoems-bpm`）当前使用 **`1.0.0-SNAPSHOT`**。从远程 Maven 仓库拉取 SNAPSHOT 时，建议启用「每次构建检查最新 snapshot」：
+
+1. 将 [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) 中的 `<profiles>` / `<activeProfiles>` 合并进 `%USERPROFILE%\.m2\settings.xml`。
+2. 或单次构建使用 **`mvn -U ...`**。
+3. 若仅依赖同事本机 `mvn install` 的 `~/.m2` 副本，`alwaysUpdateSnapshots` **不会**自动更新；需对方重新 install，或改用远程仓库 / **`-Pcryoems-bpm-local`** 联调（与同级 `../cryoems-bpm` 同一 reactor）。
 
 ## 环境要求
 

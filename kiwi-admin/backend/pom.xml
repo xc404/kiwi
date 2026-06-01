@@ -5,7 +5,6 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>kiwi-admin</artifactId>
-    <version>1.0.0</version>
 
     <properties>
         <poi.version>5.4.0</poi.version>
@@ -22,7 +21,7 @@
     <parent>
         <groupId>com.kiwi</groupId>
         <artifactId>kiwi-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <dependencies>
@@ -41,6 +40,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.mongock</groupId>
+            <artifactId>mongock-springboot-v3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.mongock</groupId>
+            <artifactId>mongodb-springdata-v4-driver</artifactId>
         </dependency>
 <!--        <dependency>-->
 <!--            <groupId>org.springframework.boot</groupId>-->
@@ -191,22 +198,18 @@
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-component</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-external-task</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
         <dependency>

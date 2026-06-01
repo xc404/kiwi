@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.kiwi</groupId>
     <artifactId>kiwi-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <parent>
@@ -21,6 +21,7 @@
         <module>kiwi-bpmn/kiwi-bpmn-component</module>
     </modules>
     <properties>
+        <cryoems-bpm.version>1.0.0-SNAPSHOT</cryoems-bpm.version>
         <java.version>25</java.version>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -31,6 +32,7 @@
         <spring-boot.version>3.5.8</spring-boot.version>
         <!-- 与 spring-boot-dependencies 对齐；勿被传递依赖降到 6.2.12 以下，否则 spring-core 6.2.1 无法解析 JDK 25 编译的 .class（组件扫描 ClassReader 报错） -->
         <spring-framework.version>6.2.14</spring-framework.version>
+        <mongock.version>5.5.1</mongock.version>
     </properties>
     <dependencies>
         <dependency>
@@ -74,6 +76,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>io.mongock</groupId>
+                <artifactId>mongock-bom</artifactId>
+                <version>${mongock.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- Spring AI 会拉 swagger-annotations-jakarta 2.2.25，与 springdoc 2.8.x 不兼容（/v3/api-docs NoSuchMethodError: Parameter.validationGroups） -->
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>
@@ -90,8 +99,30 @@
                 <artifactId>swagger-models-jakarta</artifactId>
                 <version>${swagger-annotations.version}</version>
             </dependency>
+            <!-- com.kiwi 内部模块：子模块依赖可省略 version -->
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-bpmn-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-bpmn-component</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-bpmn-external-task</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
 
     <build>
         <plugins>
