@@ -125,6 +125,15 @@
         </dependencies>
     </dependencyManagement>
 
+    <!-- 与 ../cryoems-bpm 同级时启用：mvn -Pcryoems-bpm-local ...（不依赖远程 Maven 仓库） -->
+    <profiles>
+        <profile>
+            <id>cryoems-bpm-local</id>
+            <modules>
+                <module>../cryoems-bpm</module>
+            </modules>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
