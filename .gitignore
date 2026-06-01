@@ -56,4 +56,5 @@ kiwi-common/target/
 kiwi-bpmn/**/target/
 /data/
 **/target/**
+kiwi-admin/frontend/deploy/__pycache__/
 /**/*local*.yml

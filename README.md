@@ -1,102 +1,87 @@
 # Kiwi
 
-**Kiwi 是一款面向企业的低代码开发平台**：在统一技术栈上提供可配置的管理能力、**可视化 BPMN 流程设计与运行**，以及可扩展的流程组件与外部任务集成，减少重复编码、缩短业务上线周期。
+**Kiwi** 是基于 [Camunda BPM 7](https://camunda.com/platform/) 的工作流编排与管理平台，提供可视化 BPMN 设计、可扩展流程组件、系统管理后台，以及与 CryoEMS 等业务系统的集成能力。仓库为 Maven 多模块 monorepo，前后端分离部署。
 
-实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，
+## 特性
 
-## 平台定位（低代码）
-
-| 能力 | 说明 |
-|------|------|
-| 流程低代码 | 基于 **BPMN.js** 的流程建模、与 **Camunda** 部署/运行对接，支持流程实例查看与变量洞察。 |
-| 业务与管理端 | 管理端页面与权限、数据服务可组合扩展，面向「配置 + 少量代码」交付典型后台场景。 |
-| 可扩展 | **kiwi-bpmn** 等模块承载流程扩展、外部任务等，便于按需接入业务系统。 |
+- **BPMN 流程设计**：Angular + BPMN.js 可视化建模，属性面板与组件元数据联动
+- **Camunda 引擎**：流程定义/实例管理、REST API（`/engine-rest`）、External Task、异步 Job 与可配置重试
+- **可插拔流程组件**：Shell、HTTP、文件读写、变量赋值、MongoDB、Slurm 等 JavaDelegate / External Task
+- **管理后台**：用户、角色、菜单、部门、字典；Sa-Token 鉴权；Personal Access Token
+- **低代码工具**：代码生成、JDBC 连接与表结构浏览
+- **AI 辅助**：Spring AI（通义 DashScope）对话；内置 MCP Server，支持页面导航与 BPM 设计器编排
+- **数据迁移**：Mongock 命令式迁移 + JSON 参考数据（类 Flyway 约定）
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Java 17、Spring Boot 3.4.x、Spring Data MongoDB、MyBatis、Sa-Token |
-| 流程 | Camunda Platform 7.24（Spring Boot Starter、REST、Web 控制台、External Task Client） |
-| 数据 | MongoDB、MySQL（Camunda/业务数据源） |
-| 前端 | Angular 21、ng-zorro-antd、BPMN.js（流程设计相关页面） |
+| 后端 | Java **25**、Spring Boot **3.5**、Camunda **7.24**、MongoDB、MyBatis、Sa-Token |
+| 前端 | Angular **21**、ng-zorro-antd、BPMN.js、ECharts、@antv/x6 |
+| 构建 | Maven（多模块）、npm |
+| 规格 | [OpenSpec](openspec/)（`spec-driven` 工作流） |
 
 ## 仓库结构
 
 ```
 kiwi/
-├── pom.xml                 # 父 POM（聚合模块与统一版本）
-├── kiwi-common/            # 公共 Java 模块（实体与 Mongo 等共用能力）
+├── kiwi-common/              # 公共实体与工具
+├── kiwi-bpmn/
+│   ├── kiwi-bpmn-core/       # 组件注解、变量映射、Job 重试等引擎扩展
+│   ├── kiwi-bpmn-component/  # 内置流程组件（Shell、HTTP、Slurm…）
+│   └── kiwi-bpmn-external-task/  # External Task 抽象与重试
 ├── kiwi-admin/
-│   ├── backend/            # Spring Boot 主应用（端口见配置）
-│   └── frontend/           # Angular 应用
-└── kiwi-bpmn/              # BPMN 相关模块
-    ├── kiwi-bpmn-core/
-    ├── kiwi-bpmn-component/
-    └── kiwi-bpmn-external-task/
+│   ├── backend/              # Spring Boot 主应用（API + Camunda）
+│   └── frontend/             # Angular 管理端
+├── openspec/                 # 变更规格与任务（OpenSpec）
+└── docs/                     # 补充文档（如 Maven settings 片段）
 ```
-
-## IntelliJ IDEA 与 Maven 多模块
-
-- **导入方式**：在 IntelliJ IDEA 中**优先以仓库根目录**（例如 `d:\Projects\kiwi`）作为项目根导入，按 **Maven 多模块** 识别，便于与 Reactor 构建顺序、模块依赖保持一致。
-
-- **单独编 backend**：`kiwi-admin/backend` 的 POM 已包含指向根父 POM 的 `<relativePath>`；在此前提下，若只关心 backend，仍建议：
-  - 在仓库根对父 POM 先执行一次 **`mvn install`**，或
-  - 始终在根目录使用 **`mvn -pl kiwi-admin/backend -am`**（`-am` 会顺带按顺序构建 **kiwi-common**、**kiwi-bpmn-*** 等 backend 所依赖的模块）。
-
-- **本地仓库缓存**：若此前因父 POM 解析失败在 `~/.m2/repository` 中留下不完整产物，在 **relativePath 已正确** 时一般**不必**清空整个本地仓库；若仍异常，可对根 **`pom.xml`** 执行 **`mvn -U`** 强制更新元数据，或删除本地目录 **`~/.m2/repository/com/kiwi/kiwi-parent`**（对应 `com.kiwi:kiwi-parent:1.0.0-SNAPSHOT`）后重试。
-
-## Snapshot 开发（内部构件）
-
-内部模块与跨仓库依赖（如 `cryoems-bpm`）当前使用 **`1.0.0-SNAPSHOT`**。从远程 Maven 仓库拉取 SNAPSHOT 时，建议启用「每次构建检查最新 snapshot」：
-
-1. 将 [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) 中的 `<profiles>` / `<activeProfiles>` 合并进 `%USERPROFILE%\.m2\settings.xml`。
-2. 或单次构建使用 **`mvn -U ...`**。
-3. 若仅依赖同事本机 `mvn install` 的 `~/.m2` 副本，`alwaysUpdateSnapshots` **不会**自动更新；需对方重新 install，或改用远程仓库 / **`-Pcryoems-bpm-local`** 联调（与同级 `../cryoems-bpm` 同一 reactor）。
 
 ## 环境要求
 
-- **JDK 17**
-- **Maven 3.8+**
-- **Node.js**（建议 LTS，与 Angular 21 兼容的版本）
-- 运行期依赖：**MongoDB**、**MySQL**（具体库名与用途以 `application.yml` 为准）
+| 依赖 | 说明 |
+|------|------|
+| **JDK 25** | 根 `pom.xml` 通过 `maven-enforcer-plugin` 强制 `[25,26)`；`JAVA_HOME` 须指向 JDK 25 |
+| **Maven 3.x** | 在仓库根目录执行构建 |
+| **MongoDB** | 系统数据、Sa-Token（默认）、菜单/字典等 |
+| **MySQL** | 生产/联调 Camunda 引擎库（`spring.datasource`） |
+| **Node.js** | 前端开发；版本需与 Angular 21 兼容 |
 
-## 配置说明
+开发 profile `dev` 下 Camunda 可使用内嵌 **H2** 文件库（`./data/dev-bpm`），但仍需可用的 MongoDB。
 
-1. **后端**  
-   - 主配置：`kiwi-admin/backend/src/main/resources/application.yml`（默认不含真实密钥，敏感项使用环境变量占位，如 `SPRING_DATASOURCE_PASSWORD`、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD` 等）。  
-   - 本地覆盖：复制 `application-local.example.yml` 为 `application-local.yml`，填写数据库等；**`application-local.yml` 已加入 `.gitignore`，勿提交。** 启动时建议：`--spring.profiles.active=local,dev`（`dev` 可选，用于开启 MyBatis SQL 输出到控制台，仅调试用）。  
-   - **CORS**：由 `app.cors.allowed-origins` 配置（逗号分隔）。本地默认包含 `http://localhost:4201` 等；**生产环境**请通过环境变量 `APP_CORS_ALLOWED_ORIGINS` 设置为实际前端 Origin，勿使用 `*`。
+## 快速开始
 
-2. **前端 API**  
-   - `kiwi-admin/frontend/src/environments/environment.ts` 中的 `api.baseUrl` 需指向后端（默认与后端 `server.port` 一致，例如 `http://localhost:8088`）。  
-   - `proxy.conf.json` 将 `/site/api` 代理到 `http://localhost:3001/`，若你未单独起该服务，请按需调整或忽略相关路径。
+### 1. 后端
 
-3. **Camunda**  
-   - 管理员账号等在 `application.yml` 的 `camunda.bpm.admin-user` 中配置；流程引擎 REST 与 Webapp 随 Spring Boot 应用一同启动。
+1. **本地配置**（推荐）：复制并按环境修改
 
-## 本地运行
+   ```bash
+   cp kiwi-admin/backend/src/main/resources/application-local.example.yml \
+      kiwi-admin/backend/src/main/resources/application-local.yml
+   ```
 
-### 1. 启动后端
+   填写 MySQL/MongoDB 密码、`kiwi.mongodb.init.admin-password`、`app.password.secret` 等。详见示例文件内注释。
 
-在仓库根目录：
+2. **编译**（在仓库根目录，会按依赖顺序编译 `kiwi-common`、`kiwi-bpmn-*` 等）：
 
-```bash
-mvn -pl kiwi-admin/backend -am spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
+   ```bash
+   mvn -pl kiwi-admin/backend -am compile -DskipTests
+   ```
 
-（若未使用 `application-local.yml`，可去掉 profile 参数，并确保环境变量或默认占位符与本地数据库一致。）
+3. **启动**：在 IDE 中运行 `com.kiwi.framework.springboot.Application`，并设置 Spring Profile，例如：
 
-或在模块目录：
+   ```text
+   --spring.profiles.active=local,dev
+   ```
 
-```bash
-cd kiwi-admin/backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
+   - `local`：加载 `application-local.yml` 中的连接与密钥
+   - `dev`：H2 作为 Camunda 数据源、MyBatis StdOut 日志等
 
-确保 MySQL、MongoDB 已按配置可用，否则启动会失败。
+4. 默认监听 **http://localhost:8000**。Camunda REST：**/engine-rest**；Swagger UI 由 springdoc 提供（路径以启动日志为准）。
 
-### 2. 启动前端
+首次启动且 `kiwi.mongodb.migration.enabled=true`（默认）时会初始化管理员与参考数据，须配置 `kiwi.mongodb.init.admin-password`。MongoDB 迁移说明见 [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)。
+
+### 2. 前端
 
 ```bash
 cd kiwi-admin/frontend
@@ -104,49 +89,89 @@ npm install
 npm start
 ```
 
-开发服务器默认 **http://localhost:4201**（见 `package.json` 中 `ng serve` 参数）。
+开发服务器默认 **http://localhost:4201**。
 
-### 3. 构建
+将 `src/environments/environment.ts` 中的 `api.baseUrl` 指向后端 API 根地址（本地一般为 `http://localhost:8000`；若经反向代理挂载在 `/kiwi-be` 等路径，需与部署一致）。`camundaEngineRestPath` 默认 `/engine-rest`。
 
-- 后端：在仓库根执行 `mvn -pl kiwi-admin/backend -am clean package`（与上文「Maven 多模块」一致，`-am` 会构建依赖模块）。  
-- 前端：`cd kiwi-admin/frontend && npm run build`（生产环境会替换为 `environment.prod.ts`）
+### 3. CORS
 
-## AI 辅助功能
+后端 `application.yml` 中 `app.cors.allowed-origins` 默认包含 `http://localhost:4201`。自定义前端 Origin 时通过环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置（逗号分隔）。
 
-管理后台内置 **AI 对话与助手**（基于后端 **Spring AI Alibaba** 对接阿里云 **DashScope / 通义**）。登录后可在界面中使用：
+## 常用构建命令
 
-- **右下角浮窗「Kiwi · AI」**：在默认布局中常驻，可折叠对话；适合边操作后台边提问。
-- **仪表盘「AI 对话」页**：嵌入同一套对话组件，适合全屏查看长回复。
+```bash
+# 编译后端及依赖模块
+mvn -pl kiwi-admin/backend -am compile -DskipTests
 
-对话走 **`/ai/assistant`**：模型通过 MCP 自选工具；除文本外，响应中 **`actions`** 可含页面导航、BPM 设计器建议等（由 `assistant_*` / `assistant_designer_*` 工具登记）。BPM 等场景由前端在 **`messages`** 中附带上下文，无单独 BPM 接口。纯补全为 **`/ai/chat`**（一般供集成或调试）。
+# 打包（thin app jar + lib jar，供 deploy 使用）
+mvn -pl kiwi-admin/backend -am package -DskipTests
 
-使用前请在后端配置 **API Key** 并视需要开启或关闭总开关；可选开启 **MCP Server**（SSE），供外部客户端以与 REST API 相同方式携带登录 Token 调用工具。详细环境变量、接口说明与前端联调注意见：
+# 前端生产构建
+cd kiwi-admin/frontend && npm run build
+```
 
-- **[kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)**（密钥、`kiwi.ai.enabled`、模型名、MCP）
-- **[kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)**（入口位置、`api.baseUrl` 配置）
+SNAPSHOT 开发期若需 Maven 更频繁检查远程更新，可参考 [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml)。
 
-## 其他说明
+## 模块说明
 
-- **kiwi-bpmn** 子模块为流程扩展与外部任务等能力，随父工程一并构建。  
+### kiwi-bpmn-core
 
-## 合作开发
+Camunda 引擎层扩展：`@ComponentDescription` / `@ComponentParameter` 组件元数据、输入输出变量映射、JUEL 容错、选择性 Job 重试、默认 asyncBefore 等。
 
-欢迎对 **Kiwi 低代码平台** 感兴趣的同学**一起参与开发与维护**。你可以：
+### kiwi-bpmn-component
 
-- 通过 **Issue** 讨论需求与方案、认领任务或反馈缺陷（请尽量写清背景与复现方式）；  
-- 提交 **Pull Request**（较大改动建议先开 Issue 对齐方向，避免与现有路线冲突）；  
-- 通过下方 **开发者联系** 中的邮箱沟通技术路线、模块分工或长期协作意向。
+内置流程组件（通过 Spring `@Component` 注册，供 BPMN Service Task 引用）：
 
-我们重视可读的提交说明与可复现的问题描述；代码与目录结构请尽量贴近现有模块习惯。期待你的参与。
-
-## 开发者联系
-
-| 方式 | 说明 |
+| 组件 | 说明 |
 |------|------|
-| Issue | 在代码托管仓库提交 Issue，建议附上复现步骤、环境与关键日志。 |
-| 邮件 | 418315052@qq.com |
+| Shell | 执行命令行 |
+| HTTP 请求 | 发起 HTTP 调用 |
+| 文件读/写 | 读写本地文件 |
+| 变量赋值 | 流程变量赋值 |
+| MongoDB | Mongo 文档操作 |
+| Slurm | External Task：提交/跟踪 Slurm 作业（可选集成） |
 
+Slurm 相关运维说明见 [kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md)。
 
-## 许可证
+### kiwi-admin
 
-MIT — 详见仓库根目录 [LICENSE](LICENSE)。
+- **backend**：REST API、Camunda 嵌入式引擎、系统管理、BPM 项目管理、AI/MCP、通知与监控等
+- **frontend**：基于 [ng-antd-admin](https://github.com/huajian123/ng-antd-admin) 演进的管理 UI，详见 [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)
+
+## 主要配置项
+
+| 变量 / 配置 | 说明 |
+|-------------|------|
+| `SPRING_DATA_MONGODB_URI` | 主 MongoDB 连接 |
+| `SPRING_DATASOURCE_URL` | Camunda/MyBatis 关系库（非 dev profile） |
+| `KIWI_MONGODB_MIGRATION_ENABLED` | 是否执行 Mongo 迁移，默认 `true` |
+| `KIWI_INIT_ADMIN_PASSWORD` / `kiwi.mongodb.init.admin-password` | 首次管理员密码 |
+| `APP_CORS_ALLOWED_ORIGINS` | 允许的前端 Origin |
+| `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY` | AI 对话（通义）API Key |
+| `KIWI_SA_TOKEN_STORAGE` | Sa-Token 存储：`mongodb`（默认）或 `redis` |
+
+完整默认值见 `kiwi-admin/backend/src/main/resources/application.yml` 及 `application-local.example.yml`。
+
+## 部署
+
+- 后端远程部署：[kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md)（`deploy.py` + OpenSSH）
+- 前端部署说明：[kiwi-admin/frontend/deploy/README.md](kiwi-admin/frontend/deploy/README.md)
+- 远端进程管理：`kiwi-admin/backend/bin/restart.sh`（thin jar + lib jar，`-cp` 启动）
+
+## 开发规范
+
+- 非琐碎功能变更建议使用 **OpenSpec**（`openspec/`、`openspec list`）；Cursor 斜杠命令见 `.cursor/commands/opsx-*.md`
+- Java 业务类优先实例方法，流程组件 `@ComponentParameter#key` 使用扁平下划线命名（禁止 `.`）
+- 前端异步优先 RxJS `Observable`；列表接口注意统一响应中的 `CollectionResult.content`
+
+## 相关文档
+
+| 文档 | 内容 |
+|------|------|
+| [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | 前端技术栈、脚本、AI 联调 |
+| [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | MongoDB 迁移约定 |
+| [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | 后端远程部署 |
+
+## License
+
+[MIT License](LICENSE)
