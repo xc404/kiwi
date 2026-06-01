@@ -3,3 +3,4 @@ build.local.yaml
 remote.yaml
 *.local.yaml
 *.local2.yaml
+/build.prod.yaml

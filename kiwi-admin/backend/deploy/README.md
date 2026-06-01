@@ -1,6 +1,6 @@
 # kiwi-admin 远程部署脚本
 
-`deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **Maven** 将 kiwi-admin 后端构建产物**构建并上传到远程主机**。连接与部署选项均写在 **`conf/build.local.yaml`**（`ssh`、`deploy` 块），见 `conf/build.example.yaml`。
+`deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **Maven** 将 kiwi-admin 后端构建产物**构建并上传到远程主机**。连接与部署选项默认读取 **`conf/build.local.yaml`**（`ssh`、`deploy` 块），也可通过 `-c/--config` 指定其他配置文件；示例见 `conf/build.example.yaml`。
 
 构建与仓库根 [README](../../README.md) 一致：在 **kiwi 仓库根**执行 `mvn -pl kiwi-admin/backend -am package -DskipTests`，以按顺序编译 **kiwi-common**、**kiwi-bpmn-*** 等依赖模块。Maven 输出在 `target/`，`deploy.py` 会将其同步到 **`backend/bin/`**（应用 jar + 依赖 lib jar）再上传。请使用完整克隆的仓库，勿只拷贝 `kiwi-admin` 子目录。
 
@@ -27,6 +27,16 @@
    pip install -r requirements-remote.txt
    python deploy.py
    ```
+
+   使用自定义配置文件：
+
+   ```bash
+   python deploy.py --config conf/build.prod.yaml
+   # 或
+   python deploy.py -c /path/to/build.yaml
+   ```
+
+   > `--config` 默认值为 `conf/build.local.yaml`；传入相对路径时按 `deploy.py` 所在目录解析。
 
 仅上传已有产物、跳过构建：在 `build.local.yaml` 中设置 `deploy.skip_build: true`。
 
