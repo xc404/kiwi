@@ -75,7 +75,7 @@
 
 ## 增量细节（`incremental: true`）
 
-- **构建**：每次部署均执行 `mvn package`（除非 `skip_build: true`）。若远端已有 lib jar 且本地 lib 未因 POM 过期，则使用 `-P!lib-jar` **跳过 shade-lib**（不生成 `*-lib.jar`，缩短构建时间）。
+- **构建**：每次部署均执行 `mvn package`（除非 `skip_build: true`）。需要 lib jar 时 deploy 显式加 `-Plib-jar`；若远端已有 lib jar 且本地 lib 未因 POM 过期，则不加该 profile（不生成 `*-lib.jar`，缩短构建时间）。
 - **上传**：应用 jar 按 SHA256 增量；`config/` 与 `restart.sh`/`stop.sh` 在远端不存在时直接上传，内容不一致时会提示确认是否覆盖。
 - **全量触发**：`incremental: false`，远端缺少 lib jar，或本地 lib jar 早于反应堆 POM 修改时间（本地无 lib 但远端有时视为未过期，仍跳过 lib 构建）。
 

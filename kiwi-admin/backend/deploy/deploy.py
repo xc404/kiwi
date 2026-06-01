@@ -5,7 +5,7 @@
 在仓库根执行 mvn -pl kiwi-admin/backend -am package（与根 README 多模块建议一致）。
 连接与部署选项来自 conf/build.local.yaml（`ssh`、`deploy` 块），见 conf/build.example.yaml。
 构建产物为应用 thin jar + 依赖 lib jar；mvn 输出在 target/，脚本会同步到 backend/bin/ 再上传。
-incremental 为 true 且远端 lib 未过期时通常只构建/上传应用 jar（mvn 使用 -P!lib-jar 跳过 shade-lib）；
+incremental 为 true 且远端 lib 未过期时通常只构建/上传应用 jar（不启用 -Plib-jar）；
 为 false（或依赖 lib 过期、远端无 lib）时构建并上传应用 jar 与 lib jar；并同步 config/、restart.sh、stop.sh（不一致时交互确认覆盖）。
 auth: password 时：优先使用 sshpass + 系统 ssh/scp；若无 sshpass 则使用 paramiko（见同目录 requirements-remote.txt）。
 
@@ -421,8 +421,8 @@ def run_mvn_package(mvn_override: str | None, *, build_lib_jar: bool = True) -> 
         "package",
         "-DskipTests",
     ]
-    if not build_lib_jar:
-        cmd.append("-P!lib-jar")
+    if build_lib_jar:
+        cmd.append("-Plib-jar")
     try:
         subprocess.run(cmd, cwd=str(REPO_ROOT), check=True)
     except subprocess.CalledProcessError as exc:
@@ -734,9 +734,9 @@ def _maybe_run_mvn(
     if settings.skip_build:
         return
     if build_lib_jar:
-        print("执行 mvn package …")
+        print("执行 mvn package（-Plib-jar，含依赖 lib JAR）…")
     else:
-        print("执行 mvn package（跳过依赖 lib JAR 构建，-P!lib-jar）…")
+        print("执行 mvn package（跳过依赖 lib JAR 构建）…")
     run_mvn_package(mvn_override, build_lib_jar=build_lib_jar)
     sync_maven_outputs_to_bin(settings, sync_lib=build_lib_jar)
 

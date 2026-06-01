@@ -366,12 +366,9 @@
     </build>
 
     <profiles>
-        <!-- 依赖 lib jar；增量部署且远端 lib 未过期时 deploy.py 使用 -P!lib-jar 跳过 -->
+        <!-- 依赖 lib jar；仅 deploy.py 显式 -Plib-jar 时启用，普通 mvn install/deploy 不构建 -->
         <profile>
             <id>lib-jar</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <build>
                 <plugins>
                     <plugin>
