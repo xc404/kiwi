@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.kiwi</groupId>
         <artifactId>kiwi-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -28,17 +28,14 @@
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-external-task</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
