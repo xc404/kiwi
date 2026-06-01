@@ -112,16 +112,6 @@
                 <artifactId>kiwi-bpmn-external-task</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.kiwi</groupId>
-                <artifactId>kiwi-admin</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.kiwi</groupId>
-                <artifactId>cryoems-bpm</artifactId>
-                <version>${cryoems-bpm.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
