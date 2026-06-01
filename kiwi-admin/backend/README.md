@@ -1,123 +1,37 @@
-# Kiwi Admin 后端
+# kiwi-admin backend
 
-**Kiwi** 管理端 **Spring Boot** 主应用：REST API、**Camunda BPM**（引擎 REST 与 Web 控制台）、Sa-Token 鉴权、MyBatis 与 MongoDB 等业务数据访问，以及与前端 `kiwi-admin/frontend` 协作的低代码与流程能力。
+## MongoDB 迁移
 
-更完整的平台说明、仓库结构与 Maven 多模块说明见仓库根 [README.md](../../README.md)。
+启动时在 `kiwi.mongodb.migration.enabled=true`（默认）下执行两类迁移：
 
-## 技术栈
+| 类型 | 机制 | 适用 |
+|------|------|------|
+| **命令式** | [Mongock](https://docs.mongock.io/) `@ChangeUnit`（如 `InitAdminUserChangeUnit`） | 密码哈希、复杂逻辑 |
+| **参考数据 JSON** | `MongoJsonMigrationRunner` 扫描 classpath，changelog 集合 `kiwi_json_migration` | 字典、菜单等实体 upsert |
 
-| 类别 | 说明 |
-|------|------|
-| 运行时 | Java 17、Spring Boot 3.4.x |
-| Web / 文档 | Spring Web、SpringDoc OpenAPI（Swagger UI） |
-| 鉴权 | Sa-Token（`kiwi.sa-token.storage`：`mongodb` 默认，或 `redis`） |
-| 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；可选 Redis（仅 Sa-Token 为 redis 时） |
-| 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描；`assistant_*` 前端动作为 ChatClient 进程内 `@Tool`） |
-| 其他 | Hutool、Velocity（代码生成模板）等 |
+### JSON 脚本约定（类 Flyway）
 
-模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
+- **版本化（只执行一次）**：`src/main/resources/mongo/migration/versioned/`  
+  文件名：`V{version}__{EntitySimpleName}.json`  
+  示例：`V20250601_001__SysDictGroup.json` → 实体 `com.kiwi.project.system.entity.SysDictGroup`
+- **可重复（checksum 变化时重跑）**：`mongo/migration/repeatable/`  
+  文件名：`R__{EntitySimpleName}.json`  
+  示例：`R__SysMenu.json`
 
-## 环境要求
+JSON 为**对象数组**，每项须含非空 `id`。新增参考数据时**只加文件**，无需新建 Java ChangeUnit；版本化脚本通过提高 `V` 前缀版本保证顺序。
 
-- **JDK 17**
-- **Maven 3.8+**
-- 运行期：**MySQL**、**MongoDB**；若 `kiwi.sa-token.storage=redis`，另需 **Redis**
+### 配置
 
-## 快速开始
-
-在**仓库根目录**（推荐，便于解析父 POM 并构建依赖模块）：
-
-```bash
-mvn -pl kiwi-admin/backend -am spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
+```yaml
+kiwi.mongodb.migration.enabled: true
+kiwi.mongodb.migration.json.entity-base-package: com.kiwi.project.system.entity
+kiwi.mongodb.init.admin-password: # 001 管理员迁移必填
 ```
 
-仅在本目录时（需已 `mvn install` 过父工程或依赖模块）：
+关闭迁移：`KIWI_MONGODB_MIGRATION_ENABLED=false`。
 
-```bash
-cd kiwi-admin/backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
+### 验证
 
-- 默认 HTTP 端口：**8088**（`server.port`）。
-- 若未使用 `application-local.yml`，可去掉上述 profile，并确保环境变量或默认占位符与本地数据库一致；否则启动会因连库失败而报错。
-
-## 配置说明
-
-| 项 | 说明 |
-|----|------|
-| 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、`kiwi.sa-token.storage`、Camunda、`app.cors`、AI/MCP 等） |
-| MCP 端点 | `spring.ai.mcp.server.sse-endpoint`、`spring.ai.mcp.server.sse-message-endpoint`（及 `SPRING_AI_MCP_SERVER_*` 环境变量）；助手回环基址 `kiwi.ai.mcp.loopback-base-url` |
-| 本地覆盖 | 复制 `application-local.example.yml` 为 `application-local.yml` 填写真实连接信息；**勿提交** `application-local.yml`（已在 `.gitignore`） |
-| CORS | `app.cors.allowed-origins`，生产环境用环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置实际前端 Origin |
-| 敏感项 | 数据库密码、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD`、AI 密钥（如 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`）等建议用环境变量 |
-
-`dev` profile 常用于本地将 MyBatis SQL 输出到控制台（见 `application-dev.yml`），仅调试使用。
-
-### MongoDB 迁移（Mongock）
-
-主库（`spring.data.mongodb`，默认库 `x404`）在启动时通过 [Mongock](https://docs.mongock.io/) 执行版本化迁移（`kiwi.mongodb.migration.enabled`，默认 `true`）。
-
-| 项 | 说明 |
-|----|------|
-| 关闭迁移 | 环境变量 `KIWI_MONGODB_MIGRATION_ENABLED=false` |
-| 扫描包 | `com.kiwi.framework.mongo.migration.primary` |
-| 初始管理员 | `KIWI_INIT_ADMIN_PASSWORD` 或 `kiwi.mongodb.init.admin-password`（为空则跳过 001）；用户名默认 `admin` |
-| 字典 / 菜单 JSON | `src/main/resources/mongo/migration/data/*.json`，由 ChangeUnit `002` 导入 |
-| 新增迁移 | 在 `migration/primary` 新建 `@ChangeUnit`，`order` 递增、`id` 全局唯一；**勿修改已上线环境已执行过的 ChangeUnit** |
-| 变更记录 | Mongo 集合 `mongockChangeLog`（以库内实际为准） |
-
-从已有环境更新 JSON：在目标库用 `mongosh` 导出 `sysDictGroup` / `sysDict` / `sysMenu` 文档，整理为上述目录中的 JSON 数组（每项须含 `id`），再通过**新的** `003-...` ChangeUnit 或替换未部署环境的 `002` 数据文件。
-
-### AI 对话与助手
-
-实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；**统一助手**由 `AiAssistantService` 提供（单一 `kiwiChatClient` + MCP；模型自行选用工具）。菜单跳转、BPM 设计器建议等前端动作由工具登记至 `AssistantClientActionContext`，经 `actions` 返回（工具定义见 `com.kiwi.project.system.ai`）。
-
-| 配置 / 环境变量 | 说明 |
-|-----------------|------|
-| `kiwi.ai.enabled` | 是否启用 AI 接口，默认 `true`；可用 **`KIWI_AI_ENABLED`** 覆盖。关闭后相关请求会失败并提示。 |
-| `spring.ai.dashscope.api-key` | 阿里云 DashScope API Key；通常使用 **`KIWI_AI_API_KEY`** 或 **`DASHSCOPE_API_KEY`**。 |
-| `spring.ai.dashscope.chat.options.model` | 模型名，默认 **`qwen-plus`**；可用 **`KIWI_AI_MODEL`** 覆盖。 |
-| `spring.ai.mcp.server` | 内置 MCP Server（SSE），与助手共用工具回调；可用 **`SPRING_AI_MCP_SERVER_ENABLED=false`** 关闭。外部 HTTP 调用需携带与业务 API 相同的 **`Authorization: Bearer`** 加登录 Token（见 `application.yml` 中 `instructions` 说明）。 |
-
-| HTTP 接口 | 说明 |
-|-----------|------|
-| `POST /ai/chat` | 请求体 `{ "messages": [ { "role": "user"\|"assistant"\|"system", "content": "..." } ] }`，返回 `{ "content": "..." }`。需登录（`@SaCheckLogin`）。 |
-| `POST /ai/assistant` | 同上消息格式；模型通过 MCP 自选工具。返回 `content` 与可选 **`actions`**（如 `navigate`、`toolbar`、`bpmnXml`、`appendComponent` 等，由 `assistant_*` / `assistant_designer_*` 工具登记）。BPM 设计器场景由前端在 `messages` 中附带 BPMN/流程上下文，**无单独 BPM 接口**。 |
-
-本地示例密钥占位见 **`application-local.example.yml`**。前端使用说明见 **[kiwi-admin/frontend/README.md](../frontend/README.md)** 中「AI 辅助」一节。
-
-## 构建产物
-
-在仓库根：
-
-```bash
-mvn -pl kiwi-admin/backend -am clean package
-```
-
-可执行包由 `spring-boot-maven-plugin` 重打包生成（具体路径以构建输出为准）。
-
-## 开发与联调
-
-- **OpenAPI / Swagger UI**：服务启动后可通过 SpringDoc 访问，例如 **`/swagger-ui.html`**、**`/swagger-ui/`**；OpenAPI JSON 一般为 **`/v3/api-docs`**（与 `SaTokenConfigure` 中放行路径一致）。
-- **Camunda**：与主应用同端口；流程引擎 REST 路径与前端 `camundaEngineRestPath`（默认 `/engine-rest`）保持一致即可。
-- **前端**：`kiwi-admin/frontend` 中 `environment.ts` 的 `api.baseUrl` 需指向本服务（默认 `http://localhost:8088`）。
-
-## 源码结构（简要）
-
-| 路径 | 说明 |
-|------|------|
-| `src/main/java/com/kiwi/framework/` | 框架层（启动类、安全、Web、Swagger 等） |
-| `src/main/java/com/kiwi/project/` | 业务：`bpm`、`system`、`tools`（代码生成 / JDBC）、`ai`、`monitor`、`notification` 等 |
-| `src/main/resources/` | `application*.yml`、MyBatis XML、Velocity 模板、权限与 BPM 资源等 |
-
-## MCP 与 AI 工具
-
-- **MCP Server**：`spring-ai-starter-mcp-server-webmvc`；工具由 **`KiwiOpenApiSyncMcpToolsConfiguration`** 根据控制器 **`@Operation(operationId, summary)`** 经 `McpToolUtils` 转为 `SyncToolSpecification`。
-- **助手**：`ChatClient` 对 OpenAPI 业务工具经本机 `McpSyncClient` 回环 MCP；`assistant_navigate`、`assistant_designer_*` 经进程内 `MethodToolCallback`（`KiwiAssistantInProcessToolsConfiguration`），与 `AssistantClientActionContext` 同线程登记 `actions`。
-
-## 相关文档
-
-- 根目录：**[README](../../README.md)**（平台概览、Maven 多模块、配置与运行）
-- 前端：**[kiwi-admin/frontend/README.md](../frontend/README.md)**
-- 远程部署脚本：**[kiwi-admin/script/README.md](../script/README.md)**
+1. 空库启动后：`mongockChangeLog` 含 `001`；`kiwi_json_migration` 含 versioned/repeatable 脚本记录。  
+2. 修改 `R__SysMenu.json` 后重启：菜单数据更新且 changelog 中 checksum 变化。  
+3. 新增 `V20250602_001__SysRole.json`：仅新脚本执行一次。

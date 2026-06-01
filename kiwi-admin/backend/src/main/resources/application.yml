@@ -30,6 +30,11 @@ kiwi:
   mongodb:
     migration:
       enabled: ${KIWI_MONGODB_MIGRATION_ENABLED:true}
+      json:
+        entity-base-package: com.kiwi.project.system.entity
+        versioned-location: classpath:mongo/migration/versioned/
+        repeatable-location: classpath:mongo/migration/repeatable/
+        changelog-collection: kiwi_json_migration
     init:
       admin-username: ${KIWI_INIT_ADMIN_USERNAME:admin}
       admin-password: ${KIWI_INIT_ADMIN_PASSWORD:}
