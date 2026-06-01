@@ -1,0 +1,22 @@
+<!--
+  开发期：每次构建向远程检查 com.kiwi:* SNAPSHOT 是否有更新（默认约每天才检查一次）。
+
+  用法：将下方 <profiles> 与 <activeProfiles> 合并进 %USERPROFILE%\.m2\settings.xml
+  （无该文件则新建根元素 <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">）。
+
+  说明：
+  - 仅影响从远程仓库解析的 SNAPSHOT；本地 mvn install 的 ~/.m2 副本不会因此自动更新。
+  - 跨仓库本地联调推荐 kiwi 使用 -Pcryoems-bpm-local（reactor 直接编 sibling）。
+  - 单次强制更新可用：mvn -U ...
+-->
+<profiles>
+  <profile>
+    <id>always-update-snapshots</id>
+    <properties>
+      <alwaysUpdateSnapshots>true</alwaysUpdateSnapshots>
+    </properties>
+  </profile>
+</profiles>
+<activeProfiles>
+  <activeProfile>always-update-snapshots</activeProfile>
+</activeProfiles>
