@@ -1,0 +1,62 @@
+[
+  {
+    "id": "system",
+    "parentId": "0",
+    "name": "系统管理",
+    "menuType": "M",
+    "path": "/system",
+    "sort": 100,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_menu",
+    "parentId": "system",
+    "name": "菜单管理",
+    "menuType": "C",
+    "path": "/system/menu",
+    "sort": 1,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_user",
+    "parentId": "system",
+    "name": "用户管理",
+    "menuType": "C",
+    "path": "/system/user",
+    "sort": 2,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_dept",
+    "parentId": "system",
+    "name": "部门管理",
+    "menuType": "C",
+    "path": "/system/dept",
+    "sort": 3,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_dict",
+    "parentId": "system",
+    "name": "字典管理",
+    "menuType": "C",
+    "path": "/system/dict",
+    "sort": 4,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_role",
+    "parentId": "system",
+    "name": "角色管理",
+    "menuType": "C",
+    "path": "/system/role",
+    "sort": 5,
+    "status": "0",
+    "visible": true
+  }
+]

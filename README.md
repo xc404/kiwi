@@ -2,7 +2,7 @@
 
 **Kiwi 是一款面向企业的低代码开发平台**：在统一技术栈上提供可配置的管理能力、**可视化 BPMN 流程设计与运行**，以及可扩展的流程组件与外部任务集成，减少重复编码、缩短业务上线周期。
 
-实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，前端为 **Angular** 管理界面（`kiwi-admin/frontend`，由 [ng-antd-admin](https://github.com/huajian123/ng-antd-admin) 模板演进而来）。
+实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，
 
 ## 平台定位（低代码）
 

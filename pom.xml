@@ -32,6 +32,7 @@
         <spring-boot.version>3.5.8</spring-boot.version>
         <!-- 与 spring-boot-dependencies 对齐；勿被传递依赖降到 6.2.12 以下，否则 spring-core 6.2.1 无法解析 JDK 25 编译的 .class（组件扫描 ClassReader 报错） -->
         <spring-framework.version>6.2.14</spring-framework.version>
+        <mongock.version>5.5.1</mongock.version>
     </properties>
     <dependencies>
         <dependency>
@@ -72,6 +73,13 @@
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-framework-bom</artifactId>
                 <version>${spring-framework.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.mongock</groupId>
+                <artifactId>mongock-bom</artifactId>
+                <version>${mongock.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

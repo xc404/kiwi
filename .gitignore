@@ -56,3 +56,4 @@ kiwi-common/target/
 kiwi-bpmn/**/target/
 /data/
 **/target/**
+/**/*local*.yml

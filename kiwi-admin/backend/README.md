@@ -54,6 +54,21 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,
 
 `dev` profile 常用于本地将 MyBatis SQL 输出到控制台（见 `application-dev.yml`），仅调试使用。
 
+### MongoDB 迁移（Mongock）
+
+主库（`spring.data.mongodb`，默认库 `x404`）在启动时通过 [Mongock](https://docs.mongock.io/) 执行版本化迁移（`kiwi.mongodb.migration.enabled`，默认 `true`）。
+
+| 项 | 说明 |
+|----|------|
+| 关闭迁移 | 环境变量 `KIWI_MONGODB_MIGRATION_ENABLED=false` |
+| 扫描包 | `com.kiwi.framework.mongo.migration.primary` |
+| 初始管理员 | `KIWI_INIT_ADMIN_PASSWORD` 或 `kiwi.mongodb.init.admin-password`（为空则跳过 001）；用户名默认 `admin` |
+| 字典 / 菜单 JSON | `src/main/resources/mongo/migration/data/*.json`，由 ChangeUnit `002` 导入 |
+| 新增迁移 | 在 `migration/primary` 新建 `@ChangeUnit`，`order` 递增、`id` 全局唯一；**勿修改已上线环境已执行过的 ChangeUnit** |
+| 变更记录 | Mongo 集合 `mongockChangeLog`（以库内实际为准） |
+
+从已有环境更新 JSON：在目标库用 `mongosh` 导出 `sysDictGroup` / `sysDict` / `sysMenu` 文档，整理为上述目录中的 JSON 数组（每项须含 `id`），再通过**新的** `003-...` ChangeUnit 或替换未部署环境的 `002` 数据文件。
+
 ### AI 对话与助手
 
 实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；**统一助手**由 `AiAssistantService` 提供（单一 `kiwiChatClient` + MCP；模型自行选用工具）。菜单跳转、BPM 设计器建议等前端动作由工具登记至 `AssistantClientActionContext`，经 `actions` 返回（工具定义见 `com.kiwi.project.system.ai`）。

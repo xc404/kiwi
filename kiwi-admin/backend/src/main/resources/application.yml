@@ -27,6 +27,17 @@ kiwi:
     session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_SESSION_TIMEOUT_SECONDS:${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}}
     # 单次兑换所得 Sa-Token 会话有效期（秒）
     exchange-session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_EXCHANGE_SESSION_TIMEOUT:7200}
+  mongodb:
+    migration:
+      enabled: ${KIWI_MONGODB_MIGRATION_ENABLED:true}
+    init:
+      admin-username: ${KIWI_INIT_ADMIN_USERNAME:admin}
+      admin-password: ${KIWI_INIT_ADMIN_PASSWORD:}
+      admin-nick-name: ${KIWI_INIT_ADMIN_NICK_NAME:Administrator}
+
+mongock:
+  migration-scan-package:
+    - com.kiwi.framework.mongo.migration.primary
 
 app:
   cors:

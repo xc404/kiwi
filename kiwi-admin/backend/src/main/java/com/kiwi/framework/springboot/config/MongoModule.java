@@ -16,8 +16,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @EnableMongoRepositories(basePackages = "com.kiwi", excludeFilters = {
         @ComponentScan.Filter(
-                type = FilterType.REGEX,
-                pattern = CryoemsMongoModule.REPOSITORY_SCAN_EXCLUDE_REGEX)
+                type = FilterType.REGEX)
 },
         repositoryBaseClass = BaseMongoRepositoryImpl.class, mongoTemplateRef = "mongoTemplate")
 @Configuration()
@@ -31,7 +30,6 @@ public class MongoModule
         return new KiwiMongoTemplate(mongoDatabaseFactory, converter);
     }
 
-    /** 主库连接属性；{@code @Primary} 避免与 {@link CryoemsMongoModule} 的 cryoems 库冲突。 */
     @Primary
     @Bean("primaryMongoProperties")
     @ConfigurationProperties(prefix = "spring.data.mongodb")
