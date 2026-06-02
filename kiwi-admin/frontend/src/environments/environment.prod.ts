@@ -1,6 +1,6 @@
-const ip = '10.15.56.173';
-const port = '8000';
-export const localUrl = `http://${ip}:${port}/kiwi-be`;
+const ip = 'api.kiwi-admin.cn';
+const port = '80';
+export const localUrl = `http://${ip}:${port}`;
 
 
 export const environment = {

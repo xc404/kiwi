@@ -2,6 +2,10 @@
 
 **Kiwi** 是基于 [Camunda BPM 7](https://camunda.com/platform/) 的工作流编排与管理平台，提供可视化 BPMN 设计、可扩展流程组件、系统管理后台，以及与 CryoEMS 等业务系统的集成能力。仓库为 Maven 多模块 monorepo，前后端分离部署。
 
+## 在线演示
+
+管理后台演示环境：[https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
+
 ## 特性
 
 - **BPMN 流程设计**：Angular + BPMN.js 可视化建模，属性面板与组件元数据联动
