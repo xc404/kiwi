@@ -28,7 +28,13 @@ kiwi.mongodb.migration.json.entity-base-package: com.kiwi.project.system.entity
 kiwi.mongodb.init.admin-password: # 001 管理员迁移必填
 ```
 
+环境变量（relaxed binding）：`KIWI_MONGODB_INIT_ADMIN_USERNAME`、`KIWI_MONGODB_INIT_ADMIN_PASSWORD`、`KIWI_MONGODB_INIT_ADMIN_NICK_NAME`；`application.yml` 中仍兼容 `KIWI_INIT_ADMIN_*` 占位符。
+
 关闭迁移：`KIWI_MONGODB_MIGRATION_ENABLED=false`。
+
+Mongock 事务：默认 `mongock.transactional=false`（`MONGOCK_TRANSACTIONAL`）。本地单机 Mongo 或同时启用 MySQL/H2 与 Mongo 时请勿依赖自动推断；仅在 Mongo **副本集**且确需迁移原子性时设为 `true`。
+
+**常见启动错误**（`Transaction numbers are only allowed on a replica set` / `Error in Mongock's transaction`）：说明 Mongock 仍在对**单机** Mongo 开事务。确认 `application.yml` 含 `mongock.transactional: false` 且已重新打包；若用 `deploy` 或 `bin/restart.sh` 启动，需重新同步 `bin/config/`（`deploy.py` 会从 `src/main/resources` 复制配置）。
 
 ### 验证
 

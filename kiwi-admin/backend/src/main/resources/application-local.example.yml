@@ -9,7 +9,7 @@ spring:
     password: your-mysql-password
   data:
     mongodb:
-      uri: mongodb://127.0.0.1:27017/x404?authSource=admin
+      uri: mongodb://127.0.0.1:27017/x404?authSource=admin&retryWrites=false
     # 使用 Redis 缓存 Sa-Token：增加 profile redis（见 application-redis.yml），例如
     #   --spring.profiles.active=local,dev,redis
     # 并在 application-local.yml 或环境变量中设置 SPRING_DATA_REDIS_HOST 等

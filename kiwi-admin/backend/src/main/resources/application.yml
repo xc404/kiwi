@@ -43,6 +43,11 @@ kiwi:
 mongock:
   migration-scan-package:
     - com.kiwi.framework.mongo.migration.primary
+  # 显式关闭 Mongock 原生事务（Mongock 5.5+ 推荐始终配置 transactional）：
+  # - 本地单机 Mongo 无副本集，无法使用多文档事务；
+  # - 同时存在 JDBC 时，驱动可能误根据 PlatformTransactionManager 推断可事务，导致 rollback 二次提交异常。
+  # 生产副本集需事务时可设 MONGOCK_TRANSACTIONAL=true。
+  transactional: ${MONGOCK_TRANSACTIONAL:false}
 
 app:
   cors:
@@ -87,17 +92,11 @@ spring:
     type: com.zaxxer.hikari.HikariDataSource
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
+      # 单机 Mongo 非副本集：默认 retryWrites=false，避免事务/可重试写与部署能力不匹配
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin&retryWrites=false}
       database: ${SPRING_DATA_MONGODB_DATABASE:x404}
       auto-index-creation: true
 
-# CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
-
-cryoems:
-  mongodb:
-    uri: ${CRYOEMS_MONGODB_URI:mongodb://127.0.0.1:27017/cryoems?authSource=admin}
-    database: ${CRYOEMS_MONGODB_DATABASE:cryoems}
-    auto-index-creation: true
 
 camunda.bpm:
   admin-user:

@@ -156,12 +156,6 @@ Slurm 相关运维说明见 [kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cl
 
 完整默认值见 `kiwi-admin/backend/src/main/resources/application.yml` 及 `application-local.example.yml`。
 
-## 部署
-
-- 后端远程部署：[kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md)（`deploy.py` + OpenSSH）
-- 前端部署说明：[kiwi-admin/frontend/deploy/README.md](kiwi-admin/frontend/deploy/README.md)
-- 远端进程管理：`kiwi-admin/backend/bin/restart.sh`（thin jar + lib jar，`-cp` 启动）
-
 ## 开发规范
 
 - 非琐碎功能变更建议使用 **OpenSpec**（`openspec/`、`openspec list`）；Cursor 斜杠命令见 `.cursor/commands/opsx-*.md`

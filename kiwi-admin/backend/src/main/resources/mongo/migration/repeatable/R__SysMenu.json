@@ -1,5 +1,87 @@
 [
   {
+    "id": "bpm",
+    "parentId": "0",
+    "name": "工作流",
+    "menuType": "M",
+    "path": "/bpm",
+    "sort": 20,
+    "status": "0",
+    "visible": true,
+    "icon": "apartment"
+  },
+  {
+    "id": "bpm_component",
+    "parentId": "bpm",
+    "name": "组件管理",
+    "menuType": "C",
+    "path": "/bpm/component",
+    "sort": 1,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "bpm_project",
+    "parentId": "bpm",
+    "name": "项目管理",
+    "menuType": "C",
+    "path": "/bpm/project",
+    "sort": 2,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "bpm_process_definition",
+    "parentId": "bpm",
+    "name": "项目流程",
+    "menuType": "C",
+    "path": "/bpm/process-definition",
+    "sort": 3,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "bpm_process_instances",
+    "parentId": "bpm",
+    "name": "运行实例",
+    "menuType": "C",
+    "path": "/bpm/process-instances",
+    "sort": 4,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "tools",
+    "parentId": "0",
+    "name": "开发工具",
+    "menuType": "M",
+    "path": "/tools",
+    "sort": 30,
+    "status": "0",
+    "visible": true,
+    "icon": "tool"
+  },
+  {
+    "id": "tools_codegen",
+    "parentId": "tools",
+    "name": "代码生成",
+    "menuType": "C",
+    "path": "/tools/codegen",
+    "sort": 1,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "tools_connection",
+    "parentId": "tools",
+    "name": "数据库连接",
+    "menuType": "C",
+    "path": "/tools/connection",
+    "sort": 2,
+    "status": "0",
+    "visible": true
+  },
+  {
     "id": "system",
     "parentId": "0",
     "name": "系统管理",

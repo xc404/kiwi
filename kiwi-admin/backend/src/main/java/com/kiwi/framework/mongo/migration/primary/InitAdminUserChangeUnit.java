@@ -1,14 +1,15 @@
 package com.kiwi.framework.mongo.migration.primary;
 
+import com.kiwi.framework.mongo.migration.MongoInitAdminProperties;
 import com.kiwi.framework.security.PasswordService;
 import com.kiwi.project.system.dao.SysUserDao;
 import com.kiwi.project.system.entity.SysRole;
 import com.kiwi.project.system.entity.SysUser;
 import io.mongock.api.annotations.ChangeUnit;
 import io.mongock.api.annotations.Execution;
+import io.mongock.api.annotations.RollbackExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
@@ -25,21 +26,19 @@ public class InitAdminUserChangeUnit {
     public InitAdminUserChangeUnit(
             SysUserDao sysUserDao,
             PasswordService passwordService,
-            @Value("${kiwi.mongodb.init.admin-username}") String adminUsername,
-            @Value("${kiwi.mongodb.init.admin-password:}") String adminPassword,
-            @Value("${kiwi.mongodb.init.admin-nick-name}") String adminNickName) {
+            MongoInitAdminProperties initAdmin) {
         this.sysUserDao = sysUserDao;
         this.passwordService = passwordService;
-        this.adminUsername = adminUsername;
-        this.adminPassword = adminPassword;
-        this.adminNickName = adminNickName;
+        this.adminUsername = initAdmin.getAdminUsername();
+        this.adminPassword = initAdmin.getAdminPassword();
+        this.adminNickName = initAdmin.getAdminNickName();
     }
 
     @Execution
     public void execute() {
         if (StringUtils.isBlank(adminPassword)) {
             log.warn(
-                    "Skip admin user migration: kiwi.mongodb.init.admin-password / KIWI_INIT_ADMIN_PASSWORD is blank");
+                    "Skip admin user migration: kiwi.mongodb.init.admin-password / KIWI_MONGODB_INIT_ADMIN_PASSWORD is blank");
             return;
         }
         if (sysUserDao.findByUsername(adminUsername).isPresent()) {
@@ -55,5 +54,13 @@ public class InitAdminUserChangeUnit {
         user.setRoleIds(List.of(SysRole.Admin));
         sysUserDao.save(user);
         log.info("Created initial admin user: {}", adminUsername);
+    }
+
+    @RollbackExecution
+    public void rollback() {
+        sysUserDao.findByUsername(adminUsername).ifPresent(user -> {
+            sysUserDao.delete(user);
+            log.info("Rolled back initial admin user: {}", adminUsername);
+        });
     }
 }
