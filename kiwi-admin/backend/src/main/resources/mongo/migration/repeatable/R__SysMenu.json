@@ -5,7 +5,7 @@
     "name": "工作流",
     "menuType": "M",
     "path": "/bpm",
-    "sort": 20,
+    "sort": 100,
     "status": "0",
     "visible": true,
     "icon": "apartment"
@@ -87,7 +87,7 @@
     "name": "系统管理",
     "menuType": "M",
     "path": "/system",
-    "sort": 100,
+    "sort": 0,
     "status": "0",
     "visible": true
   },
