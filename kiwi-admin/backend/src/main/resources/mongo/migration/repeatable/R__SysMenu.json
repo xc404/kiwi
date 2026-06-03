@@ -89,7 +89,8 @@
     "path": "/system",
     "sort": 0,
     "status": "0",
-    "visible": true
+    "visible": true,
+    "icon": "setting"
   },
   {
     "id": "system_menu",

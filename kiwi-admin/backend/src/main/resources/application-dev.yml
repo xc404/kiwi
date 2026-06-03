@@ -1,15 +1,15 @@
-spring:
-  datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:./data/dev-bpm;MODE=MySQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE
-    username: sa
-    password:
-    type: com.zaxxer.hikari.HikariDataSource
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  data:
-    mongodb:
-      uri: mongodb://127.0.0.1:27017/kiwi?authSource=admin&retryWrites=false
-  # MONGODB (MongoProperties)
+# dev profile：Camunda 内嵌 H2、端口 8000、MyBatis StdOut；与 application-local.yml 联用：--spring.profiles.active=local,dev
+# Mongo、APP_PASSWORD_SECRET、KIWI_INIT_ADMIN_PASSWORD 等请在 local 中配置，勿在本文件重复（dev 后加载会覆盖 local）。
+
+SERVER_PORT: 8000
+
+SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+SPRING_DATASOURCE_URL: jdbc:h2:file:./data/dev-kiwi;MODE=MySQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+SPRING_DATASOURCE_USERNAME: sa
+SPRING_DATASOURCE_PASSWORD:
+SPRING_DATASOURCE_TYPE: com.zaxxer.hikari.HikariDataSource
+
+SPRING_H2_CONSOLE_ENABLED: true
+SPRING_H2_CONSOLE_PATH: /h2-console
+
+MYBATIS_CONFIGURATION_LOG_IMPL: org.apache.ibatis.logging.stdout.StdOutImpl

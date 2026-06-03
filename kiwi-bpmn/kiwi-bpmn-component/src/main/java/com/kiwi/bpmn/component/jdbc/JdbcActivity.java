@@ -6,6 +6,7 @@ import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
@@ -65,6 +66,7 @@ public class JdbcActivity extends AbstractBpmnActivityBehavior {
     private final JdbcConnectionSupplier connectionSupplier;
     private final JdbcSqlSupport sqlSupport;
 
+    @Autowired
     public JdbcActivity(JdbcConnectionSupplier connectionSupplier) {
         this.connectionSupplier = connectionSupplier;
         this.sqlSupport = new JdbcSqlSupport();
