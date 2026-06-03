@@ -85,6 +85,15 @@ kiwi/
 
 非琐碎功能变更建议使用 **OpenSpec**（`openspec list`）；Java/流程组件与前端异步约定见 `.cursor/rules/`。
 
+## 参与开发
+
+欢迎加入 Kiwi 的共同开发。无论是 BPMN 流程组件、管理后台功能、文档完善还是 Bug 修复，你的贡献都很有价值。
+
+1. **本地环境**：按上文 [快速开始](#快速开始摘要) 与 [相关文档](#相关文档) 搭建前后端。
+2. **规格与任务**：非琐碎功能建议先走 [OpenSpec](openspec/)（`openspec new change "<name>"`），再按 `tasks.md` 逐项实现。
+3. **代码约定**：Java 流程组件、前端对接与 `@ComponentParameter` 等约定见 `.cursor/rules/`。
+4. **提交变更**：Fork 后新建分支，提交 Pull Request；如有疑问可在 [Issues](https://github.com/xc404/kiwi/issues) 讨论。
+
 ## License
 
 [MIT License](LICENSE)
