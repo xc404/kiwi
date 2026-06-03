@@ -3,6 +3,7 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { catchError, firstValueFrom, forkJoin, map, of, tap } from 'rxjs';
 
 import { TokenKey, TokenPre } from '@config/constant';
+import { environment } from '@env/environment';
 import { LoginService } from '@services/login/login.service';
 import { MenuStoreService } from '@store/common-store/menu-store.service';
 import { UserInfoStoreService } from '@store/common-store/userInfo-store.service';
@@ -10,7 +11,7 @@ import { UserInfoStoreService } from '@store/common-store/userInfo-store.service
 import { WindowService } from '../window.service';
 import { SessionService } from '../session.service';
 
-const DEFAULT_TARGET = '/dashboard/analysis';
+const DEFAULT_TARGET = environment.postLoginPath;
 
 /** 去掉 URL 中可能携带的 Bearer 前缀，setSession 会统一加上 TokenPre。 */
 function normalizeSaToken(raw: string): string {

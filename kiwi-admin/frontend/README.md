@@ -1,6 +1,6 @@
 # Kiwi Admin 前端
 
-Angular 管理端：低代码后台、**BPMN 流程设计**、图表与表单。独立 npm 工程，通过 HTTP 调用 [backend](../backend/README.md)。平台介绍、演示地址与界面截图见仓库根 [README.md](../../README.md)。
+Angular 管理端：低代码后台、**BPMN 流程设计**、图表与表单。独立 npm 工程，通过 HTTP 调用 [backend](../backend/README.md)。平台介绍、演示地址与界面截图见仓库根 [README.zh-CN.md](../../README.zh-CN.md)（[English](../../README.md)）。
 
 ## 技术栈
 
@@ -93,6 +93,6 @@ npm run build
 
 ## 相关文档
 
-- [../../README.md](../../README.md) — 仓库总览、目录 Map、截图  
+- [../../README.zh-CN.md](../../README.zh-CN.md) — 仓库总览、目录 Map、截图（[English](../../README.md)）  
 - [../backend/README.md](../backend/README.md) — 后端配置与启动  
 - [deploy/README.md](deploy/README.md) — 远程部署  

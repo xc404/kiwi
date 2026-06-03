@@ -1,6 +1,6 @@
 # kiwi-admin 前端远程部署脚本
 
-产品说明与仓库结构见仓库根 [README.md](../../../README.md)。
+产品说明与仓库结构见仓库根 [README.md](../../../README.md)（[中文](../../../README.zh-CN.md)）。
 
 `deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **npm/ng** 将 kiwi-admin 前端静态资源**构建并上传到远程主机**。
 

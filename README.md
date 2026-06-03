@@ -1,98 +1,120 @@
 # Kiwi
 
-**Kiwi** 是基于 [Camunda BPM 7](https://camunda.com/platform/) 的工作流编排与管理平台：可视化 BPMN 设计、可扩展流程组件、系统管理后台。本仓库为 Maven 多模块 monorepo，管理端前后端分离部署。
+[中文](README.zh-CN.md)
 
-## 在线演示
+[![License: MIT](https://img.shields.io/github/license/xc404/kiwi)](LICENSE)
+[![CI](https://github.com/xc404/kiwi/actions/workflows/ci.yml/badge.svg)](https://github.com/xc404/kiwi/actions/workflows/ci.yml)
 
-管理后台：[https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
+**Kiwi** is a BPMN-based workflow orchestration and management platform built on [Camunda BPM 7](https://camunda.com/platform/): visual BPMN designer, pluggable process delegates, admin console, and AI assistant. This repository is a Maven multi-module monorepo with a separate admin frontend and backend.
 
-## 特性
+**Live demo:** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
-- **BPMN 流程设计**：Angular + BPMN.js，属性面板与后端组件元数据联动
-- **Camunda 引擎**：流程定义/实例、`/engine-rest`、External Task、异步 Job 与可配置重试
-- **可插拔流程组件**：Shell、HTTP、文件读写、变量赋值、MongoDB、Slurm 等
-- **管理后台**：用户/角色/菜单/部门/字典、Sa-Token、Personal Access Token
-- **低代码工具**：代码生成、JDBC 与表结构浏览
-- **AI 辅助**：Spring AI（通义 DashScope）、内置 MCP，支持页面导航与 BPM 设计器编排
-- **数据迁移**：Mongock + JSON 参考数据（类 Flyway 约定）
+![BPMN workflow designer](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110358.png)
 
-## 技术栈
+## Features
 
-| 层级 | 技术 |
-|------|------|
-| 后端 | Java **25**、Spring Boot **3.5**、Camunda **7.24**、MongoDB、MyBatis、Sa-Token |
-| 前端 | Angular **21**、ng-zorro-antd、BPMN.js、ECharts、@antv/x6 |
-| 构建 | Maven（多模块）、npm |
-| 规格 | [OpenSpec](openspec/)（`spec-driven`） |
+- **BPMN design**: Angular + BPMN.js; property panel synced with backend component metadata
+- **Camunda engine**: process definitions/instances, `/engine-rest`, External Tasks, async jobs with configurable retries
+- **Pluggable delegates**: Shell, HTTP, file I/O, variable assignment, MongoDB, Slurm, and more
+- **Admin console**: users, roles, menus, departments, dictionaries, Sa-Token, Personal Access Tokens
+- **Low-code tools**: code generation, JDBC and schema browser
+- **AI assistant**: Spring AI (DashScope), built-in MCP; page navigation and BPMN designer orchestration
+- **Data migrations**: Mongock + JSON reference data (Flyway-like convention)
 
-## 仓库结构
+## Tech stack
+
+| Layer | Stack |
+|-------|-------|
+| Backend | Java **25**, Spring Boot **3.5**, Camunda **7.24**, MongoDB, MyBatis, Sa-Token |
+| Frontend | Angular **21**, ng-zorro-antd, BPMN.js, ECharts, @antv/x6 |
+| Build | Maven (multi-module), npm |
+| Specs | [OpenSpec](openspec/) (`spec-driven`) |
+
+## Repository layout
 
 ```
 kiwi/
-├── kiwi-common/                 # 公共实体、Mongo/MyBatis 工具
+├── kiwi-common/                 # Shared entities, Mongo/MyBatis utilities
 ├── kiwi-bpmn/
-│   ├── kiwi-bpmn-core/          # 组件注解、变量映射、Job 重试
-│   ├── kiwi-bpmn-component/     # 内置 Delegate（Shell、HTTP、Slurm…）
+│   ├── kiwi-bpmn-core/          # Component annotations, variable mapping, job retry
+│   ├── kiwi-bpmn-component/     # Built-in delegates (Shell, HTTP, Slurm, …)
 │   └── kiwi-bpmn-external-task/
 ├── kiwi-admin/
-│   ├── backend/                 # Spring Boot 主应用（见子 README）
-│   └── frontend/                # Angular 管理端（见子 README）
-├── docs/                        # 截图、Maven 片段等
-├── openspec/                    # 变更规格与任务
+│   ├── backend/                 # Spring Boot main app (see sub README)
+│   └── frontend/                # Angular admin UI (see sub README)
+├── docs/                        # Screenshots, Maven snippets, etc.
+├── openspec/                    # Change specs and tasks
 └── LICENSE
 ```
 
-### 模块与关键路径
+### Modules and key paths
 
-| 路径 | 职责 |
+| Path | Role |
 |------|------|
-| [kiwi-common/](kiwi-common/) | 跨模块实体与数据访问基类 |
-| [kiwi-bpmn/kiwi-bpmn-core/](kiwi-bpmn/kiwi-bpmn-core/) | `@ComponentDescription` / `@ComponentParameter`、变量映射、JUEL 容错、Job 重试 |
-| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | 内置流程组件（Shell、HTTP、MongoDB、Slurm 等）；Slurm 运维见 [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
-| [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task 抽象与重试 |
-| [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework`（启动、安全、Mongo 迁移、异常处理）+ `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
-| [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`；BPMN 编辑器在 `pages/bpm` |
-| [docs/screenshots/](docs/screenshots/) | 管理端界面截图 |
-| [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) | SNAPSHOT 开发期 Maven settings 片段 |
+| [kiwi-common/](kiwi-common/) | Cross-module entities and data-access base classes |
+| [kiwi-bpmn/kiwi-bpmn-core/](kiwi-bpmn/kiwi-bpmn-core/) | `@ComponentDescription` / `@ComponentParameter`, variable mapping, JUEL tolerance, job retry |
+| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | Built-in process components (Shell, HTTP, MongoDB, Slurm, etc.); Slurm ops: [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
+| [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task abstraction and retry |
+| [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework` (boot, security, Mongo migrations, exception handling) + `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
+| [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`; BPMN editor under `pages/bpm` |
+| [docs/screenshots/](docs/screenshots/) | Admin UI screenshots |
+| [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) | Maven settings snippet for SNAPSHOT dev |
 
-## 界面预览
+## Screenshots
 
-![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110358.png)
 ![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110413.png)
 ![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110437.png)
 ![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110447.png)
 ![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110512.png)
 ![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110602.png)
 
-更多截图见 [docs/screenshots/](docs/screenshots/)。
+More screenshots: [docs/screenshots/](docs/screenshots/).
 
-## 快速开始（摘要）
+## Quick start
 
-**依赖**：JDK 25、Maven 3.x、MongoDB；联调 Camunda 需 MySQL（`dev` profile 可用内嵌 H2）；前端需 Node.js（与 Angular 21 兼容）。
+### Docker (full stack — recommended)
 
-1. **后端**：复制 [application.example.yml](kiwi-admin/backend/src/main/resources/application.example.yml) → `application-local.yml`，填写连接与 `kiwi.mongodb.init.admin-password`；仓库根目录 `mvn -pl kiwi-admin/backend -am compile -DskipTests`；IDE 运行 `com.kiwi.framework.springboot.Application`，Profile 建议 `local,dev`（端口 **8000**）。详见 [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)。
+Requires [Docker](https://docs.docker.com/get-docker/) and Docker Compose. Starts **MongoDB**, **backend**, and **frontend** (Nginx serving the Angular app and proxying API to the backend). Compose and Dockerfiles live under [`docker/`](docker/).
 
-2. **前端**：`cd kiwi-admin/frontend && npm install && npm start` → **http://localhost:4201**；`environment.ts` 中 `api.baseUrl` 与后端端口一致。详见 [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)。
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
 
-## 相关文档
+Or from the `docker/` directory: `docker compose up -d --build`
 
-| 文档 | 内容 |
-|------|------|
-| [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | 后端架构、配置、本地启动、Mongo 迁移 |
-| [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | 前端架构、环境、脚本、AI 联调 |
-| [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | 后端远程部署 |
-| [kiwi-admin/frontend/deploy/README.md](kiwi-admin/frontend/deploy/README.md) | 前端远程部署 |
+- **Admin UI:** http://localhost:8080/kiwi-admin/
+- **Default admin:** `admin` / `kiwi-demo` (override with `KIWI_INIT_ADMIN_PASSWORD`)
+- **Notes:** `docker` profile uses embedded H2 for Camunda; MongoDB is provided by compose; AI is disabled by default; first build may take several minutes (Maven + npm)
 
-非琐碎功能变更建议使用 **OpenSpec**（`openspec list`）；Java/流程组件与前端异步约定见 `.cursor/rules/`。
+Services: `mongodb` · `backend` (internal `:8080`) · `frontend` (Nginx, host `:8080` → container `:80`).
 
-## 参与开发
+### Local development (summary)
 
-欢迎加入 Kiwi 的共同开发。无论是 BPMN 流程组件、管理后台功能、文档完善还是 Bug 修复，你的贡献都很有价值。
+**Prerequisites:** JDK 25, Maven 3.x, MongoDB; MySQL for Camunda unless using the `dev` profile (embedded H2); Node.js compatible with Angular 21.
 
-1. **本地环境**：按上文 [快速开始](#快速开始摘要) 与 [相关文档](#相关文档) 搭建前后端。
-2. **规格与任务**：非琐碎功能建议先走 [OpenSpec](openspec/)（`openspec new change "<name>"`），再按 `tasks.md` 逐项实现。
-3. **代码约定**：Java 流程组件、前端对接与 `@ComponentParameter` 等约定见 `.cursor/rules/`。
-4. **提交变更**：Fork 后新建分支，提交 Pull Request；如有疑问可在 [Issues](https://github.com/xc404/kiwi/issues) 讨论。
+1. **Backend:** Copy [application.example.yml](kiwi-admin/backend/src/main/resources/application.example.yml) → `application-local.yml`, fill in connections and `kiwi.mongodb.init.admin-password`; from repo root run `mvn -pl kiwi-admin/backend -am compile -DskipTests`; run `com.kiwi.framework.springboot.Application` in your IDE with profiles `local,dev` (port **8000**). See [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md).
+
+2. **Frontend:** `cd kiwi-admin/frontend && npm install && npm start` → **http://localhost:4201**; match `api.baseUrl` in `environment.ts` to your backend port. See [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md).
+
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | Backend architecture, config, local run, Mongo migrations |
+| [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | Frontend architecture, env, scripts, AI integration |
+| [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | Backend remote deploy |
+| [kiwi-admin/frontend/deploy/README.md](kiwi-admin/frontend/deploy/README.md) | Frontend remote deploy |
+
+For non-trivial features, use **OpenSpec** (`openspec list`); Java/process-component and frontend async conventions are in `.cursor/rules/`.
+
+## Contributing
+
+Contributions welcome — BPMN components, admin features, docs, and bug fixes.
+
+1. **Local setup:** Follow [Quick start](#quick-start) and [Documentation](#documentation) above.
+2. **Specs & tasks:** For non-trivial work, start with [OpenSpec](openspec/) (`openspec new change "<name>"`), then implement from `tasks.md`.
+3. **Conventions:** Java delegates, frontend integration, `@ComponentParameter` rules — see `.cursor/rules/`.
+4. **Submit:** Fork, branch, open a Pull Request; questions welcome in [Issues](https://github.com/xc404/kiwi/issues).
 
 ## License
 

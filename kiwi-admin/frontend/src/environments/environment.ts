@@ -8,6 +8,8 @@ export const localUrl = `http://${ip}:${port}/`;
 export const environment = {
   production: false,
   appName: 'Kiwi Admin',
+  /** 登录成功后的默认跳转路径 */
+  postLoginPath: '/dashboard/analysis',
   api: {
     baseUrl: localUrl,
     /** Camunda spring-boot-starter-rest 默认 `/engine-rest`，若改 context 请同步 */

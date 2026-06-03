@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
 import { SessionService } from '@app/core/services/common/session.service';
+import { environment } from '@env/environment';
 import { LoginService } from '@core/services/http/login/login.service';
 import { SpinService } from '@store/common-store/spin.service';
 import { fnCheckForm } from '@utils/tools';
@@ -67,7 +68,7 @@ export class LoginFormComponent implements OnInit {
       )
       .subscribe(res => {
         this.loginInOutService.setSession(res.token);
-        this.router.navigateByUrl('/dashboard/analysis');
+        this.router.navigateByUrl(environment.postLoginPath);
       });
   }
 

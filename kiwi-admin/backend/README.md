@@ -1,6 +1,6 @@
 # kiwi-admin backend
 
-Spring Boot 主应用：REST API、嵌入式 Camunda、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.md](../../README.md)。
+Spring Boot 主应用：REST API、嵌入式 Camunda、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.zh-CN.md](../../README.zh-CN.md)（[English](../../README.md)）。
 
 ## 代码结构
 
@@ -140,6 +140,6 @@ Mongock 事务：默认 `mongock.transactional=false`。单机 Mongo 勿设为 `
 
 ## 相关文档
 
-- [../../README.md](../../README.md) — 仓库总览与目录 Map  
+- [../../README.zh-CN.md](../../README.zh-CN.md) — 仓库总览与目录 Map（[English](../../README.md)）  
 - [../frontend/README.md](../frontend/README.md) — 前端配置与联调  
 - [deploy/README.md](deploy/README.md) — 远程部署脚本  
