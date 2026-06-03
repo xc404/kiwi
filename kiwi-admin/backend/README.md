@@ -1,43 +1,145 @@
 # kiwi-admin backend
 
+Spring Boot 主应用：REST API、嵌入式 Camunda、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.md](../../README.md)。
+
+## 代码结构
+
+```
+src/main/java/com/kiwi/
+├── framework/          # 横切与基础设施
+│   ├── springboot/     # Application 入口、自动配置
+│   ├── mongo/          # Mongock、JSON 迁移
+│   ├── error/          # 全局异常与统一响应
+│   └── …               # 安全、Sa-Token、Web 等
+└── project/            # 业务域
+    ├── system/         # 用户、角色、菜单、部门、字典
+    ├── bpm/            # 流程定义、项目、组件元数据
+    ├── ai/             # Spring AI 对话与助手
+    ├── tools/          # 代码生成、JDBC 等
+    ├── monitor/
+    └── notification/
+```
+
+资源与配置：`src/main/resources/application*.yml`、`mongo/migration/`（JSON 参考数据）。
+
+## 配置与 Profile
+
+| Profile | 典型用途 |
+|---------|----------|
+| `local` | 加载 `application-local.yml`（连接串、密钥；文件已 `.gitignore`） |
+| `dev` | Camunda 使用 H2（`./data/dev-bpm`）、端口 **8000**、MyBatis StdOut 等 |
+| `redis` | Sa-Token 存 Redis（需 `application-redis.yml` + Redis 连接） |
+
+本地推荐启动参数：
+
+```text
+--spring.profiles.active=local,dev
+```
+
+复制并按环境修改模板：
+
+```bash
+cp src/main/resources/application.example.yml src/main/resources/application-local.yml
+```
+
+未激活 `dev` 时，默认 `application.yml` 中 `server.port` 为 **8080**；`dev` profile 覆盖为 **8000**。前端 `environment.ts` 的 `port` 须与当前生效端口一致。
+
+### 常用环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `SPRING_DATA_MONGODB_URI` | 主 MongoDB |
+| `SPRING_DATASOURCE_URL` / `USERNAME` / `PASSWORD` | Camunda/MyBatis 关系库（非 `dev`） |
+| `KIWI_MONGODB_MIGRATION_ENABLED` | 是否执行 Mongo 迁移，默认 `true` |
+| `KIWI_INIT_ADMIN_PASSWORD` / `kiwi.mongodb.init.admin-password` | 首次管理员密码（迁移必填） |
+| `KIWI_MONGODB_INIT_ADMIN_USERNAME` / `KIWI_MONGODB_INIT_ADMIN_NICK_NAME` | 管理员用户名、昵称 |
+| `APP_CORS_ALLOWED_ORIGINS` | 允许的前端 Origin（逗号分隔） |
+| `APP_PASSWORD_SECRET` | 密码哈希密钥 |
+| `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY` | 通义 DashScope API Key |
+| `KIWI_AI_ENABLED` | 是否启用 AI，默认 `true` |
+| `KIWI_SA_TOKEN_STORAGE` | `mongodb`（默认）或 `redis` |
+| `MONGOCK_TRANSACTIONAL` | Mongock 事务，本地单机 Mongo 保持 `false` |
+
+完整键名与默认值见 [application.yml](src/main/resources/application.yml)、[application.example.yml](src/main/resources/application.example.yml)。
+
+## 本地启动
+
+1. 准备 MongoDB（及非 `dev` 时的 MySQL）。
+2. 配置 `application-local.yml`（含 `kiwi.mongodb.init.admin-password`、`app.password.secret` 等）。
+3. 在**仓库根目录**编译依赖模块：
+
+   ```bash
+   mvn -pl kiwi-admin/backend -am compile -DskipTests
+   ```
+
+4. IDE 运行 `com.kiwi.framework.springboot.Application`，Profile `local,dev`。
+5. 默认（`local,dev`）API：**http://localhost:8000**；Camunda REST：**/engine-rest**；Swagger 路径见启动日志。
+
+首次启动且迁移开启时会写入管理员与菜单/字典等参考数据。
+
+### CORS
+
+`app.cors.allowed-origins` 默认包含 `http://localhost:4201`。自定义前端地址时设置 `APP_CORS_ALLOWED_ORIGINS`。
+
+### 打包
+
+```bash
+# 仓库根目录
+mvn -pl kiwi-admin/backend -am package -DskipTests
+```
+
+远程部署见 [deploy/README.md](deploy/README.md)。
+
 ## MongoDB 迁移
 
-启动时在 `kiwi.mongodb.migration.enabled=true`（默认）下执行两类迁移：
+`kiwi.mongodb.migration.enabled=true`（默认）时执行两类迁移：
 
 | 类型 | 机制 | 适用 |
 |------|------|------|
 | **命令式** | [Mongock](https://docs.mongock.io/) `@ChangeUnit`（如 `InitAdminUserChangeUnit`） | 密码哈希、复杂逻辑 |
-| **参考数据 JSON** | `MongoJsonMigrationRunner` 扫描 classpath，changelog 集合 `kiwi_json_migration` | 字典、菜单等实体 upsert |
+| **参考数据 JSON** | classpath 扫描，changelog 集合 `kiwi_json_migration` | 字典、菜单等 upsert |
 
 ### JSON 脚本约定（类 Flyway）
 
 - **版本化（只执行一次）**：`src/main/resources/mongo/migration/versioned/`  
   文件名：`V{version}__{EntitySimpleName}.json`  
-  示例：`V20250601_001__SysDictGroup.json` → 实体 `com.kiwi.project.system.entity.SysDictGroup`
+  示例：`V20250601_001__SysDictGroup.json`
 - **可重复（checksum 变化时重跑）**：`mongo/migration/repeatable/`  
   文件名：`R__{EntitySimpleName}.json`  
   示例：`R__SysMenu.json`
 
-JSON 为**对象数组**，每项须含非空 `id`。新增参考数据时**只加文件**，无需新建 Java ChangeUnit；版本化脚本通过提高 `V` 前缀版本保证顺序。
+JSON 为**对象数组**，每项须含非空 `id`。新增参考数据时**只加文件**；版本化脚本通过提高 `V` 前缀保证顺序。
 
-### 配置
+### 从开发库导出参考数据
+
+1. 在已配置好的环境用 `mongosh` 查询集合并复制为 JSON 数组；或  
+2. 手写最小集：覆盖前端路由所需菜单（如 `menu`、`user`、`role`、`dict`）及常用 `groupCode`。
+
+```javascript
+// mongosh（库名按环境修改）
+const docs = db.sysMenu.find().toArray();
+// 保存为 R__SysMenu.json，保留 id、parentId、path、menuType、status 等字段
+```
+
+### 迁移配置与排错
 
 ```yaml
 kiwi.mongodb.migration.enabled: true
-kiwi.mongodb.migration.json.entity-base-package: com.kiwi.project.system.entity
 kiwi.mongodb.init.admin-password: # 001 管理员迁移必填
 ```
 
-环境变量（relaxed binding）：`KIWI_MONGODB_INIT_ADMIN_USERNAME`、`KIWI_MONGODB_INIT_ADMIN_PASSWORD`、`KIWI_MONGODB_INIT_ADMIN_NICK_NAME`；`application.yml` 中仍兼容 `KIWI_INIT_ADMIN_*` 占位符。
-
 关闭迁移：`KIWI_MONGODB_MIGRATION_ENABLED=false`。
 
-Mongock 事务：默认 `mongock.transactional=false`（`MONGOCK_TRANSACTIONAL`）。本地单机 Mongo 或同时启用 MySQL/H2 与 Mongo 时请勿依赖自动推断；仅在 Mongo **副本集**且确需迁移原子性时设为 `true`。
-
-**常见启动错误**（`Transaction numbers are only allowed on a replica set` / `Error in Mongock's transaction`）：说明 Mongock 仍在对**单机** Mongo 开事务。确认 `application.yml` 含 `mongock.transactional: false` 且已重新打包；若用 `deploy` 或 `bin/restart.sh` 启动，需重新同步 `bin/config/`（`deploy.py` 会从 `src/main/resources` 复制配置）。
+Mongock 事务：默认 `mongock.transactional=false`。单机 Mongo 勿设为 `true`；若出现 `Transaction numbers are only allowed on a replica set`，确认配置已生效并重新打包；`deploy` 启动时需同步 `bin/config/`。
 
 ### 验证
 
-1. 空库启动后：`mongockChangeLog` 含 `001`；`kiwi_json_migration` 含 versioned/repeatable 脚本记录。  
-2. 修改 `R__SysMenu.json` 后重启：菜单数据更新且 changelog 中 checksum 变化。  
+1. 空库启动：`mongockChangeLog` 含 `001`；`kiwi_json_migration` 有 versioned/repeatable 记录。  
+2. 修改 `R__SysMenu.json` 后重启：菜单更新且 checksum 变化。  
 3. 新增 `V20250602_001__SysRole.json`：仅新脚本执行一次。
+
+## 相关文档
+
+- [../../README.md](../../README.md) — 仓库总览与目录 Map  
+- [../frontend/README.md](../frontend/README.md) — 前端配置与联调  
+- [deploy/README.md](deploy/README.md) — 远程部署脚本  

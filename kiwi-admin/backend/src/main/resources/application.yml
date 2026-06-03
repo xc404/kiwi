@@ -1,5 +1,5 @@
 server:
-  port: 8000
+  port: 8080
   servlet:
     encoding:
       charset: UTF-8
@@ -86,15 +86,15 @@ spring:
         sse-message-endpoint: ${SPRING_AI_MCP_SERVER_SSE_MESSAGE_ENDPOINT:/message}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/kiwi?&nullCatalogMeansCurrent=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:change-me}
     type: com.zaxxer.hikari.HikariDataSource
   data:
     mongodb:
       # 单机 Mongo 非副本集：默认 retryWrites=false，避免事务/可重试写与部署能力不匹配
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin&retryWrites=false}
-      database: ${SPRING_DATA_MONGODB_DATABASE:x404}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/kiwi?authSource=admin&retryWrites=false}
+      database: ${SPRING_DATA_MONGODB_DATABASE:kiwi}
       auto-index-creation: true
 
 
