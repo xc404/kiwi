@@ -78,6 +78,9 @@ public class ComponentUtils
         bpmComponentParameter.setImportant(parameter.required() || parameter.important());
         bpmComponentParameter.setDefaultValue(parameter.schema().defaultValue());
         bpmComponentParameter.setType(parameter.type());
+        if (StringUtils.isNotBlank(parameter.dictKey())) {
+            bpmComponentParameter.setDictKey(parameter.dictKey());
+        }
         return bpmComponentParameter;
 
     }
