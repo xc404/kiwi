@@ -58,7 +58,8 @@ import java.util.List;
                 @ComponentParameter(
                         key = "result",
                         name = "结果变量名",
-                        description = "queryOne 为 Map；query 为 List<Map>；update 为影响行数",
+                        description = "queryOne 为 Map；query 为 List<Map>；update 为影响行数；"
+                                + "日期时间为 ISO-8601 字符串，二进制为 Base64",
                         schema = @Schema(defaultValue = "result"))
         })
 public class JdbcActivity extends AbstractBpmnActivityBehavior {

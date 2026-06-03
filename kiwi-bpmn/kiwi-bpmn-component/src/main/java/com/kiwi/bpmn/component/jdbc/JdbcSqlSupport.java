@@ -3,17 +3,23 @@ package com.kiwi.bpmn.component.jdbc;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.kiwi.common.utils.JsonUtils;
 
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * JDBC 单语句执行：queryOne / query / update。
@@ -142,8 +148,55 @@ public class JdbcSqlSupport {
         Map<String, Object> row = new LinkedHashMap<>();
         for (int i = 1; i <= columnCount; i++) {
             String label = meta.getColumnLabel(i);
-            row.put(label, rs.getObject(i));
+            row.put(label, normalizeCellValue(rs.getObject(i)));
         }
         return row;
+    }
+
+    /**
+     * 将 JDBC 返回值转为 Camunda 流程变量易序列化的类型。
+     */
+    Object normalizeCellValue(Object value) throws SQLException {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof byte[] bytes) {
+            return Base64.getEncoder().encodeToString(bytes);
+        }
+        if (value instanceof Blob blob) {
+            try {
+                long length = blob.length();
+                if (length > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("BLOB 过大，无法写入流程变量");
+                }
+                return Base64.getEncoder().encodeToString(blob.getBytes(1, (int) length));
+            } finally {
+                blob.free();
+            }
+        }
+        if (value instanceof Clob clob) {
+            try {
+                long length = clob.length();
+                if (length > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("CLOB 过大，无法写入流程变量");
+                }
+                return clob.getSubString(1, (int) length);
+            } finally {
+                clob.free();
+            }
+        }
+        if (value instanceof Date date) {
+            return date.toInstant().toString();
+        }
+        if (value instanceof TemporalAccessor temporal) {
+            return temporal.toString();
+        }
+        if (value instanceof UUID uuid) {
+            return uuid.toString();
+        }
+        if (value instanceof Number || value instanceof Boolean || value instanceof String) {
+            return value;
+        }
+        return value.toString();
     }
 }

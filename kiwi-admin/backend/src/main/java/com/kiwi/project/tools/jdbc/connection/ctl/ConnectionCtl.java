@@ -91,6 +91,7 @@ public class ConnectionCtl {
             @PathVariable("id") String id, @RequestBody ConnectionSettings connectionSettings) {
         this.connectionService.encrypt(connectionSettings);
         this.connectionSettingsDao.updateSelective(connectionSettings);
+        this.connectionService.evictDataSource(id);
         return this.connectionSettingsDao.findById(connectionSettings.getId()).orElseThrow();
     }
 
@@ -100,6 +101,7 @@ public class ConnectionCtl {
     @ResponseBody
     public void deleteConnectionSettings(@PathVariable("id") String id) {
         this.connectionSettingsDao.deleteById(id);
+        this.connectionService.evictDataSource(id);
     }
 
     @Operation(operationId = "conn_test", summary = "测试 JDBC 连接是否可用")
