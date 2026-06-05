@@ -131,6 +131,10 @@ kiwi.bpm:
   global:
     mdoc-auto-filter-enabled: ${KIWI_BPM_MDOC_AUTO_FILTER_ENABLED:false}
     manual-rebuild-enabled: ${KIWI_BPM_MANUAL_REBUILD_ENABLED:true}
+  # Slurm 外部任务（sbatch、sacct/Mongo 跟踪）；local 中配置 KIWI_BPM_SLURM_*，无 Slurm 集群时可设 KIWI_BPM_SLURM_ENABLED=false
+  slurm:
+    enabled: ${KIWI_BPM_SLURM_ENABLED:true}
+    work-directory: ${KIWI_BPM_SLURM_WORK_DIRECTORY:}
 
 # External Task 统一重试（AbstractExternalTaskHandler）：默认开启；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
 # kiwi.bpm.external-task-retry:

@@ -13,3 +13,6 @@ SPRING_H2_CONSOLE_ENABLED: true
 SPRING_H2_CONSOLE_PATH: /h2-console
 
 MYBATIS_CONFIGURATION_LOG_IMPL: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 本地 H2 开发通常无 Slurm 集群；与 local 联用时 dev 后加载，关闭 Slurm 避免缺少 work-directory 导致启动失败
+KIWI_BPM_SLURM_ENABLED: false
