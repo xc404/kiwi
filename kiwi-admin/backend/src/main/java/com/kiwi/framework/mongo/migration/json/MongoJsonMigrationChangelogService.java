@@ -1,6 +1,7 @@
 package com.kiwi.framework.mongo.migration.json;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -11,6 +12,11 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "kiwi.mongodb.migration",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class MongoJsonMigrationChangelogService {
 
     private final MongoTemplate mongoTemplate;

@@ -6,6 +6,7 @@ import com.kiwi.common.entity.IdEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -17,6 +18,11 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(
+        prefix = "kiwi.mongodb.migration",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class ClasspathJsonMigrationSupport {
 
     private final ObjectMapper objectMapper;

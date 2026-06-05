@@ -355,7 +355,11 @@ export class BpmProjectProcess implements OnInit {
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
-            window.open(`http://localhost:4201/#/bpm/design/${record.id}`);
+            const url = new URL(window.location.href);
+            url.hash = this.router.serializeUrl(
+              this.router.createUrlTree(['/bpm/design', record.id]),
+            );
+            window.open(url.toString(), '_blank', 'noopener,noreferrer');
           }
         },
       },

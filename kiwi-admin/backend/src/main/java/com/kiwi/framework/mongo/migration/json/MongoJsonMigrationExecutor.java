@@ -5,6 +5,7 @@ import com.kiwi.framework.mongo.migration.support.ClasspathJsonMigrationSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -22,6 +23,11 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(
+        prefix = "kiwi.mongodb.migration",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class MongoJsonMigrationExecutor {
 
     private static final String VERSIONED_FOLDER = "versioned";

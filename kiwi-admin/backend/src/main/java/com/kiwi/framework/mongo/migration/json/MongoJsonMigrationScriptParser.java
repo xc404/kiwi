@@ -1,12 +1,18 @@
 package com.kiwi.framework.mongo.migration.json;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "kiwi.mongodb.migration",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class MongoJsonMigrationScriptParser {
 
     private static final String VERSIONED_PREFIX = "V";

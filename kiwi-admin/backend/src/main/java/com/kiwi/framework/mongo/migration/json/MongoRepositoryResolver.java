@@ -3,6 +3,7 @@ package com.kiwi.framework.mongo.migration.json;
 import com.kiwi.common.entity.IdEntity;
 import com.kiwi.common.mongo.BaseMongoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -11,6 +12,11 @@ import org.springframework.util.ClassUtils;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "kiwi.mongodb.migration",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class MongoRepositoryResolver {
 
     private final ApplicationContext applicationContext;
