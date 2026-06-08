@@ -100,6 +100,7 @@ Services: `mongodb` · `backend` (internal `:8080`) · `frontend` (Nginx, host `
 
 | Doc | Contents |
 |-----|----------|
+| [docs/bpm-component.zh-CN.md](docs/bpm-component.zh-CN.md) | BPM component architecture, add/configure/use (Chinese) |
 | [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | Backend architecture, config, local run, Mongo migrations |
 | [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | Frontend architecture, env, scripts, AI integration |
 | [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | Backend remote deploy |

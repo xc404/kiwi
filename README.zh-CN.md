@@ -100,6 +100,7 @@ Compose 服务：`mongodb` · `backend`（内部 `:8080`）· `frontend`（Nginx
 
 | 文档 | 内容 |
 |------|------|
+| [docs/bpm-component.zh-CN.md](docs/bpm-component.zh-CN.md) | BPM 组件架构、添加/配置/使用 |
 | [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | 后端架构、配置、本地启动、Mongo 迁移 |
 | [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | 前端架构、环境、脚本、AI 联调 |
 | [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | 后端远程部署 |
