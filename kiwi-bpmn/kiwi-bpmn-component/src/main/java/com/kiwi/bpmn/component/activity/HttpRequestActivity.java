@@ -128,19 +128,10 @@ public class HttpRequestActivity extends AbstractBpmnActivityBehavior {
             throw new IllegalStateException("HTTP 请求被中断", e);
         }
 
-        String statusVar = ExecutionUtils.getOutputVariableName(execution, "statusCode");
-        String bodyVar = ExecutionUtils.getOutputVariableName(execution, "responseBody");
-        String headersVar = ExecutionUtils.getOutputVariableName(execution, "responseHeaders");
 
-        if (statusVar != null) {
-            execution.setVariable(statusVar, response.statusCode());
-        }
-        if (bodyVar != null) {
-            execution.setVariable(bodyVar, response.body());
-        }
-        if (headersVar != null) {
-            execution.setVariable(headersVar, responseHeadersToJson(response.headers()));
-        }
+            execution.setVariable("statusCode", response.statusCode());
+            execution.setVariable("responseBody", response.body());
+            execution.setVariable("responseHeaders", responseHeadersToJson(response.headers()));
 
         super.leave(execution);
     }

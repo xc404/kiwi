@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import { Utils } from '@app/utils/utils';
 import { environment } from '@env/environment';
 import { Observable, map } from 'rxjs';
 
@@ -113,7 +114,7 @@ export class ProcessInstanceService {
   private readonly baseHttp = inject(BaseHttpService);
 
   private engineRestRoot(): string {
-    return `${environment.api.baseUrl}${environment.api.camundaEngineRestPath}`;
+    return Utils.joinUrl(environment.api.baseUrl, environment.api.camundaEngineRestPath);
   }
 
   /**

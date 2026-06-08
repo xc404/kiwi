@@ -148,6 +148,120 @@
   color: rgb(0 0 0 / 0.45);
 }
 
+.chat-markdown {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.6;
+  font-size: 14px;
+
+  :first-child {
+    margin-top: 0;
+  }
+
+  :last-child {
+    margin-bottom: 0;
+  }
+
+  p {
+    margin: 0 0 0.75em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 1em 0 0.5em;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  h1 {
+    font-size: 1.35em;
+  }
+
+  h2 {
+    font-size: 1.2em;
+  }
+
+  h3 {
+    font-size: 1.1em;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 0.75em;
+    padding-left: 1.5em;
+  }
+
+  li + li {
+    margin-top: 0.25em;
+  }
+
+  blockquote {
+    margin: 0 0 0.75em;
+    padding-left: 0.75em;
+    border-left: 3px solid rgb(0 0 0 / 0.12);
+    color: rgb(0 0 0 / 0.65);
+  }
+
+  a {
+    color: #1677ff;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  code:not(pre code) {
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    background: rgb(0 0 0 / 0.06);
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    font-size: 0.9em;
+  }
+
+  pre {
+    margin: 0 0 0.75em;
+    padding: 0;
+    overflow: auto;
+    border-radius: 6px;
+
+    code.hljs {
+      display: block;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+  }
+
+  table {
+    width: 100%;
+    margin: 0 0 0.75em;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th,
+  td {
+    padding: 6px 10px;
+    border: 1px solid rgb(0 0 0 / 0.12);
+  }
+
+  th {
+    background: rgb(0 0 0 / 0.04);
+    font-weight: 600;
+  }
+
+  hr {
+    margin: 1em 0;
+    border: none;
+    border-top: 1px solid rgb(0 0 0 / 0.12);
+  }
+}
+
 .chat-dock.embedded {
   position: relative;
   right: auto;

@@ -9,7 +9,7 @@
 
 **Live demo:** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
-![BPMN workflow designer](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110358.png)
+![AI-assisted workflow design demo](docs/screenshots/kiwi-ai-process-design.gif)
 
 ## Features
 
@@ -57,7 +57,7 @@ kiwi/
 | [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task abstraction and retry |
 | [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework` (boot, security, Mongo migrations, exception handling) + `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
 | [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`; BPMN editor under `pages/bpm` |
-| [docs/screenshots/](docs/screenshots/) | Admin UI screenshots |
+| [docs/screenshots/](docs/screenshots/) | Admin UI screenshots and demo GIFs |
 | [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) | Maven settings snippet for SNAPSHOT dev |
 
 ## Screenshots

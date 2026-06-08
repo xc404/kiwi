@@ -29,6 +29,7 @@ import {
 } from '@services/ai-chat/ai-conversation.service';
 import { AssistantActionOrchestratorService } from '@shared/ai-assistant/assistant-action-orchestrator.service';
 import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
+import { MarkdownPipe } from '@shared/pipes/markdown.pipe';
 
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -68,7 +69,8 @@ const CHAT_PANEL_DEFAULT_HEIGHT = 560;
     FormsModule,
     ReactiveFormsModule,
     NzInputModule,
-    NgClass
+    NgClass,
+    MarkdownPipe
   ]
 })
 export class ChatComponent implements OnInit, OnDestroy {

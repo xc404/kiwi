@@ -58,6 +58,7 @@
               }
             ],
             "styles": [
+              "node_modules/highlight.js/styles/github.min.css",
               "node_modules/driver.js/dist/driver.css",
               {
                 "input": "src/styles/default.less",

@@ -9,7 +9,7 @@
 
 **在线演示：** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
-![BPMN 流程设计器](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110358.png)
+![AI 辅助流程设计演示](docs/screenshots/kiwi-ai-process-design.gif)
 
 ## 特性
 
@@ -57,7 +57,7 @@ kiwi/
 | [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task 抽象与重试 |
 | [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework`（启动、安全、Mongo 迁移、异常处理）+ `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
 | [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`；BPMN 编辑器在 `pages/bpm` |
-| [docs/screenshots/](docs/screenshots/) | 管理端界面截图 |
+| [docs/screenshots/](docs/screenshots/) | 管理端界面截图与演示动图 |
 | [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) | SNAPSHOT 开发期 Maven settings 片段 |
 
 ## 界面预览

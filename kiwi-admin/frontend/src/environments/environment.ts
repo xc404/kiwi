@@ -3,7 +3,7 @@
 // The list of file replacements can be found in `angular.json`.
 const ip = 'localhost';
 const port = '8080';
-export const localUrl = `http://${ip}:${port}/`;
+export const localUrl = `http://${ip}:${port}`;
 
 export const environment = {
   production: false,
