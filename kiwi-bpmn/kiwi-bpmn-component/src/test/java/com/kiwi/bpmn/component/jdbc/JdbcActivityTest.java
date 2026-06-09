@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.component.jdbc;
 
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
-import org.camunda.bpm.engine.variable.Variables;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.variable.Variables;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

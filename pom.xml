@@ -11,7 +11,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.8</version>
+        <version>4.0.0</version>
     </parent>
     <modules>
         <module>kiwi-common</module>
@@ -27,11 +27,9 @@
         <maven.compiler.target>25</maven.compiler.target>
         <!-- 1.18.38+ 适配 JDK 24+ javac；若用 JDK 25 作为 IDE 编译器需保持较新 -->
         <lombok.version>1.18.42</lombok.version>
-        <camunda.version>7.24.0</camunda.version>
+        <operaton.version>2.1.0</operaton.version>
         <swagger-annotations.version>2.2.41</swagger-annotations.version>
-        <spring-boot.version>3.5.8</spring-boot.version>
-        <!-- 与 spring-boot-dependencies 对齐；勿被传递依赖降到 6.2.12 以下，否则 spring-core 6.2.1 无法解析 JDK 25 编译的 .class（组件扫描 ClassReader 报错） -->
-        <spring-framework.version>6.2.14</spring-framework.version>
+        <spring-boot.version>4.0.0</spring-boot.version>
         <mongock.version>5.5.1</mongock.version>
     </properties>
     <dependencies>
@@ -55,26 +53,56 @@
             <version>${swagger-annotations.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter-external-task-client</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter-external-task-client</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
     </dependencies>
 
     <dependencyManagement>
         <dependencies>
-            <!-- 强制全仓库使用同一 Spring Framework，避免 Camunda 等将 spring-core 锁在 6.2.1。子模块若再 import 其他 BOM（如 spring-ai-alibaba-bom），须在该模块 dependencyManagement 内把 spring-framework-bom 写在最前（Maven import BOM 为先声明者优先）。 -->
             <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-framework-bom</artifactId>
-                <version>${spring-framework.version}</version>
+                <groupId>org.operaton.bpm</groupId>
+                <artifactId>operaton-bom</artifactId>
+                <version>${operaton.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- 显式锁定常用 Operaton 坐标，避免 IDE/镜像未同步 BOM 时无法解析版本 -->
+            <dependency>
+                <groupId>org.operaton.bpm.springboot</groupId>
+                <artifactId>operaton-bpm-spring-boot-starter</artifactId>
+                <version>${operaton.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.operaton.bpm.springboot</groupId>
+                <artifactId>operaton-bpm-spring-boot-starter-webapp</artifactId>
+                <version>${operaton.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.operaton.bpm.springboot</groupId>
+                <artifactId>operaton-bpm-spring-boot-starter-rest</artifactId>
+                <version>${operaton.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.operaton.bpm.springboot</groupId>
+                <artifactId>operaton-bpm-spring-boot-starter-external-task-client</artifactId>
+                <version>${operaton.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.operaton.bpm</groupId>
+                <artifactId>operaton-engine</artifactId>
+                <version>${operaton.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.operaton.bpm</groupId>
+                <artifactId>operaton-external-task-client-spring</artifactId>
+                <version>${operaton.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.mongock</groupId>
@@ -123,6 +151,20 @@
         </dependencies>
     </dependencyManagement>
 
+    <!-- Operaton 2.x 仅发布在 Maven Central；阿里云等镜像可能未同步，需直连 Central（id 勿用 central，避免被 mirrorOf=central 劫持） -->
+    <repositories>
+        <repository>
+            <id>operaton-maven-central</id>
+            <name>Maven Central (Operaton)</name>
+            <url>https://repo1.maven.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

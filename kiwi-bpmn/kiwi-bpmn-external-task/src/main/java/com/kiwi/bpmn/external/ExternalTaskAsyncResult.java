@@ -6,7 +6,7 @@ package com.kiwi.bpmn.external;
 public record ExternalTaskAsyncResult(boolean finishExternalTask) {
 
     /**
-     * 调用 {@link org.camunda.bpm.client.task.ExternalTaskService#complete}，流程离开当前活动；
+     * 调用 {@link org.operaton.bpm.client.task.ExternalTaskService#complete}，流程离开当前活动；
      * 变量取自 {@link ExternalTaskExecution#getOutputVariable()}。
      */
     public static ExternalTaskAsyncResult completeTask() {
@@ -14,7 +14,7 @@ public record ExternalTaskAsyncResult(boolean finishExternalTask) {
     }
 
     /**
-     * 仅 {@link org.camunda.bpm.client.task.ExternalTaskService#setVariables}，活动仍为等待外部任务状态。
+     * 仅 {@link org.operaton.bpm.client.task.ExternalTaskService#setVariables}，活动仍为等待外部任务状态。
      */
     public static ExternalTaskAsyncResult updateVariablesOnly() {
         return new ExternalTaskAsyncResult(false);

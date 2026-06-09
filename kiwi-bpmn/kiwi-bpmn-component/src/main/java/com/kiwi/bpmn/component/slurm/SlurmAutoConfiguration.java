@@ -2,7 +2,7 @@ package com.kiwi.bpmn.component.slurm;
 
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import lombok.extern.slf4j.Slf4j;
-import org.camunda.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.ProcessEngine;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

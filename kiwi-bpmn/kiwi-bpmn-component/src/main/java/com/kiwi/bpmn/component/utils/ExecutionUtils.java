@@ -1,9 +1,9 @@
 package com.kiwi.bpmn.component.utils;
 
-import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.camunda.bpm.engine.variable.value.NumberValue;
-import org.camunda.bpm.engine.variable.value.StringValue;
-import org.camunda.bpm.engine.variable.value.TypedValue;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.variable.value.NumberValue;
+import org.operaton.bpm.engine.variable.value.StringValue;
+import org.operaton.bpm.engine.variable.value.TypedValue;
 
 import java.util.Map;
 import java.util.Optional;

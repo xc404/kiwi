@@ -1,18 +1,16 @@
 server:
   port: 8080
   servlet:
-    encoding:
-      charset: UTF-8
-      enabled: true
+    context-path: /kiwi
 
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
-# AI 对话：Spring AI Alibaba DashScope（通义）；密钥见 KIWI_AI_API_KEY 或 DASHSCOPE_API_KEY
+# AI 对话：Spring AI DeepSeek；密钥见 KIWI_AI_API_KEY 或 DEEPSEEK_API_KEY
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
-    # 助手 ChatClient 回环 MCP 的 HTTP 基址；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
+    # 助手 ChatClient 回环 MCP 的 HTTP 基址（须含 context-path）；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
     mcp:
-      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8000}}
+      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8080}${server.servlet.context-path:}}
       # WebServer 已开始监听后再触发 MCP 回环 warmup，避免启动早期 ConnectException / SSE connection error
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
@@ -66,14 +64,12 @@ spring:
     # 由 SaTokenDaoConfiguration 按 kiwi.sa-token.storage 注册唯一 SaTokenDao；mongodb 为默认时不启用 Redis
     exclude:
       - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   ai:
-    dashscope:
-      api-key: ${KIWI_AI_API_KEY:${DASHSCOPE_API_KEY:}}
+    deepseek:
+      api-key: ${KIWI_AI_API_KEY:${DEEPSEEK_API_KEY:}}
       chat:
         options:
-          model: ${KIWI_AI_MODEL:qwen-plus}
+          model: ${KIWI_AI_MODEL:deepseek-chat}
     # MCP Server（WebMVC + SSE）：端点见 spring.ai.mcp.server.*
     mcp:
       server:
@@ -81,6 +77,8 @@ spring:
         name: ${SPRING_AI_MCP_SERVER_NAME:kiwi-admin}
         version: ${SPRING_AI_MCP_SERVER_VERSION:1.0.0}
         instructions: "Kiwi 管理后台 MCP：字典与页面导航等工具。HTTP 调用请携带与 API 相同的登录 Token（Authorization: Bearer ...）。"
+        # 与 server.servlet.context-path 对齐，否则 SSE 下发的 message 端点缺少前缀，本机回环 initialize 会失败（spring-ai#2512）
+        base-url: ${SPRING_AI_MCP_SERVER_BASE_URL:${server.servlet.context-path:}}
         # SSE：事件流路径 + JSON-RPC POST 路径（与 Spring AI WebMvc SSE 约定一致；若与运行版本不符请用环境变量覆盖）
         sse-endpoint: ${SPRING_AI_MCP_SERVER_SSE_ENDPOINT:/sse}
         sse-message-endpoint: ${SPRING_AI_MCP_SERVER_SSE_MESSAGE_ENDPOINT:/message}
@@ -96,12 +94,16 @@ spring:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/kiwi?authSource=admin&retryWrites=false}
       database: ${SPRING_DATA_MONGODB_DATABASE:kiwi}
       auto-index-creation: true
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
 
 
-camunda.bpm:
+operaton.bpm:
   admin-user:
-    id: ${CAMUNDA_ADMIN_USER:demo}
-    password: ${CAMUNDA_ADMIN_PASSWORD:change-me}
+    id: ${OPERATON_ADMIN_USER:demo}
+    password: ${OPERATON_ADMIN_PASSWORD:change-me}
     firstName: Demo
   filter:
     create: All tasks
@@ -110,17 +112,17 @@ camunda.bpm:
   # 流程变量对象的默认序列化格式：JSON（Jackson，via Camunda Spin）
   # 切换后：setVariable("xxx", pojo) 不再要求 Serializable，避免 ENGINE-02042
   # 注意：已存在的 Java 序列化历史变量仍按写入时的格式反序列化；只影响新写入
-  # 回退：环境变量设 CAMUNDA_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
-  default-serialization-format: ${CAMUNDA_DEFAULT_SERIALIZATION_FORMAT:application/json}
+  # 回退：环境变量设 OPERATON_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
+  default-serialization-format: ${OPERATON_DEFAULT_SERIALIZATION_FORMAT:application/json}
   generic-properties:
     properties:
       skip-isolation-level-check: true
       historyTimeToLive: P15D
       # 未捕获的 BpmnError 时抛 ProcessEngineException，而非按「none end」静默结束（ACT_HI_PROCINST 易为 COMPLETED）
-      # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
-      enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
+      # 关闭：环境变量 OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
+      enableExceptionsAfterUnhandledBpmnError: ${OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
       # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
-      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
+      failedJobRetryTimeCycle: ${OPERATON_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
 
 # Camunda JUEL：在 SpringExpressionManager 解析链末尾追加容错（缺失流程变量 → null，不影响 ${assignmentActivity} 等 Bean）
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false

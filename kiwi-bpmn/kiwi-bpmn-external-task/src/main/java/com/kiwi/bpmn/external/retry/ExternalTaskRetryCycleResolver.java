@@ -1,12 +1,12 @@
 package com.kiwi.bpmn.external.retry;
 
-import org.camunda.bpm.client.task.ExternalTask;
-import org.camunda.bpm.engine.RepositoryService;
-import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.bpm.model.bpmn.instance.ExtensionElements;
-import org.camunda.bpm.model.bpmn.instance.Task;
-import org.camunda.bpm.model.bpmn.instance.camunda.CamundaFailedJobRetryTimeCycle;
-import org.camunda.bpm.model.xml.instance.ModelElementInstance;
+import org.operaton.bpm.client.task.ExternalTask;
+import org.operaton.bpm.engine.RepositoryService;
+import org.operaton.bpm.model.bpmn.BpmnModelInstance;
+import org.operaton.bpm.model.bpmn.instance.ExtensionElements;
+import org.operaton.bpm.model.bpmn.instance.Task;
+import org.operaton.bpm.model.bpmn.instance.operaton.OperatonFailedJobRetryTimeCycle;
+import org.operaton.bpm.model.xml.instance.ModelElementInstance;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -47,9 +47,9 @@ public final class ExternalTaskRetryCycleResolver {
             if (extensionElements == null) {
                 return Optional.empty();
             }
-            Collection<CamundaFailedJobRetryTimeCycle> cycles =
+            Collection<OperatonFailedJobRetryTimeCycle> cycles =
                     extensionElements.getElementsQuery()
-                            .filterByType(CamundaFailedJobRetryTimeCycle.class)
+                            .filterByType(OperatonFailedJobRetryTimeCycle.class)
                             .list();
             if (cycles.isEmpty()) {
                 return Optional.empty();

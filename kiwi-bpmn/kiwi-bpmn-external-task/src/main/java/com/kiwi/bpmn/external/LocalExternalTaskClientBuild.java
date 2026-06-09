@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.external;
 
-import org.camunda.bpm.client.impl.ExternalTaskClientBuilderImpl;
-import org.camunda.bpm.engine.ProcessEngine;
+import org.operaton.bpm.client.impl.ExternalTaskClientBuilderImpl;
+import org.operaton.bpm.engine.ProcessEngine;
 
 public class LocalExternalTaskClientBuild extends ExternalTaskClientBuilderImpl
 {

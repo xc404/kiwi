@@ -16,8 +16,8 @@
  */
 package com.kiwi.bpmn.external.config;
 
-import org.camunda.bpm.client.spring.impl.client.ClientConfiguration;
-import org.camunda.bpm.client.spring.impl.subscription.SubscriptionConfiguration;
+import org.operaton.bpm.client.spring.impl.client.ClientConfiguration;
+import org.operaton.bpm.client.spring.impl.subscription.SubscriptionConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 

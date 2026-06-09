@@ -4,7 +4,7 @@ import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.io.File;

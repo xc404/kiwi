@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/github/license/xc404/kiwi)](LICENSE)
 [![CI](https://github.com/xc404/kiwi/actions/workflows/ci.yml/badge.svg)](https://github.com/xc404/kiwi/actions/workflows/ci.yml)
 
-**Kiwi** 是基于 [Camunda BPM 7](https://camunda.com/platform/) 的工作流编排与管理平台：可视化 BPMN 设计、可扩展流程组件、系统管理后台与 AI 助手。本仓库为 Maven 多模块 monorepo，管理端前后端分离部署。
+**Kiwi** 是基于 [Operaton](https://www.operaton.org/)（Camunda 7 社区续作）的工作流编排与管理平台：可视化 BPMN 设计、可扩展流程组件、系统管理后台与 AI 助手。本仓库为 Maven 多模块 monorepo，管理端前后端分离部署。
+
+> **Camunda 7 基线**：Git 标签与分支 **`camunda`** 保留迁移前 Camunda 7.24 + Spring Boot 3.5 末态，供回滚与对照（`git checkout camunda`）。
 
 **在线演示：** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
@@ -14,7 +16,7 @@
 ## 特性
 
 - **BPMN 流程设计**：Angular + BPMN.js，属性面板与后端组件元数据联动
-- **Camunda 引擎**：流程定义/实例、`/engine-rest`、External Task、异步 Job 与可配置重试
+- **Operaton 引擎**：流程定义/实例、`/engine-rest`、External Task、异步 Job 与可配置重试
 - **可插拔流程组件**：Shell、HTTP、文件读写、变量赋值、MongoDB、Slurm 等
 - **管理后台**：用户/角色/菜单/部门/字典、Sa-Token、Personal Access Token
 - **低代码工具**：代码生成、JDBC 与表结构浏览
@@ -25,7 +27,7 @@
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Java **25**、Spring Boot **3.5**、Camunda **7.24**、MongoDB、MyBatis、Sa-Token |
+| 后端 | Java **25**、Spring Boot **4.0**、Operaton **2.1**、MongoDB、MyBatis、Sa-Token |
 | 前端 | Angular **21**、ng-zorro-antd、BPMN.js、ECharts、@antv/x6 |
 | 构建 | Maven（多模块）、npm |
 | 规格 | [OpenSpec](openspec/)（`spec-driven`） |
@@ -84,13 +86,13 @@ docker compose -f docker/docker-compose.yml up -d --build
 
 - **管理端：** http://localhost:8080/kiwi-admin/
 - **默认管理员：** `admin` / `kiwi-demo`（可通过环境变量 `KIWI_INIT_ADMIN_PASSWORD` 覆盖）
-- **说明：** `docker` profile 使用内嵌 H2 作为 Camunda 库，MongoDB 由 compose 提供；AI 默认关闭；首次构建较慢（Maven + npm）
+- **说明：** `docker` profile 使用内嵌 H2 作为 Operaton 引擎库，MongoDB 由 compose 提供；AI 默认关闭；首次构建较慢（Maven + npm）
 
 Compose 服务：`mongodb` · `backend`（内部 `:8080`）· `frontend`（Nginx，宿主机 `:8080` → 容器 `:80`）。
 
 ### 本地开发（摘要）
 
-**依赖**：JDK 25、Maven 3.x、MongoDB；联调 Camunda 需 MySQL（`dev` profile 可用内嵌 H2）；前端需 Node.js（与 Angular 21 兼容）。
+**依赖**：JDK 25、Maven 3.x、MongoDB；联调 Operaton 引擎库需 MySQL（`dev` profile 可用内嵌 H2）；前端需 Node.js（与 Angular 21 兼容）。Operaton 工件需从 Maven Central 解析（见 `kiwi-admin/backend/README.md`）。
 
 1. **后端**：复制 [application.example.yml](kiwi-admin/backend/src/main/resources/application.example.yml) → `application-local.yml`，填写连接与 `kiwi.mongodb.init.admin-password`；仓库根目录 `mvn -pl kiwi-admin/backend -am compile -DskipTests`；IDE 运行 `com.kiwi.framework.springboot.Application`，Profile 建议 `local,dev`（端口 **8000**）。详见 [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)。
 

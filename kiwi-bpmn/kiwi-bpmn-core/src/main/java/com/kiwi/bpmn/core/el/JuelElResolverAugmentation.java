@@ -1,14 +1,14 @@
 package com.kiwi.bpmn.core.el;
 
-import org.camunda.bpm.engine.impl.el.JuelExpressionManager;
-import org.camunda.bpm.impl.juel.jakarta.el.CompositeELResolver;
-import org.camunda.bpm.impl.juel.jakarta.el.ELResolver;
+import jakarta.el.CompositeELResolver;
+import jakarta.el.ELResolver;
+import org.operaton.bpm.engine.impl.el.JuelExpressionManager;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * 在 Camunda 已初始化的 {@link JuelExpressionManager}（含 {@code SpringExpressionManager}）
+ * 在 Operaton 已初始化的 {@link JuelExpressionManager}（含 {@code SpringExpressionManager}）
  * 的 EL 解析链末尾追加 {@link MissingIdentifierNullElResolver}，不替换表达式管理器本身。
  */
 final class JuelElResolverAugmentation {
@@ -34,7 +34,7 @@ final class JuelElResolverAugmentation {
             composite.add(new MissingIdentifierNullElResolver());
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(
-                    "Failed to augment Camunda JuelExpressionManager EL resolver chain", e);
+                    "Failed to augment Operaton JuelExpressionManager EL resolver chain", e);
         }
     }
 
@@ -42,11 +42,21 @@ final class JuelElResolverAugmentation {
         try {
             Field resolversField = CompositeELResolver.class.getDeclaredField("resolvers");
             resolversField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Iterable<ELResolver> resolvers = (Iterable<ELResolver>) resolversField.get(composite);
-            for (ELResolver resolver : resolvers) {
-                if (resolver instanceof MissingIdentifierNullElResolver) {
-                    return true;
+            Object raw = resolversField.get(composite);
+            // Jakarta EL 6+（Boot 4）内部为 ELResolver[]；旧版为 Iterable
+            if (raw instanceof ELResolver[] array) {
+                for (ELResolver resolver : array) {
+                    if (resolver instanceof MissingIdentifierNullElResolver) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (raw instanceof Iterable<?> iterable) {
+                for (Object item : iterable) {
+                    if (item instanceof MissingIdentifierNullElResolver) {
+                        return true;
+                    }
                 }
             }
         } catch (ReflectiveOperationException ignored) {

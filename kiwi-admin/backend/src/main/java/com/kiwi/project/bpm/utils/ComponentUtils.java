@@ -5,7 +5,7 @@ import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import org.apache.commons.lang3.StringUtils;
-import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
+import org.operaton.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.springframework.core.annotation.AnnotationUtils;
 
 import java.util.Arrays;

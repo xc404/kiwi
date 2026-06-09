@@ -3,7 +3,7 @@ package com.kiwi.bpmn.external.config;
 import com.kiwi.bpmn.core.retry.JobRetryExceptionClassifier;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryCycleResolver;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
-import org.camunda.bpm.engine.RepositoryService;
+import org.operaton.bpm.engine.RepositoryService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -30,8 +30,8 @@ public class ExternalTaskRetryAutoConfiguration {
             return own.trim();
         }
         return env.getProperty(
-                "camunda.bpm.generic-properties.properties.failedJobRetryTimeCycle",
-                env.getProperty("CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE", "R5/PT1M"));
+                "operaton.bpm.generic-properties.properties.failedJobRetryTimeCycle",
+                env.getProperty("OPERATON_FAILED_JOB_RETRY_TIME_CYCLE", "R5/PT1M"));
     }
 
     @Bean

@@ -20,7 +20,7 @@ flowchart LR
         XML["BPMN XML\ncomponentId + inputParameter"]
     end
 
-    subgraph Runtime["运行时（Camunda）"]
+    subgraph Runtime["运行时（Operaton）"]
         Bean["Spring Bean\nJavaDelegate"]
         Ext["External Task\nHandler"]
     end
@@ -38,7 +38,7 @@ flowchart LR
 | 实现 | `kiwi-bpmn-component` 等 | `JavaDelegate` / `ActivityBehavior` / `ExternalTaskHandler` 执行业务 |
 | 元数据 | MongoDB `BpmComponent` | 设计器读取的参数定义、分组、继承关系 |
 | 设计器 | `kiwi-admin/frontend/.../pages/bpm/design` | 拖入节点、填写参数、生成 BPMN XML |
-| 引擎 | Camunda | `delegateExpression` 或 `external` topic 触发执行 |
+| 引擎 | Operaton 2.x | `delegateExpression` 或 `external` topic 触发执行（BPMN 仍用 `camunda:` 扩展命名空间） |
 
 ### 组件类型
 
@@ -197,7 +197,7 @@ Kiwi 扩展命名空间定义见 [kiwi.json](../kiwi-admin/frontend/src/app/page
 
 ### 2. 部署与运行
 
-1. 在流程列表点击「部署」，将 BPMN 发布到 Camunda。
+1. 在流程列表点击「部署」，将 BPMN 发布到 Operaton 引擎。
 2. 启动流程实例时传入初始变量，例如：
 
 ```json
@@ -231,7 +231,7 @@ MongoDB BpmComponent（元数据）
     ↓ 用户配置
 BPMN XML（componentId + camunda:inputParameter）
     ↓ 部署
-Camunda 引擎执行 delegateExpression / external topic
+Operaton 引擎执行 delegateExpression / external topic
     ↓
 JavaDelegate.execute() 读取参数、写回输出变量
 ```

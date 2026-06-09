@@ -3,7 +3,7 @@ package com.kiwi.project.bpm.dto;
 import lombok.Data;
 
 /**
- * 未关闭的引擎 Incident（与 {@link org.camunda.bpm.engine.runtime.Incident} 对应）。
+ * 未关闭的引擎 Incident（与 {@link org.operaton.bpm.engine.runtime.Incident} 对应）。
  */
 @Data
 public class BpmOpenIncidentDto {

@@ -17,11 +17,11 @@
 package com.kiwi.bpmn.external.config;
 
 import com.kiwi.bpmn.external.LocalExternalTaskClientBuild;
-import org.camunda.bpm.client.ExternalTaskClient;
-import org.camunda.bpm.client.ExternalTaskClientBuilder;
-import org.camunda.bpm.client.spring.impl.client.ClientConfiguration;
-import org.camunda.bpm.client.spring.impl.client.ClientFactory;
-import org.camunda.bpm.engine.ProcessEngine;
+import org.operaton.bpm.client.ExternalTaskClient;
+import org.operaton.bpm.client.ExternalTaskClientBuilder;
+import org.operaton.bpm.client.spring.impl.client.ClientConfiguration;
+import org.operaton.bpm.client.spring.impl.client.ClientFactory;
+import org.operaton.bpm.engine.ProcessEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class PropertiesAwareClientFactory extends ClientFactory {
@@ -33,7 +33,7 @@ public class PropertiesAwareClientFactory extends ClientFactory {
   protected ProcessEngine processEngine;
 
   @Override
-  public void afterPropertiesSet() throws Exception {
+  public void afterPropertiesSet() {
     applyPropertiesFrom(clientProperties);
     super.afterPropertiesSet();
   }

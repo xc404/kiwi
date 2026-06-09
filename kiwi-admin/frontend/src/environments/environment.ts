@@ -12,7 +12,7 @@ export const environment = {
   postLoginPath: '/dashboard/analysis',
   api: {
     baseUrl: localUrl,
-    /** Camunda spring-boot-starter-rest 默认 `/engine-rest`，若改 context 请同步 */
+    /** Operaton/Camunda REST 默认 `/engine-rest`（路径名未变），若改 context 请同步 */
     camundaEngineRestPath: '/engine-rest',
   },
 };

@@ -22,7 +22,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       KIWI_INIT_ADMIN_PASSWORD: kiwi-demo
       APP_PASSWORD_SECRET: docker-demo-change-me-in-production
-      CAMUNDA_ADMIN_PASSWORD: demo
+      OPERATON_ADMIN_PASSWORD: demo
     volumes:
       - backend_data:/app/data
     depends_on:

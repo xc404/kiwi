@@ -1,8 +1,8 @@
 package com.kiwi.bpmn.core.variable;
 
 import lombok.extern.slf4j.Slf4j;
-import org.camunda.bpm.engine.impl.core.variable.mapping.InputParameter;
-import org.camunda.bpm.engine.impl.core.variable.scope.AbstractVariableScope;
+import org.operaton.bpm.engine.impl.core.variable.mapping.InputParameter;
+import org.operaton.bpm.engine.impl.core.variable.scope.AbstractVariableScope;
 
 @Slf4j
 public class InputParameterWrapper extends InputParameter

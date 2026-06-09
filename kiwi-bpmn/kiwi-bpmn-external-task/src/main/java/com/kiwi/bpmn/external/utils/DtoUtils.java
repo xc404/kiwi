@@ -1,19 +1,19 @@
 package com.kiwi.bpmn.external.utils;
 
-import org.camunda.bpm.client.task.impl.ExternalTaskImpl;
-import org.camunda.bpm.client.topic.impl.dto.FetchAndLockRequestDto;
-import org.camunda.bpm.client.topic.impl.dto.TopicRequestDto;
-import org.camunda.bpm.client.variable.impl.TypedValueField;
-import org.camunda.bpm.engine.ExternalTaskService;
-import org.camunda.bpm.engine.externaltask.ExternalTaskQueryBuilder;
-import org.camunda.bpm.engine.externaltask.ExternalTaskQueryTopicBuilder;
-import org.camunda.bpm.engine.externaltask.LockedExternalTask;
+import org.operaton.bpm.client.task.impl.ExternalTaskImpl;
+import org.operaton.bpm.client.topic.impl.dto.FetchAndLockRequestDto;
+import org.operaton.bpm.client.topic.impl.dto.TopicRequestDto;
+import org.operaton.bpm.client.variable.impl.TypedValueField;
+import org.operaton.bpm.engine.ExternalTaskService;
+import org.operaton.bpm.engine.externaltask.ExternalTaskQueryBuilder;
+import org.operaton.bpm.engine.externaltask.ExternalTaskQueryTopicBuilder;
+import org.operaton.bpm.engine.externaltask.LockedExternalTask;
 
-import org.camunda.bpm.engine.variable.VariableMap;
-import org.camunda.bpm.engine.variable.type.ValueType;
-import org.camunda.bpm.engine.variable.value.FileValue;
-import org.camunda.bpm.engine.variable.value.SerializableValue;
-import org.camunda.bpm.engine.variable.value.TypedValue;
+import org.operaton.bpm.engine.variable.VariableMap;
+import org.operaton.bpm.engine.variable.type.ValueType;
+import org.operaton.bpm.engine.variable.value.FileValue;
+import org.operaton.bpm.engine.variable.value.SerializableValue;
+import org.operaton.bpm.engine.variable.value.TypedValue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -131,10 +131,10 @@ public class DtoUtils
     }
 
     /**
-     * 将引擎 {@link org.camunda.bpm.engine.externaltask.ExternalTask}（如 query 单条结果）转为 client {@link ExternalTaskImpl}，
+     * 将引擎 {@link org.operaton.bpm.engine.externaltask.ExternalTask}（如 query 单条结果）转为 client {@link ExternalTaskImpl}，
      * 供 {@link com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner} 等仅依赖 client 模型的代码使用。
      */
-    public static ExternalTaskImpl fromEngineExternalTask(org.camunda.bpm.engine.externaltask.ExternalTask task) {
+    public static ExternalTaskImpl fromEngineExternalTask(org.operaton.bpm.engine.externaltask.ExternalTask task) {
         if (task == null) {
             return null;
         }

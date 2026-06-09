@@ -82,7 +82,7 @@ npm run build
 
 ## AI 辅助（Kiwi · AI）
 
-需后端配置 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`（见 [backend README](../backend/README.md) 与 `application.example.yml`）。
+需后端配置 `KIWI_AI_API_KEY` / `DEEPSEEK_API_KEY`（见 [backend README](../backend/README.md) 与 `application.example.yml`）。
 
 | 入口 | 说明 |
 |------|------|

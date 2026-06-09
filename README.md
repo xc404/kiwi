@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/github/license/xc404/kiwi)](LICENSE)
 [![CI](https://github.com/xc404/kiwi/actions/workflows/ci.yml/badge.svg)](https://github.com/xc404/kiwi/actions/workflows/ci.yml)
 
-**Kiwi** is a BPMN-based workflow orchestration and management platform built on [Camunda BPM 7](https://camunda.com/platform/): visual BPMN designer, pluggable process delegates, admin console, and AI assistant. This repository is a Maven multi-module monorepo with a separate admin frontend and backend.
+**Kiwi** is a BPMN-based workflow orchestration and management platform built on [Operaton](https://www.operaton.org/) (the community continuation of Camunda 7): visual BPMN designer, pluggable process delegates, admin console, and AI assistant. This repository is a Maven multi-module monorepo with a separate admin frontend and backend.
+
+> **Camunda 7 baseline**: Git tag and branch **`camunda`** preserve the pre-migration Camunda 7.24 + Spring Boot 3.5 state for rollback and comparison (`git checkout camunda`).
 
 **Live demo:** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
@@ -14,7 +16,7 @@
 ## Features
 
 - **BPMN design**: Angular + BPMN.js; property panel synced with backend component metadata
-- **Camunda engine**: process definitions/instances, `/engine-rest`, External Tasks, async jobs with configurable retries
+- **Operaton engine**: process definitions/instances, `/engine-rest`, External Tasks, async jobs with configurable retries
 - **Pluggable delegates**: Shell, HTTP, file I/O, variable assignment, MongoDB, Slurm, and more
 - **Admin console**: users, roles, menus, departments, dictionaries, Sa-Token, Personal Access Tokens
 - **Low-code tools**: code generation, JDBC and schema browser
@@ -25,7 +27,7 @@
 
 | Layer | Stack |
 |-------|-------|
-| Backend | Java **25**, Spring Boot **3.5**, Camunda **7.24**, MongoDB, MyBatis, Sa-Token |
+| Backend | Java **25**, Spring Boot **4.0**, Operaton **2.1**, MongoDB, MyBatis, Sa-Token |
 | Frontend | Angular **21**, ng-zorro-antd, BPMN.js, ECharts, @antv/x6 |
 | Build | Maven (multi-module), npm |
 | Specs | [OpenSpec](openspec/) (`spec-driven`) |
@@ -84,13 +86,13 @@ Or from the `docker/` directory: `docker compose up -d --build`
 
 - **Admin UI:** http://localhost:8080/kiwi-admin/
 - **Default admin:** `admin` / `kiwi-demo` (override with `KIWI_INIT_ADMIN_PASSWORD`)
-- **Notes:** `docker` profile uses embedded H2 for Camunda; MongoDB is provided by compose; AI is disabled by default; first build may take several minutes (Maven + npm)
+- **Notes:** `docker` profile uses embedded H2 for the Operaton engine DB; MongoDB is provided by compose; AI is disabled by default; first build may take several minutes (Maven + npm)
 
 Services: `mongodb` · `backend` (internal `:8080`) · `frontend` (Nginx, host `:8080` → container `:80`).
 
 ### Local development (summary)
 
-**Prerequisites:** JDK 25, Maven 3.x, MongoDB; MySQL for Camunda unless using the `dev` profile (embedded H2); Node.js compatible with Angular 21.
+**Prerequisites:** JDK 25, Maven 3.x, MongoDB; MySQL for the Operaton engine DB unless using the `dev` profile (embedded H2); Node.js compatible with Angular 21. Operaton artifacts resolve from Maven Central (see backend README).
 
 1. **Backend:** Copy [application.example.yml](kiwi-admin/backend/src/main/resources/application.example.yml) → `application-local.yml`, fill in connections and `kiwi.mongodb.init.admin-password`; from repo root run `mvn -pl kiwi-admin/backend -am compile -DskipTests`; run `com.kiwi.framework.springboot.Application` in your IDE with profiles `local,dev` (port **8000**). See [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md).
 
