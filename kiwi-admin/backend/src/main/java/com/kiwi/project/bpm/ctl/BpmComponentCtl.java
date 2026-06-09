@@ -9,8 +9,11 @@ import com.kiwi.project.bpm.service.BpmComponentRecentUsageService;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
+import com.kiwi.project.bpm.utils.ElementTemplateExporter;
+import com.kiwi.project.bpm.utils.ElementTemplateImporter;
 import com.kiwi.project.bpm.utils.OpenApiComponentGenerator;
 import com.kiwi.project.bpm.utils.OpenApiSpecFetcher;
+import com.kiwi.project.bpm.service.BpmComponentBundleService;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,6 +53,7 @@ public class BpmComponentCtl extends BaseCtl
     private final BpmComponentDao bpmComponentDao;
     private final BpmComponentService bpmComponentService;
     private final BpmComponentRecentUsageService bpmComponentRecentUsageService;
+    private final BpmComponentBundleService bpmComponentBundleService;
 
     /**
      * 不落库：从当前用户已保存流程的 BPMN 中按需解析「最近使用的组件」；
@@ -306,6 +311,66 @@ public class BpmComponentCtl extends BaseCtl
     @Data
     public static class AllocateSourceKeyResponse {
         private String sourceKey;
+    }
+
+    @Operation(operationId = "bpmComp_exportElementTemplate", summary = "导出组件为 Camunda Element Template JSON")
+    @GetMapping("{id}/element-template")
+    @ResponseBody
+    public String exportElementTemplate(@PathVariable String id) {
+        BpmComponent comp = bpmComponentDao.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "组件不存在: " + id));
+        return ElementTemplateExporter.exportJson(bpmComponentService.fillComponentProperties(comp));
+    }
+
+    @Operation(operationId = "bpmComp_importElementTemplate", summary = "从 Element Template JSON 导入组件草稿")
+    @PostMapping("from-element-template")
+    @ResponseBody
+    public List<BpmComponent> importElementTemplate(@RequestBody ElementTemplateImportRequest request) {
+        if (request == null || StringUtils.isBlank(request.getTemplate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "template 不能为空");
+        }
+        String parentId = StringUtils.trimToNull(request.getParentId());
+        if (parentId == null && request.isInheritHttpRequest()) {
+            parentId = bpmComponentService.resolveHttpRequestParentComponentId();
+        }
+        try {
+            return ElementTemplateImporter.importMany(request.getTemplate(), parentId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
+    @Operation(operationId = "bpmComp_listPlugins", summary = "列出已安装的组件插件 JAR")
+    @GetMapping("plugins")
+    @ResponseBody
+    public List<String> listPlugins() {
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_uploadPlugin", summary = "上传组件插件 JAR 并热加载")
+    @PostMapping("plugins/upload")
+    @ResponseBody
+    public List<String> uploadPlugin(@RequestParam("file") MultipartFile file) {
+        bpmComponentBundleService.uploadJar(file);
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_reloadPlugins", summary = "重新扫描插件目录并同步组件库")
+    @PostMapping("plugins/reload")
+    @ResponseBody
+    public List<String> reloadPlugins() {
+        bpmComponentBundleService.reload();
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Data
+    public static class ElementTemplateImportRequest {
+        /** Element Template JSON（单对象或数组） */
+        private String template;
+        /** 可选父组件 id */
+        private String parentId;
+        /** true 时自动继承 httpRequest 父组件 */
+        private boolean inheritHttpRequest;
     }
 
     @Data

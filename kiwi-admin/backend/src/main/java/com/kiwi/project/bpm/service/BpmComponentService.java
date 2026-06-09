@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.DependsOn("bpmComponentPluginLoader")
 public class BpmComponentService implements InitializingBean, Refreshable
 {
 

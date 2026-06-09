@@ -137,6 +137,14 @@ kiwi.bpm:
     enabled: ${KIWI_BPM_SLURM_ENABLED:true}
     work-directory: ${KIWI_BPM_SLURM_WORK_DIRECTORY:}
 
+# BPM 组件库：classpath 自动部署、插件 JAR 目录
+bpm:
+  component:
+    auto-deploy: ${BPM_COMPONENT_AUTO_DEPLOY:true}
+    delete-not-exist: ${BPM_COMPONENT_DELETE_NOT_EXIST:true}
+    plugins-enabled: ${BPM_COMPONENT_PLUGINS_ENABLED:true}
+    plugins-dir: ${BPM_COMPONENT_PLUGINS_DIR:plugins}
+
 # External Task 统一重试（AbstractExternalTaskHandler）：默认开启；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
 # kiwi.bpm.external-task-retry:
 #   enabled: true                     # 默认 true；如需关闭显式设为 false（关闭后失败将以 retries=0 直接创建 incident）

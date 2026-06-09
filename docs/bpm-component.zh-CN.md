@@ -268,7 +268,66 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 八、相关文档
+## 八、内置组件扩充（阶段一）
+
+`kiwi-bpmn-component` 在原有 Shell / HTTP / JDBC / Mongo 等基础上新增：
+
+| Bean Key | 名称 | 分组 |
+|----------|------|------|
+| `webhookOutbound` | Webhook 出站 | 通知 |
+| `emailSend` | 发送邮件 | 通知 |
+| `sftpTransfer` | SFTP 传输 | 文件 |
+| `sleep` | 延时等待 | 通用 |
+| `digestHash` | 摘要哈希 | 通用 |
+| `base64Codec` | Base64 编解码 | 通用 |
+| `uuidGenerate` | 生成 UUID | 通用 |
+
+敏感 SMTP/SFTP 凭据请通过**项目环境变量**注入，BPMN 使用 `${SMTP_PASSWORD}` 等形式引用。
+
+---
+
+## 九、插件 JAR 加载（阶段二）
+
+配置项（`application.yml`）：
+
+| 配置 | 默认 | 说明 |
+|------|------|------|
+| `bpm.component.plugins-dir` | `plugins` | 插件 JAR 目录（相对工作目录） |
+| `bpm.component.plugins-enabled` | `true` | 是否扫描插件 |
+
+- 将含 `@ComponentDescription` + `JavaDelegate` 的 JAR 放入 `plugins/`，启动时由 `PluginBpmComponentProvider` 注册 Bean 并同步 Mongo（`source=plugin`）。
+- **上传安装**：`POST /bpm/component/plugins/upload`（multipart `file`）
+- **手动刷新**：`POST /bpm/component/plugins/reload`
+- 第三方开发仍推荐参考 `kiwi-bpmn-component-example`；插件方式适合运维侧热更新。
+
+---
+
+## 十、Element Template 导入/导出（阶段三）
+
+- **导出**：`GET /bpm/component/{id}/element-template` → Camunda Element Template JSON
+- **导入草稿**：`POST /bpm/component/from-element-template`，body `{ "template": "...", "inheritHttpRequest": true }`
+
+可与 Camunda Modeler 的 Connector Template 互操作（字段映射为 `camunda:inputParameter` / `outputParameter`）。
+
+---
+
+## 十一、入站 Webhook（阶段四）
+
+1. **注册**（需登录）：`POST /bpm/inbound/registration`
+   - `componentKey`：URL 路径段（全局唯一）
+   - `messageName`：BPMN 中间捕获事件的 message 名称
+   - `projectId`（可选）：仅关联含该流程变量的实例
+   - `secretToken`（可选）：调用方请求头 `X-Kiwi-Inbound-Token`
+
+2. **触发**（无需登录）：`POST /bpm/inbound/{componentKey}`，body 为流程变量 JSON。
+
+流程中需有 **Intermediate Message Catch Event**，message 名称与注册一致，且流程启动时写入 `projectId`（若注册配置了过滤）。
+
+**组件市场（轻量）**：通过 `POST /bpm/component/plugins/upload` 安装第三方 JAR，无需改 backend `pom.xml`。
+
+---
+
+## 十二、相关文档
 
 | 文档 | 内容 |
 |------|------|
