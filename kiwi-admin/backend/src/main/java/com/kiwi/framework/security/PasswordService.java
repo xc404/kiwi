@@ -14,5 +14,9 @@ public class PasswordService
         return DigestUtil.sha256Hex(password + this.passwordSecret);
     }
 
+    public String getPasswordSecret() {
+        return passwordSecret;
+    }
+
 
 }

@@ -69,9 +69,7 @@ public class BpmProjectCtl extends BaseCtl {
     @PostMapping("")
     @ResponseBody
     public BpmProject add(@RequestBody BpmProject folder) {
-        if (StringUtils.isBlank(folder.getCreatedBy())) {
-            folder.setCreatedBy(getCurrentUserId());
-        }
+        folder.setCreatedBy(getCurrentUserId());
         return bpmProjectDao.save(folder);
     }
 

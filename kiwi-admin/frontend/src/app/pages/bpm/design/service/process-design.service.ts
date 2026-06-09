@@ -72,7 +72,7 @@ export class ProcessDesignService {
   }
 
   saveAsProcess(id: string, processName: string, xml: string): Observable<BpmProcess> {
-    return this.http.post<BpmProcess>(`${this.apiUrl}/${id}`, { name: processName, bpmnXml: xml });
+    return this.http.post<BpmProcess>(`${this.apiUrl}/${id}/save-as`, { name: processName, bpmnXml: xml });
   }
 
   deleteProcess(id: string): Observable<unknown> {
