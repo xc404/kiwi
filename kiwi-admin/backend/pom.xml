@@ -240,7 +240,7 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-deepseek</artifactId>
         </dependency>
-        <!-- Spring AI MCP Server（WebMVC + SSE）；MCP 工具 = OpenAPI 扫描；assistant_* @Tool 见 KiwiAssistantInProcessToolsConfiguration -->
+        <!-- Spring AI MCP Server（WebMVC + SSE）；MCP 工具 = OpenAPI 扫描；assistant_* @Tool 见 KiwiAssistantInProcessToolsFactory -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>

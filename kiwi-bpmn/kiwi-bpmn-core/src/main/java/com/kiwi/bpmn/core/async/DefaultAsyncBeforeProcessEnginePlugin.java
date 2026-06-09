@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Order(Ordering.DEFAULT_ORDER + 10)
-@ConditionalOnProperty(prefix = "kiwi.bpm", name = "default-async-before-enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "kiwi.bpm", name = "default-async-before-enabled", havingValue = "true", matchIfMissing = true)
 public class DefaultAsyncBeforeProcessEnginePlugin implements ProcessEnginePlugin {
 
     @Override

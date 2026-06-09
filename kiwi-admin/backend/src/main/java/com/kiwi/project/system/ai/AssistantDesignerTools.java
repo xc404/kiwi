@@ -33,28 +33,28 @@ public class AssistantDesignerTools {
     private final BpmComponentService bpmComponentService;
     private final ObjectMapper objectMapper;
 
-    @Tool(
-            name = "assistant_designer_toolbar",
-            description = "仅用于设计器已实现的 toolbar 能力（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export 等）。"
-                    + "改节点参数、复制配置、增删连线/节点等须用 assistant_designer_bpmn_xml，不要用 toolbar 代替。"
-                    + "toolbarOptionsJson 可选，为 JSON 对象字符串。")
-    public String designerToolbar(String command, String toolbarOptionsJson) {
-        if (command == null || command.isBlank()) {
-            return "command 不能为空。";
-        }
-        String cmd = command.trim();
-        if (!DEFAULT_TOOLBAR_COMMANDS.contains(cmd)) {
-            return "不支持的 toolbar 命令: " + cmd;
-        }
-        Map<String, Object> options;
-        try {
-            options = parseToolbarOptionsJson(toolbarOptionsJson);
-        } catch (IllegalArgumentException ex) {
-            return ex.getMessage();
-        }
-        assistantClientActionContext.addClientAction(ClientAction.toolbar(cmd, options));
-        return "已登记设计器工具栏动作：" + cmd + "。";
-    }
+//    @Tool(
+//            name = "assistant_designer_toolbar",
+//            description = "仅用于设计器已实现的 toolbar 能力（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export 等）。"
+//                    + "改节点参数、复制配置、增删连线/节点等须用 assistant_designer_bpmn_xml，不要用 toolbar 代替。"
+//                    + "toolbarOptionsJson 可选，为 JSON 对象字符串。")
+//    public String designerToolbar(String command, String toolbarOptionsJson) {
+//        if (command == null || command.isBlank()) {
+//            return "command 不能为空。";
+//        }
+//        String cmd = command.trim();
+//        if (!DEFAULT_TOOLBAR_COMMANDS.contains(cmd)) {
+//            return "不支持的 toolbar 命令: " + cmd;
+//        }
+//        Map<String, Object> options;
+//        try {
+//            options = parseToolbarOptionsJson(toolbarOptionsJson);
+//        } catch (IllegalArgumentException ex) {
+//            return ex.getMessage();
+//        }
+//        assistantClientActionContext.addClientAction(ClientAction.toolbar(cmd, options));
+//        return "已登记设计器工具栏动作：" + cmd + "。";
+//    }
 
     @Tool(
             name = "assistant_designer_bpmn_xml",

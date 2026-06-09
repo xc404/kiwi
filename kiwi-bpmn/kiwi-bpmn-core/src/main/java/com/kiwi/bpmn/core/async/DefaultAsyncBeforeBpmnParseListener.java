@@ -1,8 +1,7 @@
 package com.kiwi.bpmn.core.async;
 
-import org.operaton.bpm.engine.impl.bpmn.parser.AbstractBpmnParseListener;
+import org.operaton.bpm.engine.impl.bpmn.parser.BpmnParse;
 import org.operaton.bpm.engine.impl.bpmn.parser.BpmnParseListener;
-import org.operaton.bpm.engine.impl.bpmn.parser.BpmnParser;
 import org.operaton.bpm.engine.impl.pvm.process.ActivityImpl;
 import org.operaton.bpm.engine.impl.pvm.process.ScopeImpl;
 import org.operaton.bpm.engine.impl.util.xml.Element;
@@ -21,12 +20,12 @@ public class DefaultAsyncBeforeBpmnParseListener implements BpmnParseListener
     @Override
     public void parseServiceTask(Element serviceTaskElement, ScopeImpl scope, ActivityImpl activity) {
         String camundaType =
-                serviceTaskElement.attribute(BpmnParser.OPERATON_BPMN_EXTENSIONS_NS, "type");
+                serviceTaskElement.attributeNS(BpmnParse.OPERATON_BPMN_EXTENSIONS_NS, "type");
         if ("external".equalsIgnoreCase(camundaType)) {
             return;
         }
         String explicitAsyncBefore =
-                serviceTaskElement.attribute(BpmnParser.OPERATON_BPMN_EXTENSIONS_NS, "asyncBefore");
+                serviceTaskElement.attributeNS(BpmnParse.OPERATON_BPMN_EXTENSIONS_NS, "asyncBefore");
         if ("false".equalsIgnoreCase(explicitAsyncBefore)) {
             return;
         }
