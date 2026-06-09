@@ -142,13 +142,11 @@ public class BpmComponentCtl extends BaseCtl
     @ResponseBody
     public List<ComponentGroup> getComponentsGrouped() {
         Map<String, List<BpmComponent>> map = bpmComponentDao.findAll().stream()
-                .map(c -> {
-                    return this.bpmComponentService.fillComponentProperties(c);
-                })
+                .map(bpmComponentService::fillComponentProperties)
                 .collect(Collectors.groupingBy(BpmComponent::getGroup));
-        return map.entrySet().stream().map(e -> {
-            return new ComponentGroup(e.getKey(), e.getValue());
-        }).toList();
+        return map.entrySet().stream()
+                .map(e -> new ComponentGroup(e.getKey(), e.getValue()))
+                .toList();
     }
 
     @Data

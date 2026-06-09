@@ -277,7 +277,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     }
 
     @Operation(operationId = "bpmPd_saveAs", summary = "将流程另存为新 id 的流程")
-    @PostMapping("{id}/saveAs")
+    @PostMapping("{id}/save-as")
     @ResponseBody
     public BpmProcess saveAsProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
@@ -285,7 +285,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         BpmProcess bpmProcess = new BpmProcess();
         bpmProcess.setId(getNewProcessId());
         bpmProcess.setName(saveInput.name);
-        bpmProcess.setBpmnXml(saveInput.bpmnXml);
+        bpmProcess.setBpmnXml(saveInput.bpmnXml != null ? saveInput.bpmnXml : src.getBpmnXml());
         updateIdAndName(bpmProcess);
         bpmProcess.setCreatedBy(getCurrentUserId());
         bpmProcess.setCreatedTime(new Date());

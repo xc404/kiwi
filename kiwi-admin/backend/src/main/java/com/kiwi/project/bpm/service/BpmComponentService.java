@@ -14,12 +14,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,7 +34,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     @Autowired(required = false)
     private List<BpmComponentProvider> bpmComponentProviderList;
 
-    private final Map<String, BpmComponent> CachedComponents = new HashMap<String, BpmComponent>();
+    private final Map<String, BpmComponent> cachedComponents = new ConcurrentHashMap<>();
 
     public void deployComponent(BpmComponent bpmComponent) {
         this.bpmComponentDeploymentService.deployComponent(bpmComponent);
@@ -115,7 +115,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     }
 
     private BpmComponent getComponent(String parentId) {
-        return this.CachedComponents.get(parentId);
+        return this.cachedComponents.get(parentId);
     }
 
     /**
@@ -172,7 +172,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
      * 解析继承「命令行」(shell) 父组件时使用的 {@code parentId}，一般为 {@code classpath_shell}。
      */
     public String resolveShellParentComponentId() {
-        for (BpmComponent c : CachedComponents.values()) {
+        for (BpmComponent c : cachedComponents.values()) {
             if ("shell".equals(c.getKey())) {
                 return c.getId();
             }
@@ -180,11 +180,8 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return "classpath_shell";
     }
 
-    /**
-     * 解析继承「HTTP 请求」({@code httpRequest}) 父组件时使用的 {@code parentId}，一般为 {@code classpath_httpRequest}。
-     */
     public String resolveHttpRequestParentComponentId() {
-        for (BpmComponent c : CachedComponents.values()) {
+        for (BpmComponent c : cachedComponents.values()) {
             if ("httpRequest".equals(c.getKey())) {
                 return c.getId();
             }
@@ -192,13 +189,8 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return "classpath_httpRequest";
     }
 
-    /**
-     * 从缓存按 id 解析组件定义，并合并父级参数（与列表接口一致）。
-     *
-     * @return 不存在时返回 null
-     */
     public BpmComponent resolveComponentById(String componentId) {
-        BpmComponent c = this.CachedComponents.get(componentId);
+        BpmComponent c = this.cachedComponents.get(componentId);
         if (c == null) {
             return null;
         }
@@ -217,9 +209,10 @@ public class BpmComponentService implements InitializingBean, Refreshable
     @Override
     public void refresh() {
         List<BpmComponent> all = this.bpmComponentDao.findAll();
-        this.CachedComponents.clear();
-        all.forEach(component -> {
-            this.CachedComponents.put(component.getId(), component);
-        });
+        // 原子替换：先构建新 map 再 putAll，避免 clear() 与并发读之间的窗口期
+        Map<String, BpmComponent> snapshot = new ConcurrentHashMap<>(all.size() * 2);
+        all.forEach(component -> snapshot.put(component.getId(), component));
+        this.cachedComponents.clear();
+        this.cachedComponents.putAll(snapshot);
     }
 }

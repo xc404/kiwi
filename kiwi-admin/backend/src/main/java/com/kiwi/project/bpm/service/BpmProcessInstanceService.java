@@ -436,9 +436,8 @@ public class BpmProcessInstanceService {
                 dto.setSuspended(false);
                 dto.setState(!incidents.isEmpty() ? ProcessInstanceState.ERROR : ProcessInstanceState.ACTIVE);
             }
-        }else {
-
-        dto.setEnded(true);
+        } else {
+            dto.setEnded(true);
         boolean canceled = StringUtils.hasText(hip.getDeleteReason());
         dto.setState(canceled ? ProcessInstanceState.CANCELED : ProcessInstanceState.COMPLETED);
         }

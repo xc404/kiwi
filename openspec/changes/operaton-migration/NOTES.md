@@ -43,7 +43,7 @@ mvn -U -pl kiwi-admin/backend -am compile -DskipTests
 - [ ] BPM 部署、实例、External Task、Spin JSON
 - [ ] `spring.data.mongodb` 在 Boot 4 下是否需改为 `spring.mongodb`
 - [ ] spring-ai-alibaba、MCP 在 Boot 4 运行时行为
-- [ ] 推送 `camunda` 分支与 tag 至远程
+- [x] 推送 `camunda` 分支与 tag 至远程（`6e833f8`，远程已存在 `refs/heads/camunda` 与 annotated tag `camunda`）
 
 ## 编译验证
 

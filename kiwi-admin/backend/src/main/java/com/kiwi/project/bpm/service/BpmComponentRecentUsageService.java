@@ -74,9 +74,7 @@ public class BpmComponentRecentUsageService
                 BpmComponent meta = bpmComponentService.resolveComponentById(cid);
                 BpmComponent row;
                 if (meta != null) {
-                    BpmComponent detached = new BpmComponent();
-                    BeanUtils.copyProperties(meta, detached);
-                    row = bpmComponentService.fillComponentProperties(detached);
+                    row = meta;  // resolveComponentById 已调用 fillComponentProperties
                 } else {
                     row = new BpmComponent();
                     row.setId(cid);
