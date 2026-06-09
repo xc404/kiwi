@@ -1,15 +1,17 @@
-import { SpinService } from '@store/common-store/spin.service';
-import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { filter, map, switchMap } from 'rxjs/operators';
 
-import { environment } from '@env/environment';
-import * as qs from 'qs';
+import { Utils } from '@app/utils/utils';
 import { successCode } from '@config/constant';
+import { environment } from '@env/environment';
+import { SpinService } from '@store/common-store/spin.service';
+import * as qs from 'qs';
+
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Utils } from '@app/utils/utils';
+
 export interface HttpCustomConfig {
   needSuccessInfo?: boolean; // 是否需要"操作成功"提示
   showLoading?: boolean; // 是否需要loading
@@ -36,50 +38,61 @@ export class BaseHttpService {
   }
 
   get<T>(path: string, param?: NzSafeAny, config?: HttpCustomConfig): Observable<T> {
-    config = { needSuccessInfo: false, ...config};
+    config = { needSuccessInfo: false, ...config };
     const reqPath = this.getUrl(path, config);
     const params = new HttpParams({ fromString: qs.stringify(param) });
-    return this.before(config).pipe(switchMap(() => this.http.get<ActionResult<T>>(reqPath, { params }))).pipe(this.after<T>(config));
+    return this.before(config)
+      .pipe(switchMap(() => this.http.get<ActionResult<T>>(reqPath, { params })))
+      .pipe(this.after<T>(config));
   }
 
   delete<T>(path: string, param?: NzSafeAny, config?: HttpCustomConfig): Observable<T> {
     config = { needSuccessInfo: false, showLoading: true, ...config };
     const reqPath = this.getUrl(path, config);
     const params = new HttpParams({ fromString: qs.stringify(param) });
-    return this.before(config).pipe(switchMap(() => this.http.delete<ActionResult<T>>(reqPath, { params }))).pipe(this.after<T>(config));
+    return this.before(config)
+      .pipe(switchMap(() => this.http.delete<ActionResult<T>>(reqPath, { params })))
+      .pipe(this.after<T>(config));
   }
 
   post<T>(path: string, param?: NzSafeAny, config?: HttpCustomConfig): Observable<T> {
     config = { needSuccessInfo: false, showLoading: true, ...config };
     const reqPath = this.getUrl(path, config);
-    return this.before(config).pipe(switchMap(() => this.http.post<ActionResult<T>>(reqPath, param))).pipe(this.after<T>(config));
+    return this.before(config)
+      .pipe(switchMap(() => this.http.post<ActionResult<T>>(reqPath, param)))
+      .pipe(this.after<T>(config));
   }
 
   put<T>(path: string, param?: NzSafeAny, config?: HttpCustomConfig): Observable<T> {
     config = { needSuccessInfo: false, showLoading: true, ...config };
     const reqPath = this.getUrl(path, config);
-    return this.before(config).pipe(switchMap(() => this.http.put<ActionResult<T>>(reqPath, param))).pipe(this.after<T>(config));
+    return this.before(config)
+      .pipe(switchMap(() => this.http.put<ActionResult<T>>(reqPath, param)))
+      .pipe(this.after<T>(config));
   }
 
   request<T>(method: string, path: string, options?: any, config?: HttpCustomConfig): Observable<T> {
-    const showLoading = method.toLocaleLowerCase() != 'get'; 
+    const showLoading = method.toLocaleLowerCase() != 'get';
     config = { needSuccessInfo: false, showLoading, ...config };
-    options = Object.assign({}, options, {
-      observe: 'body',
-      responseType: 'json'
-    });
+    options = { ...options, observe: 'body', responseType: 'json' };
     if (method.toLocaleLowerCase() == 'get' || method.toLocaleLowerCase() == 'delete') {
       if (options.params) {
         options.params = new HttpParams({ fromString: qs.stringify(options.params) });
       }
     }
     const reqPath = this.getUrl(path, config);
-    return this.before(config).pipe(switchMap(() => this.http.request<ActionResult<T>>(method, reqPath, options).pipe(
-      map((res) => {
-        let r = res as any as ActionResult<T>;
-        return r;
-      })
-    ))).pipe(this.after<T>(config));
+    return this.before(config)
+      .pipe(
+        switchMap(() =>
+          this.http.request<ActionResult<T>>(method, reqPath, options).pipe(
+            map(res => {
+              const r = res as any as ActionResult<T>;
+              return r;
+            })
+          )
+        )
+      )
+      .pipe(this.after<T>(config));
   }
 
   downLoadWithBlob(path: string, param?: NzSafeAny, config?: HttpCustomConfig): Observable<NzSafeAny> {
@@ -129,7 +142,7 @@ export class BaseHttpService {
 
   before(config: HttpCustomConfig): Observable<boolean> {
     if (config.showLoading) {
-      this.spinService.$globalSpinStore.set(true)
+      this.spinService.$globalSpinStore.set(true);
       return of(true);
     }
     return of(false);

@@ -15,10 +15,11 @@ import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
 import { NzTableSize } from 'ng-zorro-antd/table';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+
+import { AppButtonConfig, AppButton } from '../../button/app.button';
 import { ColumnConfig } from '../column';
 import { TableComponentToken } from '../table';
-import { AppButtonConfig, AppButton } from '../../button/app.button';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 interface TableSizeItem {
   sizeName: string;

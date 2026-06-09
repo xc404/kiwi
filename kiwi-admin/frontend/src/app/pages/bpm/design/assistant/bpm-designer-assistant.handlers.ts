@@ -22,24 +22,22 @@ export class BpmnXmlAssistantActionHandler implements AssistantActionHandler {
 
   handle(action: AiClientAction, ctx: AssistantActionContext): boolean {
     const xml = String(action.params?.['xml'] ?? '');
-    void this.deps.importBpmnXmlAndSave(xml).then(() => {
-      ctx.nzMessage.success('已按 AI 更新流程并已保存');
-    }).catch((e) => {
-      const msg = e instanceof Error ? e.message : '导入或保存失败';
-      if (msg && !msg.includes('导入失败')) {
-        ctx.nzMessage.error(msg);
-      }
-    });
+    void this.deps
+      .importBpmnXmlAndSave(xml)
+      .then(() => {
+        ctx.nzMessage.success('已按 AI 更新流程并已保存');
+      })
+      .catch(e => {
+        const msg = e instanceof Error ? e.message : '导入或保存失败';
+        if (msg && !msg.includes('导入失败')) {
+          ctx.nzMessage.error(msg);
+        }
+      });
     return false;
   }
 }
 
-function applyMatchedComponentAction(
-  deps: Pick<BpmDesignerAssistantDeps, 'applyMatchedComponent'>,
-  action: AiClientAction,
-  ctx: AssistantActionContext,
-  sourceElementId: string | null,
-): boolean {
+function applyMatchedComponentAction(deps: Pick<BpmDesignerAssistantDeps, 'applyMatchedComponent'>, action: AiClientAction, ctx: AssistantActionContext, sourceElementId: string | null): boolean {
   const componentId = String(action.params?.['componentId'] ?? '').trim();
   const componentName = String(action.params?.['componentName'] ?? componentId);
   try {
@@ -81,8 +79,7 @@ export class AppendComponentAssistantActionHandler implements AssistantActionHan
 
   handle(action: AiClientAction, ctx: AssistantActionContext): boolean {
     const sourceRaw = action.params?.['sourceElementId'];
-    const sourceElementId =
-      typeof sourceRaw === 'string' && sourceRaw.trim() ? sourceRaw.trim() : null;
+    const sourceElementId = typeof sourceRaw === 'string' && sourceRaw.trim() ? sourceRaw.trim() : null;
     return applyMatchedComponentAction(this.deps, action, ctx, sourceElementId);
   }
 }
@@ -111,10 +108,5 @@ export class ToolbarAssistantActionHandler implements AssistantActionHandler {
 }
 
 export function createBpmDesignerAssistantHandlers(deps: BpmDesignerAssistantDeps): AssistantActionHandler[] {
-  return [
-    new BpmnXmlAssistantActionHandler(deps),
-    new MatchComponentAssistantActionHandler(deps),
-    new AppendComponentAssistantActionHandler(deps),
-    new ToolbarAssistantActionHandler(deps),
-  ];
+  return [new BpmnXmlAssistantActionHandler(deps), new MatchComponentAssistantActionHandler(deps), new AppendComponentAssistantActionHandler(deps), new ToolbarAssistantActionHandler(deps)];
 }

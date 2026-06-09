@@ -11,7 +11,7 @@ export class DynamicComponent {
   constructor(
     public component: Type<NzSafeAny>,
     public data: NzSafeAny
-  ) { }
+  ) {}
 }
 
 // select下拉
@@ -26,7 +26,6 @@ export interface SearchCommonVO<T> {
   pageSize: number;
   filters?: T;
 }
-
 
 // 分页
 export interface PageInfo<T> {

@@ -1,15 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { NgClass } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  DestroyRef,
-  inject,
-  OnInit,
-  viewChild
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AdComponent, DynamicComponent } from '@core/services/types';
@@ -75,7 +66,7 @@ export class PersonalSettingComponent implements OnInit, AfterViewInit {
       key: 'access-tokens',
       title: '长期访问令牌',
       selected: false
-    },
+    }
     // {
     //   key: 'safe',
     //   title: '安全设置',

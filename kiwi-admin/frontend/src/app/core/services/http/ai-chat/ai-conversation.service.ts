@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { BaseHttpService } from '@services/base-http.service';
+
 import type { AiChatMessage } from './ai-chat.service';
 
 export type AiConversationScope = 'global' | 'bpm-designer';
@@ -48,13 +49,7 @@ export interface UpdateConversationRequest {
 export class AiConversationService {
   private http = inject(BaseHttpService);
 
-  list(params?: {
-    scope?: AiConversationScope;
-    scopeRef?: string;
-    q?: string;
-    page?: number;
-    size?: number;
-  }): Observable<SpringPage<AiChatConversation>> {
+  list(params?: { scope?: AiConversationScope; scopeRef?: string; q?: string; page?: number; size?: number }): Observable<SpringPage<AiChatConversation>> {
     return this.http.get<SpringPage<AiChatConversation>>('/ai/conversations', params ?? {}, {
       showLoading: false
     });

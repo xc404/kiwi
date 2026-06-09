@@ -1,10 +1,8 @@
 import { assertInInjectionContext, inject } from '@angular/core';
 import { ActivatedRouteSnapshot, RouterStateSnapshot, CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 
-import { TokenKey } from '@config/constant';
-
-import { WindowService } from '../window.service';
 import { SessionService } from '../session.service';
+import { WindowService } from '../window.service';
 
 // 有兴趣的可以看看class与fn的争议https://github.com/angular/angular/pull/47924
 // 我这里提供了跟judgeAuth.guard.ts的不同写法，供大家参考,也可以去官网查找mapToCanActivate 这个api，
@@ -26,6 +24,6 @@ export const JudgeLoginGuardActivateChild: CanActivateChildFn = (childRoute: Act
   return canActivateChildFn(childRoute, state);
 };
 
-export const JudgeLoginGuard : CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+export const JudgeLoginGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
   return canActivateChildFn(route, state);
 };

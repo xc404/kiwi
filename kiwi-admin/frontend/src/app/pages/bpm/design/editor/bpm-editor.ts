@@ -5,35 +5,35 @@ import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css';
+import { finalize } from 'rxjs/operators';
+
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import type { Element } from 'bpmn-js/lib/model/Types';
 import gridModule from 'diagram-js-grid';
+
 import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { finalize } from 'rxjs/operators';
+
+import { BpmEditorToken } from './bpm-editor-token';
+import { ComponentDescription, ComponentProvider } from '../../flow-elements/component-provider';
+import { ComponentService } from '../../flow-elements/component-service';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
+import type { BpmProcess } from '../../types/bpm-process';
+import appendComponentModule from '../context-pad/append-component-module';
+import customContextPadModule from '../context-pad/index';
+import replaceComponentModule from '../context-pad/replace-component-module';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from '../palette/pallete';
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
-import {
-  ComponentDescription,
-  ComponentProvider,
-} from '../../flow-elements/component-provider';
-import appendComponentModule from '../context-pad/append-component-module';
-import replaceComponentModule from '../context-pad/replace-component-module';
-import customContextPadModule from '../context-pad/index';
+import { BpmEditorAppendService } from '../service/bpm-editor-append.service';
+import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
 import { ProcessDesignService } from '../service/process-design.service';
 import { importBpmnXmlToModeler } from '../toolbar/bpm-canvas-import.utils';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
-import { BpmEditorAppendService } from '../service/bpm-editor-append.service';
-import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
-import { ComponentService } from '../../flow-elements/component-service';
-import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
-import { BpmEditorToken } from './bpm-editor-token';
-import type { BpmProcess } from '../../types/bpm-process';
-import type { BpmDesignerToolbarContext } from '../toolbar/bpm-designer-toolbar.types';
 import { BpmAiChatComponent } from './bpm-ai-chat/bpm-ai-chat.component';
+import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
+import type { BpmDesignerToolbarContext } from '../toolbar/bpm-designer-toolbar.types';
 
 export { BpmExpressionVariableService } from '../expression/bpm-expression-variable.service';
 export { ExpressionVariableContext } from '../expression/expression-variable-context';
@@ -45,23 +45,10 @@ export { BpmEditorToken };
   selector: 'bpm-editor',
   templateUrl: './bpm-editor.html',
   styleUrl: './bpm-editor.scss',
-  providers: [
-    { provide: BpmEditorToken, useExisting: BpmEditor },
-    BpmEditorAppendService,
-    BpmEditorReplaceService,
-  ],
-  imports: [
-    BpmPropertiesPanel,
-    BpmPallete,
-    NzLayoutComponent,
-    NzLayoutModule,
-    BpmToolbar,
-    NzSpinModule,
-    BpmEditorProcessMetaComponent,
-    BpmAiChatComponent,
-  ],
+  providers: [{ provide: BpmEditorToken, useExisting: BpmEditor }, BpmEditorAppendService, BpmEditorReplaceService],
+  imports: [BpmPropertiesPanel, BpmPallete, NzLayoutComponent, NzLayoutModule, BpmToolbar, NzSpinModule, BpmEditorProcessMetaComponent, BpmAiChatComponent],
 
-  standalone: true,
+  standalone: true
 })
 export class BpmEditor extends BpmEditorToken implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -102,7 +89,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   constructor() {
     super();
-    this.route.params.subscribe((params) => {
+    this.route.params.subscribe(params => {
       this.bpmnId.set(params['id']);
     });
   }
@@ -110,33 +97,26 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   ngOnInit(): void {
     this.bpmnModeler = new BpmnModeler({
       container: '.canvas',
-      additionalModules: [
-        gridModule,
-        customContextPadModule,
-        appendComponentModule,
-        replaceComponentModule,
-        { http: ['value', this.http] },
-      ],
+      additionalModules: [gridModule, customContextPadModule, appendComponentModule, replaceComponentModule, { http: ['value', this.http] }],
       kiwiAppendComponent: {
         getComponentGroups: () => this.componentProvider.componentGroups(),
         getRecentUsages: () => this.recentComponentUsages(),
         append: (sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined) => {
           this.append.appendComponentFromContextPad(sourceElement, component, event);
-        },
+        }
       },
       kiwiReplaceComponent: {
         getComponentGroups: () => this.componentProvider.componentGroups(),
         getRecentUsages: () => this.recentComponentUsages(),
-        getCurrentComponentId: (element: Element) =>
-          this.componentService.getComponentForElement(element)?.id,
+        getCurrentComponentId: (element: Element) => this.componentService.getComponentForElement(element)?.id,
         replace: (element: Element, component: ComponentDescription) => {
           this.replace.replaceComponentFromContextPad(element, component);
-        },
+        }
       },
       moddleExtensions: {
         moddleProvider: this.elementModel.getModdleExtension(),
-        componentProvider: kiwiDescriptor,
-      },
+        componentProvider: kiwiDescriptor
+      }
     });
     this.append.init(this.bpmnModeler);
     this.replace.init(this.bpmnModeler);
@@ -145,14 +125,14 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     this.loadDefinition();
 
     this.processDefinitionService.getRecentComponentUsages().subscribe({
-      next: (list) =>
+      next: list =>
         this.recentComponentUsages.set(
-          (list ?? []).map((c) => ({
+          (list ?? []).map(c => ({
             ...c,
-            icon: c.icon || 'bpmn-icon-service-task',
-          })),
+            icon: c.icon || 'bpmn-icon-service-task'
+          }))
         ),
-      error: () => this.recentComponentUsages.set([]),
+      error: () => this.recentComponentUsages.set([])
     });
   }
 
@@ -165,16 +145,14 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     if (!this.dirty()) {
       return Promise.resolve(this.bpmProcess());
     }
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
-        this.processDefinitionService.updateProcess(this.bpmProcess()!.id!, { bpmnXml: bpmn.xml }).subscribe(
-          (data: BpmProcess) => {
-            this.bpmProcess.set(data);
-            this.stackIdx = stackIdx;
-            this.refreshRecentComponentUsages();
-            resolve(data);
-          },
-        );
+        this.processDefinitionService.updateProcess(this.bpmProcess()!.id!, { bpmnXml: bpmn.xml }).subscribe((data: BpmProcess) => {
+          this.bpmProcess.set(data);
+          this.stackIdx = stackIdx;
+          this.refreshRecentComponentUsages();
+          resolve(data);
+        });
       });
     });
   }
@@ -186,11 +164,9 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   importBpmnXml(xml: string): Promise<void> {
     const trimmed = typeof xml === 'string' ? xml.trim() : '';
-    return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection()).then(
-      () => {
-        this.syncLocalBpmnXml(trimmed);
-      },
-    );
+    return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection()).then(() => {
+      this.syncLocalBpmnXml(trimmed);
+    });
   }
 
   importBpmnXmlAndSave(xml: string): Promise<void> {
@@ -200,23 +176,24 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
       return Promise.reject(new Error('流程未加载，无法保存'));
     }
     return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection(), {
-      notifySuccess: false,
+      notifySuccess: false
     })
       .then(() => this.bpmnModeler.saveXML({ format: true }))
-      .then((bpmn: { xml?: string }) =>
-        new Promise<void>((resolve, reject) => {
-          this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
-            next: (data: BpmProcess) => {
-              this.bpmProcess.set(data);
-              this.stackIdx = this.commandStack._stackIdx;
-              this.refreshRecentComponentUsages();
-              const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
-              canvas.resized?.();
-              resolve();
-            },
-            error: (err: unknown) => reject(err),
-          });
-        }),
+      .then(
+        (bpmn: { xml?: string }) =>
+          new Promise<void>((resolve, reject) => {
+            this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
+              next: (data: BpmProcess) => {
+                this.bpmProcess.set(data);
+                this.stackIdx = this.commandStack._stackIdx;
+                this.refreshRecentComponentUsages();
+                const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
+                canvas.resized?.();
+                resolve();
+              },
+              error: (err: unknown) => reject(err)
+            });
+          })
       );
   }
 
@@ -242,7 +219,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
       if (!this.depolyVersionBehind()) {
         return Promise.resolve(this.bpmProcess());
       }
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         this.processDefinitionService.deployProcess(this.bpmProcess()!.id!).subscribe((data: BpmProcess) => {
           this.bpmProcess.set(data);
           resolve(data);
@@ -263,21 +240,20 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         },
         error: () => {
           this.bpmProcess.set(null);
-        },
+        }
       });
   }
 
   private refreshRecentComponentUsages(): void {
     this.processDefinitionService.getRecentComponentUsages().subscribe({
-      next: (list) =>
+      next: list =>
         this.recentComponentUsages.set(
-          (list ?? []).map((c) => ({
+          (list ?? []).map(c => ({
             ...c,
-            icon: c.icon || 'bpmn-icon-service-task',
-          })),
+            icon: c.icon || 'bpmn-icon-service-task'
+          }))
         ),
-      error: () => {},
+      error: () => {}
     });
   }
-
 }

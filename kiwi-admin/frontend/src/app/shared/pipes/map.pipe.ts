@@ -5,7 +5,8 @@ this.accidentTypeOptions = [...MapPipe.transformMapToArray(MapSet.accidentType)]
 */
 
 import { DatePipe } from '@angular/common';
-import { inject, Inject, Pipe, PipeTransform } from '@angular/core';
+import { inject, Pipe, PipeTransform } from '@angular/core';
+
 import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
@@ -88,9 +89,9 @@ export class MapPipe implements PipeTransform {
       case 'date':
         return this.datePipe.transform(value, param);
       case 'dict':
-        return this.dictService.getDictValue(param ,value);
+        return this.dictService.getDictValue(param, value);
       default:
-       return value;
+        return value;
     }
   }
 }

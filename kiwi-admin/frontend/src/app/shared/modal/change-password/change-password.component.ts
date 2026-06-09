@@ -4,7 +4,6 @@ import { Observable, of } from 'rxjs';
 
 import { PasswordStrengthMeterComponent } from '@shared/biz-components/password-strength-meter/password-strength-meter.component';
 import { fnCheckForm } from '@utils/tools';
-import { BasicConfirmModalComponent } from '../base-modal';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
@@ -13,6 +12,8 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalRef } from 'ng-zorro-antd/modal';
+
+import { BasicConfirmModalComponent } from '../base-modal';
 
 @Component({
   selector: 'app-change-password',

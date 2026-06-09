@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { Observable, map } from 'rxjs';
+
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
 
 /**
  * 与后端 {@code BpmProcessInstanceDto} 一致（单实例查询 {@code GET /bpm/process-instance/{id}}）。
@@ -15,13 +16,7 @@ export interface BpmOpenIncidentDto {
 }
 
 /** 与后端 ProcessInstanceState 枚举序列化一致 */
-export type BpmProcessInstanceState =
-  | 'RUNNING'
-  | 'SUSPENDED'
-  | 'COMPLETED'
-  | 'CANCELED'
-  | 'ACTIVE'
-  | 'ERROR';
+export type BpmProcessInstanceState = 'RUNNING' | 'SUSPENDED' | 'COMPLETED' | 'CANCELED' | 'ACTIVE' | 'ERROR';
 
 export interface BpmProcessInstanceDto {
   id?: string;
@@ -90,7 +85,7 @@ export interface BpmInstanceRecoverResultDto {
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class ProcessInstanceService {
   private readonly baseHttp = inject(BaseHttpService);
@@ -99,57 +94,41 @@ export class ProcessInstanceService {
    * 单实例详情：{@code GET /bpm/process-instance/{instanceId}}（运行中与已结束均由后端统一解析）。
    */
   getProcessInstance(processInstanceId: string): Observable<BpmProcessInstanceDto> {
-    return this.baseHttp.get<BpmProcessInstanceDto>(
-      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}`,
-    );
+    return this.baseHttp.get<BpmProcessInstanceDto>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}`);
   }
 
   /** GET /bpm/process-instance/{instanceId}/definition-xml */
   getProcessDefinitionXml(processInstanceId: string): Observable<CamundaProcessDefinitionXml> {
-    return this.baseHttp.get<CamundaProcessDefinitionXml>(
-      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}/definition-xml`,
-    );
+    return this.baseHttp.get<CamundaProcessDefinitionXml>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/definition-xml`);
   }
 
   /** GET /bpm/process-instance/{instanceId}/history-activities */
   getHistoryActivityInstances(processInstanceId: string): Observable<CamundaHistoricActivityInstance[]> {
-    return this.baseHttp
-      .get<CamundaHistoricActivityInstance[]>(
-        `/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`,
+    return this.baseHttp.get<CamundaHistoricActivityInstance[]>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`).pipe(
+      map(items =>
+        items.map(item => {
+          const completed = item.completed ?? (item.endTime != null && item.endTime !== '');
+          return {
+            ...item,
+            completed,
+            active: item.active ?? !completed
+          };
+        })
       )
-      .pipe(
-        map((items) =>
-          items.map((item) => {
-            const completed = item.completed ?? (item.endTime != null && item.endTime !== '');
-            return {
-              ...item,
-              completed,
-              active: item.active ?? !completed,
-            };
-          }),
-        ),
-      );
+    );
   }
 
   /**
    * 一键恢复运行中实例上所有 OPEN 的 incident：
    * {@code POST /bpm/process-instance/{instanceId}/recover?retries={n}}（默认 3，范围 1～100）。
    */
-  recoverProcessInstance(
-    processInstanceId: string,
-    retries?: number,
-  ): Observable<BpmInstanceRecoverResultDto> {
+  recoverProcessInstance(processInstanceId: string, retries?: number): Observable<BpmInstanceRecoverResultDto> {
     const query = retries != null ? `?retries=${encodeURIComponent(String(retries))}` : '';
-    return this.baseHttp.post<BpmInstanceRecoverResultDto>(
-      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}/recover${query}`,
-      null,
-    );
+    return this.baseHttp.post<BpmInstanceRecoverResultDto>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/recover${query}`, null);
   }
 
   /** GET /bpm/process-instance/{instanceId}/variables */
   getProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
-    return this.baseHttp.get<CamundaHistoricVariableInstance[]>(
-      `/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`,
-    );
+    return this.baseHttp.get<CamundaHistoricVariableInstance[]>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`);
   }
 }

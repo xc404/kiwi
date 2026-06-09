@@ -1,43 +1,31 @@
 import { Component, ElementRef, inject, input, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+
+import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
+
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
-import { firstValueFrom } from 'rxjs';
 
-import { BpmEditorToken } from '../editor/bpm-editor-token';
-import { ProcessDesignService } from '../service/process-design.service';
-import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
-import { buildToolbarSegments, type ToolbarSegment } from './build-toolbar-segments';
 import { BpmDesignerToolbarService } from './bpm-designer-toolbar.service';
-import type {
-  BpmDesignerToolbarCommand,
-  BpmDesignerToolbarContext,
-} from './bpm-designer-toolbar.types';
-import type {
-  BpmSaveAsComponentModalData,
-  SaveAsComponentFormPayload,
-} from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
-import {
-  exportBpmnSvg,
-  exportBpmnXml,
-  logBpmnXml,
-  openSaveAsComponentModal,
-  openStartProcessModal,
-  toggleGridSnapping,
-  triggerEditorAction,
-} from './bpm-toolbar-run.utils';
+import type { BpmDesignerToolbarCommand, BpmDesignerToolbarContext } from './bpm-designer-toolbar.types';
+import type { BpmSaveAsComponentModalData, SaveAsComponentFormPayload } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
+import { exportBpmnSvg, exportBpmnXml, logBpmnXml, openSaveAsComponentModal, openStartProcessModal, toggleGridSnapping, triggerEditorAction } from './bpm-toolbar-run.utils';
+import { buildToolbarSegments, type ToolbarSegment } from './build-toolbar-segments';
+import { BpmEditorToken } from '../editor/bpm-editor-token';
+import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
+import { ProcessDesignService } from '../service/process-design.service';
 
 @Component({
   selector: 'bpm-toolbar',
   templateUrl: './bpm-toolbar.html',
   styleUrls: ['bpm-toolbar.css'],
   standalone: true,
-  imports: [NzButtonModule, NzIconModule, NzTooltipModule, NzDividerModule],
+  imports: [NzButtonModule, NzIconModule, NzTooltipModule, NzDividerModule]
 })
 export class BpmToolbar implements BpmDesignerToolbarContext {
   readonly editor = inject(BpmEditorToken);
@@ -58,10 +46,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
 
   constructor() {
     this.registerCommands();
-    this.toolbarSegments = buildToolbarSegments(
-      this.toolbarService.listUiCommands(),
-      (id) => this.runCommand(id),
-    );
+    this.toolbarSegments = buildToolbarSegments(this.toolbarService.listUiCommands(), id => this.runCommand(id));
   }
 
   get modeler(): BpmnModeler {
@@ -101,7 +86,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
     return {
       defaultName: process?.name || '流程',
       defaultDescription: '',
-      defaultVersion: '1.0',
+      defaultVersion: '1.0'
     };
   }
 
@@ -118,8 +103,8 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
           this.processDefinitionService.saveAsComponent(processId, {
             name: payload.name,
             description: payload.description,
-            version: payload.version,
-          }),
+            version: payload.version
+          })
         );
       })
       .then(() => {
@@ -155,9 +140,9 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         new Promise<unknown>((resolve, reject) => {
           this.processDefinitionService.startProcess(id, { variables }).subscribe({
             next: (data: unknown) => resolve(data),
-            error: (err: unknown) => reject(err),
+            error: (err: unknown) => reject(err)
           });
-        }),
+        })
     );
   }
 
@@ -169,7 +154,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'border',
         group: 'tools',
         aiExposed: false,
-        run: (ctx) => triggerEditorAction(ctx, 'lassoTool'),
+        run: ctx => triggerEditorAction(ctx, 'lassoTool')
       },
       {
         id: 'handTool',
@@ -177,7 +162,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'drag',
         group: 'tools',
         aiExposed: false,
-        run: (ctx) => triggerEditorAction(ctx, 'handTool'),
+        run: ctx => triggerEditorAction(ctx, 'handTool')
       },
       {
         id: 'globalConnectTool',
@@ -185,7 +170,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'link',
         group: 'tools',
         aiExposed: false,
-        run: (ctx) => triggerEditorAction(ctx, 'globalConnectTool'),
+        run: ctx => triggerEditorAction(ctx, 'globalConnectTool')
       },
       {
         id: 'spaceTool',
@@ -193,70 +178,70 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'column-width',
         group: 'tools',
         aiExposed: false,
-        run: (ctx) => triggerEditorAction(ctx, 'spaceTool'),
+        run: ctx => triggerEditorAction(ctx, 'spaceTool')
       },
       {
         id: 'undo',
         tooltip: '撤销',
         icon: 'undo',
         group: 'edit',
-        run: (ctx) => triggerEditorAction(ctx, 'undo'),
+        run: ctx => triggerEditorAction(ctx, 'undo')
       },
       {
         id: 'redo',
         tooltip: '重做',
         icon: 'redo',
         group: 'edit',
-        run: (ctx) => triggerEditorAction(ctx, 'redo'),
+        run: ctx => triggerEditorAction(ctx, 'redo')
       },
       {
         id: 'copy',
         tooltip: '复制',
         icon: 'copy',
         group: 'edit',
-        run: (ctx) => triggerEditorAction(ctx, 'copy'),
+        run: ctx => triggerEditorAction(ctx, 'copy')
       },
       {
         id: 'paste',
         tooltip: '粘贴',
         icon: 'snippets',
         group: 'edit',
-        run: (ctx) => triggerEditorAction(ctx, 'paste'),
+        run: ctx => triggerEditorAction(ctx, 'paste')
       },
       {
         id: 'removeSelection',
         tooltip: '删除',
         icon: 'delete',
         group: 'edit',
-        run: (ctx) => triggerEditorAction(ctx, 'removeSelection'),
+        run: ctx => triggerEditorAction(ctx, 'removeSelection')
       },
       {
         id: 'zoomIn',
         tooltip: '放大',
         icon: 'zoom-in',
         group: 'view',
-        run: (ctx) => triggerEditorAction(ctx, 'stepZoom', { value: 1 }),
+        run: ctx => triggerEditorAction(ctx, 'stepZoom', { value: 1 })
       },
       {
         id: 'zoomOut',
         tooltip: '缩小',
         icon: 'zoom-out',
         group: 'view',
-        run: (ctx) => triggerEditorAction(ctx, 'stepZoom', { value: -1 }),
+        run: ctx => triggerEditorAction(ctx, 'stepZoom', { value: -1 })
       },
       {
         id: 'zoomFit',
         tooltip: '适应画布',
         icon: 'expand',
         group: 'view',
-        run: (ctx) => triggerEditorAction(ctx, 'zoom', { value: 'fit-viewport' }),
+        run: ctx => triggerEditorAction(ctx, 'zoom', { value: 'fit-viewport' })
       },
       {
         id: 'find',
         tooltip: '搜索元素',
         icon: 'search',
         group: 'view',
-        run: (ctx) => triggerEditorAction(ctx, 'find'),
+        run: ctx => triggerEditorAction(ctx, 'find')
       },
       {
         id: 'gridSnapping',
@@ -264,23 +249,23 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'appstore',
         group: 'view',
         aiExposed: false,
-        run: (ctx) => toggleGridSnapping(ctx),
+        run: ctx => toggleGridSnapping(ctx)
       },
       {
         id: 'save',
         tooltip: '保存',
         icon: 'save',
         group: 'file',
-        run: (ctx) => {
+        run: ctx => {
           void ctx.editor.save();
-        },
+        }
       },
       {
         id: 'saveAsComponent',
         tooltip: '另存为组件',
         icon: 'appstore-add',
         group: 'file',
-        run: (ctx) => openSaveAsComponentModal(ctx),
+        run: ctx => openSaveAsComponentModal(ctx)
       },
       {
         id: 'importXml',
@@ -288,21 +273,21 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'upload',
         group: 'file',
         aiExposed: false,
-        run: (ctx) => ctx.openImportFile?.(),
+        run: ctx => ctx.openImportFile?.()
       },
       {
         id: 'exportXml',
         tooltip: '下载 BPMN XML',
         icon: 'file-text',
         group: 'file',
-        run: (ctx) => exportBpmnXml(ctx),
+        run: ctx => exportBpmnXml(ctx)
       },
       {
         id: 'exportSvg',
         tooltip: '下载 SVG',
         icon: 'file-image',
         group: 'file',
-        run: (ctx) => exportBpmnSvg(ctx),
+        run: ctx => exportBpmnSvg(ctx)
       },
       {
         id: 'logXml',
@@ -310,24 +295,24 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         icon: 'code',
         group: 'file',
         aiExposed: false,
-        run: (ctx) => logBpmnXml(ctx),
+        run: ctx => logBpmnXml(ctx)
       },
       {
         id: 'deploy',
         tooltip: '部署',
         icon: 'cloud-upload',
         group: 'file',
-        run: (ctx) => {
+        run: ctx => {
           void ctx.editor.deploy();
-        },
+        }
       },
       {
         id: 'start',
         tooltip: '启动流程',
         icon: 'play-circle',
         group: 'file',
-        run: (ctx) => openStartProcessModal(ctx),
-      },
+        run: ctx => openStartProcessModal(ctx)
+      }
     ];
     this.toolbarService.registerAll(cmds);
   }

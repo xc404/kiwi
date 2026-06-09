@@ -1,60 +1,34 @@
 <nz-form-item class="app-formly-vertical-item">
   <div class="app-formly-vertical-item__label-row">
-    <nz-form-label nzNoColon="true" class="app-formly-vertical-item__label">
+    <nz-form-label class="app-formly-vertical-item__label" nzNoColon="true">
       {{ displayName() }}
     </nz-form-label>
     @if (descriptionTooltip(); as tip) {
-      <span
-        class="app-formly-vertical-item__tip"
-        nz-icon
-        nzType="question-circle"
-        nzTheme="outline"
-        nz-tooltip
-        [nzTooltipTitle]="tip"
-      ></span>
+      <span class="app-formly-vertical-item__tip" nz-icon nz-tooltip nzTheme="outline" nzType="question-circle" [nzTooltipTitle]="tip"></span>
     }
   </div>
   <nz-form-control class="app-formly-vertical-item__control">
-    <nz-input-group
-      class="readonly-property-row__input-group"
-      [class.readonly-property-row__input-group--warning]="hasRuntimeMissingWarning()"
-      [nzSuffix]="detailSuffixTpl"
-    >
-      <input
-        nz-input
-        type="text"
-        disabled
-        [value]="value()"
-        tabindex="-1"
-        [attr.aria-label]="value()"
-      />
+    <nz-input-group class="readonly-property-row__input-group" [class.readonly-property-row__input-group--warning]="hasRuntimeMissingWarning()" [nzSuffix]="detailSuffixTpl">
+      <input type="text" disabled nz-input tabindex="-1" [attr.aria-label]="value()" [value]="value()" />
     </nz-input-group>
   </nz-form-control>
   <ng-template #detailSuffixTpl>
     @if (hasRuntimeMissingWarning()) {
-      <span
-        class="warning-trigger"
-        nz-icon
-        nzType="exclamation-circle"
-        nzTheme="fill"
-        nz-tooltip
-        nzTooltipTitle="已配置值，但运行时未生效（变量为空）"
-        aria-label="运行时值缺失告警"
-      ></span>
+      <span class="warning-trigger" aria-label="运行时值缺失告警" nz-icon nz-tooltip nzTheme="fill" nzTooltipTitle="已配置值，但运行时未生效（变量为空）" nzType="exclamation-circle"></span>
     }
     <span
       class="detail-trigger"
-      nz-icon
-      nzType="info-circle"
-      nzTheme="outline"
-      nz-popover
-      nzPopoverTrigger="click"
-      nzPopoverPlacement="topRight"
-      [nzPopoverContent]="detailTpl"
-      nzPopoverTitle="详情"
-      tabindex="0"
-      role="button"
       aria-label="查看详情"
+      nz-icon
+      nz-popover
+      nzPopoverPlacement="topRight"
+      nzPopoverTitle="详情"
+      nzPopoverTrigger="click"
+      nzTheme="outline"
+      nzType="info-circle"
+      role="button"
+      tabindex="0"
+      [nzPopoverContent]="detailTpl"
     ></span>
   </ng-template>
   <ng-template #detailTpl>
@@ -68,11 +42,11 @@
         <pre class="detail-value detail-value--long" [title]="configuredDetail()">{{ configuredDetail() }}</pre>
       </div>
       @if (hasRuntimeValue()) {
-      <div class="detail-row">
-        <span class="detail-label">运行时值</span>
-        <pre class="detail-value detail-value--long" [title]="runtimeDetail()">{{ runtimeDetail() }}</pre>
-      </div>
-    }
+        <div class="detail-row">
+          <span class="detail-label">运行时值</span>
+          <pre class="detail-value detail-value--long" [title]="runtimeDetail()">{{ runtimeDetail() }}</pre>
+        </div>
+      }
     </div>
   </ng-template>
 </nz-form-item>

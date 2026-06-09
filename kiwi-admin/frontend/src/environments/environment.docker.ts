@@ -4,6 +4,6 @@ export const environment = {
   appName: 'Kiwi Admin',
   postLoginPath: '/bpm/project',
   api: {
-    baseUrl: '',
-  },
+    baseUrl: ''
+  }
 };

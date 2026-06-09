@@ -1,7 +1,6 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect } from '@angular/core';
 
-
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzResizableModule } from 'ng-zorro-antd/resizable';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -19,12 +18,11 @@ import { TreeModel } from './tree-model';
   imports: [NzTableModule, NzResizableModule, NgClass, TableHeaderCell, TableCell]
 })
 export class AppTreeTableComponent extends BaseTableComponent {
-
   constructor() {
     super();
     effect(() => {
       this.treeModel.setItems(this.tableData());
-    })
+    });
   }
 
   treeModel = new TreeModel([]);
@@ -50,7 +48,6 @@ export class AppTreeTableComponent extends BaseTableComponent {
     }
 
     return false;
-
   }
 
   override isItemSelected(item: any): boolean {
@@ -76,16 +73,15 @@ export class AppTreeTableComponent extends BaseTableComponent {
     this.checkParent(dataItem);
   }
 
-  checkParent(dataItem: any){
-     let parent = dataItem._parent;
-      if(!parent){
-          return;
-      }
-      if(this.isItemSelected(parent) || this.isItemIndeterminate(parent)){
-        super.checkFn(parent, true);
-      }else {
-        super.checkFn(parent, false);
-      }    
-
+  checkParent(dataItem: any) {
+    const parent = dataItem._parent;
+    if (!parent) {
+      return;
+    }
+    if (this.isItemSelected(parent) || this.isItemIndeterminate(parent)) {
+      super.checkFn(parent, true);
+    } else {
+      super.checkFn(parent, false);
+    }
   }
 }

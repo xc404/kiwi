@@ -6,12 +6,12 @@ import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } 
 import { finalize } from 'rxjs/operators';
 
 import { SessionService } from '@core/services/common/session.service';
-import { AccountService } from '@core/services/http/system/account.service';
 import { LoginService } from '@core/services/http/login/login.service';
+import { AccountService } from '@core/services/http/system/account.service';
 import { ValidatorsService } from '@core/services/validators/validators.service';
+import { environment } from '@env/environment';
 import { UserInfoStoreService } from '@store/common-store/userInfo-store.service';
 import { fnCheckForm } from '@utils/tools';
-import { environment } from '@env/environment';
 
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -27,18 +27,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
   templateUrl: './base.component.html',
   styleUrls: ['./base.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NzGridModule,
-    FormsModule,
-    NzFormModule,
-    ReactiveFormsModule,
-    NzInputModule,
-    NzSelectModule,
-    NzButtonModule,
-    NzWaveModule,
-    NgClass,
-    NzAvatarModule
-  ]
+  imports: [NzGridModule, FormsModule, NzFormModule, ReactiveFormsModule, NzInputModule, NzSelectModule, NzButtonModule, NzWaveModule, NgClass, NzAvatarModule]
 })
 export class BaseComponent implements OnInit {
   readonly data = input.required<{
@@ -90,14 +79,7 @@ export class BaseComponent implements OnInit {
     return `${base}${path}`;
   }
 
-  private patchFormFromSessionUser(u: {
-    userName?: string;
-    nickName?: string;
-    email?: string;
-    phonenumber?: string;
-    sex?: string;
-    avatar?: string;
-  }): void {
+  private patchFormFromSessionUser(u: { userName?: string; nickName?: string; email?: string; phonenumber?: string; sex?: string; avatar?: string }): void {
     this.validateForm.patchValue({
       userName: u.userName ?? '',
       nickName: u.nickName ?? '',

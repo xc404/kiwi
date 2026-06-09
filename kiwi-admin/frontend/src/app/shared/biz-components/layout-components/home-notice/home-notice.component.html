@@ -3,9 +3,9 @@
     <nz-tabs nzCentered [nzTabBarStyle]="{ paddingLeft: '15px', paddingRight: '15px' }">
       @for (ch of channels; track ch; let i = $index) {
         <nz-tab [nzTitle]="tabTitle(i)">
-          <nz-list nzItemLayout="horizontal" class="home-notice-list">
+          <nz-list class="home-notice-list" nzItemLayout="horizontal">
             @if (forChannel(ch).length === 0) {
-              <nz-empty nzNotFoundContent="暂无消息" class="home-notice-empty"></nz-empty>
+              <nz-empty class="home-notice-empty" nzNotFoundContent="暂无消息"></nz-empty>
             } @else {
               @for (item of forChannel(ch); track item.id) {
                 <nz-list-item>
@@ -37,6 +37,6 @@
     </nz-tabs>
   </nz-spin>
   <div class="footer-wrap">
-    <a routerLink="/personal/notifications" class="footer-link">查看全部</a>
+    <a class="footer-link" routerLink="/personal/notifications">查看全部</a>
   </div>
 </nz-card>

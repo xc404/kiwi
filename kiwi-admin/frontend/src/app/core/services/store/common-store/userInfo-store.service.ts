@@ -20,22 +20,21 @@ export interface UserInfo {
   providedIn: 'root'
 })
 export class UserInfoStoreService {
-  $userInfo = signal<UserInfo>({ id: -1, userName: '', roles: [], permissions:[] });
+  $userInfo = signal<UserInfo>({ id: -1, userName: '', roles: [], permissions: [] });
 
   userService = inject(AccountService);
 
-  hasRole(role?: string){
-    if(!role){
+  hasRole(role?: string) {
+    if (!role) {
       return true;
     }
     return this.$userInfo().roles.includes(role);
   }
 
-  hasPermission(permission?: string){
-    if(!permission){
+  hasPermission(permission?: string) {
+    if (!permission) {
       return true;
     }
     return this.$userInfo().permissions.includes(permission);
   }
-
 }

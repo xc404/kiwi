@@ -8,6 +8,7 @@ import { DatePipe } from '@angular/common';
 import { inject, Pipe, PipeTransform } from '@angular/core';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
+
 import { IDictService } from './dict';
 
 export const enum DateFormat {
@@ -15,8 +16,6 @@ export const enum DateFormat {
   DateHour = 'yyyy-MM-dd HH',
   DateTime = 'yyyy-MM-dd HH:mm'
 }
-
-
 
 export interface MapItem {
   label: string;
@@ -29,9 +28,8 @@ export interface MapItem {
 })
 export class DictPipe implements PipeTransform {
   private datePipe: DatePipe = new DatePipe('en-US');
-   readonly dictService: IDictService = inject<IDictService>(IDictService);
-//   private mapObj = MapSet;
-
+  readonly dictService: IDictService = inject<IDictService>(IDictService);
+  //   private mapObj = MapSet;
 
   transform(value: NzSafeAny, arg?: NzSafeAny): NzSafeAny {
     if (arg === undefined) {

@@ -1,31 +1,15 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  effect,
-  ElementRef,
-  input,
-  OnDestroy,
-  output,
-  signal,
-  ViewChild,
-} from '@angular/core';
+import { Component, effect, ElementRef, input, OnDestroy, output, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import {
-  SpelVariableSuggestion,
-  spelVariableSuggestionDetail,
-} from '@app/pages/bpm/design/expression/expression-variable';
+
+import { SpelVariableSuggestion, spelVariableSuggestionDetail } from '@app/pages/bpm/design/expression/expression-variable';
 import { buildSpelVariableCompletion } from '@app/shared/components/spel-expression-editor/spel-expression-editor.component';
-import { autocompletion, closeBrackets, CompletionContext, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion, closeBrackets, completionKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorState, Extension } from '@codemirror/state';
-import {
-  placeholder as cmPlaceholder,
-  EditorView,
-  highlightActiveLine,
-  keymap,
-  lineNumbers,
-} from '@codemirror/view';
+import { placeholder as cmPlaceholder, EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
+
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -34,29 +18,20 @@ import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 
 /** Camunda 使用 JUEL（统一表达式语言）；变量引用与 UI 补全仍采用 ${name}，与图中分析一致 */
-export const JUEL_EXPRESSION_SNIPPETS: { label: string; insert: string }[] = [
+export const JUEL_EXPRESSION_SNIPPETS: Array<{ label: string; insert: string }> = [
   { label: 'execution', insert: '${execution}' },
   { label: '三元', insert: '${true ? a : b}' },
   { label: 'empty', insert: '${empty myVar}' },
   { label: 'eq', insert: "${myVar eq 'x'}" },
-  { label: '数值比较', insert: '${amount gt 100}' },
+  { label: '数值比较', insert: '${amount gt 100}' }
 ];
 
 @Component({
   selector: 'app-juel-expression-editor',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    NzButtonModule,
-    NzIconModule,
-    NzInputModule,
-    NzDropdownModule,
-    NzMenuModule,
-    NzModalModule,
-  ],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzIconModule, NzInputModule, NzDropdownModule, NzMenuModule, NzModalModule],
   templateUrl: './juel-expression-editor.component.html',
-  styleUrl: './juel-expression-editor.component.css',
+  styleUrl: './juel-expression-editor.component.css'
 })
 export class JuelExpressionEditorComponent implements OnDestroy {
   @ViewChild('modalHost') modalHostRef?: ElementRef<HTMLDivElement>;
@@ -149,7 +124,7 @@ export class JuelExpressionEditorComponent implements OnDestroy {
   }
 
   insertVariableRef(v: SpelVariableSuggestion): void {
-    this.insertText('${' + v.key + '}');
+    this.insertText(`\${${v.key}}`);
   }
 
   insertText(text: string): void {
@@ -160,7 +135,7 @@ export class JuelExpressionEditorComponent implements OnDestroy {
     this.modalEditorView.dispatch({
       changes: { from, insert: text },
       selection: { anchor: from + text.length },
-      scrollIntoView: true,
+      scrollIntoView: true
     });
     this.modalEditorView.focus();
   }
@@ -187,23 +162,23 @@ export class JuelExpressionEditorComponent implements OnDestroy {
       cmPlaceholder('JUEL（Camunda）；输入 $ 可插入 ${变量名}（与流程分析一致）'),
       autocompletion({
         override: [completionSource],
-        activateOnTyping: true,
+        activateOnTyping: true
       }),
       keymap.of([...defaultKeymap, ...historyKeymap, ...completionKeymap]),
       EditorView.lineWrapping,
       EditorView.theme({
         '&': { minHeight: '200px', fontSize: '13px' },
-        '.cm-scroller': { fontFamily: 'monospace' },
+        '.cm-scroller': { fontFamily: 'monospace' }
       }),
-      EditorState.allowMultipleSelections.of(false),
+      EditorState.allowMultipleSelections.of(false)
     ];
 
     this.modalEditorView = new EditorView({
       state: EditorState.create({
         doc: start,
-        extensions,
+        extensions
       }),
-      parent: host,
+      parent: host
     });
   }
 }

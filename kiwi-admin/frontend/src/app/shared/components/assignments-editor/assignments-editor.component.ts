@@ -1,34 +1,24 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
 import type { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
 import { JuelExpressionEditorComponent } from '@app/shared/components/juel-expression-editor/juel-expression-editor.component';
+
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import {
-  AssignmentRow,
-  parseAssignments,
-  parseValueText,
-} from './assignments-editor.utils';
+
+import { AssignmentRow, parseAssignments, parseValueText } from './assignments-editor.utils';
 
 @Component({
   selector: 'app-assignments-editor',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    NzButtonModule,
-    NzIconModule,
-    NzInputModule,
-    NzSelectModule,
-    NzTooltipModule,
-    JuelExpressionEditorComponent,
-  ],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzIconModule, NzInputModule, NzSelectModule, NzTooltipModule, JuelExpressionEditorComponent],
   templateUrl: './assignments-editor.component.html',
-  styleUrl: './assignments-editor.component.css',
+  styleUrl: './assignments-editor.component.css'
 })
 export class AssignmentsEditorComponent {
   /** 绑定值：JSON 字符串或已解析数组 */
@@ -48,24 +38,19 @@ export class AssignmentsEditorComponent {
     if (!Array.isArray(raw)) {
       return [] as string[];
     }
-    const names = raw
-      .map((v) => (v?.name != null ? String(v.name).trim() : ''))
-      .filter((n) => n.length > 0);
+    const names = raw.map(v => (v?.name != null ? String(v.name).trim() : '')).filter(n => n.length > 0);
     return [...new Set(names)];
   });
 
   /** JUEL 编辑器变量补全（与属性面板运行时变量一致） */
-  protected expressionVariableSuggestions = computed<SpelVariableSuggestion[]>(() =>
-    this.varNames().map((key) => ({ key, source: 'referenced' as const })),
-  );
+  protected expressionVariableSuggestions = computed<SpelVariableSuggestion[]>(() => this.varNames().map(key => ({ key, source: 'referenced' as const })));
 
   /** 单行输入占位（完整编辑见右侧图标弹窗） */
-  readonly juelInlinePlaceholder =
-    '字面量或 JUEL；$ 补全变量，右侧图标展开编辑';
+  readonly juelInlinePlaceholder = '字面量或 JUEL；$ 补全变量，右侧图标展开编辑';
 
   protected refSelection = computed(() => {
     const names = this.varNames();
-    return this.rows().map((r) => {
+    return this.rows().map(r => {
       const t = r.valueText.trim();
       const m = /^\$\{([a-zA-Z0-9_]+)\}$/.exec(t);
       if (m && names.includes(m[1])) {
@@ -77,8 +62,8 @@ export class AssignmentsEditorComponent {
 
   protected payloadRows = computed(() =>
     this.rows()
-      .filter((r) => r.key.trim() !== '')
-      .map((r) => ({ key: r.key.trim(), value: parseValueText(r.valueText) })),
+      .filter(r => r.key.trim() !== '')
+      .map(r => ({ key: r.key.trim(), value: parseValueText(r.valueText) }))
   );
 
   constructor() {
@@ -103,16 +88,12 @@ export class AssignmentsEditorComponent {
   }
 
   onKeyChange(index: number, value: string): void {
-    this.rows.update((rows) =>
-      rows.map((r, i) => (i === index ? { ...r, key: value } : r)),
-    );
+    this.rows.update(rows => rows.map((r, i) => (i === index ? { ...r, key: value } : r)));
     this.emit();
   }
 
   onValueChange(index: number, value: string): void {
-    this.rows.update((rows) =>
-      rows.map((r, i) => (i === index ? { ...r, valueText: value } : r)),
-    );
+    this.rows.update(rows => rows.map((r, i) => (i === index ? { ...r, valueText: value } : r)));
     this.emit();
   }
 
@@ -120,21 +101,17 @@ export class AssignmentsEditorComponent {
     if (varName == null || varName === '') {
       return;
     }
-    this.rows.update((rows) =>
-      rows.map((r, i) =>
-        i === index ? { ...r, valueText: '${' + varName + '}' } : r,
-      ),
-    );
+    this.rows.update(rows => rows.map((r, i) => (i === index ? { ...r, valueText: `\${${varName}}` } : r)));
     this.emit();
   }
 
   addRow(): void {
-    this.rows.update((rows) => [...rows, { key: '', valueText: '' }]);
+    this.rows.update(rows => [...rows, { key: '', valueText: '' }]);
     this.emit();
   }
 
   removeRow(index: number): void {
-    this.rows.update((rows) => {
+    this.rows.update(rows => {
       if (rows.length <= 1) {
         return [{ key: '', valueText: '' }];
       }
@@ -144,7 +121,7 @@ export class AssignmentsEditorComponent {
   }
 
   duplicateRow(index: number): void {
-    this.rows.update((rows) => {
+    this.rows.update(rows => {
       const r = rows[index];
       return [...rows.slice(0, index + 1), { key: r.key, valueText: r.valueText }, ...rows.slice(index + 1)];
     });

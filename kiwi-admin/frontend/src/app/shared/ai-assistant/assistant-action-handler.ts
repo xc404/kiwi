@@ -1,7 +1,8 @@
 import { Router } from '@angular/router';
-import { NzMessageService } from 'ng-zorro-antd/message';
 
 import type { AiClientAction } from '@services/ai-chat/ai-chat.service';
+
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 /** 供各 handler 使用的 Angular 服务入口（可随需求扩展字段）。 */
 export interface AssistantActionContext {

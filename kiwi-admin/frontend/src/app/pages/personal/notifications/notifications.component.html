@@ -7,7 +7,7 @@
     </nz-breadcrumb>
     <div class="toolbar-actions">
       <button nz-button nzType="default" (click)="reload()">
-        <i nz-icon nzType="reload" nzTheme="outline"></i>
+        <i nz-icon nzTheme="outline" nzType="reload"></i>
         刷新
       </button>
     </div>
@@ -16,29 +16,15 @@
 
 <section class="content-wrap">
   <nz-card [nzBodyStyle]="{ padding: '0' }">
-    <nz-tabs
-      [nzSelectedIndex]="tabIndex()"
-      (nzSelectedIndexChange)="onTabChange($event)"
-      [nzTabBarStyle]="{ paddingLeft: '16px', paddingRight: '16px', marginBottom: '0' }"
-    >
+    <nz-tabs [nzSelectedIndex]="tabIndex()" [nzTabBarStyle]="{ paddingLeft: '16px', paddingRight: '16px', marginBottom: '0' }" (nzSelectedIndexChange)="onTabChange($event)">
       @for (_ of tabTitles; track $index; let i = $index) {
         <nz-tab [nzTitle]="tabLabel(i)"></nz-tab>
       }
     </nz-tabs>
 
     <div class="tab-toolbar">
-      <button nz-button nzType="link" nzSize="small" (click)="markAllReadInChannel()">全部已读</button>
-      <button
-        nz-button
-        nzType="link"
-        nzDanger
-        nzSize="small"
-        nz-popconfirm
-        nzPopconfirmTitle="确定清空当前分类下的全部消息？"
-        (nzOnConfirm)="clearChannel()"
-      >
-        清空
-      </button>
+      <button nz-button nzSize="small" nzType="link" (click)="markAllReadInChannel()">全部已读</button>
+      <button nz-button nz-popconfirm nzDanger nzPopconfirmTitle="确定清空当前分类下的全部消息？" nzSize="small" nzType="link" (nzOnConfirm)="clearChannel()"> 清空 </button>
     </div>
 
     <nz-spin [nzSpinning]="loading()">
@@ -47,7 +33,7 @@
           <nz-empty nzNotFoundContent="暂无消息"></nz-empty>
         </div>
       } @else {
-        <nz-list nzItemLayout="horizontal" class="notification-list">
+        <nz-list class="notification-list" nzItemLayout="horizontal">
           @for (item of paged(); track item.id) {
             <nz-list-item [class.unread]="!item.read">
               <nz-list-item-meta>
@@ -61,7 +47,7 @@
                 </nz-list-item-meta-title>
                 <nz-list-item-meta-description>
                   <div class="row-body">
-                    <p nz-typography nzType="secondary" nzEllipsis [nzEllipsisRows]="2">{{ item.summary }}</p>
+                    <p nz-typography nzEllipsis nzType="secondary" [nzEllipsisRows]="2">{{ item.summary }}</p>
                     @if (item.extra) {
                       <p class="extra-line">{{ item.extra }}</p>
                     }
@@ -69,19 +55,9 @@
                       <span>{{ item.createdAt | date: 'yyyy-MM-dd HH:mm' }}</span>
                       <div class="row-actions">
                         @if (!item.read) {
-                          <button nz-button nzType="link" nzSize="small" (click)="markRead(item)">标为已读</button>
+                          <button nz-button nzSize="small" nzType="link" (click)="markRead(item)">标为已读</button>
                         }
-                        <button
-                          nz-button
-                          nzType="link"
-                          nzDanger
-                          nzSize="small"
-                          nz-popconfirm
-                          nzPopconfirmTitle="删除这条消息？"
-                          (nzOnConfirm)="remove(item)"
-                        >
-                          删除
-                        </button>
+                        <button nz-button nz-popconfirm nzDanger nzPopconfirmTitle="删除这条消息？" nzSize="small" nzType="link" (nzOnConfirm)="remove(item)"> 删除 </button>
                       </div>
                     </div>
                   </div>
@@ -93,13 +69,7 @@
 
         @if (totalFiltered() > pageSize) {
           <div class="pagination-wrap">
-            <nz-pagination
-              [nzPageIndex]="pageIndex()"
-              [nzTotal]="totalFiltered()"
-              [nzPageSize]="pageSize"
-              [nzShowSizeChanger]="false"
-              (nzPageIndexChange)="onPageChange($event)"
-            ></nz-pagination>
+            <nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize" [nzShowSizeChanger]="false" [nzTotal]="totalFiltered()" (nzPageIndexChange)="onPageChange($event)"></nz-pagination>
           </div>
         }
       }

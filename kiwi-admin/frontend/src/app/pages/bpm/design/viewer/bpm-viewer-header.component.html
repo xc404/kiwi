@@ -1,94 +1,95 @@
 <header class="instance-toolbar">
   @if (processInstance(); as v) {
-  <div class="instance-toolbar__head">
-    <div class="instance-toolbar__lead">
-      <h3 class="instance-toolbar__title" nz-typography>{{ processTitle() }}</h3>
-      @if (v.businessKey?.trim()) {
-      <span class="instance-toolbar__business-key" title="业务键：{{ v.businessKey }}">{{
-        v.businessKey?.trim()
-        }}</span>
+    <div class="instance-toolbar__head">
+      <div class="instance-toolbar__lead">
+        <h3 class="instance-toolbar__title" nz-typography>{{ processTitle() }}</h3>
+        @if (v.businessKey?.trim()) {
+          <span class="instance-toolbar__business-key" title="业务键：{{ v.businessKey }}">{{ v.businessKey?.trim() }}</span>
+        }
+      </div>
+      <nz-tag class="instance-toolbar__status" [nzColor]="statusColor()">{{ statusLabel() }}</nz-tag>
+      @if (canRecover()) {
+        <button
+          class="instance-toolbar__recover"
+          nz-button
+          nz-popconfirm
+          nzDanger
+          nzPopconfirmPlacement="bottomRight"
+          nzPopconfirmTitle="将为该实例下所有 OPEN incident 重置 retries 并恢复执行，是否继续？"
+          nzSize="small"
+          nzType="primary"
+          [nzLoading]="recovering()"
+          (nzOnConfirm)="recoverRequested.emit()"
+        >
+          <span nz-icon nzType="reload"></span>
+          一键恢复
+        </button>
       }
     </div>
-    <nz-tag [nzColor]="statusColor()" class="instance-toolbar__status">{{ statusLabel() }}</nz-tag>
-    @if (canRecover()) {
-    <button
-      nz-button
-      nzType="primary"
-      nzDanger
-      nzSize="small"
-      class="instance-toolbar__recover"
-      nz-popconfirm
-      nzPopconfirmTitle="将为该实例下所有 OPEN incident 重置 retries 并恢复执行，是否继续？"
-      nzPopconfirmPlacement="bottomRight"
-      [nzLoading]="recovering()"
-      (nzOnConfirm)="recoverRequested.emit()"
-    >
-      <span nz-icon nzType="reload"></span>
-      一键恢复
-    </button>
-    }
-  </div>
-  <div class="instance-toolbar__details" [class.instance-toolbar__details--no-error]="!showErrorStrip()">
-    <div>
-      <section class="detail-strip detail-strip--identity" aria-label="实例标识">
-        <span class="detail-pair">
-          <span class="detail-label">实例 ID</span>
-          <span class="detail-value detail-value--mono" title="{{ v.id }}">{{ v.id }}</span>
-        </span>
-        @if (v.processDefinitionKey) {
-        <span class="detail-pair">
-          <span class="detail-label">定义 Key</span>
-          <span class="detail-value" title="{{ v.processDefinitionKey }}">{{ v.processDefinitionKey }}</span>
-        </span>
-        }
-      </section>
-      <section class="detail-strip " aria-label="时间">
-        <span class="detail-pair">
-          <span class="detail-label">开始时间</span>
-          <span class="detail-value detail-value--time">
-            {{ v.startTime ? (v.startTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}
+    <div class="instance-toolbar__details" [class.instance-toolbar__details--no-error]="!showErrorStrip()">
+      <div>
+        <section class="detail-strip detail-strip--identity" aria-label="实例标识">
+          <span class="detail-pair">
+            <span class="detail-label">实例 ID</span>
+            <span class="detail-value detail-value--mono" title="{{ v.id }}">{{ v.id }}</span>
           </span>
-        </span>
-        <span class="detail-pair">
-          <span class="detail-label">结束时间</span>
-          <span class="detail-value detail-value--time">
-            {{ v.endTime ? (v.endTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}
-          </span>
-        </span>
-      </section>
-    </div>
-    @if (showErrorStrip()) {
-    <section class="detail-strip detail-strip-padding detail-strip--error detail-strip--error-active" aria-label="错误原因">
-      <div class="detail-pair detail-pair--stack detail-pair--error-block">
-        <span class="detail-label">错误原因</span>
-        <div class="error-lines" title="{{ errorSummaryText() }}">
-          @for (line of errorLines(); track $index) {
-          <div class="error-line">
-            @if (line.nodeLabel) {
-            <span class="error-node-name">{{ line.nodeLabel }}</span>
-            <span class="error-node-sep" aria-hidden="true">：</span>
-            }
-            <span class="detail-value detail-value--error-body">{{ line.text }}</span>
-          </div>
+          @if (v.processDefinitionKey) {
+            <span class="detail-pair">
+              <span class="detail-label">定义 Key</span>
+              <span class="detail-value" title="{{ v.processDefinitionKey }}">{{ v.processDefinitionKey }}</span>
+            </span>
           }
-        </div>
+        </section>
+        <section class="detail-strip" aria-label="时间">
+          <span class="detail-pair">
+            <span class="detail-label">开始时间</span>
+            <span class="detail-value detail-value--time">
+              {{ v.startTime ? (v.startTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}
+            </span>
+          </span>
+          <span class="detail-pair">
+            <span class="detail-label">结束时间</span>
+            <span class="detail-value detail-value--time">
+              {{ v.endTime ? (v.endTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}
+            </span>
+          </span>
+        </section>
       </div>
-    </section>
-    }
-  </div>
-  <div class="instance-toolbar__legend" role="group" aria-label="节点状态图例">
-    @for (item of activityMarkerLegend; track item.marker) {
-    <span class="legend-item">
-      <span class="legend-dot" [ngClass]="{
-          'legend-dot--completed': item.variant === 'completed',
-          'legend-dot--active': item.variant === 'active',
-          'legend-dot--error': item.variant === 'error'
-        }"></span>
-      <span>{{ item.label }}</span>
-    </span>
-    }
-  </div>
+      @if (showErrorStrip()) {
+        <section class="detail-strip detail-strip-padding detail-strip--error detail-strip--error-active" aria-label="错误原因">
+          <div class="detail-pair detail-pair--stack detail-pair--error-block">
+            <span class="detail-label">错误原因</span>
+            <div class="error-lines" title="{{ errorSummaryText() }}">
+              @for (line of errorLines(); track $index) {
+                <div class="error-line">
+                  @if (line.nodeLabel) {
+                    <span class="error-node-name">{{ line.nodeLabel }}</span>
+                    <span class="error-node-sep" aria-hidden="true">：</span>
+                  }
+                  <span class="detail-value detail-value--error-body">{{ line.text }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    </div>
+    <div class="instance-toolbar__legend" aria-label="节点状态图例" role="group">
+      @for (item of activityMarkerLegend; track item.marker) {
+        <span class="legend-item">
+          <span
+            class="legend-dot"
+            [ngClass]="{
+              'legend-dot--completed': item.variant === 'completed',
+              'legend-dot--active': item.variant === 'active',
+              'legend-dot--error': item.variant === 'error'
+            }"
+          ></span>
+          <span>{{ item.label }}</span>
+        </span>
+      }
+    </div>
   } @else if (loading()) {
-  <span class="toolbar-loading" role="status" aria-live="polite">正在加载流程实例…</span>
+    <span class="toolbar-loading" aria-live="polite" role="status">正在加载流程实例…</span>
   }
 </header>

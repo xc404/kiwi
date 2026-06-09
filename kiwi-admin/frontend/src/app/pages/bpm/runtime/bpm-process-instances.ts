@@ -1,10 +1,11 @@
 import { Component, DestroyRef, inject, OnInit, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
+
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
-import { ColumnToken } from '@app/shared/components/table/column';
 import { Editor } from '@app/shared/components/field/field-editor';
+import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
+import { ColumnToken } from '@app/shared/components/table/column';
 
 @Component({
   selector: 'app-bpm-process-instances',
@@ -14,7 +15,7 @@ import { Editor } from '@app/shared/components/field/field-editor';
       <crud-page [pageConfig]="pageConfig"></crud-page>
     </section>
   `,
-  imports: [PageHeaderComponent, CrudPage],
+  imports: [PageHeaderComponent, CrudPage]
 })
 export class BpmProcessInstances implements OnInit {
   private router = inject(Router);
@@ -35,15 +36,15 @@ export class BpmProcessInstances implements OnInit {
           basicParams: {
             ...this.pageConfig.search?.basicParams,
             instanceState: 'running',
-            processDefinitionKey: key,
-          },
-        },
+            processDefinitionKey: key
+          }
+        }
       };
       const page = this.crudPage();
       if (page) {
         page.load({
           instanceState: 'running',
-          processDefinitionKey: key,
+          processDefinitionKey: key
         });
       }
     });
@@ -53,21 +54,21 @@ export class BpmProcessInstances implements OnInit {
     title: '运行实例',
     search: {
       basicParams: {
-        instanceState: 'running',
-      },
+        instanceState: 'running'
+      }
     },
     initializeData: true,
     editModal: { disabled: true },
     tableConfig: {
       showCheckbox: false,
-      pageSize: 20,
+      pageSize: 20
     },
     crud: {
       search: '/bpm/process-instance',
       create: false,
       update: false,
       delete: false,
-      get: false,
+      get: false
     },
     columnActions: [
       {
@@ -77,13 +78,11 @@ export class BpmProcessInstances implements OnInit {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
             const url = new URL(window.location.href);
-            url.hash = this.router.serializeUrl(
-              this.router.createUrlTree(['/bpm/process-instance', record.id])
-            );
+            url.hash = this.router.serializeUrl(this.router.createUrlTree(['/bpm/process-instance', record.id]));
             window.open(url.toString(), '_blank', 'noopener,noreferrer');
           }
-        },
-      },
+        }
+      }
     ],
     fields: [
       {
@@ -91,7 +90,7 @@ export class BpmProcessInstances implements OnInit {
         dataIndex: 'processDefinitionKey',
         width: 280,
         search: true,
-        edit: false,
+        edit: false
       },
       {
         name: '实例状态',
@@ -104,40 +103,40 @@ export class BpmProcessInstances implements OnInit {
         options: [
           { label: '运行中', value: 'running' },
           { label: '已结束', value: 'completed' },
-          { label: '全部', value: 'all' },
-        ],
+          { label: '全部', value: 'all' }
+        ]
       },
       {
         name: '实例 ID',
         dataIndex: 'id',
         width: 280,
         search: true,
-        edit: false,
+        edit: false
       },
       {
         name: '业务键',
         dataIndex: 'businessKey',
         search: true,
-        edit: false,
+        edit: false
       },
-     
+
       {
         name: '流程名称',
         dataIndex: 'processDefinitionName',
-        edit: false,
+        edit: false
       },
       {
         name: '开始时间',
         dataIndex: 'startTime',
         width: 180,
-        edit: false,
+        edit: false
       },
       {
         name: '租户',
         dataIndex: 'tenantId',
         width: 120,
-        edit: false,
-      },
-    ],
+        edit: false
+      }
+    ]
   };
 }

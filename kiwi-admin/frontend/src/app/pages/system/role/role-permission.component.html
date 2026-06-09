@@ -1,30 +1,14 @@
-
-<nz-card  nzTitle="菜单权限分配" [nzActions]="[actions]">
-
-
-
-<div  nz-row>
-    <nz-card nz-col nzFlex="300px" >
-        <nz-tree  [nzData]="menuTree()"
-                nzCheckable="true"
-                nzExpandAll="true"
-                [nzCheckedKeys]="_checkedMenus()"
-                (nzCheckedKeysChange)="setCheckMenus($event)"
-                
-            >
-        </nz-tree>
+<nz-card nzTitle="菜单权限分配" [nzActions]="[actions]">
+  <div nz-row>
+    <nz-card nz-col nzFlex="300px">
+      <nz-tree nzCheckable="true" nzExpandAll="true" [nzCheckedKeys]="_checkedMenus()" [nzData]="menuTree()" (nzCheckedKeysChange)="setCheckMenus($event)"> </nz-tree>
     </nz-card>
-    <nz-card nz-col  class="m-l-8" nzTitle="权限">
-        <nz-transfer [nzListStyle]="{width: '400px', height: '500px'}" [nzDisabled]="disabled()"
-        [nzTitles]="['未分配权限','已分配权限']"
-      [nzDataSource]="permissionList()"
-      nzShowSearch
-    ></nz-transfer>
+    <nz-card class="m-l-8" nz-col nzTitle="权限">
+      <nz-transfer nzShowSearch [nzDataSource]="permissionList()" [nzDisabled]="disabled()" [nzListStyle]="{ width: '400px', height: '500px' }" [nzTitles]="['未分配权限', '已分配权限']"></nz-transfer>
     </nz-card>
-</div>
-
+  </div>
 </nz-card>
 
-<ng-template #actions >
-    <button nz-button nzType="primary" (click)="savePermissions()" [disabled]="disabled()">保存</button>
+<ng-template #actions>
+  <button nz-button nzType="primary" [disabled]="disabled()" (click)="savePermissions()">保存</button>
 </ng-template>

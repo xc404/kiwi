@@ -8,8 +8,8 @@ import { LoginService } from '@services/login/login.service';
 import { MenuStoreService } from '@store/common-store/menu-store.service';
 import { UserInfoStoreService } from '@store/common-store/userInfo-store.service';
 
-import { WindowService } from '../window.service';
 import { SessionService } from '../session.service';
+import { WindowService } from '../window.service';
 
 const DEFAULT_TARGET = environment.postLoginPath;
 
@@ -77,11 +77,7 @@ export const TokenBootstrapGuard: CanActivateFn = (route, state) => {
   const targetPath = resolveTargetPath(state.url, tokenParam);
 
   return firstValueFrom(
-    forkJoin([
-      loginService.getUserInfo(),
-      loginService.getUserMenus(),
-      loginService.getUserPermissions()
-    ]).pipe(
+    forkJoin([loginService.getUserInfo(), loginService.getUserMenus(), loginService.getUserPermissions()]).pipe(
       tap(([userInfo, menus, permissions]) => {
         userInfo.permissions = permissions;
         userInfoService.$userInfo.set(userInfo);

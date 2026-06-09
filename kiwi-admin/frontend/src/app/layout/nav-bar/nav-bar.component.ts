@@ -16,10 +16,10 @@ import { UserInfoStoreService } from '@store/common-store/userInfo-store.service
 import { fnStopMouseEvent } from '@utils/tools';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
-import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 
 @Component({
   selector: 'app-nav-bar',
@@ -255,7 +255,7 @@ export class NavBarComponent implements OnInit {
   }
 
   changeRoute(e: MouseEvent, menu: Menu): void {
-    if (menu.newLinkFlag || menu.path.endsWith("_blank")) {
+    if (menu.newLinkFlag || menu.path.endsWith('_blank')) {
       fnStopMouseEvent(e);
       window.open(menu.path, '_blank');
       return;

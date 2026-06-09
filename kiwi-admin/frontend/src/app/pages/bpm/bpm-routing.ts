@@ -9,6 +9,6 @@ export default [
     path: 'process-instances',
     title: '运行实例',
     data: { key: 'bpm-process-instances' },
-    loadComponent: () => import('./runtime/bpm-process-instances').then(m => m.BpmProcessInstances),
-  },
+    loadComponent: () => import('./runtime/bpm-process-instances').then(m => m.BpmProcessInstances)
+  }
 ] satisfies Route[];

@@ -4,11 +4,7 @@ import type { BpmDesignerToolbarContext } from './bpm-designer-toolbar.types';
 import { BpmSaveAsComponentModalComponent } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
 import { BpmStartProcessModalComponent } from './bpm-start-process-modal/bpm-start-process-modal.component';
 
-export function triggerEditorAction(
-  ctx: BpmDesignerToolbarContext,
-  action: string,
-  opts?: Record<string, unknown>,
-): void {
+export function triggerEditorAction(ctx: BpmDesignerToolbarContext, action: string, opts?: Record<string, unknown>): void {
   const ea = ctx.modeler.get('editorActions') as {
     isRegistered: (a: string) => boolean;
     trigger: (a: string, o?: Record<string, unknown>) => void;
@@ -38,7 +34,7 @@ export function openSaveAsComponentModal(ctx: BpmDesignerToolbarContext): void {
         return false;
       }
       return ctx.submitSaveAsComponent(payload);
-    },
+    }
   });
 }
 
@@ -58,7 +54,7 @@ export function openStartProcessModal(ctx: BpmDesignerToolbarContext): void {
       }
       return ctx
         .submitStartProcessFromModal(parsed)
-        .then((started) => {
+        .then(started => {
           ctx.message.success('流程已启动');
           promptOpenProcessInstanceViewer(ctx, started);
         })
@@ -67,7 +63,7 @@ export function openStartProcessModal(ctx: BpmDesignerToolbarContext): void {
           ctx.message.error(e?.error?.message ?? e?.message ?? '启动失败');
           return Promise.reject(err);
         });
-    },
+    }
   });
 }
 
@@ -103,16 +99,14 @@ function promptOpenProcessInstanceViewer(ctx: BpmDesignerToolbarContext, startRe
         return;
       }
       const url = new URL(window.location.href);
-      url.hash = ctx.router.serializeUrl(
-        ctx.router.createUrlTree(['/bpm/process-instance', id]),
-      );
+      url.hash = ctx.router.serializeUrl(ctx.router.createUrlTree(['/bpm/process-instance', id]));
       window.open(url.toString(), '_blank', 'noopener,noreferrer');
-    },
+    }
   });
 }
 
 export function exportBpmnXml(ctx: BpmDesignerToolbarContext): void {
-  void ctx.modeler.saveXML({ format: true }).then((result) => {
+  void ctx.modeler.saveXML({ format: true }).then(result => {
     const xml = result.xml;
     if (!xml) {
       ctx.message.error('导出 XML 失败');
@@ -125,7 +119,7 @@ export function exportBpmnXml(ctx: BpmDesignerToolbarContext): void {
 }
 
 export function exportBpmnSvg(ctx: BpmDesignerToolbarContext): void {
-  void ctx.modeler.saveSVG().then((result) => {
+  void ctx.modeler.saveSVG().then(result => {
     const svg = result.svg;
     if (!svg) {
       ctx.message.error('导出 SVG 失败');
@@ -138,7 +132,7 @@ export function exportBpmnSvg(ctx: BpmDesignerToolbarContext): void {
 }
 
 export function logBpmnXml(ctx: BpmDesignerToolbarContext): void {
-  void ctx.modeler.saveXML({ format: true }).then((result) => {
+  void ctx.modeler.saveXML({ format: true }).then(result => {
     if (result.xml) {
       console.log(result.xml);
       ctx.message.info('已在控制台输出 XML');

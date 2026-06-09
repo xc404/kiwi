@@ -2,10 +2,13 @@ import { NgClass, NgStyle, NgTemplateOutlet } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
-import { SettingDrawerComponent, Theme } from '@app/layout/setting-drawer/setting-drawer.component';
+import { SessionService } from '@app/core/services/common/session.service';
+import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
+import { Theme } from '@app/layout/setting-drawer/setting-drawer.component';
 import { CollapsedNavWidth, IsFirstLogin, SideNavWidth } from '@config/constant';
 import { DriverService } from '@core/services/common/driver.service';
 import { WindowService } from '@core/services/common/window.service';
+import { environment } from '@env/environment';
 import { LayoutHeadRightMenuComponent } from '@shared/biz-components/layout-components/layout-head-right-menu/layout-head-right-menu.component';
 import { ChatComponent } from '@shared/components/chat/chat.component';
 import { TopProgressBarComponent } from '@shared/components/top-progress-bar/top-progress-bar.component';
@@ -13,14 +16,11 @@ import { SplitNavStoreService } from '@store/common-store/split-nav-store.servic
 import { ThemeService } from '@store/common-store/theme.service';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 
-import { environment } from '@env/environment';
-import { SessionService } from '@app/core/services/common/session.service';
-import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
-import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NavBarComponent } from './nav-bar/nav-bar.component';
 import { NavDrawerComponent } from './nav-drawer/nav-drawer.component';
 import { SideNavComponent } from './side-nav/side-nav.component';
@@ -56,7 +56,6 @@ import { ToolBarComponent } from './tool-bar/tool-bar.component';
   ]
 })
 export class MainComponent implements AfterViewInit, OnInit {
-
   readonly appName = environment.appName;
   readonly footerYear = new Date().getFullYear();
 

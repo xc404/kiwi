@@ -1,5 +1,6 @@
-import { assign } from 'min-dash';
 import type { Element } from 'bpmn-js/lib/model/Types';
+import { assign } from 'min-dash';
+
 import type { ComponentDescription, ComponentsGroup } from '../../flow-elements/component-provider';
 
 /** 与 BpmnModeler 顶层 options 一并传入 diagram-js `config` */
@@ -10,19 +11,16 @@ export interface KiwiReplaceComponentConfig {
   replace: (element: Element, component: ComponentDescription, event: MouseEvent | undefined) => void;
 }
 
-function hasReplaceCandidates(
-  kiwi: KiwiReplaceComponentConfig | undefined,
-  currentComponentId: string | undefined,
-): boolean {
+function hasReplaceCandidates(kiwi: KiwiReplaceComponentConfig | undefined, currentComponentId: string | undefined): boolean {
   if (!kiwi || !currentComponentId) {
     return false;
   }
   const recent = kiwi.getRecentUsages?.() ?? [];
-  if (recent.some((c) => !!c?.id)) {
+  if (recent.some(c => !!c?.id)) {
     return true;
   }
   const groups = kiwi.getComponentGroups?.() ?? [];
-  return groups.some((g) => (g.components ?? []).some((c) => !!c?.id));
+  return groups.some(g => (g.components ?? []).some(c => !!c?.id));
 }
 
 function canReplaceComponent(element: Element, kiwi: KiwiReplaceComponentConfig | undefined): boolean {
@@ -51,7 +49,7 @@ export function KiwiReplaceComponentPopupProvider(
   this: PopupProviderThis,
   config: { kiwiReplaceComponent?: KiwiReplaceComponentConfig },
   popupMenu: { registerProvider: (id: string, provider: unknown) => void },
-  translate: (s: string) => string,
+  translate: (s: string) => string
 ) {
   this._kiwi = config.kiwiReplaceComponent;
   this._translate = translate;
@@ -60,10 +58,7 @@ export function KiwiReplaceComponentPopupProvider(
 
 KiwiReplaceComponentPopupProvider.$inject = ['config', 'popupMenu', 'translate'];
 
-KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
-  this: PopupProviderThis,
-  element: Element,
-) {
+KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (this: PopupProviderThis, element: Element) {
   const kiwi = this._kiwi;
   const t = this._translate;
   const entries: Record<string, unknown> = {};
@@ -78,7 +73,7 @@ KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
     if (!c?.id || c.id === currentId) {
       continue;
     }
-    const id = 'kiwi-replace-recent-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const id = `kiwi-replace-recent-${String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     entries[id] = {
       label: c.name,
       description: t('最近使用'),
@@ -86,7 +81,7 @@ KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
       group: { id: '__recent__', name: t('最近使用') },
       action: () => {
         kiwi.replace(element, c, undefined);
-      },
+      }
     };
   }
 
@@ -97,7 +92,7 @@ KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
         continue;
       }
       const isCurrent = c.id === currentId;
-      const id = 'kiwi-replace-comp-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const id = `kiwi-replace-comp-${String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
       entries[id] = {
         label: c.name,
         description: isCurrent ? t('当前组件 · 刷新参数') : c.descrition,
@@ -105,7 +100,7 @@ KiwiReplaceComponentPopupProvider.prototype.getPopupMenuEntries = function (
         group: { id: g.group, name: g.group },
         action: () => {
           kiwi.replace(element, c, undefined);
-        },
+        }
       };
     }
   }
@@ -124,7 +119,7 @@ export function KiwiReplaceComponentContextPadProvider(
   config: { kiwiReplaceComponent?: KiwiReplaceComponentConfig },
   contextPad: ContextPadProviderThis['_contextPad'] & { registerProvider: (p: unknown) => void },
   popupMenu: ContextPadProviderThis['_popupMenu'],
-  translate: (s: string) => string,
+  translate: (s: string) => string
 ) {
   this._kiwi = config.kiwiReplaceComponent;
   this._contextPad = contextPad;
@@ -135,10 +130,7 @@ export function KiwiReplaceComponentContextPadProvider(
 
 KiwiReplaceComponentContextPadProvider.$inject = ['config', 'contextPad', 'popupMenu', 'translate'];
 
-KiwiReplaceComponentContextPadProvider.prototype.getContextPadEntries = function (
-  this: ContextPadProviderThis,
-  element: Element,
-) {
+KiwiReplaceComponentContextPadProvider.prototype.getContextPadEntries = function (this: ContextPadProviderThis, element: Element) {
   const kiwi = this._kiwi;
   const contextPad = this._contextPad;
   const popupMenu = this._popupMenu;
@@ -159,7 +151,7 @@ KiwiReplaceComponentContextPadProvider.prototype.getContextPadEntries = function
     const padRect = pad.getBoundingClientRect();
     return {
       x: padRect.left,
-      y: padRect.bottom + Y_OFFSET,
+      y: padRect.bottom + Y_OFFSET
     };
   }
 
@@ -171,16 +163,16 @@ KiwiReplaceComponentContextPadProvider.prototype.getContextPadEntries = function
       action: {
         click: (event: MouseEvent, el: Element) => {
           const position = assign(getMenuPosition(el), {
-            cursor: { x: event.x, y: event.y },
+            cursor: { x: event.x, y: event.y }
           });
           popupMenu.open(el, 'kiwi-replace-component', position, {
             title: translate('选择要替换的业务组件'),
             width: 320,
-            search: true,
+            search: true
           });
-        },
-      },
-    },
+        }
+      }
+    }
   });
 
   return actions;
@@ -189,7 +181,7 @@ KiwiReplaceComponentContextPadProvider.prototype.getContextPadEntries = function
 const replaceComponentModule = {
   __init__: ['kiwiReplaceComponentPopupProvider', 'kiwiReplaceComponentContextPadProvider'],
   kiwiReplaceComponentPopupProvider: ['type', KiwiReplaceComponentPopupProvider],
-  kiwiReplaceComponentContextPadProvider: ['type', KiwiReplaceComponentContextPadProvider],
+  kiwiReplaceComponentContextPadProvider: ['type', KiwiReplaceComponentContextPadProvider]
 };
 
 export default replaceComponentModule;

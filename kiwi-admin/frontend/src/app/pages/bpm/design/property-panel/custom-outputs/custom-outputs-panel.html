@@ -1,66 +1,27 @@
 @if (readonlyFlag()) {
-
   @if (customRows().every((r) => !r.name.trim())) {
-
     <span class="muted">—</span>
-
   } @else {
-
     <ul class="readonly-list">
-
       @for (r of customRows(); track $index) {
-
         @if (r.name.trim()) {
-
           <li>
-
-            <bpm-readonly-property-row
-
-              [propertyDescription]="toPropertyDescription(r)"
-
-              [variables]="variablesProp()"
-
-            />
-
+            <bpm-readonly-property-row [propertyDescription]="toPropertyDescription(r)" [variables]="variablesProp()" />
           </li>
-
         }
-
       }
-
     </ul>
-
   }
-
 } @else {
-
   @for (row of customRows(); track $index; let i = $index) {
-
-    <bpm-custom-output-row
-
-      [row]="row"
-
-      [variables]="variablesProp()"
-
-      (rowChange)="onRowChange(i, $event)"
-
-      (remove)="removeRow(i)"
-
-    />
-
+    <bpm-custom-output-row [row]="row" [variables]="variablesProp()" (remove)="removeRow(i)" (rowChange)="onRowChange(i, $event)" />
   }
 
   <div class="toolbar">
-
-    <button nz-button nzType="dashed" nzSize="small" type="button" (click)="addRow()">
-
-      <nz-icon nzType="plus" nzTheme="outline" />
+    <button type="button" nz-button nzSize="small" nzType="dashed" (click)="addRow()">
+      <nz-icon nzTheme="outline" nzType="plus" />
 
       添加输出
-
     </button>
-
   </div>
-
 }
-

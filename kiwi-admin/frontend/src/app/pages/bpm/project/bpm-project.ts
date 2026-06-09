@@ -1,9 +1,10 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
+import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { ColumnToken } from '@app/shared/components/table/column';
+
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 
@@ -16,21 +17,14 @@ import { BpmWorkspaceService } from './bpm-workspace.service';
     <section class="page-content">
       @if (lastWorkspaceId()) {
         <div class="m-b-16">
-          <nz-alert
-            nzType="info"
-            nzShowIcon
-            nzMessage="上次工作区"
-            nzDescription="点击下方按钮可回到上次打开的项目流程页"
-          ></nz-alert>
-          <button nz-button nzType="primary" nzSize="small" class="m-t-8" type="button" (click)="goLastWorkspace()">
-            进入上次工作区
-          </button>
+          <nz-alert nzDescription="点击下方按钮可回到上次打开的项目流程页" nzMessage="上次工作区" nzShowIcon nzType="info"></nz-alert>
+          <button class="m-t-8" type="button" nz-button nzSize="small" nzType="primary" (click)="goLastWorkspace()"> 进入上次工作区 </button>
         </div>
       }
       <crud-page [pageConfig]="pageConfig"> </crud-page>
     </section>
   `,
-  imports: [PageHeaderComponent, CrudPage, NzAlertModule, NzButtonModule],
+  imports: [PageHeaderComponent, CrudPage, NzAlertModule, NzButtonModule]
 })
 export class BpmProject implements OnInit {
   router = inject(Router);
@@ -62,10 +56,10 @@ export class BpmProject implements OnInit {
           if (record?.id) {
             void this.router.navigate(['/bpm/process-definition'], { queryParams: { projectId: record.id } });
           }
-        },
-      },
+        }
+      }
     ],
     crud: '/bpm/project',
-    fields: [{ name: '名称', dataIndex: 'name' }],
+    fields: [{ name: '名称', dataIndex: 'name' }]
   };
 }

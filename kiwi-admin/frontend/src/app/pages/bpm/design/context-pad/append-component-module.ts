@@ -1,7 +1,8 @@
-import { assign } from 'min-dash';
-import { is } from 'bpmn-js/lib/util/ModelUtil';
-import { isEventSubProcess } from 'bpmn-js/lib/util/DiUtil';
 import type { Element } from 'bpmn-js/lib/model/Types';
+import { isEventSubProcess } from 'bpmn-js/lib/util/DiUtil';
+import { is } from 'bpmn-js/lib/util/ModelUtil';
+import { assign } from 'min-dash';
+
 import type { ComponentDescription, ComponentsGroup } from '../../flow-elements/component-provider';
 
 /** 与 BpmnModeler 顶层 options 一并传入 diagram-js `config` */
@@ -55,11 +56,11 @@ function hasAnyAppendEntry(kiwi: KiwiAppendComponentConfig | undefined): boolean
     return false;
   }
   const groups = kiwi.getComponentGroups?.() ?? [];
-  if (groups.some((g) => (g.components?.length ?? 0) > 0)) {
+  if (groups.some(g => (g.components?.length ?? 0) > 0)) {
     return true;
   }
   const recent = kiwi.getRecentUsages?.() ?? [];
-  return recent.some((c) => !!c?.id);
+  return recent.some(c => !!c?.id);
 }
 
 interface PopupProviderThis {
@@ -74,7 +75,7 @@ export function KiwiAppendComponentPopupProvider(
   this: PopupProviderThis,
   config: { kiwiAppendComponent?: KiwiAppendComponentConfig },
   popupMenu: { registerProvider: (id: string, provider: unknown) => void },
-  translate: (s: string) => string,
+  translate: (s: string) => string
 ) {
   this._kiwi = config.kiwiAppendComponent;
   this._translate = translate;
@@ -96,7 +97,7 @@ KiwiAppendComponentPopupProvider.prototype.getPopupMenuEntries = function (this:
     if (!c?.id) {
       continue;
     }
-    const id = 'kiwi-recent-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const id = `kiwi-recent-${String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     entries[id] = {
       label: c.name,
       description: t('最近使用'),
@@ -104,14 +105,14 @@ KiwiAppendComponentPopupProvider.prototype.getPopupMenuEntries = function (this:
       group: { id: '__recent__', name: t('最近使用') },
       action: (event: MouseEvent) => {
         kiwi.append(element, c, event);
-      },
+      }
     };
   }
 
   const groups = kiwi.getComponentGroups() || [];
   for (const g of groups) {
     for (const c of g.components || []) {
-      const id = 'kiwi-comp-' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const id = `kiwi-comp-${String(c.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
       entries[id] = {
         label: c.name,
         description: c.descrition,
@@ -119,7 +120,7 @@ KiwiAppendComponentPopupProvider.prototype.getPopupMenuEntries = function (this:
         group: { id: g.group, name: g.group },
         action: (event: MouseEvent) => {
           kiwi.append(element, c, event);
-        },
+        }
       };
     }
   }
@@ -141,7 +142,7 @@ export function KiwiAppendComponentContextPadProvider(
   config: { kiwiAppendComponent?: KiwiAppendComponentConfig },
   contextPad: ContextPadProviderThis['_contextPad'] & { registerProvider: (p: unknown) => void },
   popupMenu: ContextPadProviderThis['_popupMenu'],
-  translate: (s: string) => string,
+  translate: (s: string) => string
 ) {
   this._kiwi = config.kiwiAppendComponent;
   this._contextPad = contextPad;
@@ -152,10 +153,7 @@ export function KiwiAppendComponentContextPadProvider(
 
 KiwiAppendComponentContextPadProvider.$inject = ['config', 'contextPad', 'popupMenu', 'translate'];
 
-KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function (
-  this: ContextPadProviderThis,
-  element: Element,
-) {
+KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function (this: ContextPadProviderThis, element: Element) {
   const kiwi = this._kiwi;
   const contextPad = this._contextPad;
   const popupMenu = this._popupMenu;
@@ -180,7 +178,7 @@ KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function 
     const padRect = pad.getBoundingClientRect();
     return {
       x: padRect.left,
-      y: padRect.bottom + Y_OFFSET,
+      y: padRect.bottom + Y_OFFSET
     };
   }
 
@@ -192,16 +190,16 @@ KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function 
       action: {
         click: (event: MouseEvent, el: Element) => {
           const position = assign(getMenuPosition(el), {
-            cursor: { x: event.x, y: event.y },
+            cursor: { x: event.x, y: event.y }
           });
           popupMenu.open(el, 'kiwi-append-component', position, {
             title: translate('选择要追加的业务组件'),
             width: 320,
-            search: true,
+            search: true
           });
-        },
-      },
-    },
+        }
+      }
+    }
   });
 
   return actions;
@@ -210,7 +208,7 @@ KiwiAppendComponentContextPadProvider.prototype.getContextPadEntries = function 
 const appendComponentModule = {
   __init__: ['kiwiAppendComponentPopupProvider', 'kiwiAppendComponentContextPadProvider'],
   kiwiAppendComponentPopupProvider: ['type', KiwiAppendComponentPopupProvider],
-  kiwiAppendComponentContextPadProvider: ['type', KiwiAppendComponentContextPadProvider],
+  kiwiAppendComponentContextPadProvider: ['type', KiwiAppendComponentContextPadProvider]
 };
 
 export default appendComponentModule;

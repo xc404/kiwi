@@ -1,10 +1,6 @@
 import { Injectable, isDevMode } from '@angular/core';
 
-import type {
-  BpmDesignerToolbarCommand,
-  BpmDesignerToolbarContext,
-  BpmDesignerToolbarGroup,
-} from './bpm-designer-toolbar.types';
+import type { BpmDesignerToolbarCommand, BpmDesignerToolbarContext, BpmDesignerToolbarGroup } from './bpm-designer-toolbar.types';
 
 const GROUP_ORDER: BpmDesignerToolbarGroup[] = ['tools', 'edit', 'view', 'file'];
 
@@ -18,7 +14,6 @@ export class BpmDesignerToolbarService {
       return;
     }
     if (this.commands.has(id) && isDevMode()) {
-      // eslint-disable-next-line no-console -- 开发期诊断重复注册
       console.warn(`[BpmDesignerToolbarService] 覆盖已注册命令: ${id}`);
     }
     this.commands.set(id, { ...cmd, id });
@@ -46,13 +41,11 @@ export class BpmDesignerToolbarService {
   }
 
   listUiCommands(): BpmDesignerToolbarCommand[] {
-    const list = [...this.commands.values()].filter((c) => c.showInToolbar !== false);
+    const list = [...this.commands.values()].filter(c => c.showInToolbar !== false);
     return list.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
   }
 
   listAiCommandIds(): string[] {
-    return [...this.commands.values()]
-      .filter((c) => c.aiExposed !== false)
-      .map((c) => c.id);
+    return [...this.commands.values()].filter(c => c.aiExposed !== false).map(c => c.id);
   }
 }

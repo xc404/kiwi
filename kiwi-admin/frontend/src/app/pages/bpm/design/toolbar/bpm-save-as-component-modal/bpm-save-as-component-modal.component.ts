@@ -1,14 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NzInputModule } from 'ng-zorro-antd/input';
-import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
-import { NzMessageService } from 'ng-zorro-antd/message';
 
-export type SaveAsComponentFormPayload = {
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+
+export interface SaveAsComponentFormPayload {
   name: string;
   description?: string;
   version?: string;
-};
+}
 
 export interface BpmSaveAsComponentModalData {
   defaultName: string;
@@ -22,7 +23,7 @@ export interface BpmSaveAsComponentModalData {
   standalone: true,
   imports: [NzInputModule, FormsModule],
   templateUrl: './bpm-save-as-component-modal.component.html',
-  styleUrl: './bpm-save-as-component-modal.component.scss',
+  styleUrl: './bpm-save-as-component-modal.component.scss'
 })
 export class BpmSaveAsComponentModalComponent implements OnInit {
   private readonly message = inject(NzMessageService);
@@ -50,7 +51,7 @@ export class BpmSaveAsComponentModalComponent implements OnInit {
     return {
       name,
       description: description || undefined,
-      version: version || undefined,
+      version: version || undefined
     };
   }
 }

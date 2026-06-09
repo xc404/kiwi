@@ -24,9 +24,9 @@ export const ActionCode = {
   DeptAddLowLevel: 'default:system:dept:addlowlevel', // 部门管理添加下级
 
   /*权限后缀*/
-  GetSuffix:'get',
-  AddSuffix: "add",
-  EditSuffix: "edit",
-  ListSuffix: "list",
-  DeleteSuffix: "delete"
+  GetSuffix: 'get',
+  AddSuffix: 'add',
+  EditSuffix: 'edit',
+  ListSuffix: 'list',
+  DeleteSuffix: 'delete'
 };

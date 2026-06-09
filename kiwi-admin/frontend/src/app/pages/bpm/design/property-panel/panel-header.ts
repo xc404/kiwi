@@ -1,21 +1,11 @@
-import { Element } from 'bpmn-js/lib/model/Types';
-import {
-  getLabel
-} from 'bpmn-js/lib/features/label-editing/LabelUtil';
-
-import {
-  is,
-  getBusinessObject
-} from 'bpmn-js/lib/util/ModelUtil';
-
-import {
-  isExpanded,
-  isEventSubProcess,
-  isInterrupting
-} from 'bpmn-js/lib/util/DiUtil';
 import { Component, input } from '@angular/core';
-import { NzIconModule } from "ng-zorro-antd/icon";
 
+import { getLabel } from 'bpmn-js/lib/features/label-editing/LabelUtil';
+import { Element } from 'bpmn-js/lib/model/Types';
+import { isExpanded, isEventSubProcess, isInterrupting } from 'bpmn-js/lib/util/DiUtil';
+import { is, getBusinessObject } from 'bpmn-js/lib/util/ModelUtil';
+
+import { NzIconModule } from 'ng-zorro-antd/icon';
 
 // helpers ///////////////////////
 
@@ -50,9 +40,7 @@ function isDefaultFlow(element: any) {
     return false;
   }
 
-  return sourceBusinessObject.default && sourceBusinessObject.default === businessObject && (
-    is(sourceBusinessObject, 'bpmn:Gateway') || is(sourceBusinessObject, 'bpmn:Activity')
-  );
+  return sourceBusinessObject.default && sourceBusinessObject.default === businessObject && (is(sourceBusinessObject, 'bpmn:Gateway') || is(sourceBusinessObject, 'bpmn:Activity'));
 }
 
 function isConditionalFlow(element: any) {
@@ -67,13 +55,11 @@ function isConditionalFlow(element: any) {
 }
 
 function isPlane(element: any) {
-
   // Backwards compatibility for bpmn-js<8
   const di = element && (element.di || getBusinessObject(element).di);
 
   return is(di, 'bpmndi:BPMNPlane');
 }
-
 
 function getTemplate(element: any, elementTemplates: any) {
   return elementTemplates.get(element);
@@ -84,12 +70,9 @@ function getTemplateDocumentation(element: any, elementTemplates: any) {
 
   return template && template.documentationRef;
 }
-{ /* Required to break up imports, see https://github.com/babel/babel/issues/15156 */ }
 
 export function getConcreteType(element: any) {
-  const {
-    type: elementType
-  } = element;
+  const { type: elementType } = element;
 
   let type = getRawType(elementType);
 
@@ -100,10 +83,7 @@ export function getConcreteType(element: any) {
     type = `${getEventDefinitionPrefix(eventDefinition)}${type}`;
 
     // (1.1) interrupting / non interrupting
-    if (
-      (is(element, 'bpmn:StartEvent') && !isInterrupting(element)) ||
-      (is(element, 'bpmn:BoundaryEvent') && !isCancelActivity(element))
-    ) {
+    if ((is(element, 'bpmn:StartEvent') && !isInterrupting(element)) || (is(element, 'bpmn:BoundaryEvent') && !isCancelActivity(element))) {
       type = `${type}NonInterrupting`;
     }
 
@@ -129,29 +109,25 @@ export function getConcreteType(element: any) {
     type = 'ConditionalFlow';
   }
 
-
   return type;
 }
 
-@Component(
-  {
-    selector: 'bpm-panel-header',
-    styleUrls: ["./panel-header.scss"],
-    template: `
-      @if(element()) {
+@Component({
+  selector: 'bpm-panel-header',
+  styleUrls: ['./panel-header.scss'],
+  template: `
+    @if (element()) {
       <div class="bpm-panel-header">
         <h2>{{ getTypeLabel() }}</h2>
         <div class="bpm-panel-header-icons">
-         <nz-icon> {{ getElementIcon() }}</nz-icon>
+          <nz-icon> {{ getElementIcon() }}</nz-icon>
         </div>
       </div>
-      }
-    `,
-    imports: [NzIconModule]
-  }
-)
+    }
+  `,
+  imports: [NzIconModule]
+})
 export class PanelHeader {
-
   element = input.required<Element>();
 
   // getDocumentationRef(element: any) {
@@ -173,7 +149,6 @@ export class PanelHeader {
   getElementIcon() {
     const concreteType = getConcreteType(this.element());
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     // const config = useService('config.elementTemplateIconRenderer', false);
 
     // const { iconProperty = 'zeebe:modelerTemplateIcon' } = config || {};
@@ -188,13 +163,8 @@ export class PanelHeader {
   }
 
   getTypeLabel() {
-
-
     const concreteType = getConcreteType(this.element());
 
     return concreteType;
   }
 }
-
-
-

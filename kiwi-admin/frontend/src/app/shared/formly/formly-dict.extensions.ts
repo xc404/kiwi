@@ -1,15 +1,13 @@
-import { FormlyExtension, FormlyFieldConfig } from "@ngx-formly/core";
-import { IDictService } from "../dict/dict";
+import { FormlyExtension, FormlyFieldConfig } from '@ngx-formly/core';
 
+import { IDictService } from '../dict/dict';
 
 export class FormlyDictExtension implements FormlyExtension {
-  constructor(private dictService: IDictService) {
-    
-  }
+  constructor(private dictService: IDictService) {}
   prePopulate(field: FormlyFieldConfig) {
     const props = field.props || {};
-    if(!props['dictKey']){
-        return;
+    if (!props['dictKey']) {
+      return;
     }
     if (props.options) {
       return;

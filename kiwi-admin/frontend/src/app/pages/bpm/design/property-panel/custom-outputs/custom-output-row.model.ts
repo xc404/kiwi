@@ -1,1 +1,4 @@
-export type CustomOutputRow = { name: string; valueText: string };
+export interface CustomOutputRow {
+  name: string;
+  valueText: string;
+}

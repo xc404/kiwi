@@ -1,16 +1,16 @@
 import { inject, Injectable } from '@angular/core';
+
+import BpmnModeler from 'bpmn-js/lib/Modeler';
 import BpmnFactory from 'bpmn-js/lib/features/modeling/BpmnFactory';
 import ElementFactory from 'bpmn-js/lib/features/modeling/ElementFactory';
-import BpmnModeler from 'bpmn-js/lib/Modeler';
 import type { Element } from 'bpmn-js/lib/model/Types';
 import Create from 'diagram-js/lib/features/create/Create';
+
 import { NzMessageService } from 'ng-zorro-antd/message';
-import {
-  ComponentDescription,
-  ComponentProvider,
-} from '../../flow-elements/component-provider';
-import { ComponentService } from '../../flow-elements/component-service';
+
 import { BpmAppendAnchorRequiredError } from './bpm-append-anchor-required.error';
+import { ComponentDescription, ComponentProvider } from '../../flow-elements/component-provider';
+import { ComponentService } from '../../flow-elements/component-service';
 
 /** 上下文菜单 / 组件面板追加业务节点（依赖已初始化的 modeler） */
 @Injectable()
@@ -51,30 +51,20 @@ export class BpmEditorAppendService {
     canvas.zoom('fit-viewport');
   }
 
-  appendComponentFromContextPad(
-    sourceElement: Element,
-    component: ComponentDescription,
-    event: MouseEvent | undefined,
-  ): void {
+  appendComponentFromContextPad(sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined): void {
     const item = this.componentService.convertComponentToPalette(component);
     const { type, options } = this.componentService.getElementOptions(item);
     const businessObject = this.bpmnFactory.create(type, options);
     const shape = this.elementFactory.createShape({ type, businessObject });
     this.componentService.initElement(this.modeler, shape, item);
-    const autoPlace = this.modeler.get('autoPlace', false) as
-      | { append: (source: Element, newShape: Element) => void }
-      | false;
+    const autoPlace = this.modeler.get('autoPlace', false) as { append: (source: Element, newShape: Element) => void } | false;
     if (autoPlace) {
       autoPlace.append(sourceElement, shape);
     } else if (event) {
       this.create.start(event, shape, { source: sourceElement });
     } else {
       const modeling = this.modeler.get('modeling') as {
-        appendShape: (
-          source: Element,
-          shape: Element,
-          position?: { x: number; y: number },
-        ) => Element;
+        appendShape: (source: Element, shape: Element, position?: { x: number; y: number }) => Element;
       };
       const bounds = sourceElement as Element & { x?: number; y?: number; width?: number };
       const x = (bounds.x ?? 0) + (bounds.width ?? 100) + 80;
@@ -95,7 +85,7 @@ export class BpmEditorAppendService {
       let el = registry.get(id);
       if (!el) {
         const lower = id.toLowerCase();
-        el = registry.getAll().find((e) => (e.id ?? '').toLowerCase() === lower);
+        el = registry.getAll().find(e => (e.id ?? '').toLowerCase() === lower);
       }
       if (el && this.canAppendFrom(el)) {
         return el;
@@ -103,26 +93,21 @@ export class BpmEditorAppendService {
       throw new Error(`指定的锚点「${id}」不存在或不可追加`);
     }
 
-    const sel = selection.get().filter((e) => this.canAppendFrom(e));
+    const sel = selection.get().filter(e => this.canAppendFrom(e));
     if (sel.length === 1) {
       return sel[0];
     }
     if (sel.length > 1) {
-      throw new BpmAppendAnchorRequiredError(
-        componentName,
-        sel.map((e) => e.id ?? '').filter(Boolean),
-      );
+      throw new BpmAppendAnchorRequiredError(componentName, sel.map(e => e.id ?? '').filter(Boolean));
     }
 
-    const startEvents = registry
-      .getAll()
-      .filter((e) => (e as { type?: string }).type === 'bpmn:StartEvent' && this.canAppendFrom(e));
+    const startEvents = registry.getAll().filter(e => (e as { type?: string }).type === 'bpmn:StartEvent' && this.canAppendFrom(e));
     if (startEvents.length === 1) {
       return startEvents[0];
     }
 
-    const candidates = registry.getAll().filter((e) => this.canAppendFrom(e));
-    const ids = candidates.map((e) => e.id ?? '').filter(Boolean);
+    const candidates = registry.getAll().filter(e => this.canAppendFrom(e));
+    const ids = candidates.map(e => e.id ?? '').filter(Boolean);
     throw new BpmAppendAnchorRequiredError(componentName, ids.slice(0, 12));
   }
 
@@ -131,13 +116,7 @@ export class BpmEditorAppendService {
     if (!type || type === 'label') {
       return false;
     }
-    if (
-      type === 'bpmn:EndEvent' ||
-      type === 'bpmn:Process' ||
-      type === 'bpmn:Collaboration' ||
-      type === 'bpmn:Participant' ||
-      type === 'bpmn:Lane'
-    ) {
+    if (type === 'bpmn:EndEvent' || type === 'bpmn:Process' || type === 'bpmn:Collaboration' || type === 'bpmn:Participant' || type === 'bpmn:Lane') {
       return false;
     }
     return type.startsWith('bpmn:');

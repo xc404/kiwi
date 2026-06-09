@@ -5,8 +5,8 @@ import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { filter, finalize, share, switchMap } from 'rxjs/operators';
 
-import { TokenKey, loginTimeOutCode, tokenErrorCode } from '@config/constant';
 import { SessionService } from '@app/core/services/common/session.service';
+import { TokenKey, loginTimeOutCode, tokenErrorCode } from '@config/constant';
 import { ModalBtnStatus } from '@shared/modal/base-modal';
 import { LoginModalService } from '@shared/modal/login/login-modal.service';
 

@@ -1,11 +1,12 @@
 import { isDevMode, Injectable, Inject, Optional } from '@angular/core';
 import { Router } from '@angular/router';
-import { NzMessageService } from 'ng-zorro-antd/message';
 
 import type { AiClientAction } from '@services/ai-chat/ai-chat.service';
 
-import { ASSISTANT_ACTION_HANDLERS } from './assistant-action-handlers.token';
+import { NzMessageService } from 'ng-zorro-antd/message';
+
 import type { AssistantActionContext, AssistantActionHandler } from './assistant-action-handler';
+import { ASSISTANT_ACTION_HANDLERS } from './assistant-action-handlers.token';
 import { NavigateAssistantActionHandler } from './navigate-assistant-action.handler';
 
 @Injectable({ providedIn: 'root' })
@@ -28,10 +29,7 @@ export class AssistantActionOrchestratorService {
    * 按 design：input → multi token → 内置 navigate；每个 action 仅首个匹配的 handler 执行。
    * 若 navigate 成功认领则不再处理后续 action（与旧 `ChatComponent` 行为一致）。
    */
-  dispatch(
-    actions: AiClientAction[] | undefined,
-    inputHandlers: readonly AssistantActionHandler[]
-  ): void {
+  dispatch(actions: AiClientAction[] | undefined, inputHandlers: readonly AssistantActionHandler[]): void {
     if (!actions?.length) {
       return;
     }
@@ -51,7 +49,6 @@ export class AssistantActionOrchestratorService {
         }
       }
       if (!matched && isDevMode()) {
-        // eslint-disable-next-line no-console -- 开发期诊断未知 action，符合 spec
         console.warn('[AssistantActionOrchestrator] 未识别的 assistant action:', action);
       }
     }

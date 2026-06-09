@@ -5,7 +5,7 @@ import { catchError, filter } from 'rxjs/operators';
 
 import { TokenKey } from '@config/constant';
 import { WindowService } from '@core/services/common/window.service';
-import { constant } from 'lodash';
+
 import { SessionService } from '../common/session.service';
 
 interface CustomHttpConfig {

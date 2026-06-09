@@ -1,12 +1,5 @@
-import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  inject,
-  OnInit,
-  signal
-} from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, interval, of, startWith, switchMap, tap } from 'rxjs';
 
@@ -15,12 +8,12 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
-import { NzSpinModule } from "ng-zorro-antd/spin";
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
 import { MonitorMetric, MonitorSnapshot } from './monitor.models';
 import { MonitorService } from './monitor.service';
-import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
 const POLL_MS = 10_000;
 
@@ -29,18 +22,7 @@ const POLL_MS = 10_000;
   templateUrl: './monitor.component.html',
   styleUrls: ['./monitor.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NzCardModule,
-    NzBreadCrumbModule,
-    NzGridModule,
-    NzButtonModule,
-    NzSpinModule,
-    NzProgressModule,
-    NzTypographyModule,
-    NzTagModule,
-    DatePipe,
-    DecimalPipe
-  ]
+  imports: [NzCardModule, NzBreadCrumbModule, NzGridModule, NzButtonModule, NzSpinModule, NzProgressModule, NzTypographyModule, NzTagModule, DatePipe, DecimalPipe]
 })
 export class MonitorComponent implements OnInit {
   private readonly monitor = inject(MonitorService);

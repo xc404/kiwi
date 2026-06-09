@@ -1,12 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import BaseViewer from 'bpmn-js/lib/BaseViewer';
+
 import { Element } from 'bpmn-js/lib/model/Types';
+
 import { ComponentService } from '../../../flow-elements/component-service';
 import { ElementModel } from '../../extension/element-model';
-import {
-  ExpressionVariableProvider,
-  ExpressionVariableProviderContext,
-} from '../expression-variable-provider';
+import { ExpressionVariableProvider, ExpressionVariableProviderContext } from '../expression-variable-provider';
 import { backwardReachable, buildReverseAdjacency } from '../process-graph';
 
 function parameterName(param: Element): string {
@@ -55,7 +53,7 @@ export class BpmnModelerUpstreamVariableProvider implements ExpressionVariablePr
       context.addVariable({
         key,
         kind: 'upstreamInput',
-        ...origin,
+        ...origin
       });
     }
 
@@ -63,7 +61,7 @@ export class BpmnModelerUpstreamVariableProvider implements ExpressionVariablePr
       context.addVariable({
         key,
         kind: 'upstreamOutput',
-        ...origin,
+        ...origin
       });
     }
 
@@ -72,7 +70,7 @@ export class BpmnModelerUpstreamVariableProvider implements ExpressionVariablePr
         key: declared.key,
         name: declared.name,
         kind: 'declaredOutput',
-        ...origin,
+        ...origin
       });
     }
   }
@@ -105,12 +103,12 @@ export class BpmnModelerUpstreamVariableProvider implements ExpressionVariablePr
     return [...keys];
   }
 
-  private listDeclaredOutputKeys(el: Element): { key: string; name?: string }[] {
+  private listDeclaredOutputKeys(el: Element): Array<{ key: string; name?: string }> {
     const comp = this.componentService.getComponentForElement(el);
     if (!comp?.outputParameters?.length) {
       return [];
     }
-    const out: { key: string; name?: string }[] = [];
+    const out: Array<{ key: string; name?: string }> = [];
     for (const p of comp.outputParameters) {
       if ((p as { hidden?: boolean }).hidden) {
         continue;

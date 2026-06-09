@@ -30,7 +30,7 @@ export function parseAssignments(raw: unknown): AssignmentRow[] {
   }
   return list.map((item: any) => ({
     key: String(item?.key ?? ''),
-    valueText: formatValueForEdit(item?.value),
+    valueText: formatValueForEdit(item?.value)
   }));
 }
 

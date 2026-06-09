@@ -1,28 +1,21 @@
 <div class="content-wrap">
   <div nz-row>
     <div nz-col nzFlex="240px">
-      <nz-card [nzExtra]="tableToolbar" nzTitle="角色">
-        <nz-tree #roleTree [nzData]="roleNodes()"
-        
-            nzShowExpand="false"
-            nzShowLine="false"
-            nzCheckable="true"
-            (nzClick)="onRoleClick($event)"
-        ></nz-tree>
+      <nz-card nzTitle="角色" [nzExtra]="tableToolbar">
+        <nz-tree #roleTree nzCheckable="true" nzShowExpand="false" nzShowLine="false" [nzData]="roleNodes()" (nzClick)="onRoleClick($event)"></nz-tree>
       </nz-card>
     </div>
-    <div class="m-l-8" nz-col >
-         <app-role-permission [role]="selectedRole()" (permissionChange)="updateSelectPermission($event)"></app-role-permission>
+    <div class="m-l-8" nz-col>
+      <app-role-permission [role]="selectedRole()" (permissionChange)="updateSelectPermission($event)"></app-role-permission>
     </div>
   </div>
-<ng-template #tableToolbar>
-  <app-button [config]="addBtn"></app-button>
-  <nz-divider nzType="vertical"></nz-divider>
-  <app-button [config]="editBtn"></app-button>
-</ng-template>
-<nz-modal [nzVisible]="editModalVisible()" nzTitle="编辑角色" (nzOnCancel)="cancelEdit()" (nzOnOk)="saveRole()">
-      <ng-container *nzModalContent>
-        <app-formly-panel [fields]="fields"  [model]="model()">
-        </app-formly-panel>
-      </ng-container>
-    </nz-modal>
+  <ng-template #tableToolbar>
+    <app-button [config]="addBtn"></app-button>
+    <nz-divider nzType="vertical"></nz-divider>
+    <app-button [config]="editBtn"></app-button>
+  </ng-template>
+  <nz-modal nzTitle="编辑角色" [nzVisible]="editModalVisible()" (nzOnCancel)="cancelEdit()" (nzOnOk)="saveRole()">
+    <ng-container *nzModalContent>
+      <app-formly-panel [fields]="fields" [model]="model()"> </app-formly-panel>
+    </ng-container> </nz-modal
+></div>

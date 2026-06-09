@@ -1,7 +1,9 @@
 import { Component, inject, viewChild } from '@angular/core';
+
 import { JsonCodeEditorComponent } from '@app/shared/components/json-code-editor/json-code-editor.component';
-import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 
 export interface BpmStartProcessModalData {
   initialText: string;
@@ -13,7 +15,7 @@ export interface BpmStartProcessModalData {
   standalone: true,
   imports: [JsonCodeEditorComponent],
   templateUrl: './bpm-start-process-modal.component.html',
-  styleUrl: './bpm-start-process-modal.component.scss',
+  styleUrl: './bpm-start-process-modal.component.scss'
 })
 export class BpmStartProcessModalComponent {
   private readonly message = inject(NzMessageService);
@@ -27,11 +29,7 @@ export class BpmStartProcessModalComponent {
     const trimmed = raw.trim();
     try {
       const rawParsed = trimmed === '' ? {} : JSON.parse(trimmed);
-      if (
-        rawParsed === null ||
-        typeof rawParsed !== 'object' ||
-        Array.isArray(rawParsed)
-      ) {
+      if (rawParsed === null || typeof rawParsed !== 'object' || Array.isArray(rawParsed)) {
         this.message.warning('须为 JSON 对象，例如 {} 或 {"key":"value"}');
         return false;
       }

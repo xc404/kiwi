@@ -5,9 +5,7 @@ export class BpmAppendAnchorRequiredError extends Error {
 
   constructor(componentName: string, candidateElementIds: string[]) {
     const list = candidateElementIds.length ? candidateElementIds.join('、') : '（无）';
-    super(
-      `已匹配组件「${componentName}」，但无法确定追加到哪个节点。请在画布上选中一个节点后重试，或在对话中说明元素 id（例如：${list}）。`,
-    );
+    super(`已匹配组件「${componentName}」，但无法确定追加到哪个节点。请在画布上选中一个节点后重试，或在对话中说明元素 id（例如：${list}）。`);
     this.name = 'BpmAppendAnchorRequiredError';
     this.componentName = componentName;
     this.candidateElementIds = candidateElementIds;

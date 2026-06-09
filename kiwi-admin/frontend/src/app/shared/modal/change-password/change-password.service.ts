@@ -1,10 +1,9 @@
 import { inject, Injectable, Type } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { ChangePasswordComponent } from './change-password.component';
-
 import { ModalOptions } from 'ng-zorro-antd/modal';
 
+import { ChangePasswordComponent } from './change-password.component';
 import { ModalResponse, ModalWrapService } from '../base-modal';
 
 @Injectable({

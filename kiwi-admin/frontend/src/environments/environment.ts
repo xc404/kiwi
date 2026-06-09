@@ -11,8 +11,8 @@ export const environment = {
   /** 登录成功后的默认跳转路径 */
   postLoginPath: '/dashboard/analysis',
   api: {
-    baseUrl: localUrl,
-  },
+    baseUrl: localUrl
+  }
 };
 
 /*

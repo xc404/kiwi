@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, TemplateRef, input, OnInit, signal, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
+
 import { MenuStoreService } from '@app/core/services/store/common-store/menu-store.service';
 import { Menu } from '@app/core/services/types';
 
@@ -36,12 +37,10 @@ export class PageHeaderComponent implements OnInit {
     this.router.navigateByUrl(this.backUrl());
   }
 
-
   ngOnInit(): void {
-
     this.menuStoreService.getMenuArrayStore().subscribe(menu => {
-      let url = this.router.routerState.snapshot.url;
-      let breadcrumb: Menu[] = [];
+      const url = this.router.routerState.snapshot.url;
+      const breadcrumb: Menu[] = [];
       this.findMenu(menu, url, breadcrumb);
       this.breadcrumb.set(breadcrumb.map(item => item.name));
     });
@@ -62,5 +61,4 @@ export class PageHeaderComponent implements OnInit {
     }
     return false;
   }
-
 }

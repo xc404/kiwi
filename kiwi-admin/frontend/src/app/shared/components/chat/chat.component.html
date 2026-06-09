@@ -8,20 +8,10 @@
     'aliyun-mode': $themeStyle() === 'aliyun'
   }"
 >
-  <div
-    #chatPanel
-    class="chat-wrap"
-    [style.width.px]="embed() ? null : panelWidth()"
-    [style.height.px]="panelHeight()"
-  >
+  <div #chatPanel class="chat-wrap" [style.height.px]="panelHeight()" [style.width.px]="embed() ? null : panelWidth()">
     @if (embed() || show) {
-      <button
-        type="button"
-        class="chat-resize-handle"
-        aria-label="拖动调整大小"
-        (mousedown)="onResizeStart($event)"
-      >
-        <i nz-icon nzType="column-width" nzTheme="outline"></i>
+      <button class="chat-resize-handle" type="button" aria-label="拖动调整大小" (mousedown)="onResizeStart($event)">
+        <i nz-icon nzTheme="outline" nzType="column-width"></i>
       </button>
     }
     <nz-card [nzActions]="[inputTpl]" [nzBodyStyle]="{ padding: 0 }" [nzExtra]="extraTemplate" [nzTitle]="titleTemplate">
@@ -42,13 +32,7 @@
           @if (item.dir === 'left') {
             <div class="m-t-20" nz-row>
               <nz-avatar class="m-r-8" nz-col nzFlex="30px" nzIcon="user" nzSrc="imgs/logo.svg"></nz-avatar>
-              <div
-                class="chat-markdown m-t-0 p-8"
-                nz-col
-                nz-result-content
-                nzFlex="1"
-                [innerHTML]="item.msg | markdown"
-              ></div>
+              <div class="chat-markdown m-t-0 p-8" nz-col nz-result-content nzFlex="1" [innerHTML]="item.msg | markdown"></div>
               <div nz-col nzFlex="30px"></div>
               {{ last ? scrollToBottom() : '' }}
             </div>
@@ -62,9 +46,7 @@
                   <span nz-typography>{{ item.msg }}</span>
                   {{ last ? scrollToBottom() : '' }}
                 </div>
-                <span class="sp-12 text-right m-t-5" nz-typography nzType="secondary">{{
-                  item.isReaded ? '已读' : '未读'
-                }}</span>
+                <span class="sp-12 text-right m-t-5" nz-typography nzType="secondary">{{ item.isReaded ? '已读' : '未读' }}</span>
               </div>
 
               <div nz-col nzFlex="8px"></div>
@@ -78,59 +60,30 @@
 </div>
 <ng-template #extraTemplate>
   <span class="chat-extra-actions">
-    <button
-      type="button"
-      nz-button
-      nzType="text"
-      nzSize="small"
-      class="chat-session-btn"
-      nz-dropdown
-      [nzDropdownMenu]="sessionMenu"
-      nzTrigger="click"
-      [nzDisabled]="sessionsLoading()"
-    >
-      <i nz-icon nzType="history" nzTheme="outline"></i>
+    <button class="chat-session-btn" type="button" nz-button nz-dropdown nzSize="small" nzTrigger="click" nzType="text" [nzDisabled]="sessionsLoading()" [nzDropdownMenu]="sessionMenu">
+      <i nz-icon nzTheme="outline" nzType="history"></i>
     </button>
-    <button type="button" nz-button nzType="text" nzSize="small" class="chat-session-btn" (click)="startNewConversation()">
-      <i nz-icon nzType="plus" nzTheme="outline"></i>
+    <button class="chat-session-btn" type="button" nz-button nzSize="small" nzType="text" (click)="startNewConversation()">
+      <i nz-icon nzTheme="outline" nzType="plus"></i>
     </button>
     @if (conversationId()) {
-      <button
-        type="button"
-        nz-button
-        nzType="text"
-        nzSize="small"
-        class="chat-session-btn"
-        nz-popconfirm
-        nzPopconfirmTitle="删除当前会话？"
-        (nzOnConfirm)="deleteCurrentConversation()"
-      >
-        <i nz-icon nzType="delete" nzTheme="outline"></i>
+      <button class="chat-session-btn" type="button" nz-button nz-popconfirm nzPopconfirmTitle="删除当前会话？" nzSize="small" nzType="text" (nzOnConfirm)="deleteCurrentConversation()">
+        <i nz-icon nzTheme="outline" nzType="delete"></i>
       </button>
     }
     @if (!embed()) {
-      <i
-        class="hand-model"
-        nz-icon
-        nzTheme="outline"
-        [nzType]="show ? 'shrink' : 'arrows-alt'"
-        (click)="show = !show"
-      ></i>
+      <i class="hand-model" nz-icon nzTheme="outline" [nzType]="show ? 'shrink' : 'arrows-alt'" (click)="show = !show"></i>
       <i class="hand-model m-l-8" nz-icon nzTheme="outline" nzType="close" (click)="close()"></i>
     }
   </span>
 </ng-template>
 <nz-dropdown-menu #sessionMenu="nzDropdownMenu">
-  <ul nz-menu class="chat-session-menu">
+  <ul class="chat-session-menu" nz-menu>
     @if (conversationSummaries().length === 0) {
       <li nz-menu-item nzDisabled>暂无历史会话</li>
     }
     @for (c of conversationSummaries(); track c.id) {
-      <li
-        nz-menu-item
-        [nzSelected]="c.id === conversationId()"
-        (click)="selectConversation(c.id!)"
-      >
+      <li nz-menu-item [nzSelected]="c.id === conversationId()" (click)="selectConversation(c.id!)">
         <span class="chat-session-title">{{ c.title || '未命名' }}</span>
         @if (c.lastMessagePreview) {
           <span class="chat-session-preview" nz-typography nzType="secondary">{{ c.lastMessagePreview }}</span>
@@ -159,4 +112,3 @@
     ></textarea>
   </form>
 </ng-template>
-

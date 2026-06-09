@@ -1,46 +1,30 @@
-import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  effect,
-  inject,
-  signal
-} from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-codes.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import 'bpmn-js/dist/assets/diagram-js.css';
-import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
-import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import { interval } from 'rxjs';
 import { filter, map as mapOp } from 'rxjs/operators';
-import {
-  BpmActivityVisualState,
-  BpmInstanceRecoverResultDto,
-  BpmProcessInstanceDto,
-  CamundaHistoricActivityInstance,
-  ProcessInstanceService
-} from '../service/process-instance.service';
-import { BpmPropertiesPanel } from "../property-panel/properties-panel";
+
+import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
+
+import { NzLayoutComponent, NzLayoutModule } from 'ng-zorro-antd/layout';
+import { NzMessageService } from 'ng-zorro-antd/message';
+
 import { BPM_ACTIVITY_MARKER_NAMES, BpmActivityMarkerName } from './bpm-activity-markers';
+import { buildCalledProcessInstanceMap, clearCallActivityLinkOverlays, syncCallActivityLinkOverlays } from './bpm-viewer-call-activity-links';
 import { BpmViewerHeaderComponent } from './bpm-viewer-header.component';
-import {
-  buildCalledProcessInstanceMap,
-  clearCallActivityLinkOverlays,
-  syncCallActivityLinkOverlays,
-} from './bpm-viewer-call-activity-links';
-import { ElementModel } from '../extension/element-model';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
+import { ElementModel } from '../extension/element-model';
+import { BpmPropertiesPanel } from '../property-panel/properties-panel';
+import { BpmActivityVisualState, BpmInstanceRecoverResultDto, BpmProcessInstanceDto, CamundaHistoricActivityInstance, ProcessInstanceService } from '../service/process-instance.service';
 @Component({
   selector: 'bpm-viewer',
   templateUrl: './bpm-viewer.html',
   styleUrl: './bpm-viewer.scss',
   imports: [NzLayoutComponent, NzLayoutModule, BpmPropertiesPanel, BpmViewerHeaderComponent],
-  standalone: true,
+  standalone: true
 })
 export class BpmViewer implements OnInit, OnDestroy {
   /** 运行中实例轮询间隔（毫秒） */
@@ -69,7 +53,6 @@ export class BpmViewer implements OnInit, OnDestroy {
   /** 一键恢复请求中（避免重复点击；用于按钮 loading 态） */
   protected readonly recovering = signal(false);
 
-
   /** 最近一次 importXML 已成功，可与 processActivities 叠加打标 */
   private readonly bpmnImportReady = signal(false);
 
@@ -81,11 +64,9 @@ export class BpmViewer implements OnInit, OnDestroy {
 
   /** diagram-js 默认使用 marker `selected`；在 SelectionVisuals 之后同步为 `kiwi-bpmn-selected`（EventBus 默认优先级 1000，此处用更低优先级以在其后执行） */
 
-
-
   constructor() {
     effect(() => {
-      let processInstanceId = this.processInstanceId();
+      const processInstanceId = this.processInstanceId();
       if (processInstanceId) {
         this.loadProcessInstance();
         this.loadProcessActivities();
@@ -100,7 +81,7 @@ export class BpmViewer implements OnInit, OnDestroy {
       }
     });
 
-    effect((onCleanup) => {
+    effect(onCleanup => {
       if (!this.isProcessInstanceRunning(this.processInstance())) {
         return;
       }
@@ -111,7 +92,7 @@ export class BpmViewer implements OnInit, OnDestroy {
     });
 
     effect(() => {
-      let bpmnXml = this.bpmnXml();
+      const bpmnXml = this.bpmnXml();
       if (bpmnXml) {
         this.loadXml(bpmnXml);
       }
@@ -144,10 +125,10 @@ export class BpmViewer implements OnInit, OnDestroy {
     this.elementRegistry = this.viewer.get('elementRegistry');
     this.route.paramMap
       .pipe(
-        mapOp((p) => p.get('processInstanceId')),
-        filter((id): id is string => !!id),
+        mapOp(p => p.get('processInstanceId')),
+        filter((id): id is string => !!id)
       )
-      .subscribe((id) => {
+      .subscribe(id => {
         this.loadedProcessDefinitionId.set(undefined);
         this.processInstanceId.set(id);
       });
@@ -168,16 +149,14 @@ export class BpmViewer implements OnInit, OnDestroy {
     }
   }
 
-
-
   loadProcessInstance() {
     this.processInstanceService.getProcessInstance(this.processInstanceId()!).subscribe({
-      next: (pi) => {
+      next: pi => {
         this.processInstance.set(pi);
       },
-      error: (err) => {
+      error: err => {
         console.error('加载流程实例失败', err);
-      },
+      }
     });
   }
 
@@ -188,18 +167,18 @@ export class BpmViewer implements OnInit, OnDestroy {
       return;
     }
     this.processInstanceService.getProcessDefinitionXml(instanceId).subscribe({
-      next: (res) => {
+      next: res => {
         this.bpmnXml.set(res.bpmn20Xml);
       },
-      error: (err) => {
+      error: err => {
         console.error('获取流程定义 XML 失败', err);
-      },
+      }
     });
   }
 
   loadProcessActivities() {
     this.processInstanceService.getHistoryActivityInstances(this.processInstanceId()!).subscribe({
-      next: (activities) => {
+      next: activities => {
         this.processActivities.set(activities);
         this.activityStates.set(this.buildActivityStateMap(activities));
         this.calledProcessInstanceMap.set(buildCalledProcessInstanceMap(activities));
@@ -214,11 +193,7 @@ export class BpmViewer implements OnInit, OnDestroy {
       }
       return;
     }
-    syncCallActivityLinkOverlays(
-      this.viewer,
-      this.calledProcessInstanceMap(),
-      (childId) => this.openChildProcessInstanceViewer(childId),
-    );
+    syncCallActivityLinkOverlays(this.viewer, this.calledProcessInstanceMap(), childId => this.openChildProcessInstanceViewer(childId));
   }
 
   private openChildProcessInstanceViewer(childProcessInstanceId: string): void {
@@ -227,9 +202,7 @@ export class BpmViewer implements OnInit, OnDestroy {
       return;
     }
     const url = new URL(window.location.href);
-    url.hash = this.router.serializeUrl(
-      this.router.createUrlTree(['/bpm/process-instance', id]),
-    );
+    url.hash = this.router.serializeUrl(this.router.createUrlTree(['/bpm/process-instance', id]));
     window.open(url.toString(), '_blank', 'noopener,noreferrer');
   }
 
@@ -253,23 +226,22 @@ export class BpmViewer implements OnInit, OnDestroy {
     }
     this.recovering.set(true);
     this.processInstanceService.recoverProcessInstance(id).subscribe({
-      next: (res) => {
+      next: res => {
         this.recovering.set(false);
         this.message.success(this.formatRecoverResult(res));
         this.refreshRuntimeData();
       },
-      error: (err) => {
+      error: err => {
         this.recovering.set(false);
         console.error('一键恢复失败', err);
         this.message.error('一键恢复失败，请稍后重试');
-      },
+      }
     });
   }
 
   private formatRecoverResult(res: BpmInstanceRecoverResultDto): string {
     return (
-      `已恢复：Job ${res.jobsRetried} 个、External Task ${res.externalTasksRetried} 个` +
-      `（OPEN incident ${res.openIncidentCount}，跳过 ${res.incidentsSkipped}，retries=${res.retriesApplied}）`
+      `已恢复：Job ${res.jobsRetried} 个、External Task ${res.externalTasksRetried} 个` + `（OPEN incident ${res.openIncidentCount}，跳过 ${res.incidentsSkipped}，retries=${res.retriesApplied}）`
     );
   }
 
@@ -298,9 +270,7 @@ export class BpmViewer implements OnInit, OnDestroy {
    * 同一 BPMN activityId 可能有多条历史实例（重试/多实例）：优先保留未结束的一条，
    * 以便与 open incident 对齐；同态时保留 startTime 更晚的。
    */
-  private buildActivityStateMap(
-    activities: CamundaHistoricActivityInstance[],
-  ): Map<string, CamundaHistoricActivityInstance> {
+  private buildActivityStateMap(activities: CamundaHistoricActivityInstance[]): Map<string, CamundaHistoricActivityInstance> {
     const activityMap = new Map<string, CamundaHistoricActivityInstance>();
     for (const activity of activities) {
       const activityId = activity.activityId?.trim();
@@ -364,8 +334,6 @@ export class BpmViewer implements OnInit, OnDestroy {
         this.bpmnImportReady.set(false);
       });
   }
-
-
 
   private clearActivityMarkers(): void {
     for (const id of this.markedActivityElementIds) {
@@ -439,9 +407,7 @@ export class BpmViewer implements OnInit, OnDestroy {
       .trim()
       .toUpperCase();
     if (state === 'ERROR') {
-      const currents = this.processInstance()?.currentActivities as
-        | Array<{ activityId?: string | null }>
-        | undefined;
+      const currents = this.processInstance()?.currentActivities as Array<{ activityId?: string | null }> | undefined;
       for (const cur of currents ?? []) {
         const aid = cur.activityId?.trim();
         if (aid) {
@@ -456,10 +422,7 @@ export class BpmViewer implements OnInit, OnDestroy {
   /**
    * 与 activityStates 一致的四种语义：已结束 / error / 运行中；（未运行不入 Map，无 marker）。
    */
-  private markerForHistoricActivity(
-    activity: CamundaHistoricActivityInstance,
-    errorActivityIds: Set<string>,
-  ): BpmActivityMarkerName | null {
+  private markerForHistoricActivity(activity: CamundaHistoricActivityInstance, errorActivityIds: Set<string>): BpmActivityMarkerName | null {
     const id = activity.activityId?.trim();
     if (!id) {
       return null;
@@ -501,11 +464,7 @@ export class BpmViewer implements OnInit, OnDestroy {
     return 'completed';
   }
 
-
-  onSelectionChanged(event: {
-    oldSelection: unknown[];
-    newSelection: unknown[];
-  }): void {
+  onSelectionChanged(event: { oldSelection: unknown[]; newSelection: unknown[] }): void {
     if (!this.canvas) {
       return;
     }
@@ -522,7 +481,7 @@ export class BpmViewer implements OnInit, OnDestroy {
         this.canvas.addMarker(el, 'kiwi-bpmn-selected');
       }
     }
-  };
+  }
 
   removeActivityMarker(activityId: string, marker: string) {
     if (!this.canvas) {
@@ -558,7 +517,7 @@ export class BpmViewer implements OnInit, OnDestroy {
       return direct;
     }
     const all = this.elementRegistry.getAll() as Array<{ businessObject?: { id?: string } }>;
-    return all.find((el) => el.businessObject?.id === id);
+    return all.find(el => el.businessObject?.id === id);
   }
 
   /** 是否正常结束（不含取消 / incident） */

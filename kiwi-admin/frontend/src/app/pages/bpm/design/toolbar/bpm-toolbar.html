@@ -1,30 +1,13 @@
-<div class="bpm-toolbar" role="toolbar" aria-label="BPMN 编辑工具栏">
-  <input
-    #bpmnFileInput
-    type="file"
-    class="bpm-toolbar__file-input"
-    accept=".bpmn,.xml,application/xml,text/xml"
-    tabindex="-1"
-    aria-hidden="true"
-    (change)="onBpmnFileSelected($event)"
-  />
+<div class="bpm-toolbar" aria-label="BPMN 编辑工具栏" role="toolbar">
+  <input #bpmnFileInput class="bpm-toolbar__file-input" type="file" accept=".bpmn,.xml,application/xml,text/xml" aria-hidden="true" tabindex="-1" (change)="onBpmnFileSelected($event)" />
   @for (seg of toolbarSegments; track $index) {
     @if (seg.type === 'divider') {
-      <nz-divider nzType="vertical" class="bpm-toolbar__divider" />
+      <nz-divider class="bpm-toolbar__divider" nzType="vertical" />
     } @else {
       <div class="bpm-toolbar__group">
         @for (btn of seg.buttons; track $index) {
-          <button
-            type="button"
-            nz-button
-            nzType="text"
-            nzSize="small"
-            class="bpm-toolbar__btn"
-            nz-tooltip
-            [nzTooltipTitle]="btn.tooltip"
-            (click)="btn.onClick()"
-          >
-            <nz-icon [nzType]="btn.icon" nzTheme="outline" />
+          <button class="bpm-toolbar__btn" type="button" nz-button nz-tooltip nzSize="small" nzType="text" [nzTooltipTitle]="btn.tooltip" (click)="btn.onClick()">
+            <nz-icon nzTheme="outline" [nzType]="btn.icon" />
           </button>
         }
       </div>

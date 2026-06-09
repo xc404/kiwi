@@ -1,13 +1,8 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+
 import { MenuStoreService } from '@app/core/services/store/common-store/menu-store.service';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
-
-import { AppTableWrapComponent } from '@app/shared/components/table/app-table-wrap/app-table-wrap.component';
-import { AppTableComponent } from '@app/shared/components/table/app-table/app-table.component';
-import { AppTableConfig } from '@app/shared/components/table/table';
-import { ScreenLessHiddenDirective } from '@shared/directives/screen-less-hidden.directive';
-import { NumberLoopPipe } from '@shared/pipes/number-loop.pipe';
 
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
@@ -114,14 +109,13 @@ export class AnalysisComponent {
     }
   ];
 
-
   pageConfig: PageConfig = {
-    title: "测试",
-    crud: "system/menu",
+    title: '测试',
+    crud: 'system/menu',
     tableConfig: {
       showCheckbox: true,
       type: 'tree',
-      enableTreeSelection: true,
+      enableTreeSelection: true
     },
     fields: [
       {
@@ -152,7 +146,3 @@ export class AnalysisComponent {
     ]
   };
 }
-
-
-
-

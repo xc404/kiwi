@@ -1,37 +1,28 @@
+import { computed, inject, input, model, OnInit, signal, Component } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { computed, inject, input, model, OnInit, signal } from "@angular/core";
+import { FormsModule } from '@angular/forms';
 
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import { CrudDataSource } from '@app/shared/components/crud/crud-datastore';
+import { CrudHttp } from '@app/shared/components/crud/crud-http';
 
-
-import { Component } from "@angular/core";
-import { FormsModule } from "@angular/forms";
-import { BaseHttpService } from "@app/core/services/http/base-http.service";
-import { CrudDataSource } from "@app/shared/components/crud/crud-datastore";
-import { CrudHttp } from "@app/shared/components/crud/crud-http";
-import { NzSelectModule } from "ng-zorro-antd/select";
-import { NzSpinModule } from "ng-zorro-antd/spin";
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 @Component({
   selector: 'app-dict-selector',
-  template: `<nz-select style="minWidth: 200px"
-      [(ngModel)]="model"
-      (nzScrollToBottom)="loadMore()"
-      nzPlaceHolder="{{name()}}"
-      nzAllowClear
-      [nzDropdownRender]="renderTemplate"
-    >
+  template: `<nz-select nzAllowClear nzPlaceHolder="{{ name() }}" style="minWidth: 200px" [nzDropdownRender]="renderTemplate" [(ngModel)]="model" (nzScrollToBottom)="loadMore()">
       @for (item of optionList(); track item) {
-        <nz-option [nzValue]="item.key" [nzLabel]="item.value"></nz-option>
+        <nz-option [nzLabel]="item.value" [nzValue]="item.key"></nz-option>
       }
     </nz-select>
-    
+
     <ng-template #renderTemplate>
       @if (loading()) {
         <nz-spin></nz-spin>
       }
-    </ng-template>
-    `,
+    </ng-template> `,
   standalone: true,
-  imports: [FormsModule, NzSelectModule, NzSpinModule],
+  imports: [FormsModule, NzSelectModule, NzSpinModule]
 })
 export class DictSelector implements OnInit {
   http = inject(BaseHttpService);
@@ -39,17 +30,16 @@ export class DictSelector implements OnInit {
   pageSize = input<number>(-1);
   name = input<string>();
 
-  model = model<any>();;
+  model = model<any>();
 
   optionList = signal<Array<{ key: string; value: string }>>([]);
   loadMore(): void {
-
     this.loadDict();
   }
 
   pageDataSource = computed(() => {
-    return new CrudDataSource<any>(new CrudHttp(this.http, '/common/dict/' + this.groupKey()), {
-      pageSize: this.pageSize() > 0 ? this.pageSize() : 1000,
+    return new CrudDataSource<any>(new CrudHttp(this.http, `/common/dict/${this.groupKey()}`), {
+      pageSize: this.pageSize() > 0 ? this.pageSize() : 1000
     });
   });
 
@@ -67,9 +57,6 @@ export class DictSelector implements OnInit {
     });
   }
 
-
-
-
   public loadDict(reset: boolean = false) {
     if (reset) {
       this.optionList.set([]);
@@ -82,5 +69,4 @@ export class DictSelector implements OnInit {
   ngOnInit(): void {
     this.loadDict(true);
   }
-
 }

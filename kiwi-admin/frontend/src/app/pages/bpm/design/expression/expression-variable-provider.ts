@@ -1,5 +1,6 @@
 import BaseViewer from 'bpmn-js/lib/BaseViewer';
 import { Element } from 'bpmn-js/lib/model/Types';
+
 import { ExpressionMethod, ExpressionVariable } from './expression-variable';
 
 export interface ExpressionVariableProviderContext {

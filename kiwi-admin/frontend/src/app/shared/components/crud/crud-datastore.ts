@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
+
 import { NzTableQueryParams, NzTableSortOrder } from 'ng-zorro-antd/table';
+
 import { CrudHttp } from './crud-http';
 
 function toSortDirection(value: NzTableSortOrder): string {
@@ -102,7 +104,7 @@ export class CrudDataSource<T> {
     this._loadSub?.unsubscribe();
     const params: any = {
       ...this.basicParams,
-      ...(this.currentParams ?? {}),
+      ...(this.currentParams ?? {})
     };
     if (this.pageIndex >= 0) {
       params.page = this.pageIndex;
@@ -130,26 +132,17 @@ export class CrudDataSource<T> {
         },
         error: () => {
           this.items.set(new Page(this.pageIndex, this.pageSize, 0, []));
-        },
+        }
       });
   }
 
   search(params: NzTableQueryParams | Record<string, unknown>) {
-    if (
-      params &&
-      typeof params === 'object' &&
-      'pageIndex' in params &&
-      params.pageIndex != null &&
-      'filter' in params &&
-      (params as NzTableQueryParams).filter
-    ) {
+    if (params && typeof params === 'object' && 'pageIndex' in params && params.pageIndex != null && 'filter' in params && (params as NzTableQueryParams).filter) {
       const p = params as NzTableQueryParams;
       this.pageIndex = p.pageIndex - 1;
       this.pageSize = p.pageSize;
       this.currentParams = p.filter as any;
-      this.sortParams = (p.sort ?? [])
-        .map(item => `${item.key} ${toSortDirection(item.value)}`)
-        .join(',');
+      this.sortParams = (p.sort ?? []).map(item => `${item.key} ${toSortDirection(item.value)}`).join(',');
     } else {
       this.currentParams = params as Record<string, unknown>;
     }

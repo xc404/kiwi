@@ -2,9 +2,10 @@ import { inject, Injectable, Type } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { ModalResponse, ModalWrapService } from '@shared/modal/base-modal';
-import { LockWidgetComponent } from './lock-widget.component';
 
 import { ModalOptions } from 'ng-zorro-antd/modal';
+
+import { LockWidgetComponent } from './lock-widget.component';
 
 @Injectable({
   providedIn: 'root'

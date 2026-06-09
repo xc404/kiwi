@@ -2,12 +2,7 @@
   <bpm-editor-process-meta [loading]="processLoading()" [meta]="processMeta()" />
 
   <nz-layout class="full-height bpm-editor-layout">
-    <nz-sider
-      class="mix-sider-height side-explorer bpm-editor-palette-sider"
-      nzWidth="300px"
-      nzTheme="light"
-      nzNoAnimation
-    >
+    <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzNoAnimation nzTheme="light" nzWidth="300px">
       <div class="bpm-editor-palette-scroll">
         <bpm-pallete></bpm-pallete>
       </div>
@@ -20,19 +15,9 @@
           </div>
           <div class="canvas bpm-editor-canvas" ref="canvas"></div>
         </nz-content>
-        <nz-sider
-          class="mix-sider-height side-explorer bpm-editor-properties-sider"
-          nzWidth="500px"
-          nzTheme="light"
-          nzNoAnimation
-        >
+        <nz-sider class="mix-sider-height side-explorer bpm-editor-properties-sider" nzNoAnimation nzTheme="light" nzWidth="500px">
           <div class="bpm-editor-properties-scroll">
-            <bpm-properties-panel
-              [bpmnModeler]="bpmnModeler"
-              [usedHeight]="50"
-              [currentProcessId]="bpmnId()"
-              [projectId]="bpmProcess()?.projectId ?? null"
-            ></bpm-properties-panel>
+            <bpm-properties-panel [bpmnModeler]="bpmnModeler" [currentProcessId]="bpmnId()" [projectId]="bpmProcess()?.projectId ?? null" [usedHeight]="50"></bpm-properties-panel>
           </div>
         </nz-sider>
       </nz-layout>
