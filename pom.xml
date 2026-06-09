@@ -19,6 +19,7 @@
         <module>kiwi-bpmn</module>
         <module>kiwi-bpmn/kiwi-bpmn-external-task</module>
         <module>kiwi-bpmn/kiwi-bpmn-component</module>
+        <module>kiwi-bpmn/kiwi-bpmn-component-example</module>
     </modules>
     <properties>
         <cryoems-bpm.version>1.0.0-SNAPSHOT</cryoems-bpm.version>
@@ -146,6 +147,11 @@
             <dependency>
                 <groupId>com.kiwi</groupId>
                 <artifactId>kiwi-bpmn-external-task</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-bpmn-component-example</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

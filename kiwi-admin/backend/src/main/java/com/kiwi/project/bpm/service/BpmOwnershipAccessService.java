@@ -2,7 +2,9 @@ package com.kiwi.project.bpm.service;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
+import com.kiwi.project.bpm.dao.BpmProjectDao;
 import com.kiwi.project.bpm.model.BpmProcess;
+import com.kiwi.project.bpm.model.BpmProject;
 import lombok.RequiredArgsConstructor;
 import org.operaton.bpm.engine.HistoryService;
 import org.operaton.bpm.engine.ProcessEngine;
@@ -27,6 +29,7 @@ public class BpmOwnershipAccessService {
 
     private final ProcessEngine processEngine;
     private final BpmProcessDefinitionDao bpmProcessDefinitionDao;
+    private final BpmProjectDao bpmProjectDao;
 
     private HistoryService historyService() {
         return processEngine.getHistoryService();
@@ -57,6 +60,22 @@ public class BpmOwnershipAccessService {
                 .processInstanceId(instanceId.trim())
                 .singleResult();
         return hip != null && userId.equals(hip.getTenantId());
+    }
+
+    public void assertOwnsProject(String userId, String projectId) {
+        if (isBpmAdmin()) {
+            return;
+        }
+        if (!StringUtils.hasText(projectId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "project id is required");
+        }
+        BpmProject project = bpmProjectDao.findById(projectId.trim()).orElse(null);
+        if (project == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "project not found");
+        }
+        if (!StringUtils.hasText(userId) || !userId.equals(project.getCreatedBy())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权访问该项目");
+        }
     }
 
     public void assertOwnsProcess(String userId, String bpmProcessId) {

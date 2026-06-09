@@ -238,7 +238,37 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 六、相关文档
+## 六、第三方组件开发（示例模块）
+
+仓库提供 [`kiwi-bpmn-component-example`](../kiwi-bpmn/kiwi-bpmn-component-example/README.md)：
+
+- `DemoGreetingActivity`：`@Component("demoGreeting")` + `@ComponentDescription`
+- 在 `kiwi-admin/backend/pom.xml` 增加对 `kiwi-bpmn-component-example` 的依赖即可编入 classpath
+- 启动后自动注册为 `classpath_demoGreeting`，设计器「示例」分组可见
+
+契约：`kiwi-bpmn-core`（注解）+ `JavaDelegate` + Spring `@Component`，无需额外 SDK。
+
+---
+
+## 七、项目环境变量
+
+每个 BPM **项目**可配置环境变量（Mongo 集合 `bpmProjectEnvVar`，`projectId` 外键）：
+
+| 字段 | 说明 |
+|------|------|
+| `key` | 变量名（项目内唯一），如 `API_URL`、`API_KEY` |
+| `value` | 值；`encrypted=true` 时 AES 存储，API 不回显 |
+| `encrypted` | 敏感项开启；启动时以 Operaton **瞬态变量**注入，避免进历史 |
+
+**管理**：工作流 → 项目流程 → 选择项目 → **环境变量** Tab。
+
+**启动注入**：`BpmProcessStartService` 读取流程所属 `projectId` 的 env，与用户启动 variables 合并（**同名 key 用户优先**）。组件 BPMN 中可写 `${API_URL}`、`${API_KEY}` 等。
+
+**约定**：勿在 BPMN 属性面板明文填写生产密钥；非敏感配置（URL、桶名）可 `encrypted=false`。
+
+---
+
+## 八、相关文档
 
 | 文档 | 内容 |
 |------|------|
