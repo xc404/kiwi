@@ -16,7 +16,8 @@
 
 **Non-Goals:**
 
-- 多 profile（dev/staging/prod）子环境；Vault 外部集成；插件 JAR 加载；内置组件库扩充。
+- 多 profile（dev/staging/prod）子环境；Vault 外部集成。
+- 入站 Webhook 管理端 UI（默认集成方式为内部服务调 `POST /bpm/process/{id}/start`；外部入站 API 为可选能力，文档弱化）。
 
 ## Decisions
 

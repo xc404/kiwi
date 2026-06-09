@@ -101,7 +101,7 @@ public class ShellActivityBehavior implements JavaDelegate {
 
 **External Task 组件**（如 Slurm）额外添加 `@ExternalTaskSubscription(topicName = "slurm")`，类型自动识别为 `SpringExternalTask`。参考 [SlurmExternalTaskHandler.java](../kiwi-bpmn/kiwi-bpmn-component/src/main/java/com/kiwi/bpmn/component/slurm/SlurmExternalTaskHandler.java)。
 
-运行时读取参数统一使用 `ExecutionUtils.getStringInputVariable(execution, "xxx")` 等顶层 API；`@ComponentParameter` 的 `key` **禁止使用 `.`**，用下划线扁平命名（见 `.cursor/rules/component-parameter-key-no-dot.mdc`）。
+运行时读取参数统一使用 [`ExecutionUtils`](../kiwi-bpmn/kiwi-bpmn-core/src/main/java/com/kiwi/bpmn/core/utils/ExecutionUtils.java)（`kiwi-bpmn-core`）的 `getStringInputVariable(execution, "xxx")` 等顶层 API；`@ComponentParameter` 的 `key` **禁止使用 `.`**，用下划线扁平命名（见 `.cursor/rules/component-parameter-key-no-dot.mdc`）。
 
 ### 方式 B：管理端「组件管理」
 
@@ -246,7 +246,7 @@ JavaDelegate.execute() 读取参数、写回输出变量
 - 在 `kiwi-admin/backend/pom.xml` 增加对 `kiwi-bpmn-component-example` 的依赖即可编入 classpath
 - 启动后自动注册为 `classpath_demoGreeting`，设计器「示例」分组可见
 
-契约：`kiwi-bpmn-core`（注解）+ `JavaDelegate` + Spring `@Component`，无需额外 SDK。
+契约：`kiwi-bpmn-core`（注解 + `ExecutionUtils`）+ `JavaDelegate` + Spring `@Component`；第三方**无需**依赖 `kiwi-bpmn-component`。
 
 ---
 
@@ -274,7 +274,7 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 | Bean Key | 名称 | 分组 |
 |----------|------|------|
-| `webhookOutbound` | Webhook 出站 | 通知 |
+| `webhookOutbound` | Webhook 出站（流程内调外部/内部 HTTP） | 通知 |
 | `emailSend` | 发送邮件 | 通知 |
 | `sftpTransfer` | SFTP 传输 | 文件 |
 | `sleep` | 延时等待 | 通用 |
@@ -311,19 +311,35 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 十一、入站 Webhook（阶段四）
+## 十一、阶段四：内部集成与插件安装
 
-1. **注册**（需登录）：`POST /bpm/inbound/registration`
-   - `componentKey`：URL 路径段（全局唯一）
-   - `messageName`：BPMN 中间捕获事件的 message 名称
-   - `projectId`（可选）：仅关联含该流程变量的实例
-   - `secretToken`（可选）：调用方请求头 `X-Kiwi-Inbound-Token`
+Kiwi 的**默认集成方式**是集群内服务通过已认证 API 与流程协作，而不是对外暴露 Webhook 入站。
 
-2. **触发**（无需登录）：`POST /bpm/inbound/{componentKey}`，body 为流程变量 JSON。
+### 内部服务调用（推荐）
 
-流程中需有 **Intermediate Message Catch Event**，message 名称与注册一致，且流程启动时写入 `projectId`（若注册配置了过滤）。
+| 场景 | 做法 |
+|------|------|
+| 另一服务**启动**流程 | `POST /bpm/process/{processId}/start`，body 传 `variables`；自动合并该项目环境变量（见第七节） |
+| 流程**调用**内部 REST | 使用 `httpRequest` / `webhookOutbound` 组件；基址、Token 用项目 env 的 `${API_URL}`、`${API_KEY}` |
+| 长耗时 / 异步回调 | External Task（如 Slurm），或业务服务完成后调引擎/管理端 API（须携带登录 Token） |
 
-**组件市场（轻量）**：通过 `POST /bpm/component/plugins/upload` 安装第三方 JAR，无需改 backend `pom.xml`。
+以上路径**不需要**入站注册表，也**不需要**在 BPMN 里画 Message Catch 专门等外部 POST。
+
+### 插件包安装（组件市场轻量形态）
+
+- `POST /bpm/component/plugins/upload`：上传第三方组件 JAR 至 `plugins/`
+- `POST /bpm/component/plugins/reload`：重新扫描并同步组件库
+- 无需改 `backend/pom.xml` 即可试用可选组件
+
+### 附录：外部 Webhook 入站（可选，可忽略）
+
+仅当存在**未经登录的第三方**（如 GitHub、支付网关）需要 POST 唤醒**已在运行、且停在 Message Catch 上**的流程实例时，才使用下列 API。  
+**无此类需求时整块可忽略**；不提供管理端 UI，由脚本或运维一次性配置即可。
+
+1. **注册**（需登录）：`POST /bpm/inbound/registration` — `componentKey`、`messageName`、可选 `projectId` / `secretToken`
+2. **触发**（无需登录）：`POST /bpm/inbound/{componentKey}`，body 为流程变量 JSON；可选请求头 `X-Kiwi-Inbound-Token`
+
+BPMN 中须有 **Intermediate Message Catch Event**，message 名称与注册一致。
 
 ---
 

@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.component.json;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;

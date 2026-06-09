@@ -1,4 +1,4 @@
-package com.kiwi.bpmn.component.utils;
+package com.kiwi.bpmn.core.utils;
 
 import org.operaton.bpm.engine.delegate.DelegateExecution;
 import org.operaton.bpm.engine.variable.Variables;
@@ -20,9 +20,9 @@ class ExecutionUtilsTest {
     void getStringInputVariableAtPath_readsNestedMap() {
         DelegateExecution execution = mock(DelegateExecution.class);
         when(execution.getVariableTyped("task")).thenReturn(
-                Variables.objectValue(Map.of("config_id", "cfg-1")));
+                Variables.objectValue(Map.of("config_id", "cfg-1")).create());
         when(execution.getVariableTyped("movie")).thenReturn(
-                Variables.objectValue(Map.of("id", "m-1", "data_id", "d-1")));
+                Variables.objectValue(Map.of("id", "m-1", "data_id", "d-1")).create());
 
         assertEquals("cfg-1", ExecutionUtils.getStringInputVariableAtPath(execution, "task.config_id").orElseThrow());
         assertEquals("m-1", ExecutionUtils.getStringInputVariableAtPath(execution, "movie.id").orElseThrow());
@@ -51,7 +51,7 @@ class ExecutionUtilsTest {
     @Test
     void getStringInputVariableAtPath_missingPathIsEmpty() {
         DelegateExecution execution = mock(DelegateExecution.class);
-        when(execution.getVariableTyped("task")).thenReturn(Variables.objectValue(Map.of()));
+        when(execution.getVariableTyped("task")).thenReturn(Variables.objectValue(Map.of()).create());
 
         assertTrue(ExecutionUtils.getStringInputVariableAtPath(execution, "task.config_id").isEmpty());
     }

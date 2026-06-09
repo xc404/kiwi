@@ -12,6 +12,14 @@ import { NzTreeModule, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 
 import { Permission, Role } from '../types';
 
+interface MenuPermission {
+  permission: string;
+}
+
+interface MenuNode {
+  permissions?: MenuPermission[];
+}
+
 @Component({
   selector: 'app-role-permission',
   templateUrl: './role-permission.component.html',
@@ -25,19 +33,18 @@ export class RolePermissionComponent implements OnInit {
   loading = false;
   submitting = false;
   allMenus = signal<NzTreeNodeOptions[]>([]);
-  menuMap = signal<Map<string, any>>(new Map());
+  menuMap = signal<Map<string, MenuNode>>(new Map());
   expandedKeys: string[] = [];
   allPermissions = signal<Permission[]>([]);
   checkedMenus = signal<string[]>([]);
   checkedPermissions = signal<string[]>([]);
 
-  permissionChange = output<Role>();
+  readonly permissionChange = output<Role>();
 
   constructor() {
     effect(() => {
       this.checkedMenus.set(this.role()?.menuIds || []);
-
-      const disabled = this.disabled();
+      this.disabled();
     });
   }
 
@@ -84,14 +91,14 @@ export class RolePermissionComponent implements OnInit {
   }
 
   loadAllMenus(): void {
-    this.http.get(`/system/menu`).subscribe((res: any) => {
+    this.http.get<{ content: MenuNode[] }>(`/system/menu`).subscribe(res => {
       this.allMenus.set(TreeUtils.convertToTreeNode(res.content));
       this.menuMap.set(TreeUtils.buildMap(res.content, 'id'));
     });
   }
 
   loadAllPermissions(): void {
-    this.http.get(`/common/permission`).subscribe((res: any) => {
+    this.http.get<{ content: Permission[] }>(`/common/permission`).subscribe(res => {
       this.allPermissions.set(res.content);
     });
   }
@@ -125,7 +132,7 @@ export class RolePermissionComponent implements OnInit {
     menuIds.forEach(id => {
       const menu = this.menuMap().get(id);
       if (menu && menu.permissions) {
-        permissions.push(...menu.permissions.map((p: any) => p.permission));
+        permissions.push(...menu.permissions.map(p => p.permission));
       }
     });
     return permissions;
@@ -137,7 +144,7 @@ export class RolePermissionComponent implements OnInit {
       menuIds: this.checkedMenus(),
       permissions: this.checkedPermissions()
     };
-    this.http.put(`/system/role/${this.role().id}`, role).subscribe(res => {
+    this.http.put(`/system/role/${this.role().id}`, role).subscribe(() => {
       this.permissionChange.emit(role);
     });
   }

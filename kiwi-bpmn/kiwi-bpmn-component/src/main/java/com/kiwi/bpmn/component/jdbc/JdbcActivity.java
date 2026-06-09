@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.component.jdbc;
 
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import io.swagger.v3.oas.annotations.media.Schema;

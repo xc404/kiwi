@@ -27,7 +27,7 @@ export class PropertyGroup {
   bpmnModeler = input.required<BaseViewer>();
   element = input.required<Element>();
   viewMode = input(false);
-  variables = input<any[]>([]);
+  variables = input<unknown[]>([]);
 
   form = computed(() => {
     return new FormGroup({});

@@ -29,6 +29,22 @@ mvn -pl kiwi-bpmn/kiwi-bpmn-component-example test
 mvn -pl kiwi-admin/backend -am compile -DskipTests
 ```
 
+## 最小 Maven 依赖（第三方组件）
+
+```xml
+<dependency>
+    <groupId>com.kiwi</groupId>
+    <artifactId>kiwi-bpmn-core</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <scope>provided</scope>
+</dependency>
+```
+
+`ExecutionUtils` 已位于 `kiwi-bpmn-core`（`com.kiwi.bpmn.core.utils`），**无需**依赖 `kiwi-bpmn-component`。
+
 ## 复制为自有组件
 
 1. 复制本模块或仅复制 `DemoGreetingActivity` 类

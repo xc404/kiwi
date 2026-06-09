@@ -17,6 +17,11 @@ import { NzFormatEmitEvent, NzTreeModule, NzTreeNodeOptions } from 'ng-zorro-ant
 import { RolePermissionComponent } from './role-permission.component';
 import { Role } from '../types';
 
+interface RoleFormModel {
+  id?: string | number;
+  [key: string]: unknown;
+}
+
 @Component({
   selector: 'app-role',
   standalone: true,
@@ -29,8 +34,8 @@ export class RoleComponent implements OnInit {
 
   messageService = inject(NzMessageService);
 
-  roleNodes = signal<NzTreeNodeOptions[]>([] as any);
-  selectedRole = signal<Role>(null as any);
+  roleNodes = signal<NzTreeNodeOptions[]>([]);
+  selectedRole = signal<Role | undefined>(undefined);
   isEditing: boolean = false;
 
   addBtn: AppButtonConfig = {
@@ -72,7 +77,7 @@ export class RoleComponent implements OnInit {
       }
     }
   ];
-  model = signal<any>({});
+  model = signal<RoleFormModel>({});
   constructor() {}
 
   ngOnInit(): void {
@@ -80,7 +85,7 @@ export class RoleComponent implements OnInit {
   }
 
   loadRoles(): void {
-    this.httpService.get<any>('/system/role').subscribe(res => {
+    this.httpService.get<{ content: Role[] }>('/system/role').subscribe(res => {
       const role = res.content;
       const nodes: NzTreeNodeOptions[] = TreeUtils.convertToTreeNode(role, 'id', 'name', 'children');
       this.roleNodes.set(nodes);
@@ -94,11 +99,11 @@ export class RoleComponent implements OnInit {
   saveRole(): void {
     const model = this.model();
     if (model.id) {
-      this.httpService.put(`/system/role/${model.id}`, model).subscribe(res => {
+      this.httpService.put(`/system/role/${model.id}`, model).subscribe(() => {
         this.completeEdit();
       });
     } else {
-      this.httpService.post('/system/role', model).subscribe(res => {
+      this.httpService.post('/system/role', model).subscribe(() => {
         this.completeEdit();
       });
     }
@@ -114,7 +119,7 @@ export class RoleComponent implements OnInit {
       this.loadRoles();
       const selected = this.selectedRole();
       if (selected && Number(selected.id) === id) {
-        this.selectedRole.set(null as any);
+        this.selectedRole.set(undefined);
       }
       this.messageService.success('删除成功');
     });
@@ -140,6 +145,9 @@ export class RoleComponent implements OnInit {
 
   updateSelectPermission(role: Role): void {
     const selected = this.selectedRole();
+    if (!selected) {
+      return;
+    }
     selected.permissions = role.permissions;
     selected.menuIds = role.menuIds;
   }

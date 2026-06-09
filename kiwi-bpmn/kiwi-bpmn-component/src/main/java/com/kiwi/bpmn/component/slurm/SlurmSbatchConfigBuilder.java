@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.component.slurm;
 
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import org.operaton.bpm.engine.delegate.DelegateExecution;
 
 import java.util.Optional;

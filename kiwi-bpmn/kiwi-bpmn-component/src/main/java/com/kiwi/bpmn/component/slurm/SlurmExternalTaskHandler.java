@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.component.slurm;
 
 import com.kiwi.bpmn.component.activity.ShellActivityBehavior;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import com.kiwi.bpmn.external.AbstractExternalTaskHandler;

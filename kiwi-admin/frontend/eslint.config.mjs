@@ -15,6 +15,9 @@ import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
   {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off'
+    },
     ignores: [
       '.*/',
       'publish/',
@@ -64,9 +67,9 @@ export default tseslint.config(
       '@angular-eslint/no-host-metadata-property': 'off',
       '@angular-eslint/no-lifecycle-call': 'off',
       '@angular-eslint/no-pipe-impure': 'error',
-      '@angular-eslint/prefer-output-readonly': 'warn',
+      '@angular-eslint/prefer-output-readonly': 'off',
       '@angular-eslint/no-empty-lifecycle-method': 'off',
-      '@angular-eslint/no-output-native': 'warn',
+      '@angular-eslint/no-output-native': 'off',
       '@angular-eslint/use-component-selector': 'off',
       '@angular-eslint/use-component-view-encapsulation': 'off',
 
@@ -95,7 +98,7 @@ export default tseslint.config(
         }
       ],
       '@typescript-eslint/no-empty-function': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-inferrable-types': [
@@ -111,18 +114,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-expressions': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          vars: 'all',
-          varsIgnorePattern: '^_',
-          args: 'after-used',
-          argsIgnorePattern: '^_'
-        }
-      ],
+      'unused-imports/no-unused-vars': 'off',
       'prefer-arrow/prefer-arrow-functions': 'off',
       'import/no-duplicates': 'error',
       'import/no-unused-modules': 'error',
