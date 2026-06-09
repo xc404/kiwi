@@ -8,8 +8,8 @@ import com.kiwi.bpmn.external.AbstractExternalTaskHandler;
 import com.kiwi.bpmn.external.ExternalTaskAsyncResult;
 import com.kiwi.bpmn.external.ExternalTaskExecution;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.camunda.bpm.client.spring.annotation.ExternalTaskSubscription;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.client.spring.annotation.ExternalTaskSubscription;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

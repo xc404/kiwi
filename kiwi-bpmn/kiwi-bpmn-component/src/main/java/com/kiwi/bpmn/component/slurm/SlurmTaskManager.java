@@ -4,7 +4,7 @@ import com.kiwi.common.process.ProcessHelper;
 import com.kiwi.bpmn.external.ExternalTaskExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 

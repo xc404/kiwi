@@ -26,6 +26,6 @@ kiwi:
     init:
       admin-password: ${KIWI_INIT_ADMIN_PASSWORD:kiwi-demo}
 
-camunda.bpm:
+operaton.bpm:
   admin-user:
-    password: ${CAMUNDA_ADMIN_PASSWORD:demo}
+    password: ${OPERATON_ADMIN_PASSWORD:demo}

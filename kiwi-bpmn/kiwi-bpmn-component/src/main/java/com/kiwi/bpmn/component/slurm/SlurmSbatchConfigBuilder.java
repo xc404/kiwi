@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.component.slurm;
 
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
 
 import java.util.Optional;
 

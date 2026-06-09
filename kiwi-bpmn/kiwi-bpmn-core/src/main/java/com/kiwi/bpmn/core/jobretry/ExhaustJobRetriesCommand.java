@@ -1,18 +1,18 @@
 package com.kiwi.bpmn.core.jobretry;
 
-import org.camunda.bpm.engine.impl.cfg.TransactionContext;
-import org.camunda.bpm.engine.impl.cfg.TransactionState;
-import org.camunda.bpm.engine.impl.context.Context;
-import org.camunda.bpm.engine.impl.interceptor.Command;
-import org.camunda.bpm.engine.impl.interceptor.CommandContext;
-import org.camunda.bpm.engine.impl.jobexecutor.JobExecutor;
-import org.camunda.bpm.engine.impl.jobexecutor.MessageAddedNotification;
-import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
-import org.camunda.bpm.engine.impl.util.ExceptionUtil;
+import org.operaton.bpm.engine.impl.cfg.TransactionContext;
+import org.operaton.bpm.engine.impl.cfg.TransactionState;
+import org.operaton.bpm.engine.impl.context.Context;
+import org.operaton.bpm.engine.impl.interceptor.Command;
+import org.operaton.bpm.engine.impl.interceptor.CommandContext;
+import org.operaton.bpm.engine.impl.jobexecutor.JobExecutor;
+import org.operaton.bpm.engine.impl.jobexecutor.MessageAddedNotification;
+import org.operaton.bpm.engine.impl.persistence.entity.JobEntity;
+import org.operaton.bpm.engine.impl.util.ExceptionUtil;
 
 /**
  * 将失败 Job 的 retries 直接降为 0（触发 failed-job incident），不经过
- * {@link org.camunda.bpm.engine.impl.cmd.DefaultJobRetryCmd} 的按周期重试。
+ * {@link org.operaton.bpm.engine.impl.cmd.DefaultJobRetryCmd} 的按周期重试。
  */
 final class ExhaustJobRetriesCommand implements Command<Object> {
 

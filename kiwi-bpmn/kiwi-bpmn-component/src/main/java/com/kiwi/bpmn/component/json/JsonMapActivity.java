@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.kiwi.bpmn.component.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
-import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

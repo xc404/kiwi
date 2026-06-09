@@ -3,11 +3,11 @@ package com.kiwi.bpmn.external;
 import com.kiwi.bpmn.core.retry.RetryPlan;
 import com.kiwi.bpmn.external.retry.ExternalTaskRetryPlanner;
 import lombok.extern.slf4j.Slf4j;
-import org.camunda.bpm.client.task.ExternalTask;
-import org.camunda.bpm.client.task.ExternalTaskHandler;
-import org.camunda.bpm.client.task.ExternalTaskService;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.camunda.bpm.engine.delegate.JavaDelegate;
+import org.operaton.bpm.client.task.ExternalTask;
+import org.operaton.bpm.client.task.ExternalTaskHandler;
+import org.operaton.bpm.client.task.ExternalTaskService;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.delegate.JavaDelegate;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 

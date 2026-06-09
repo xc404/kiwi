@@ -23,19 +23,19 @@
             <artifactId>kiwi-bpmn-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm</groupId>
-            <artifactId>camunda-engine</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm</groupId>
+            <artifactId>operaton-engine</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter-external-task-client</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter-external-task-client</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm</groupId>
-            <artifactId>camunda-external-task-client-spring</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm</groupId>
+            <artifactId>operaton-external-task-client-spring</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

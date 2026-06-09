@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.core.variable;
 
-import org.camunda.bpm.engine.impl.core.variable.mapping.OutputParameter;
-import org.camunda.bpm.engine.impl.core.variable.scope.AbstractVariableScope;
+import org.operaton.bpm.engine.impl.core.variable.mapping.OutputParameter;
+import org.operaton.bpm.engine.impl.core.variable.scope.AbstractVariableScope;
 
 /**
  * Camunda 默认 {@link OutputParameter} 只把值写到父作用域；当

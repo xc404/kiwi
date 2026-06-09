@@ -1,10 +1,11 @@
 package com.kiwi.bpmn.core.async;
 
-import org.camunda.bpm.engine.impl.bpmn.parser.AbstractBpmnParseListener;
-import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParser;
-import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
-import org.camunda.bpm.engine.impl.pvm.process.ScopeImpl;
-import org.camunda.bpm.engine.impl.util.xml.Element;
+import org.operaton.bpm.engine.impl.bpmn.parser.AbstractBpmnParseListener;
+import org.operaton.bpm.engine.impl.bpmn.parser.BpmnParseListener;
+import org.operaton.bpm.engine.impl.bpmn.parser.BpmnParser;
+import org.operaton.bpm.engine.impl.pvm.process.ActivityImpl;
+import org.operaton.bpm.engine.impl.pvm.process.ScopeImpl;
+import org.operaton.bpm.engine.impl.util.xml.Element;
 
 /**
  * 解析 BPMN 时为 Service Task 默认设置 {@code asyncBefore}，在易失败节点前形成事务边界，
@@ -14,17 +15,18 @@ import org.camunda.bpm.engine.impl.util.xml.Element;
  * <p>
  * 由 {@link DefaultAsyncBeforeProcessEnginePlugin} 在开启 {@code kiwi.bpm.default-async-before-enabled} 时注册，非独立 Bean。
  */
-public class DefaultAsyncBeforeBpmnParseListener extends AbstractBpmnParseListener {
+public class DefaultAsyncBeforeBpmnParseListener implements BpmnParseListener
+{
 
     @Override
     public void parseServiceTask(Element serviceTaskElement, ScopeImpl scope, ActivityImpl activity) {
         String camundaType =
-                serviceTaskElement.attribute(BpmnParser.CAMUNDA_BPMN_EXTENSIONS_NS, "type");
+                serviceTaskElement.attribute(BpmnParser.OPERATON_BPMN_EXTENSIONS_NS, "type");
         if ("external".equalsIgnoreCase(camundaType)) {
             return;
         }
         String explicitAsyncBefore =
-                serviceTaskElement.attribute(BpmnParser.CAMUNDA_BPMN_EXTENSIONS_NS, "asyncBefore");
+                serviceTaskElement.attribute(BpmnParser.OPERATON_BPMN_EXTENSIONS_NS, "asyncBefore");
         if ("false".equalsIgnoreCase(explicitAsyncBefore)) {
             return;
         }

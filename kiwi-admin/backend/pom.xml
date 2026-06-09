@@ -8,15 +8,14 @@
 
     <properties>
         <poi.version>5.4.0</poi.version>
-        <mica.version>3.4.1</mica.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jakarta.persistence.version>3.2.0</jakarta.persistence.version>
         <velocity.version>2.3</velocity.version>
-        <spring-boot.version>3.5.8</spring-boot.version>
+        <spring-boot.version>4.0.0</spring-boot.version>
         <!-- Spring AI Alibaba（DashScope / 通义），BOM 与 starter 版本对齐 -->
         <spring-ai-alibaba.version>1.0.0.4</spring-ai-alibaba.version>
-        <!-- Camunda Spin：自 7.22 起与 camunda BPM 引擎版本号统一，必须与 ${camunda.version} 一致 -->
-        <camunda-spin.version>${camunda.version}</camunda-spin.version>
+        <sa-token.version>1.45.0</sa-token.version>
+        <springdoc.version>3.0.0</springdoc.version>
     </properties>
     <parent>
         <groupId>com.kiwi</groupId>
@@ -54,19 +53,19 @@
 <!--            <artifactId>spring-boot-starter-data-jpa</artifactId>-->
 <!--        </dependency>-->
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter-webapp</artifactId>
+            <version>${operaton.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.camunda.bpm.springboot</groupId>
-            <artifactId>camunda-bpm-spring-boot-starter-rest</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm.springboot</groupId>
+            <artifactId>operaton-bpm-spring-boot-starter-rest</artifactId>
+            <version>${operaton.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>commons-io</groupId>
@@ -74,21 +73,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!--
-            Camunda Spin：把流程变量的默认序列化格式从 Java 原生序列化切到 JSON（Jackson）。
-            配合 application.yml 中 camunda.bpm.default-serialization-format=application/json 生效；
-            领域对象（如 MovieResult）不再需要实现 Serializable，避免 ENGINE-02042 序列化失败。
-            自 Camunda 7.22 起 Spin 版本号已与 BPM 引擎统一（${camunda.version}）。
-        -->
+        <!-- Operaton Spin：流程变量默认 JSON 序列化（operaton.bpm.default-serialization-format=application/json） -->
         <dependency>
-            <groupId>org.camunda.bpm</groupId>
-            <artifactId>camunda-engine-plugin-spin</artifactId>
-            <version>${camunda.version}</version>
+            <groupId>org.operaton.bpm</groupId>
+            <artifactId>operaton-engine-plugin-spin</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.camunda.spin</groupId>
-            <artifactId>camunda-spin-dataformat-json-jackson</artifactId>
-            <version>${camunda-spin.version}</version>
+            <groupId>org.operaton.spin</groupId>
+            <artifactId>operaton-spin-dataformat-json-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -117,18 +109,18 @@
         </dependency>
         <dependency>
             <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-spring-boot3-starter</artifactId>
-            <version>1.44.0</version>
+            <artifactId>sa-token-spring-boot4-starter</artifactId>
+            <version>${sa-token.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-template</artifactId>
-            <version>1.44.0</version>
+            <version>${sa-token.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.8.14</version>
+            <version>${springdoc.version}</version>
         </dependency>
         <!-- 解析 OpenAPI 3.x / Swagger 2.0 文档，用于从规范生成 BPM 组件草稿 -->
         <dependency>
@@ -243,14 +235,6 @@
     </dependencies>
     <dependencyManagement>
         <dependencies>
-            <!-- 必须置于本模块 BOM 导入首位：Maven 对 import BOM 为「先声明者优先」，若 spring-ai-alibaba-bom / mica-bom 在前会锁死 spring-core 6.2.1，ASM 无法解析 JDK 25 字节码 -->
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-framework-bom</artifactId>
-                <version>${spring-framework.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>com.alibaba.cloud.ai</groupId>
                 <artifactId>spring-ai-alibaba-bom</artifactId>
@@ -258,14 +242,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>net.dreamlu</groupId>
-                <artifactId>mica-bom</artifactId>
-                <version>${mica.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
         </dependencies>
     </dependencyManagement>
 

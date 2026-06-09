@@ -2,6 +2,8 @@
 
 Kiwi 当前基于 Spring Boot 3.5.x 与 JDK 25；升级到 **Spring Boot 4.x** 可与上游长期支持节奏对齐，获得安全修复与 Spring Framework 7 / Boot 4 生态的一致行为，并为后续依赖升级腾出空间。迁移有一定破坏性（Camunda 工件坐标、BOM 策略），适合以规格化变更一次性收敛。
 
+> **Superseded**：本变更的 Boot 4 目标已由 [`operaton-migration`](../operaton-migration/proposal.md) 吸收——采用 **Operaton 2.x** 替代 Camunda 官方 `-4` starter，而非单独升 Camunda 7.24.3+。归档本 change 前请确认 `operaton-migration` 已合并或明确取舍。
+
 ## What Changes
 
 - 将根 BOM / `spring-boot-starter-parent` 及子模块中显式声明的 Spring Boot 版本提升至 **4.0.x**（与团队锁定的补丁线一致，具体版本以实现时 Central 与兼容性矩阵为准）。

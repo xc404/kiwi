@@ -3,7 +3,7 @@ package com.kiwi.framework.springboot.config;
 import com.kiwi.common.mongo.BaseMongoRepositoryImpl;
 import com.kiwi.common.mongo.KiwiMongoTemplate;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.mongo.MongoProperties;
+import org.springframework.boot.mongodb.autoconfigure.MongoProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;

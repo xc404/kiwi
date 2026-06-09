@@ -77,7 +77,7 @@ public class SlurmJob extends BaseEntity<String> implements Cloneable{
 
     /**
      * sacct 跟踪视为超时的绝对时刻（通常 ≈ {@link com.kiwi.common.entity.BaseEntity#getCreatedTime()} + 跟踪窗口）。
-     * 窗口时长见 {@link SlurmService#getSlurmJobMaxDuration(org.camunda.bpm.engine.delegate.DelegateExecution)}。
+     * 窗口时长见 {@link SlurmService#getSlurmJobMaxDuration(org.operaton.bpm.engine.delegate.DelegateExecution)}。
      */
     private Date expiration;
 

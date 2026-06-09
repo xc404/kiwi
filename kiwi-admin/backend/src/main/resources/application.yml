@@ -98,10 +98,10 @@ spring:
       auto-index-creation: true
 
 
-camunda.bpm:
+operaton.bpm:
   admin-user:
-    id: ${CAMUNDA_ADMIN_USER:demo}
-    password: ${CAMUNDA_ADMIN_PASSWORD:change-me}
+    id: ${OPERATON_ADMIN_USER:demo}
+    password: ${OPERATON_ADMIN_PASSWORD:change-me}
     firstName: Demo
   filter:
     create: All tasks
@@ -110,17 +110,17 @@ camunda.bpm:
   # 流程变量对象的默认序列化格式：JSON（Jackson，via Camunda Spin）
   # 切换后：setVariable("xxx", pojo) 不再要求 Serializable，避免 ENGINE-02042
   # 注意：已存在的 Java 序列化历史变量仍按写入时的格式反序列化；只影响新写入
-  # 回退：环境变量设 CAMUNDA_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
-  default-serialization-format: ${CAMUNDA_DEFAULT_SERIALIZATION_FORMAT:application/json}
+  # 回退：环境变量设 OPERATON_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
+  default-serialization-format: ${OPERATON_DEFAULT_SERIALIZATION_FORMAT:application/json}
   generic-properties:
     properties:
       skip-isolation-level-check: true
       historyTimeToLive: P15D
       # 未捕获的 BpmnError 时抛 ProcessEngineException，而非按「none end」静默结束（ACT_HI_PROCINST 易为 COMPLETED）
-      # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
-      enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
+      # 关闭：环境变量 OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
+      enableExceptionsAfterUnhandledBpmnError: ${OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
       # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
-      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
+      failedJobRetryTimeCycle: ${OPERATON_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
 
 # Camunda JUEL：在 SpringExpressionManager 解析链末尾追加容错（缺失流程变量 → null，不影响 ${assignmentActivity} 等 Bean）
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false

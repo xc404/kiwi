@@ -1,15 +1,13 @@
 package com.kiwi.bpmn.core.el;
 
-import org.camunda.bpm.engine.impl.el.VariableScopeElResolver;
-import org.camunda.bpm.impl.juel.jakarta.el.ELContext;
-import org.camunda.bpm.impl.juel.jakarta.el.ELResolver;
+import jakarta.el.ELContext;
+import jakarta.el.ELResolver;
+import org.operaton.bpm.engine.impl.el.VariableScopeElResolver;
 
-import java.beans.FeatureDescriptor;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
- * 置于 JUEL {@link org.camunda.bpm.impl.juel.jakarta.el.CompositeELResolver} 链末尾
+ * 置于 JUEL {@link jakarta.el.CompositeELResolver} 链末尾
  * （须在 {@code SpringExpressionManager} / Bean 解析器之后追加）：
  * 当流程变量、Spring Bean 等均未解析顶层标识符时，返回 {@code null} 而非
  * {@code PropertyNotFoundException}。
@@ -50,11 +48,6 @@ public class MissingIdentifierNullElResolver extends ELResolver {
     @Override
     public boolean isReadOnly(ELContext context, Object base, Object property) {
         return true;
-    }
-
-    @Override
-    public Iterator<FeatureDescriptor> getFeatureDescriptors(ELContext context, Object base) {
-        return null;
     }
 
     @Override

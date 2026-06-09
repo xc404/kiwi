@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.component.json;
 
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
-import org.camunda.bpm.engine.variable.Variables;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.variable.Variables;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;

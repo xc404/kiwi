@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.core.retry;
 
-import org.camunda.bpm.engine.OptimisticLockingException;
+import org.operaton.bpm.engine.OptimisticLockingException;
 
 public final class JobRetryFailureSupport {
 

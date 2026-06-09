@@ -1,8 +1,8 @@
 package com.kiwi.bpmn.component.activity;
 
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
-import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
 
 /**

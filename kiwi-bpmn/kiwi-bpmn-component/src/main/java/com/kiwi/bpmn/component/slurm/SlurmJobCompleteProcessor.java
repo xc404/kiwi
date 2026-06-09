@@ -6,11 +6,11 @@ import com.kiwi.bpmn.external.utils.DtoUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.camunda.bpm.client.task.impl.ExternalTaskImpl;
-import org.camunda.bpm.engine.ExternalTaskService;
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.RuntimeService;
-import org.camunda.bpm.engine.externaltask.ExternalTask;
+import org.operaton.bpm.client.task.impl.ExternalTaskImpl;
+import org.operaton.bpm.engine.ExternalTaskService;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.RuntimeService;
+import org.operaton.bpm.engine.externaltask.ExternalTask;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.io.File;

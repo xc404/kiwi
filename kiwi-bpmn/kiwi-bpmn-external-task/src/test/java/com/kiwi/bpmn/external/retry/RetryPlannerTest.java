@@ -3,7 +3,7 @@ package com.kiwi.bpmn.external.retry;
 import com.kiwi.bpmn.core.retry.IRetry;
 import com.kiwi.bpmn.core.retry.JobRetryExceptionClassifier;
 import com.kiwi.bpmn.core.retry.RetryPlan;
-import org.camunda.bpm.client.task.ExternalTask;
+import org.operaton.bpm.client.task.ExternalTask;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 

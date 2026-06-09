@@ -1,6 +1,8 @@
 # kiwi-admin backend
 
-Spring Boot 主应用：REST API、嵌入式 Camunda、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.zh-CN.md](../../README.zh-CN.md)（[English](../../README.md)）。
+Spring Boot 主应用：REST API、嵌入式 **Operaton 2.x** BPM 引擎、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.zh-CN.md](../../README.zh-CN.md)（[English](../../README.md)）。
+
+**Camunda 7 回滚**：检出 Git 标签/分支 **`camunda`** 可回到迁移前 Camunda 7.24 + Boot 3.5 代码基线；引擎库须用迁移前备份恢复。
 
 ## 代码结构
 
@@ -27,7 +29,7 @@ src/main/java/com/kiwi/
 | Profile | 典型用途 |
 |---------|----------|
 | `local` | 加载 `application-local.yml`（连接串、密钥；文件已 `.gitignore`） |
-| `dev` | Camunda 使用 H2（`./data/dev-bpm`）、端口 **8000**、MyBatis StdOut 等 |
+| `dev` | Operaton 引擎库使用 H2（`./data/dev-bpm`）、端口 **8000**、MyBatis StdOut 等 |
 | `redis` | Sa-Token 存 Redis（需 `application-redis.yml` + Redis 连接） |
 
 本地推荐启动参数：
@@ -49,7 +51,8 @@ cp src/main/resources/application.example.yml src/main/resources/application-loc
 | 变量 | 说明 |
 |------|------|
 | `SPRING_DATA_MONGODB_URI` | 主 MongoDB |
-| `SPRING_DATASOURCE_URL` / `USERNAME` / `PASSWORD` | Camunda/MyBatis 关系库（非 `dev`） |
+| `SPRING_DATASOURCE_URL` / `USERNAME` / `PASSWORD` | Operaton/MyBatis 关系库（非 `dev`） |
+| `OPERATON_ADMIN_USER` / `OPERATON_ADMIN_PASSWORD` | Operaton Webapp/Tasklist 演示管理员（原 `CAMUNDA_*`） |
 | `KIWI_MONGODB_MIGRATION_ENABLED` | 是否执行 Mongo 迁移，默认 `true` |
 | `KIWI_INIT_ADMIN_PASSWORD` / `kiwi.mongodb.init.admin-password` | 首次管理员密码（迁移必填） |
 | `KIWI_MONGODB_INIT_ADMIN_USERNAME` / `KIWI_MONGODB_INIT_ADMIN_NICK_NAME` | 管理员用户名、昵称 |
@@ -73,7 +76,13 @@ cp src/main/resources/application.example.yml src/main/resources/application-loc
    ```
 
 4. IDE 运行 `com.kiwi.framework.springboot.Application`，Profile `local,dev`。
-5. 默认（`local,dev`）API：**http://localhost:8000**；Camunda REST：**/engine-rest**；Swagger 路径见启动日志。
+5. 默认（`local,dev`）API：**http://localhost:8000**；引擎 REST：**/engine-rest**；Swagger 路径见启动日志。
+
+### Operaton 依赖与 Maven Central
+
+Operaton **2.1.x** 发布在 [Maven Central](https://repo1.maven.org/maven2/org/operaton/)。若私服/阿里云镜像未同步，根 `pom.xml` 已声明仓库 `operaton-maven-central`；仍失败时可执行 `mvn -U` 并清理 `~/.m2/repository/org/operaton` 中损坏缓存。
+
+配置前缀为 **`operaton.bpm.*`**（替代原 `camunda.bpm.*`）。引擎库自 Camunda 7.24 升级前请 **备份** 关系库。
 
 首次启动且迁移开启时会写入管理员与菜单/字典等参考数据。
 
