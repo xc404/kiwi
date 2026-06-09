@@ -5,6 +5,5 @@ export const environment = {
   postLoginPath: '/bpm/project',
   api: {
     baseUrl: '',
-    camundaEngineRestPath: '/engine-rest',
   },
 };

@@ -1,8 +1,5 @@
 server:
   port: 8080
-  servlet:
-    context-path: /kiwi
-
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
 # AI 对话：Spring AI DeepSeek；密钥见 KIWI_AI_API_KEY 或 DEEPSEEK_API_KEY
 kiwi:
@@ -127,6 +124,8 @@ operaton.bpm:
 # Camunda JUEL：在 SpringExpressionManager 解析链末尾追加容错（缺失流程变量 → null，不影响 ${assignmentActivity} 等 Bean）
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false
 kiwi.bpm:
+  # 是否对外暴露 Operaton /engine-rest HTTP（Jersey）；默认关闭，仅调试/遗留集成时显式开启
+  engine-rest-http-enabled: ${KIWI_BPM_ENGINE_REST_HTTP_ENABLED:false}
   juel-null-for-missing-variables: ${KIWI_BPM_JUEL_NULL_FOR_MISSING_VARIABLES:true}
   # BPM 全局变量：通过 Bean ${bpmGlobalVariables.<field>} 暴露给 BPMN EL（网关条件、Service Task 输入参数等）
   # 字段定义见 com.kiwi.cryoems.bpm.config.BpmGlobalVariables；新增字段时 yml 用 kebab-case，Java 用 camelCase

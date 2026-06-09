@@ -76,7 +76,7 @@ cp src/main/resources/application.example.yml src/main/resources/application-loc
    ```
 
 4. IDE 运行 `com.kiwi.framework.springboot.Application`，Profile `local,dev`。
-5. 默认（`local,dev`）API：**http://localhost:8000**；引擎 REST：**/engine-rest**；Swagger 路径见启动日志。
+5. 默认（`local,dev`）API：**http://localhost:8000**；Operaton **`/engine-rest` HTTP 默认关闭**（`kiwi.bpm.engine-rest-http-enabled=false`）；需调试时可设 `KIWI_BPM_ENGINE_REST_HTTP_ENABLED=true`。Swagger 路径见启动日志。
 
 ### Operaton 依赖与 Maven Central
 

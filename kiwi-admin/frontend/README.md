@@ -8,7 +8,7 @@ Angular 管理端：低代码后台、**BPMN 流程设计**、图表与表单。
 |------|------|
 | 框架 | Angular 21、TypeScript 5.9 |
 | UI | ng-zorro-antd、Less（`default` / `dark` / `aliyun` / `compact`） |
-| 流程 | BPMN.js、`camundaEngineRestPath` 与后端一致 |
+| 流程 | BPMN.js、实例查看走 `/bpm/process-instance` API |
 | 图表 / 图编辑 | ECharts、@antv/g2plot、@antv/x6 |
 | 其他 | CodeMirror、TinyMCE、JWT、ngx-formly 等 |
 
@@ -53,7 +53,7 @@ npm start
 | `environment.ts` | 开发：`api.baseUrl` 默认 `http://localhost:8000/`（与 `environment.ts` 内 `port` 及后端 `server.port` 一致） |
 | `environment.prod.ts` | 生产构建替换；改为实际后端地址 |
 
-`api.baseUrl` 为 API **根地址**，不要以 `/ai` 结尾。`camundaEngineRestPath` 默认 `/engine-rest`。
+`api.baseUrl` 为 API **根地址**，不要以 `/ai` 结尾。BPM 实例查看走 `/bpm/process-instance/*` 封装 API，不再直连 `/engine-rest`。
 
 ### 开发代理（`proxy.conf.json`）
 

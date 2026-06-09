@@ -7,8 +7,10 @@ import org.operaton.bpm.engine.ProcessEngine;
 import org.operaton.bpm.engine.repository.ProcessDefinition;
 import org.operaton.bpm.engine.rest.dto.runtime.ProcessInstanceDto;
 import org.operaton.bpm.engine.runtime.ProcessInstance;
+import org.operaton.bpm.engine.runtime.ProcessInstantiationBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
@@ -30,15 +32,15 @@ public class BpmProcessStartService {
             throw new IllegalStateException("流程未部署");
         }
         enforceMaxRunningInstances(bpmProcess, deployedProcessDefinitionId);
-        ProcessInstance processInstance;
-        if (variables == null || variables.isEmpty()) {
-            processInstance = processEngine.getRuntimeService()
-                    .startProcessInstanceByKey(bpmProcessId);
-        } else {
-            processInstance = processEngine.getRuntimeService()
-                    .startProcessInstanceByKey(bpmProcessId, variables);
+        ProcessInstantiationBuilder builder = processEngine.getRuntimeService()
+                .createProcessInstanceByKey(bpmProcessId);
+        if (StringUtils.hasText(bpmProcess.getCreatedBy())) {
+            builder.processDefinitionTenantId(bpmProcess.getCreatedBy());
         }
-        return new ProcessInstanceDto(processInstance);
+        if (variables != null && !variables.isEmpty()) {
+            builder.setVariables(variables);
+        }
+        return new ProcessInstanceDto(builder.execute());
     }
 
     /**

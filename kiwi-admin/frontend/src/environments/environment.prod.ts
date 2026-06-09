@@ -10,7 +10,5 @@ export const environment = {
   postLoginPath: '/bpm/project',
   api: {
     baseUrl: localUrl,
-    /** Operaton/Camunda REST 默认 `/engine-rest`（路径名未变），若改 context 请同步 */
-    camundaEngineRestPath: '/engine-rest',
   },
 };

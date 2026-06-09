@@ -23,7 +23,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *   <li>{@code /auth/signin}、{@code /auth/signout} — 登录/登出</li>
  *   <li>{@code /user/personal-access-tokens/exchange} — PAT 兑换 Sa-Token（机机）</li>
  *   <li>{@code /swagger-ui/**}、{@code /v3/api-docs/**}、{@code /swagger-ui.html} — OpenAPI/Swagger</li>
- *   <li>{@code /engine-rest/**} — Camunda REST（请结合网关或 Camunda 自身鉴权在生产环境收紧）</li>
  *   <li>{@code /camunda/**} — Camunda Webapp</li>
  *   <li>{@code /sse}、{@code /message} — Spring AI MCP（WebMVC + SSE）协议端点</li>
  *   <li>{@code /error} — Spring Boot 错误页</li>
@@ -65,7 +64,6 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                 .notMatch("/swagger-ui.html")
                 .notMatch("/v3/api-docs/**")
                 .notMatch("/v3/api-docs")
-                .notMatch("/engine-rest/**")
                 .notMatch("/camunda/**")
                 .notMatch("/sse")
                 .notMatch("/message")

@@ -13,4 +13,7 @@ public interface BpmProcessDefinitionDao extends BaseMongoRepository<BpmProcess,
      * 当前用户保存过的流程，按更新时间从新到旧（用于按需解析「最近使用的组件」）。
      */
     List<BpmProcess> findByCreatedByOrderByUpdatedTimeDesc(String createdBy, Pageable pageable);
+
+    /** 当前用户拥有的流程定义 id 列表（与 Camunda processDefinitionKey 一致）。 */
+    List<BpmProcess> findByCreatedBy(String createdBy);
 }

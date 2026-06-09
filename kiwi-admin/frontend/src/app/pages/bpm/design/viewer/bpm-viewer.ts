@@ -174,7 +174,6 @@ export class BpmViewer implements OnInit, OnDestroy {
     this.processInstanceService.getProcessInstance(this.processInstanceId()!).subscribe({
       next: (pi) => {
         this.processInstance.set(pi);
-        this.ensureProcessDefinitionName(pi);
       },
       error: (err) => {
         console.error('加载流程实例失败', err);
@@ -182,42 +181,13 @@ export class BpmViewer implements OnInit, OnDestroy {
     });
   }
 
-  /** 运行时实例常无 processDefinitionName，补拉 GET /process-definition/{id} */
-  private ensureProcessDefinitionName(pi: BpmProcessInstanceDto): void {
-    const defId = pi.processDefinitionId?.trim();
-    if (!defId) {
-      return;
-    }
-    if (pi.processDefinitionName?.trim()) {
-      return;
-    }
-    this.processInstanceService.getProcessDefinition(defId).subscribe({
-      next: (def) => {
-        const n = def.name != null ? String(def.name).trim() : '';
-        if (!n) {
-          return;
-        }
-        const cur = this.processInstance();
-        if (cur?.id !== pi.id) {
-          return;
-        }
-        if (cur.processDefinitionName?.trim()) {
-          return;
-        }
-        this.processInstance.set({ ...cur, processDefinitionName: n });
-      },
-      error: () => {
-        /* 名称非关键路径，忽略 */
-      },
-    });
-  }
   loadBpmnXml() {
-    const definitionId = this.processInstance().processDefinitionId;
-    if (!definitionId) {
-      console.error('无法解析流程定义 ID（definitionId / processDefinitionId）');
+    const instanceId = this.processInstanceId();
+    if (!instanceId) {
+      console.error('无法解析流程实例 ID');
       return;
     }
-    this.processInstanceService.getProcessDefinitionXml(definitionId).subscribe({
+    this.processInstanceService.getProcessDefinitionXml(instanceId).subscribe({
       next: (res) => {
         this.bpmnXml.set(res.bpmn20Xml);
       },

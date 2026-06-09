@@ -2,14 +2,19 @@ package com.kiwi.project.bpm.ctl;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.kiwi.framework.ctl.BaseCtl;
+import com.kiwi.project.bpm.dto.BpmHistoricActivityInstanceDto;
+import com.kiwi.project.bpm.dto.BpmHistoricVariableInstanceDto;
 import com.kiwi.project.bpm.dto.BpmInstanceRecoverResultDto;
+import com.kiwi.project.bpm.dto.BpmProcessDefinitionXmlDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceBatchIdsRequest;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceStateDto;
+import com.kiwi.project.bpm.service.BpmOwnershipAccessService;
 import com.kiwi.project.bpm.service.BpmProcessInstanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.operaton.bpm.engine.ExternalTaskService;
 import org.operaton.bpm.engine.HistoryService;
 import org.operaton.bpm.engine.ManagementService;
@@ -52,22 +57,25 @@ import java.util.stream.Collectors;
  */
 @SaCheckLogin
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/bpm/process-instance")
 @Tag(name = "BPM 流程实例", description = "实例分页、状态查询与 incident 恢复")
 public class BpmProcessInstanceCtl extends BaseCtl {
 
     private final ProcessEngine processEngine;
-    private final HistoryService historyService;
     private final BpmProcessInstanceService bpmProcessInstanceService;
-    private final RuntimeService runtimeService;
-    private final TaskService taskService;
+    private final BpmOwnershipAccessService bpmOwnershipAccessService;
 
-    public BpmProcessInstanceCtl(ProcessEngine processEngine, BpmProcessInstanceService bpmProcessInstanceService) {
-        this.processEngine = processEngine;
-        this.historyService = processEngine.getHistoryService();
-        this.bpmProcessInstanceService = bpmProcessInstanceService;
-        this.runtimeService = processEngine.getRuntimeService();
-        this.taskService = processEngine.getTaskService();
+    private HistoryService historyService() {
+        return processEngine.getHistoryService();
+    }
+
+    private RuntimeService runtimeService() {
+        return processEngine.getRuntimeService();
+    }
+
+    private TaskService taskService() {
+        return processEngine.getTaskService();
     }
 
     /** 完成 UserTask / 推动 ManualTask 时透传的流程变量（可选）。 */
@@ -94,7 +102,12 @@ public class BpmProcessInstanceCtl extends BaseCtl {
             Pageable pageable) {
 
         InstanceState state = resolveInstanceState(unfinished, instanceState);
-        HistoricProcessInstanceQuery query = buildQuery(processDefinitionKey, businessKey, processInstanceId, state);
+        List<String> ownedKeys = resolveOwnedProcessKeysForPage(processDefinitionKey);
+        if (ownedKeys != null && ownedKeys.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+        HistoricProcessInstanceQuery query =
+                buildQuery(processDefinitionKey, businessKey, processInstanceId, state, ownedKeys);
 
         long total = query.count();
         List<HistoricProcessInstance> list = query
@@ -115,8 +128,9 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     @Operation(operationId = "bpmInst_get", summary = "按实例 id 获取流程实例详情")
     @GetMapping("{instanceId}")
     public BpmProcessInstanceDto get(@PathVariable String instanceId) {
+        bpmOwnershipAccessService.assertOwnsInstance(getCurrentUserId(), instanceId);
 
-        HistoricProcessInstance hip = historyService.createHistoricProcessInstanceQuery()
+        HistoricProcessInstance hip = historyService().createHistoricProcessInstanceQuery()
                 .processInstanceId(instanceId)
                 .singleResult();
         if (hip == null) {
@@ -124,6 +138,30 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         }
 
         return bpmProcessInstanceService.detailDtoFromHistoric(instanceId, hip);
+    }
+
+    @Operation(operationId = "bpmInst_definitionXml", summary = "获取流程实例对应定义的 BPMN XML")
+    @GetMapping("{instanceId}/definition-xml")
+    @ResponseBody
+    public BpmProcessDefinitionXmlDto definitionXml(@PathVariable String instanceId) {
+        bpmOwnershipAccessService.assertOwnsInstance(getCurrentUserId(), instanceId);
+        return bpmProcessInstanceService.definitionXmlForInstance(instanceId);
+    }
+
+    @Operation(operationId = "bpmInst_historyActivities", summary = "获取流程实例历史活动（画布高亮）")
+    @GetMapping("{instanceId}/history-activities")
+    @ResponseBody
+    public List<BpmHistoricActivityInstanceDto> historyActivities(@PathVariable String instanceId) {
+        bpmOwnershipAccessService.assertOwnsInstance(getCurrentUserId(), instanceId);
+        return bpmProcessInstanceService.historyActivitiesForInstance(instanceId);
+    }
+
+    @Operation(operationId = "bpmInst_variables", summary = "获取流程实例历史变量列表")
+    @GetMapping("{instanceId}/variables")
+    @ResponseBody
+    public List<BpmHistoricVariableInstanceDto> variables(@PathVariable String instanceId) {
+        bpmOwnershipAccessService.assertOwnsInstance(getCurrentUserId(), instanceId);
+        return bpmProcessInstanceService.historicVariablesForInstance(instanceId);
     }
 
     /**
@@ -166,7 +204,8 @@ public class BpmProcessInstanceCtl extends BaseCtl {
     public BpmInstanceRecoverResultDto recover(
             @PathVariable String instanceId,
             @RequestParam(defaultValue = "3") int retries) {
-        ProcessInstance pi = this.runtimeService.createProcessInstanceQuery()
+        bpmOwnershipAccessService.assertOwnsInstance(getCurrentUserId(), instanceId);
+        ProcessInstance pi = this.runtimeService().createProcessInstanceQuery()
                 .processInstanceId(instanceId)
                 .singleResult();
         if (pi == null) {
@@ -175,7 +214,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
 
         int retriesApplied = Math.min(100, Math.max(1, retries));
         List<Incident> incidents =
-                runtimeService.createIncidentQuery().processInstanceId(instanceId).list();
+                runtimeService().createIncidentQuery().processInstanceId(instanceId).list();
 
         ManagementService managementService = processEngine.getManagementService();
         ExternalTaskService externalTaskService = processEngine.getExternalTaskService();
@@ -250,7 +289,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         String pid = instanceId.trim();
         String key = taskKey.trim();
 
-        ProcessInstance pi = runtimeService.createProcessInstanceQuery()
+        ProcessInstance pi = runtimeService().createProcessInstanceQuery()
                 .processInstanceId(pid)
                 .singleResult();
         if (pi == null) {
@@ -264,7 +303,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
                 : Map.of();
 
         // 1) UserTask 路径：taskService.complete
-        List<Task> userTasks = taskService.createTaskQuery()
+        List<Task> userTasks = taskService().createTaskQuery()
                 .processInstanceId(pid)
                 .taskDefinitionKey(key)
                 .active()
@@ -275,7 +314,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
                     "ambiguous: multiple active user tasks with key '" + taskKey + "' on instance '" + instanceId + "'");
         }
         if (userTasks.size() == 1) {
-            taskService.complete(userTasks.get(0).getId(), variables);
+            taskService().complete(userTasks.get(0).getId(), variables);
             return loadStateAfterComplete(pid);
         }
 
@@ -294,7 +333,7 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         if (jobs.size() == 1) {
             Job job = jobs.get(0);
             if (!variables.isEmpty() && StringUtils.hasText(job.getExecutionId())) {
-                runtimeService.setVariables(job.getExecutionId(), variables);
+                runtimeService().setVariables(job.getExecutionId(), variables);
             }
             managementService.executeJob(job.getId());
             return loadStateAfterComplete(pid);
@@ -342,20 +381,43 @@ public class BpmProcessInstanceCtl extends BaseCtl {
         }
     }
 
+    /**
+     * 非管理员：返回本人流程 key 列表；若请求指定了他人流程 key 则返回空列表。
+     * 管理员：返回 {@code null} 表示不限制。
+     */
+    private List<String> resolveOwnedProcessKeysForPage(String processDefinitionKey) {
+        if (bpmOwnershipAccessService.isBpmAdmin()) {
+            return null;
+        }
+        List<String> owned = bpmOwnershipAccessService.ownedProcessKeys(getCurrentUserId());
+        if (isNotBlank(processDefinitionKey)) {
+            String key = processDefinitionKey.trim();
+            return owned.contains(key) ? List.of(key) : List.of();
+        }
+        return owned;
+    }
+
     private HistoricProcessInstanceQuery buildQuery(
             String processDefinitionKey,
             String businessKey,
             String processInstanceId,
-            InstanceState state) {
+            InstanceState state,
+            List<String> ownedProcessKeys) {
 
-        HistoricProcessInstanceQuery query = historyService.createHistoricProcessInstanceQuery();
+        HistoricProcessInstanceQuery query = historyService().createHistoricProcessInstanceQuery();
         switch (state) {
             case RUNNING -> query.unfinished();
             case COMPLETED -> query.completed();
             case ALL -> {}
         }
 
-        if (isNotBlank(processDefinitionKey)) {
+        if (ownedProcessKeys != null) {
+            if (ownedProcessKeys.size() == 1) {
+                query.processDefinitionKey(ownedProcessKeys.get(0));
+            } else {
+                query.processDefinitionKeyIn(ownedProcessKeys.toArray(String[]::new));
+            }
+        } else if (isNotBlank(processDefinitionKey)) {
             query.processDefinitionKey(processDefinitionKey.trim());
         }
         if (isNotBlank(businessKey)) {
