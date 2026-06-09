@@ -58,7 +58,7 @@ cp src/main/resources/application.example.yml src/main/resources/application-loc
 | `KIWI_MONGODB_INIT_ADMIN_USERNAME` / `KIWI_MONGODB_INIT_ADMIN_NICK_NAME` | 管理员用户名、昵称 |
 | `APP_CORS_ALLOWED_ORIGINS` | 允许的前端 Origin（逗号分隔） |
 | `APP_PASSWORD_SECRET` | 密码哈希密钥 |
-| `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY` | 通义 DashScope API Key |
+| `KIWI_AI_API_KEY` / `DEEPSEEK_API_KEY` | DeepSeek API Key |
 | `KIWI_AI_ENABLED` | 是否启用 AI，默认 `true` |
 | `KIWI_SA_TOKEN_STORAGE` | `mongodb`（默认）或 `redis` |
 | `MONGOCK_TRANSACTIONAL` | Mongock 事务，本地单机 Mongo 保持 `false` |

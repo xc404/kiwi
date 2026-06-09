@@ -1,7 +1,7 @@
 package com.kiwi.project.ai;
 
 /**
- * 将 Spring AI / DashScope 等上游错误原文转为面向用户的中文提示。
+ * 将 Spring AI / DeepSeek 等上游错误原文转为面向用户的中文提示。
  */
 public final class AiModelErrorUtils {
 
@@ -12,8 +12,8 @@ public final class AiModelErrorUtils {
         if (rawMessage == null || rawMessage.isBlank()) {
             return "大模型服务调用失败，请稍后重试。";
         }
-        if (containsCode(rawMessage, "Arrearage")) {
-            return "大模型服务账户欠费或余额不足，请充值阿里云 DashScope（百炼）后重试。";
+        if (containsCode(rawMessage, "Arrearage") || containsCode(rawMessage, "Insufficient Balance")) {
+            return "大模型服务账户欠费或余额不足，请充值 DeepSeek 账户后重试。";
         }
         if (containsCode(rawMessage, "InvalidApiKey")) {
             return "大模型 API Key 无效或未配置，请联系管理员检查配置。";

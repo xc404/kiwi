@@ -1,7 +1,6 @@
 package com.kiwi.project.ai.mcp;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
@@ -23,18 +22,16 @@ public class KiwiLocalMcpClientConfiguration {
     @Lazy
     public McpSyncClient kiwiLocalMcpSyncClient(
             @Value("${kiwi.ai.mcp.loopback-base-url}") String loopbackBaseUrl,
-            @Value("${spring.ai.mcp.server.sse-endpoint:/sse}") String sseEndpoint,
-            ObjectMapper objectMapper) {
+            @Value("${spring.ai.mcp.server.sse-endpoint:/sse}") String sseEndpoint) {
         String base = loopbackBaseUrl.endsWith("/")
                 ? loopbackBaseUrl.substring(0, loopbackBaseUrl.length() - 1)
                 : loopbackBaseUrl;
         var transport = HttpClientSseClientTransport.builder(base)
                 .sseEndpoint(sseEndpoint.startsWith("/") ? sseEndpoint : "/" + sseEndpoint)
-                .objectMapper(objectMapper)
-                .customizeRequest(b -> {
+                .httpRequestCustomizer((requestBuilder, method, uri, body, context) -> {
                     try {
                         if (StpUtil.isLogin()) {
-                            b.header("Authorization", "Bearer " + StpUtil.getTokenValue());
+                            requestBuilder.header("Authorization", "Bearer " + StpUtil.getTokenValue());
                         }
                     } catch (Throwable ignored) {
                         // 无登录态时回环仍可能匿名失败，由调用方处理

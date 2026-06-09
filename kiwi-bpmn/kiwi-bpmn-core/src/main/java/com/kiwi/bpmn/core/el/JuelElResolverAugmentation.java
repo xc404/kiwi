@@ -42,11 +42,21 @@ final class JuelElResolverAugmentation {
         try {
             Field resolversField = CompositeELResolver.class.getDeclaredField("resolvers");
             resolversField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Iterable<ELResolver> resolvers = (Iterable<ELResolver>) resolversField.get(composite);
-            for (ELResolver resolver : resolvers) {
-                if (resolver instanceof MissingIdentifierNullElResolver) {
-                    return true;
+            Object raw = resolversField.get(composite);
+            // Jakarta EL 6+（Boot 4）内部为 ELResolver[]；旧版为 Iterable
+            if (raw instanceof ELResolver[] array) {
+                for (ELResolver resolver : array) {
+                    if (resolver instanceof MissingIdentifierNullElResolver) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (raw instanceof Iterable<?> iterable) {
+                for (Object item : iterable) {
+                    if (item instanceof MissingIdentifierNullElResolver) {
+                        return true;
+                    }
                 }
             }
         } catch (ReflectiveOperationException ignored) {

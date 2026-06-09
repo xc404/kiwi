@@ -6,7 +6,7 @@ server:
       enabled: true
 
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
-# AI 对话：Spring AI Alibaba DashScope（通义）；密钥见 KIWI_AI_API_KEY 或 DASHSCOPE_API_KEY
+# AI 对话：Spring AI DeepSeek；密钥见 KIWI_AI_API_KEY 或 DEEPSEEK_API_KEY
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
@@ -69,11 +69,11 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   ai:
-    dashscope:
-      api-key: ${KIWI_AI_API_KEY:${DASHSCOPE_API_KEY:}}
+    deepseek:
+      api-key: ${KIWI_AI_API_KEY:${DEEPSEEK_API_KEY:}}
       chat:
         options:
-          model: ${KIWI_AI_MODEL:qwen-plus}
+          model: ${KIWI_AI_MODEL:deepseek-chat}
     # MCP Server（WebMVC + SSE）：端点见 spring.ai.mcp.server.*
     mcp:
       server:
