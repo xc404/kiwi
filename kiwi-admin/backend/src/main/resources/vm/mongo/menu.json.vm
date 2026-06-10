@@ -1,0 +1,10 @@
+{
+  "id": "${menuId}",
+  "parentId": "${parentMenuId}",
+  "name": "${functionName}",
+  "menuType": "C",
+  "path": "/${moduleName}/${businessName}",
+  "sort": 10,
+  "status": "0",
+  "visible": true
+}

@@ -1,0 +1,36 @@
+import { CommonModule } from '@angular/common';
+import { Component, computed } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
+import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
+
+@Component({
+  selector: 'app-${businessName}',
+  standalone: true,
+  imports: [CommonModule, FormsModule, PageHeaderComponent, CrudPage],
+  templateUrl: './${businessName}.component.html'
+})
+export class ${BusinessName}Component {
+  pageConfig = computed(() => {
+    return {
+      title: '${functionName}',
+      initializeData: true,
+      crud: '${moduleName}/${businessName}',
+      tableConfig: {
+        pageSize: 0
+      },
+      fields: [
+#foreach($field in $fields)
+#if($field.inColumn)
+        {
+          name: '${field.columnComment}',
+          dataIndex: '${field.javaField}'#if($field.required),
+          required: true#end
+        },
+#end
+#end
+      ]
+    } as PageConfig;
+  });
+}

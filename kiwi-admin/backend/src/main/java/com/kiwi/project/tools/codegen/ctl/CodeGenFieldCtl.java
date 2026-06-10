@@ -1,5 +1,6 @@
 package com.kiwi.project.tools.codegen.ctl;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
@@ -26,6 +27,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("tools/codegen/field")
+@SaCheckLogin
 @RequiredArgsConstructor
 @Tag(name = "代码生成字段", description = "GenField CRUD")
 public class CodeGenFieldCtl {

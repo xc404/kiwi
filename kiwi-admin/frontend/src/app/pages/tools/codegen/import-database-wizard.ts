@@ -30,16 +30,16 @@ import { NzStepsModule } from 'ng-zorro-antd/steps';
       @if (step === 2) {
         <button nz-button nzType="default" (click)="pre()">上一步</button>
       }
-      <button nz-button nzType="primary" (click)="next()">确定</button>
+      <button nz-button nzType="primary" (click)="next()">{{ step === 1 ? '下一步' : '导入' }}</button>
     </div>
   `,
   imports: [NzButtonModule, NzStepsModule, DictSelector, NzCardModule, NzModalFooterDirective, NzFormModule, AppTableComponent],
   standalone: true
 })
 export class ImportDatabaseWizardComponent {
-  step = 2;
+  step = 1;
   http = inject(BaseHttpService);
-  connection = signal<string | null>('6943758352c8d068f11b4fda');
+  connection = signal<string | null>(null);
 
   page = viewChild(AppTableComponent);
 
@@ -60,9 +60,12 @@ export class ImportDatabaseWizardComponent {
 
   constructor() {
     effect(() => {
-      this.loadTables();
+      if (this.step === 2) {
+        this.loadTables();
+      }
     });
   }
+
   loadTables() {
     const connId = this.connection();
     if (!connId) {
@@ -111,7 +114,7 @@ export class ImportDatabaseWizardComponent {
             this.messageService.success('导入成功');
             this.destroyModal();
           },
-          error: _err => {
+          error: () => {
             this.messageService.error('导入失败');
           }
         });
