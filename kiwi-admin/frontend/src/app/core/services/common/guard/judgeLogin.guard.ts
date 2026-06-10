@@ -10,7 +10,7 @@ import { WindowService } from '../window.service';
 const canActivateChildFn: CanActivateFn = () => {
   // 这个方法可以检查inject是否在context中
   assertInInjectionContext(canActivateChildFn);
-  const windowSrc = inject(WindowService);
+  const _windowSrc = inject(WindowService);
   const router = inject(Router);
   const sessionService = inject(SessionService);
 

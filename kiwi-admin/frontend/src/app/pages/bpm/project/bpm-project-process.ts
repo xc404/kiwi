@@ -74,28 +74,17 @@ interface BpmProjectOption {
         </div>
       </nz-dropdown-menu>
 
-      <nz-tabset>
+      <nz-tabs>
         <nz-tab nzTitle="流程">
           <crud-page [pageConfig]="pageConfig"> </crud-page>
         </nz-tab>
         <nz-tab nzTitle="环境变量">
           <app-bpm-project-env [projectId]="projectId()" />
         </nz-tab>
-      </nz-tabset>
+      </nz-tabs>
     </section>
   `,
-  imports: [
-    PageHeaderComponent,
-    CrudPage,
-    BpmProjectEnv,
-    FormsModule,
-    NzButtonModule,
-    NzDropdownModule,
-    NzIconModule,
-    NzInputModule,
-    NzMenuModule,
-    NzTabsModule
-  ],
+  imports: [PageHeaderComponent, CrudPage, BpmProjectEnv, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule, NzTabsModule],
   styleUrls: ['./bpm-project-process.less'],
   encapsulation: ViewEncapsulation.None
 })

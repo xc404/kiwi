@@ -66,7 +66,7 @@ export class BpmParameters implements OnInit {
 
   editRecord = signal<any>(null);
 
-  parameterChange = output<PropertyDescription[]>();
+  readonly parameterChange = output<PropertyDescription[]>();
   editModel = 'edit';
 
   /** 由外层（如 BpmInputOutputParameters）注入的额外工具栏按钮，渲染于「添加参数」右侧 */
@@ -243,7 +243,7 @@ export class BpmInputOutputParameters {
   http: any = inject(BaseHttpService);
 
   /** 重新生成 command 之后向外抛出最新组件（已由后端持久化），供宿主刷新 selectedComponent 等本地状态 */
-  rebuildCommand = output<ComponentDescription>();
+  readonly rebuildCommand = output<ComponentDescription>();
 
   inputParams = computed(() => {
     return this.component().inputParameters || [];

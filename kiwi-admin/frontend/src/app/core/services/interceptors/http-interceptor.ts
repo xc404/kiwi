@@ -37,7 +37,7 @@ function handleError(error: HttpErrorResponse): Observable<never> {
 }
 
 export const httpInterceptorService: HttpInterceptorFn = (req, next) => {
-  const windowServe = inject(WindowService);
+  const _windowServe = inject(WindowService);
   const sessionService = inject(SessionService);
   const token = sessionService.getToken();
   let httpConfig: CustomHttpConfig = {};

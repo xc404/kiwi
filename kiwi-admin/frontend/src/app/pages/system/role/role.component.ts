@@ -35,7 +35,7 @@ export class RoleComponent implements OnInit {
   messageService = inject(NzMessageService);
 
   roleNodes = signal<NzTreeNodeOptions[]>([]);
-  selectedRole = signal<Role | undefined>(undefined);
+  selectedRole = signal<Role | null>(null);
   isEditing: boolean = false;
 
   addBtn: AppButtonConfig = {
@@ -53,7 +53,7 @@ export class RoleComponent implements OnInit {
         this.messageService.warning('请先选择一个角色');
         return;
       }
-      this.showEdit(this.selectedRole());
+      this.showEdit(this.selectedRole() as Role);
     }
   };
   editModalVisible = signal(false);
@@ -78,7 +78,7 @@ export class RoleComponent implements OnInit {
     }
   ];
   model = signal<RoleFormModel>({});
-  constructor() {}
+  constructor() { }
 
   ngOnInit(): void {
     this.loadRoles();
@@ -119,7 +119,7 @@ export class RoleComponent implements OnInit {
       this.loadRoles();
       const selected = this.selectedRole();
       if (selected && Number(selected.id) === id) {
-        this.selectedRole.set(undefined);
+        this.selectedRole.set(null);
       }
       this.messageService.success('删除成功');
     });

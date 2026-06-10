@@ -145,7 +145,7 @@ export function getInputType(editor: Editor | any): string | undefined {
   template: ''
 })
 export class FieldEditor extends FieldComp {
-  valueChange = output<any>();
+  readonly valueChange = output<unknown>();
 
   override field = input<FieldEditorConfig | any>();
   setValue(value: any) {

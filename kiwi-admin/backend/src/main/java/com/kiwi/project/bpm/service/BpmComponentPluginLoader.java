@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.operaton.bpm.client.task.ExternalTaskHandler;
 import org.operaton.bpm.engine.delegate.JavaDelegate;
 import org.operaton.bpm.engine.impl.pvm.delegate.ActivityBehavior;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -42,7 +43,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
 
     private final ConfigurableApplicationContext applicationContext;
     private final BpmComponentDeploymentService deploymentService;
-    private final BpmComponentService componentService;
+    private final ObjectProvider<BpmComponentService> componentServiceProvider;
     private final PluginBpmComponentProvider pluginBpmComponentProvider;
 
     @Value("${bpm.component.plugins-dir:plugins}")
@@ -89,7 +90,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
     public void reloadAndDeploy() {
         reload();
         deploymentService.deploy(pluginBpmComponentProvider);
-        componentService.refresh();
+        componentServiceProvider.getObject().refresh();
     }
 
     @Override

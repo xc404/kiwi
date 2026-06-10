@@ -127,7 +127,7 @@ export default class BasePaletteProvider implements PaletteProvider {
     };
   }
 
-  initElement(bpmnModeler: BpmnModeler, element: Element, item: PaletteItem): void {
+  initElement(bpmnModeler: BpmnModeler, element: Element, _item: PaletteItem): void {
     if (element.type === 'bpmn:CallActivity') {
       this.elementModel.ensurePropagateAllVariables(bpmnModeler, element);
     }

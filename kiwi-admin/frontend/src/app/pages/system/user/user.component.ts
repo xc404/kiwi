@@ -5,13 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 
-interface User {
-  id?: number;
-  username: string;
-  email: string;
-  role: string;
-  status: string;
-}
 
 @Component({
   selector: 'app-user',

@@ -284,6 +284,19 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 敏感 SMTP/SFTP 凭据请通过**项目环境变量**注入，BPMN 使用 `${SMTP_PASSWORD}` 等形式引用。
 
+### 独立可选模块（按项目拆分）
+
+重型集成不塞进 `kiwi-bpmn-component`，各自独立 Maven 模块，backend 按需依赖或打 JAR 放 `plugins/`：
+
+| 模块 | Bean Key | 分组 |
+|------|----------|------|
+| `kiwi-bpmn-component-slack` | `slackNotify` | 通知 |
+| `kiwi-bpmn-component-kafka` | `kafkaPublish` | 消息 |
+| `kiwi-bpmn-component-rabbitmq` | `rabbitMqPublish` | 消息 |
+| `kiwi-bpmn-component-s3` | `s3Object` | 存储 |
+
+各模块 README 见 `kiwi-bpmn/kiwi-bpmn-component-*/README.md`。
+
 ---
 
 ## 九、插件 JAR 加载（阶段二）

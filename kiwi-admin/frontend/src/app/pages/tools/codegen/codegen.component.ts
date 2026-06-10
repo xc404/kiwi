@@ -135,7 +135,7 @@ export class CodegenComponent implements OnInit {
       nzFooter: [
         {
           label: '确定',
-          onClick: (modal: any) => {
+          onClick: (_modal: unknown) => {
             modalRef.close;
           }
         }

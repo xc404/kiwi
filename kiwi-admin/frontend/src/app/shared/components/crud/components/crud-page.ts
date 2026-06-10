@@ -133,7 +133,7 @@ export class CrudPage implements OnInit, CrudPageToken {
 
   pageConfig = input.required<PageConfig>();
 
-  tableRowClick = output<any>();
+  readonly tableRowClick = output<unknown>();
   pageData = computed(() => {
     return this.crudDatasource().items();
   });

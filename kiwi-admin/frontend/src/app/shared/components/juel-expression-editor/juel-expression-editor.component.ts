@@ -41,7 +41,7 @@ export class JuelExpressionEditorComponent implements OnDestroy {
   variables = input<SpelVariableSuggestion[]>([]);
   placeholder = input('点击右侧图标编辑 JUEL');
 
-  valueChange = output<string>();
+  readonly valueChange = output<string>();
 
   readonly snippets = JUEL_EXPRESSION_SNIPPETS;
 

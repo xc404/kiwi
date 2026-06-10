@@ -1,6 +1,6 @@
 <div class="normal-table-wrap">
   @if (searchFormFields().length > 0) {
-    <crud-search-form [fields]="searchFormFields()" [searchModel]="searchModel()" (search)="doSearch($event)"></crud-search-form>
+    <crud-search-form [fields]="searchFormFields()" [searchModel]="searchModel()" (doSearch)="doSearch($event)"></crud-search-form>
   }
   <app-table-wrap [toolbarActions]="toolbarActions()" (reload)="reloadTable()">
     @if (tableConfig().type === 'tree') {

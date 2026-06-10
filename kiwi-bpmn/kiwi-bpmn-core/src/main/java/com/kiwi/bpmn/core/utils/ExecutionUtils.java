@@ -22,6 +22,12 @@ public final class ExecutionUtils {
         return getInputVariable(execution, variableName).flatMap(ExecutionUtils::toOptionalString);
     }
 
+    public static String requireStringInputVariable(DelegateExecution execution, String key) {
+        return getStringInputVariable(execution, key)
+                .filter(s -> !s.isBlank())
+                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
+    }
+
     /**
      * 按点分路径读取流程变量，例如 {@code task.config_id}、{@code movie.data_id}。
      * <p>
