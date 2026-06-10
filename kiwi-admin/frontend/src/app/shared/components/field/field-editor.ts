@@ -33,6 +33,8 @@ export interface FieldEditorConfig extends FieldConfig {
   readonly?: boolean;
   /** 静态下拉选项（如 ComboBox/select），与 dictKey 二选一；存在时优先于字典 */
   options?: Array<{ label: string; value: unknown }>;
+  /** 透传给 Formly field.props（如 biz-tree-select 的 groupCode） */
+  props?: Record<string, unknown>;
 }
 
 function unifyConfig(config: FieldEditorConfig) {
@@ -87,6 +89,7 @@ export function toFormlyConfig(config: FieldEditorConfig, wrapper = 'form-field'
     type: toFormlyType(config.editor),
 
     props: {
+      ...(config.props ?? {}),
       ...props,
       description: config.description,
       label: config.name,

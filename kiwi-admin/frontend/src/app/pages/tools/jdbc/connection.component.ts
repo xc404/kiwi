@@ -63,8 +63,9 @@ export class ConnectionComponent {
 
   testConnection(record: any) {
     const id = record.id;
-    this.http.post(`${this.baseApi}/${id}/test-connection`, {}).subscribe(_res => {
-      this.messageService.success('连接成功');
+    this.http.post(`${this.baseApi}/${id}/test-connection`, {}).subscribe({
+      next: () => this.messageService.success('连接成功'),
+      error: err => this.messageService.error(err?.error?.msg ?? '连接失败')
     });
   }
 }

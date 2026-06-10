@@ -1,6 +1,6 @@
 package com.kiwi.project.tools.jdbc.connection.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kiwi.common.entity.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -26,16 +26,13 @@ public class ConnectionSettings extends BaseEntity<String>
 
     /**
      * The password used for the JDBC connection.
+     * 请求体可写入；响应不输出明文（列表/详情/新增返回均不含 password）。
      */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     /**
      * The JDBC URL for the connection.
      */
     private String jdbcUrl;
-
-    @JsonIgnore
-    public String getPassword() {
-        return password;
-    }
 }

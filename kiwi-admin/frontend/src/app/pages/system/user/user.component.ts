@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
-
+import { TreeUtils } from '@app/utils/treeUtils';
 
 @Component({
   selector: 'app-user',
@@ -13,8 +14,22 @@ import { PageHeaderComponent } from '@app/shared/components/page-header/page-hea
   templateUrl: './user.component.html',
   styleUrls: ['user.component.css']
 })
-export class UserComponent {
+export class UserComponent implements OnInit {
+  private http = inject(BaseHttpService);
+
+  deptNameMap = signal<Map<string, { name: string }>>(new Map());
+
+  ngOnInit(): void {
+    this.http
+      .get<{ content: Array<{ id: string; name: string; children?: unknown[] }> }>('common/tree/sys-dept/0', { loadAll: true })
+      .subscribe(res => {
+        const map = TreeUtils.buildMap(res.content ?? [], 'id');
+        this.deptNameMap.set(map);
+      });
+  }
+
   pageConfig = computed(() => {
+    const deptMap = this.deptNameMap();
     return {
       title: '用户',
       initializeData: true,
@@ -37,7 +52,13 @@ export class UserComponent {
         {
           name: '部门',
           dataIndex: 'deptId',
-          dictKey: 'system_department'
+          editor: 'biz-tree-select',
+          format: (deptId: string) => (deptId === '0' ? '总部门' : (deptMap.get(deptId)?.name ?? deptId ?? '-')),
+          props: {
+            groupCode: 'sys-dept',
+            placeholder: '请选择部门',
+            rootNode: { id: '0', name: '总部门' }
+          }
         },
         {
           name: '角色',
