@@ -63,11 +63,9 @@ import { NZ_ICONS } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 
 import { LoginExpiredService } from './core/services/interceptors/login-expired.service';
-import { HttpDictService } from './core/services/store/common-store/dict.service';
 import { CamundaElementModel } from './pages/bpm/design/extension/camunda/camunda-element-model';
 import { ElementModel } from './pages/bpm/design/extension/element-model';
 import { provideBpmDefaultPropertyProviderContributors } from './pages/bpm/design/property-panel/property-provider';
-import { IDictService } from './shared/dict/dict';
 import { formlyConfig } from './shared/formly/public_api';
 
 const icons = [
@@ -206,13 +204,8 @@ export const appConfig: ApplicationConfig = {
         ]
       }
     ]),
-    { provide: FORMLY_CONFIG, multi: true, useFactory: formlyConfig, deps: [IDictService] },
+    { provide: FORMLY_CONFIG, multi: true, useFactory: formlyConfig },
     provideZonelessChangeDetection(), // 开启 zoneless,
-    {
-      provide: IDictService,
-      multi: false,
-      useExisting: HttpDictService
-    },
     provideHttpClient(withInterceptorsFromDi()),
     {
       provide: ElementModel,

@@ -33,6 +33,7 @@ import { AppTableConfig, TableType } from '../../table/table';
 import { AddAction, columnAction, DeleteAction, DeleteBatchAction, EditAction } from '../actions';
 import { CrudDataSource } from '../crud-datastore';
 import { crudConfig, CrudHttp, CrudHttpConfig } from '../crud-http';
+import { collectDictStoreConfigs, DictStoreConfig, DictStoreService } from '@app/shared/datastore';
 import { CrudFieldConfig, getActionColumnWidth } from '../utils';
 
 export abstract class CrudPageToken {
@@ -81,6 +82,8 @@ export interface PageConfig {
     disabled?: boolean;
   };
   fields: CrudFieldConfig[]; // 列设置
+  /** 页面需预载的字典 Store，对标 ExtJS View stores 配置 */
+  stores?: DictStoreConfig[];
   toolbarActions?: AppButtonConfig[];
   columnActions?: ColumnActionConfig[];
   initializeData?: boolean;
@@ -121,6 +124,7 @@ export class CrudPage implements OnInit, CrudPageToken {
   formlyConfig = inject(FormlyConfig);
   modalService = inject(NzModalService);
   messageService = inject(NzMessageService);
+  dictStoreService = inject(DictStoreService);
 
   /** app-table 经 app-table-wrap 的 ng-content 投影，须用 viewChild 而非 contentChild */
   readonly tableWrap = viewChild(AppTableWrapComponent);
@@ -406,7 +410,12 @@ export class CrudPage implements OnInit, CrudPageToken {
   }
 
   ngOnInit(): void {
-    if (this.pageConfig().initializeData) {
+    const config = this.pageConfig();
+    const storeConfigs = collectDictStoreConfigs(config);
+    if (storeConfigs.length > 0) {
+      this.dictStoreService.registerStores(storeConfigs);
+    }
+    if (config.initializeData) {
       this.reloadTable();
     }
   }
