@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -53,6 +54,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
     private boolean pluginsEnabled;
 
     private final Map<String, URLClassLoader> jarClassLoaders = new ConcurrentHashMap<>();
+    private final Set<String> pluginRegisteredBeans = ConcurrentHashMap.newKeySet();
 
     public synchronized void reload() {
         if (!pluginsEnabled) {
@@ -68,6 +70,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
         }
 
         closeClassLoaders();
+        unregisterPluginBeans();
         List<BpmComponent> discovered = new ArrayList<>();
 
         try (var stream = Files.list(dir)) {
@@ -186,13 +189,30 @@ public class BpmComponentPluginLoader implements InitializingBean {
         DefaultListableBeanFactory beanFactory =
                 (DefaultListableBeanFactory) applicationContext.getBeanFactory();
         if (beanFactory.containsSingleton(beanName)) {
-            log.warn("跳过插件 Bean（主上下文已存在同名 Bean）: {}", beanName);
-            return;
+            if (pluginRegisteredBeans.contains(beanName)) {
+                beanFactory.destroySingleton(beanName);
+                pluginRegisteredBeans.remove(beanName);
+            } else {
+                log.warn("跳过插件 Bean（主上下文已存在同名 Bean）: {}", beanName);
+                return;
+            }
         }
         AutowireCapableBeanFactory autowire = applicationContext.getAutowireCapableBeanFactory();
         Object bean = autowire.createBean(clazz);
         autowire.initializeBean(bean, beanName);
         beanFactory.registerSingleton(beanName, bean);
+        pluginRegisteredBeans.add(beanName);
+    }
+
+    private void unregisterPluginBeans() {
+        DefaultListableBeanFactory beanFactory =
+                (DefaultListableBeanFactory) applicationContext.getBeanFactory();
+        for (String beanName : pluginRegisteredBeans) {
+            if (beanFactory.containsSingleton(beanName)) {
+                beanFactory.destroySingleton(beanName);
+            }
+        }
+        pluginRegisteredBeans.clear();
     }
 
     private void closeClassLoaders() {

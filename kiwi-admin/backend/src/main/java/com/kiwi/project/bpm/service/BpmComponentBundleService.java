@@ -45,4 +45,24 @@ public class BpmComponentBundleService {
     public void reload() {
         pluginLoader.reloadAndDeploy();
     }
+
+    public void deleteJar(String fileName) {
+        if (StringUtils.isBlank(fileName)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "文件名不能为空");
+        }
+        String safeName = Path.of(fileName).getFileName().toString();
+        if (!safeName.toLowerCase().endsWith(".jar")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "仅支持删除 .jar 文件");
+        }
+        Path target = pluginLoader.resolvePluginsDir().resolve(safeName);
+        if (!Files.exists(target)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "插件 JAR 不存在: " + safeName);
+        }
+        try {
+            Files.delete(target);
+        } catch (IOException e) {
+            throw new UncheckedIOException("删除插件 JAR 失败", e);
+        }
+        pluginLoader.reloadAndDeploy();
+    }
 }

@@ -363,6 +363,14 @@ public class BpmComponentCtl extends BaseCtl
         return bpmComponentBundleService.listInstalled();
     }
 
+    @Operation(operationId = "bpmComp_deletePlugin", summary = "卸载组件插件 JAR 并同步组件库")
+    @DeleteMapping("plugins/{fileName}")
+    @ResponseBody
+    public List<String> deletePlugin(@PathVariable String fileName) {
+        bpmComponentBundleService.deleteJar(fileName);
+        return bpmComponentBundleService.listInstalled();
+    }
+
     @Data
     public static class ElementTemplateImportRequest {
         /** Element Template JSON（单对象或数组） */
