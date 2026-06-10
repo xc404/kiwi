@@ -33,7 +33,7 @@
   {
     "id": "bpm_process_definition",
     "parentId": "bpm",
-    "name": "项目流程",
+    "name": "流程管理",
     "menuType": "C",
     "path": "/bpm/process-definition",
     "sort": 3,
@@ -139,6 +139,16 @@
     "menuType": "C",
     "path": "/system/role",
     "sort": 5,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_monitor",
+    "parentId": "system",
+    "name": "系统监控",
+    "menuType": "C",
+    "path": "/dashboard/monitor",
+    "sort": 6,
     "status": "0",
     "visible": true
   }

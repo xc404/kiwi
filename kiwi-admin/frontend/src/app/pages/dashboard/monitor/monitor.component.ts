@@ -1,7 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, interval, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, EMPTY, interval, of, startWith, switchMap, tap } from 'rxjs';
 
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -27,19 +27,30 @@ const POLL_MS = 10_000;
 export class MonitorComponent implements OnInit {
   private readonly monitor = inject(MonitorService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly pollActive$ = new BehaviorSubject(true);
 
   readonly snapshot = signal<MonitorSnapshot | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    interval(POLL_MS)
+    this.pollActive$
       .pipe(
-        startWith(0),
+        switchMap(active => (active ? interval(POLL_MS).pipe(startWith(0)) : EMPTY)),
         switchMap(() => this.loadOnce()),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
+  }
+
+  /** 路由复用：离开监控页时暂停轮询，避免后台持续请求 /monitor/snapshot */
+  _onReuseDestroy(): void {
+    this.pollActive$.next(false);
+  }
+
+  /** 路由复用：回到监控页时恢复轮询 */
+  _onReuseInit(): void {
+    this.pollActive$.next(true);
   }
 
   refresh(): void {

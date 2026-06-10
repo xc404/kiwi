@@ -54,12 +54,12 @@ public class S3ObjectActivity implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) throws Exception {
         String endpoint = ExecutionUtils.getStringInputVariable(execution, "endpoint").orElse(null);
-        String region = require(execution, "region");
-        String accessKey = require(execution, "access_key");
-        String secretKey = require(execution, "secret_key");
-        String bucket = require(execution, "bucket");
-        String objectKey = require(execution, "object_key");
-        String action = require(execution, "action").toLowerCase(Locale.ROOT);
+        String region = ExecutionUtils.requireStringInputVariable(execution, "region");
+        String accessKey = ExecutionUtils.requireStringInputVariable(execution, "access_key");
+        String secretKey = ExecutionUtils.requireStringInputVariable(execution, "secret_key");
+        String bucket = ExecutionUtils.requireStringInputVariable(execution, "bucket");
+        String objectKey = ExecutionUtils.requireStringInputVariable(execution, "object_key");
+        String action = ExecutionUtils.requireStringInputVariable(execution, "action").toLowerCase(Locale.ROOT);
 
         S3ClientBuilder builder =
                 S3Client.builder()
@@ -134,11 +134,5 @@ public class S3ObjectActivity implements JavaDelegate {
         if (bytesVar != null && !bytesVar.isBlank()) {
             execution.setVariable(bytesVar, bytes);
         }
-    }
-
-    private static String require(DelegateExecution execution, String key) {
-        return ExecutionUtils.getStringInputVariable(execution, key)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
     }
 }

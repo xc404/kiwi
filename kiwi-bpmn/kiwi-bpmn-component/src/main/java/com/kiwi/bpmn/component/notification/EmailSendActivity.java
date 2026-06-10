@@ -48,16 +48,16 @@ public class EmailSendActivity implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) throws MessagingException {
-        String host = require(execution, "smtp_host");
+        String host = ExecutionUtils.requireStringInputVariable(execution, "smtp_host");
         int port = ExecutionUtils.getIntInputVariable(execution, "smtp_port").orElse(587);
         String user = ExecutionUtils.getStringInputVariable(execution, "smtp_user").orElse(null);
         String password = ExecutionUtils.getStringInputVariable(execution, "smtp_password").orElse(null);
         boolean startTls =
                 ExecutionUtils.getBooleanInputVariable(execution, "smtp_starttls").orElse(true);
-        String from = require(execution, "from");
-        String to = require(execution, "to");
-        String subject = require(execution, "subject");
-        String body = require(execution, "body");
+        String from = ExecutionUtils.requireStringInputVariable(execution, "from");
+        String to = ExecutionUtils.requireStringInputVariable(execution, "to");
+        String subject = ExecutionUtils.requireStringInputVariable(execution, "subject");
+        String body = ExecutionUtils.requireStringInputVariable(execution, "body");
 
         Properties props = new Properties();
         props.put("mail.smtp.host", host);
@@ -91,11 +91,5 @@ public class EmailSendActivity implements JavaDelegate {
         message.setSubject(subject, StandardCharsets.UTF_8.name());
         message.setText(body, StandardCharsets.UTF_8.name());
         Transport.send(message);
-    }
-
-    private static String require(DelegateExecution execution, String key) {
-        return ExecutionUtils.getStringInputVariable(execution, key)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
     }
 }

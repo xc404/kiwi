@@ -52,13 +52,13 @@ public class SftpTransferActivity implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) throws JSchException, SftpException, IOException {
-        String host = require(execution, "host");
+        String host = ExecutionUtils.requireStringInputVariable(execution, "host");
         int port = ExecutionUtils.getIntInputVariable(execution, "port").orElse(22);
-        String username = require(execution, "username");
+        String username = ExecutionUtils.requireStringInputVariable(execution, "username");
         String password = ExecutionUtils.getStringInputVariable(execution, "password").orElse(null);
-        String action = require(execution, "action").toLowerCase(Locale.ROOT);
-        String remotePath = require(execution, "remote_path");
-        String localPath = require(execution, "local_path");
+        String action = ExecutionUtils.requireStringInputVariable(execution, "action").toLowerCase(Locale.ROOT);
+        String remotePath = ExecutionUtils.requireStringInputVariable(execution, "remote_path");
+        String localPath = ExecutionUtils.requireStringInputVariable(execution, "local_path");
 
         JSch jsch = new JSch();
         Session session = jsch.getSession(username, host, port);
@@ -112,11 +112,5 @@ public class SftpTransferActivity implements JavaDelegate {
         }
         channel.get(remotePath, local.toString());
         return Files.size(local);
-    }
-
-    private static String require(DelegateExecution execution, String key) {
-        return ExecutionUtils.getStringInputVariable(execution, key)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
     }
 }

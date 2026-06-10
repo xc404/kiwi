@@ -40,9 +40,9 @@ public class KafkaPublishActivity implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) throws Exception {
-        String bootstrap = require(execution, "bootstrap_servers");
-        String topic = require(execution, "topic");
-        String value = require(execution, "value");
+        String bootstrap = ExecutionUtils.requireStringInputVariable(execution, "bootstrap_servers");
+        String topic = ExecutionUtils.requireStringInputVariable(execution, "topic");
+        String value = ExecutionUtils.requireStringInputVariable(execution, "value");
         String key = ExecutionUtils.getStringInputVariable(execution, "key").orElse(null);
         String acks = ExecutionUtils.getStringInputVariable(execution, "acks").orElse("all");
 
@@ -70,11 +70,5 @@ public class KafkaPublishActivity implements JavaDelegate {
                 execution.setVariable(offsetVar, meta.offset());
             }
         }
-    }
-
-    private static String require(DelegateExecution execution, String key) {
-        return ExecutionUtils.getStringInputVariable(execution, key)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
     }
 }

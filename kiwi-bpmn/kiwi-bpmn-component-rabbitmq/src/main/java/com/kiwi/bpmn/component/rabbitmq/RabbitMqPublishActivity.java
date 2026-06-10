@@ -39,14 +39,14 @@ public class RabbitMqPublishActivity implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) throws Exception {
-        String host = require(execution, "host");
+        String host = ExecutionUtils.requireStringInputVariable(execution, "host");
         int port = ExecutionUtils.getIntInputVariable(execution, "port").orElse(5672);
-        String username = require(execution, "username");
+        String username = ExecutionUtils.requireStringInputVariable(execution, "username");
         String password = ExecutionUtils.getStringInputVariable(execution, "password").orElse("");
         String vhost = ExecutionUtils.getStringInputVariable(execution, "virtual_host").orElse("/");
-        String exchange = require(execution, "exchange");
-        String routingKey = require(execution, "routing_key");
-        String body = require(execution, "body");
+        String exchange = ExecutionUtils.requireStringInputVariable(execution, "exchange");
+        String routingKey = ExecutionUtils.requireStringInputVariable(execution, "routing_key");
+        String body = ExecutionUtils.requireStringInputVariable(execution, "body");
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost(host);
@@ -63,11 +63,5 @@ public class RabbitMqPublishActivity implements JavaDelegate {
                     null,
                     body.getBytes(StandardCharsets.UTF_8));
         }
-    }
-
-    private static String require(DelegateExecution execution, String key) {
-        return ExecutionUtils.getStringInputVariable(execution, key)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new IllegalArgumentException("流程变量 " + key + " 不能为空"));
     }
 }

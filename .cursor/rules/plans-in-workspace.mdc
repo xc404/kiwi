@@ -1,31 +1,40 @@
 ---
-description: 计划文件 (plan) 必须保存在当前工作区内
+description: 生成的 plan 必须立即写入工作区 .cursor/plans/
 alwaysApply: true
 ---
 
-# 计划文件保存位置规则
+# 计划文件自动保存规则
 
-## 规则
-所有由 AI 助手生成的计划文件（plan 文件）**必须**保存在当前打开的工作区内，禁止保存到用户全局目录、系统临时目录或其他工作区之外的路径。
+## 强制行为
+
+凡生成或修订 **plan**（实施计划、路线图、设计草案等结构化规划文档），**必须在同一次回复中**用 **Write 工具**写入磁盘，**禁止**仅在对话中输出而不落盘。
 
 ## 保存位置
-- 默认路径：`<工作区根目录>/.cursor/plans/`
-- 文件命名：`<功能描述>_<短哈希>.plan.md`（如 `frontend_intermediate_catch_event_82ba8a18.plan.md`）
-- 如目录不存在，应自动创建
+
+- 路径：`<工作区根目录>/.cursor/plans/`
+- 命名：`<功能描述>_<8位短哈希>.plan.md`（如 `frontend_intermediate_catch_event_82ba8a18.plan.md`）
+- 短哈希：对功能描述或日期取稳定片段即可，保证同主题不重复覆盖已有文件
+- 目录不存在时：写入前确保 `.cursor/plans/` 存在（Write 失败则用 Shell 创建）
 
 ## 禁止的位置
-- ❌ `C:\Users\<用户名>\` 或其他用户主目录
-- ❌ `%TEMP%` 或系统临时目录
-- ❌ 其他工作区目录（多工作区场景下，必须保存到该计划所属的主工作区）
-- ❌ Cursor 全局配置目录（`~/.cursor/` 下而非 `<workspace>/.cursor/`）
 
-## 多工作区场景
-当前用户同时打开多个工作区时（如 `kiwi`、`cryo-em-server-backend`、`cryo-em-server-frontend`），应：
-1. 判断计划主要涉及哪个工作区
-2. 将 plan 保存到该工作区的 `.cursor/plans/` 下
-3. 若计划跨多个工作区，保存到主要修改的工作区
+- ❌ 用户主目录（`C:\Users\<用户名>\` 等）
+- ❌ 系统临时目录（`%TEMP%`）
+- ❌ 其他工作区根目录
+- ❌ Cursor 全局目录（`~/.cursor/`，非 `<workspace>/.cursor/`）
 
-## 理由
-- 计划与代码同源管理，便于追溯
-- 可随仓库共享/版本控制（如需要）
-- 避免文件分散导致丢失
+## 工作流
+
+1. 拟定 plan 内容
+2. **立即** Write 到 `.cursor/plans/<name>.plan.md`
+3. 在回复中附上已保存文件的**工作区相对路径**（如 `.cursor/plans/xxx.plan.md`），便于打开
+4. 后续修订 plan 时，**更新同一文件**（或按主题新建带新哈希的文件），不要只改对话文本
+
+## 多工作区
+
+同时打开多个工作区时，将 plan 保存到**主要涉及**的那个工作区的 `.cursor/plans/`；跨工作区变更保存到改动最多的工作区。
+
+## 与 OpenSpec 的关系
+
+- **OpenSpec change**（`openspec/changes/`）走规格驱动流程，与 plan 互补，不互相替代
+- 用户未要求 OpenSpec 时，复杂任务仍应写 plan 并落盘
