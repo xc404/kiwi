@@ -15,8 +15,6 @@
         <li nz-menu-item nz-tooltip="导入Java文件">
           <nz-upload [nzAction]="uploadJavaUrl()" [nzHeaders]="{ authorization: 'authorization-text' }" [nzShowUploadList]="false" (nzChange)="uploadJavaFile($event)"> 导入Java文件 </nz-upload>
         </li>
-
-        <li nz-menu-item nz-tooltip="导入JSON" (click)="showImportJsonModal()"> 导入JSON </li>
       </ul>
     </nz-dropdown-menu>
   </ng-template>

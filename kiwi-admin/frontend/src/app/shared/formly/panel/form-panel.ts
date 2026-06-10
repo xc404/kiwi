@@ -34,7 +34,6 @@ export class FormPanel {
           if (this.columns() > 1) {
             className += ' padding-right-24';
           }
-          console.log(field.className, className);
           return {
             ...field,
             className: className

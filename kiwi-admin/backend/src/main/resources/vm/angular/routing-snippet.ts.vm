@@ -1,0 +1,7 @@
+// 将以下路由条目合并到 frontend/src/app/pages/${moduleName}/${moduleName}-routing.ts
+{
+  path: '${businessName}',
+  title: '${functionName}',
+  data: { key: '${businessName}' },
+  loadComponent: () => import('./${businessName}/${businessName}.component').then(m => m.${BusinessName}Component)
+}

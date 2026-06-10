@@ -1,0 +1,24 @@
+Kiwi 代码生成 — 集成说明
+========================
+
+实体：${ClassName}（表 ${tableName}）
+持久层：${daoTpl}
+包路径：${packageName}
+
+1. 后端
+   - 将 main/java/ 下文件复制到对应 Maven 模块的 src/main/java/
+   - MyBatis 时同时将 main/resources/mybatis/ 复制到 src/main/resources/
+
+2. 前端（Angular）
+   - 将 frontend/src/app/pages/ 下组件复制到 kiwi-admin/frontend/src/app/pages/${moduleName}/${businessName}/
+   - 按 integration/routing-snippet.ts 合并路由到 ${moduleName}-routing.ts
+   - 若模块路由未在 layout-routing.ts 注册，需添加 loadChildren
+
+3. 菜单
+   - 将 integration/menu.json 条目合并到 mongo/migration/repeatable/R__SysMenu.json
+
+4. 权限
+   - 将 integration/permissions.txt 中的权限码分配给角色
+
+生成时间：${datetime}
+作者：${author}

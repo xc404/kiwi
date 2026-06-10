@@ -12,5 +12,12 @@
     "groupName": "系统开关",
     "status": "0",
     "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "user_status",
+    "groupCode": "user_status",
+    "groupName": "用户状态",
+    "status": "0",
+    "remark": "Mongock 初始数据"
   }
 ]

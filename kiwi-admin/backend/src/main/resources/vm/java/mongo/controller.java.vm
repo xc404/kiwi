@@ -1,0 +1,87 @@
+package ${packageName}.ctl;
+
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.kiwi.common.query.QueryField;
+import com.kiwi.common.query.QueryParams;
+import ${packageName}.dao.${ClassName}Dao;
+import ${packageName}.entity.${ClassName};
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * ${functionName}
+ *
+ * @author ${author}
+ */
+@RestController
+@RequestMapping("/${moduleName}/${businessName}")
+@SaCheckLogin
+@RequiredArgsConstructor
+@Tag(name = "${functionName}", description = "${functionName} CRUD")
+public class ${ClassName}Ctl {
+
+    private final ${ClassName}Dao ${className}Dao;
+
+    @Operation(operationId = "${businessName}_page", summary = "分页查询${functionName}")
+    @SaCheckPermission("${permissionPrefix}:view")
+    @GetMapping("")
+    public Page<${ClassName}> page(SearchInput searchInput, Pageable pageable) {
+        return this.${className}Dao.findBy(QueryParams.of(searchInput), pageable);
+    }
+
+    @Operation(operationId = "${businessName}_get", summary = "按 id 获取${functionName}详情")
+    @SaCheckPermission("${permissionPrefix}:view")
+    @GetMapping("/{id}")
+    public ${ClassName} get(@PathVariable("id") String id) {
+        return this.${className}Dao.findById(id).orElseThrow();
+    }
+
+    @Operation(operationId = "${businessName}_add", summary = "新增${functionName}")
+    @SaCheckPermission("${permissionPrefix}:add")
+    @PostMapping("")
+    public ${ClassName} add(@RequestBody ${ClassName} ${className}) {
+        this.${className}Dao.insert(${className});
+        return ${className};
+    }
+
+    @Operation(operationId = "${businessName}_edit", summary = "按 id 修改${functionName}")
+    @SaCheckPermission("${permissionPrefix}:update")
+    @PutMapping("/{id}")
+    public ${ClassName} edit(@PathVariable("id") String id, @RequestBody ${ClassName} ${className}) {
+        ${className}.setId(id);
+        this.${className}Dao.updateSelective(${className});
+        return this.${className}Dao.findById(id).orElseThrow();
+    }
+
+    @Operation(operationId = "${businessName}_delete", summary = "按 id 列表批量删除${functionName}")
+    @SaCheckPermission("${permissionPrefix}:delete")
+    @DeleteMapping("/{ids}")
+    public void delete(@PathVariable List<String> ids) {
+        this.${className}Dao.deleteAllById(ids);
+    }
+
+    @Data
+    public static class SearchInput {
+#foreach($field in $fields)
+#if($field.inQuery)
+        @QueryField(value = "${field.javaField}", condition = QueryField.Type.${field.queryType})
+        private $field.javaType ${field.javaField};
+#end
+#end
+    }
+}
