@@ -1,8 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, OnInit, viewChild } from '@angular/core';
+import { Component, computed, inject, viewChild } from '@angular/core';
 
 import { SessionService } from '@app/core/services/common/session.service';
-import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { ColumnToken } from '@app/shared/components/table/column';
@@ -26,16 +25,15 @@ import { ImportDatabaseWizardComponent } from './import-database-wizard';
 @Component({
   selector: 'app-codegen',
   templateUrl: 'codegen.component.html',
-  imports: [PageHeaderComponent, CrudPage, NzCardModule, NzButtonModule, NzIconModule, NzDropDownModule, NzButtonModule, NzModalModule, NzUploadModule],
+  imports: [PageHeaderComponent, CrudPage, NzCardModule, NzButtonModule, NzIconModule, NzDropDownModule, NzModalModule, NzUploadModule],
   standalone: true
 })
-export class CodegenComponent implements OnInit {
+export class CodegenComponent {
   importBtn = viewChild('importBtn');
   config = inject(NzConfigService);
   page = viewChild(CrudPage);
   baseApi = '/tools/codegen';
   http = inject(HttpClient);
-  httpService = inject(BaseHttpService);
   modalService = inject(NzModalService);
   messageService = inject(NzMessageService);
   sessionService = inject(SessionService);
@@ -221,5 +219,4 @@ export class CodegenComponent implements OnInit {
       });
   }
 
-  ngOnInit(): void {}
 }

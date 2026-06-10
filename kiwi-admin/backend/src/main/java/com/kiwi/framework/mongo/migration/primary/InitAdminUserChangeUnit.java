@@ -52,6 +52,7 @@ public class InitAdminUserChangeUnit {
         user.setStatus("0");
         user.setDelFlag("0");
         user.setDeptId("0");
+        user.setEmail("admin@example.com");
         user.setRoleIds(List.of(SysRole.Admin));
         sysUserDao.save(user);
         log.info("Created initial admin user: {}", adminUsername);
