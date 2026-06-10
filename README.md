@@ -16,11 +16,11 @@
 ## Features
 
 - **BPMN design**: Angular + BPMN.js; property panel synced with backend component metadata
-- **Operaton engine**: process definitions/instances, `/engine-rest`, External Tasks, async jobs with configurable retries
-- **Pluggable delegates**: Shell, HTTP, file I/O, variable assignment, MongoDB, Slurm, and more
+- **Operaton engine**: process definitions/instances, External Tasks, async jobs with configurable retries; `/engine-rest` HTTP **off by default** (enable for debugging)
+- **Pluggable delegates**: Shell, HTTP, JDBC, MongoDB, file I/O, SFTP, email/webhook, variable assignment, Kafka, RabbitMQ, S3, Slack, Slurm, and more — core in `kiwi-bpmn-component`, optional integrations in sibling modules
 - **Admin console**: users, roles, menus, departments, dictionaries, Sa-Token, Personal Access Tokens
 - **Low-code tools**: code generation, JDBC and schema browser
-- **AI assistant**: Spring AI (DashScope), built-in MCP; page navigation and BPMN designer orchestration
+- **AI assistant**: Spring AI (DeepSeek), built-in MCP; page navigation and BPMN designer orchestration
 - **Data migrations**: Mongock + JSON reference data (Flyway-like convention)
 
 ## Tech stack
@@ -36,16 +36,24 @@
 
 ```
 kiwi/
-├── kiwi-common/                 # Shared entities, Mongo/MyBatis utilities
+├── kiwi-common/                      # Shared entities, Mongo/MyBatis utilities
 ├── kiwi-bpmn/
-│   ├── kiwi-bpmn-core/          # Component annotations, variable mapping, job retry
-│   ├── kiwi-bpmn-component/     # Built-in delegates (Shell, HTTP, Slurm, …)
-│   └── kiwi-bpmn-external-task/
+│   ├── kiwi-bpmn-core/               # Component annotations, variable mapping, job retry
+│   ├── kiwi-bpmn-component/          # Core delegates (Shell, HTTP, JDBC, MongoDB, …)
+│   ├── kiwi-bpmn-component-kafka/    # Optional: Kafka publish
+│   ├── kiwi-bpmn-component-rabbitmq/ # Optional: RabbitMQ publish
+│   ├── kiwi-bpmn-component-s3/       # Optional: S3 object ops
+│   ├── kiwi-bpmn-component-slack/    # Optional: Slack notify
+│   ├── kiwi-bpmn-component-slurm/    # Optional: Slurm external tasks
+│   ├── kiwi-bpmn-component-example/  # Example / template module
+│   └── kiwi-bpmn-external-task/      # External Task abstraction and retry
 ├── kiwi-admin/
-│   ├── backend/                 # Spring Boot main app (see sub README)
-│   └── frontend/                # Angular admin UI (see sub README)
-├── docs/                        # Screenshots, Maven snippets, etc.
-├── openspec/                    # Change specs and tasks
+│   ├── backend/                      # Spring Boot main app (see sub README)
+│   └── frontend/                     # Angular admin UI (see sub README)
+├── docker/                           # Docker Compose and Dockerfiles
+├── docs/                             # Screenshots, Maven snippets, BPM component guide
+├── openspec/                         # Change specs and tasks
+├── AGENTS.md                         # AI agent / contributor codebase guide
 └── LICENSE
 ```
 
@@ -55,7 +63,12 @@ kiwi/
 |------|------|
 | [kiwi-common/](kiwi-common/) | Cross-module entities and data-access base classes |
 | [kiwi-bpmn/kiwi-bpmn-core/](kiwi-bpmn/kiwi-bpmn-core/) | `@ComponentDescription` / `@ComponentParameter`, variable mapping, JUEL tolerance, job retry |
-| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | Built-in process components (Shell, HTTP, MongoDB, Slurm, etc.); Slurm ops: [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
+| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | Core process components (Shell, HTTP, JDBC, MongoDB, email, SFTP, etc.) |
+| [kiwi-bpmn/kiwi-bpmn-component-kafka/](kiwi-bpmn/kiwi-bpmn-component-kafka/) | Kafka publish delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-rabbitmq/](kiwi-bpmn/kiwi-bpmn-component-rabbitmq/) | RabbitMQ publish delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-s3/](kiwi-bpmn/kiwi-bpmn-component-s3/) | S3 object delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-slack/](kiwi-bpmn/kiwi-bpmn-component-slack/) | Slack notification delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-slurm/](kiwi-bpmn/kiwi-bpmn-component-slurm/) | Slurm external tasks; ops: [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
 | [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task abstraction and retry |
 | [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework` (boot, security, Mongo migrations, exception handling) + `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
 | [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`; BPMN editor under `pages/bpm` |
@@ -98,10 +111,13 @@ Services: `mongodb` · `backend` (internal `:8080`) · `frontend` (Nginx, host `
 
 2. **Frontend:** `cd kiwi-admin/frontend && npm install && npm start` → **http://localhost:4201**; match `api.baseUrl` in `environment.ts` to your backend port. See [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md).
 
+**Package backend:** `mvn -pl kiwi-admin/backend -am package -DskipTests`
+
 ## Documentation
 
 | Doc | Contents |
 |-----|----------|
+| [AGENTS.md](AGENTS.md) | Codebase guide for AI agents and contributors (workflows, conventions, config) |
 | [docs/bpm-component.zh-CN.md](docs/bpm-component.zh-CN.md) | BPM component architecture, add/configure/use (Chinese) |
 | [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | Backend architecture, config, local run, Mongo migrations |
 | [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | Frontend architecture, env, scripts, AI integration |
@@ -116,7 +132,7 @@ Contributions welcome — BPMN components, admin features, docs, and bug fixes.
 
 1. **Local setup:** Follow [Quick start](#quick-start) and [Documentation](#documentation) above.
 2. **Specs & tasks:** For non-trivial work, start with [OpenSpec](openspec/) (`openspec new change "<name>"`), then implement from `tasks.md`.
-3. **Conventions:** Java delegates, frontend integration, `@ComponentParameter` rules — see `.cursor/rules/`.
+3. **Conventions:** Java delegates, frontend integration, `@ComponentParameter` rules — see `.cursor/rules/` and [AGENTS.md](AGENTS.md).
 4. **Submit:** Fork, branch, open a Pull Request; questions welcome in [Issues](https://github.com/xc404/kiwi/issues).
 
 ## License

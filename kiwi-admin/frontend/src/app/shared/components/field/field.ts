@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, model } from '@angular/core';
 
-import { IDictService } from '../../dict/dict';
+import { DictStoreService } from '../../datastore/dict-store.service';
 
 export enum FieldType {
   Int = 'Int',
@@ -29,7 +29,7 @@ export abstract class FieldComp {
   readonly field = input.required<FieldConfig | any>();
   readonly record = input<any>();
   readonly value = model<any>();
-  readonly dictService: IDictService = inject<IDictService>(IDictService);
+  private readonly dictStoreService = inject(DictStoreService);
   readonly datepipe = new DatePipe('en-US');
 
   displayValue = computed(() => {
@@ -47,7 +47,9 @@ export abstract class FieldComp {
       }
     }
     if (field.dictKey) {
-      return this.dictService.getDictValue(field.dictKey || '', value);
+      const store = this.dictStoreService.getStore({ storeId: field.dictKey, autoLoad: true });
+      store.items();
+      return store.getDisplayName(value);
     }
     if (field.type == FieldType.Date) {
       return this.datepipe.transform(value, field().format || 'yyyy-MM-dd');
@@ -60,7 +62,9 @@ export abstract class FieldComp {
 
   dicts = computed(() => {
     if (this.value() && this.field().dictKey) {
-      return this.dictService.getDictGroup(this.field().dictKey as string);
+      const store = this.dictStoreService.getStore({ storeId: this.field().dictKey as string, autoLoad: true });
+      store.items();
+      return store.getRecords();
     }
     return [];
   });

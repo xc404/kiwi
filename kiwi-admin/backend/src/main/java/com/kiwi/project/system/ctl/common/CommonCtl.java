@@ -32,7 +32,11 @@ public class CommonCtl {
     private final DictService dictService;
     private final List<Refreshable> refreshableList;
 
-    @Operation(operationId = "common_dictGroups", summary = "获取全部字典分组列表（会先刷新缓存）")
+    @Deprecated
+    @Operation(
+            operationId = "common_dictGroups",
+            summary = "获取全部字典分组列表（会先刷新缓存）",
+            description = "已废弃：前端请按需调用 GET /common/dict/{groupCode} 分页加载字典项，勿再全量预载。")
     @GetMapping("/common/dict/groups")
     public List<DictGroup> getDictGroups() {
         this.refreshCache();

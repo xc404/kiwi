@@ -16,11 +16,11 @@
 ## 特性
 
 - **BPMN 流程设计**：Angular + BPMN.js，属性面板与后端组件元数据联动
-- **Operaton 引擎**：流程定义/实例、`/engine-rest`、External Task、异步 Job 与可配置重试
-- **可插拔流程组件**：Shell、HTTP、文件读写、变量赋值、MongoDB、Slurm 等
+- **Operaton 引擎**：流程定义/实例、External Task、异步 Job 与可配置重试；`/engine-rest` HTTP **默认关闭**（调试时可开启）
+- **可插拔流程组件**：Shell、HTTP、JDBC、MongoDB、文件读写、SFTP、邮件/Webhook、变量赋值、Kafka、RabbitMQ、S3、Slack、Slurm 等 — 核心在 `kiwi-bpmn-component`，可选集成在独立子模块
 - **管理后台**：用户/角色/菜单/部门/字典、Sa-Token、Personal Access Token
 - **低代码工具**：代码生成、JDBC 与表结构浏览
-- **AI 辅助**：Spring AI（通义 DashScope）、内置 MCP，支持页面导航与 BPM 设计器编排
+- **AI 辅助**：Spring AI（DeepSeek）、内置 MCP，支持页面导航与 BPM 设计器编排
 - **数据迁移**：Mongock + JSON 参考数据（类 Flyway 约定）
 
 ## 技术栈
@@ -36,16 +36,24 @@
 
 ```
 kiwi/
-├── kiwi-common/                 # 公共实体、Mongo/MyBatis 工具
+├── kiwi-common/                      # 公共实体、Mongo/MyBatis 工具
 ├── kiwi-bpmn/
-│   ├── kiwi-bpmn-core/          # 组件注解、变量映射、Job 重试
-│   ├── kiwi-bpmn-component/     # 内置 Delegate（Shell、HTTP、Slurm…）
-│   └── kiwi-bpmn-external-task/
+│   ├── kiwi-bpmn-core/               # 组件注解、变量映射、Job 重试
+│   ├── kiwi-bpmn-component/          # 核心 Delegate（Shell、HTTP、JDBC、MongoDB…）
+│   ├── kiwi-bpmn-component-kafka/    # 可选：Kafka 发布
+│   ├── kiwi-bpmn-component-rabbitmq/ # 可选：RabbitMQ 发布
+│   ├── kiwi-bpmn-component-s3/       # 可选：S3 对象操作
+│   ├── kiwi-bpmn-component-slack/    # 可选：Slack 通知
+│   ├── kiwi-bpmn-component-slurm/    # 可选：Slurm External Task
+│   ├── kiwi-bpmn-component-example/  # 示例 / 模板模块
+│   └── kiwi-bpmn-external-task/      # External Task 抽象与重试
 ├── kiwi-admin/
-│   ├── backend/                 # Spring Boot 主应用（见子 README）
-│   └── frontend/                # Angular 管理端（见子 README）
-├── docs/                        # 截图、Maven 片段等
-├── openspec/                    # 变更规格与任务
+│   ├── backend/                      # Spring Boot 主应用（见子 README）
+│   └── frontend/                     # Angular 管理端（见子 README）
+├── docker/                           # Docker Compose 与 Dockerfile
+├── docs/                             # 截图、Maven 片段、BPM 组件说明
+├── openspec/                         # 变更规格与任务
+├── AGENTS.md                         # AI 助手 / 贡献者代码库指南
 └── LICENSE
 ```
 
@@ -55,7 +63,12 @@ kiwi/
 |------|------|
 | [kiwi-common/](kiwi-common/) | 跨模块实体与数据访问基类 |
 | [kiwi-bpmn/kiwi-bpmn-core/](kiwi-bpmn/kiwi-bpmn-core/) | `@ComponentDescription` / `@ComponentParameter`、变量映射、JUEL 容错、Job 重试 |
-| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | 内置流程组件（Shell、HTTP、MongoDB、Slurm 等）；Slurm 运维见 [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
+| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | 核心流程组件（Shell、HTTP、JDBC、MongoDB、邮件、SFTP 等） |
+| [kiwi-bpmn/kiwi-bpmn-component-kafka/](kiwi-bpmn/kiwi-bpmn-component-kafka/) | Kafka 发布组件 |
+| [kiwi-bpmn/kiwi-bpmn-component-rabbitmq/](kiwi-bpmn/kiwi-bpmn-component-rabbitmq/) | RabbitMQ 发布组件 |
+| [kiwi-bpmn/kiwi-bpmn-component-s3/](kiwi-bpmn/kiwi-bpmn-component-s3/) | S3 对象组件 |
+| [kiwi-bpmn/kiwi-bpmn-component-slack/](kiwi-bpmn/kiwi-bpmn-component-slack/) | Slack 通知组件 |
+| [kiwi-bpmn/kiwi-bpmn-component-slurm/](kiwi-bpmn/kiwi-bpmn-component-slurm/) | Slurm External Task；运维见 [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
 | [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task 抽象与重试 |
 | [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework`（启动、安全、Mongo 迁移、异常处理）+ `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
 | [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`；BPMN 编辑器在 `pages/bpm` |
@@ -98,10 +111,13 @@ Compose 服务：`mongodb` · `backend`（内部 `:8080`）· `frontend`（Nginx
 
 2. **前端**：`cd kiwi-admin/frontend && npm install && npm start` → **http://localhost:4201**；`environment.ts` 中 `api.baseUrl` 与后端端口一致。详见 [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)。
 
+**打包后端**：`mvn -pl kiwi-admin/backend -am package -DskipTests`
+
 ## 相关文档
 
 | 文档 | 内容 |
 |------|------|
+| [AGENTS.md](AGENTS.md) | AI 助手与贡献者代码库指南（工作流、约定、配置） |
 | [docs/bpm-component.zh-CN.md](docs/bpm-component.zh-CN.md) | BPM 组件架构、添加/配置/使用 |
 | [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | 后端架构、配置、本地启动、Mongo 迁移 |
 | [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | 前端架构、环境、脚本、AI 联调 |
@@ -116,7 +132,7 @@ Compose 服务：`mongodb` · `backend`（内部 `:8080`）· `frontend`（Nginx
 
 1. **本地环境**：按上文 [快速开始](#快速开始) 与 [相关文档](#相关文档) 搭建前后端。
 2. **规格与任务**：非琐碎功能建议先走 [OpenSpec](openspec/)（`openspec new change "<name>"`），再按 `tasks.md` 逐项实现。
-3. **代码约定**：Java 流程组件、前端对接与 `@ComponentParameter` 等约定见 `.cursor/rules/`。
+3. **代码约定**：Java 流程组件、前端对接与 `@ComponentParameter` 等约定见 `.cursor/rules/` 与 [AGENTS.md](AGENTS.md)。
 4. **提交变更**：Fork 后新建分支，提交 Pull Request；如有疑问可在 [Issues](https://github.com/xc404/kiwi/issues) 讨论。
 
 ## License

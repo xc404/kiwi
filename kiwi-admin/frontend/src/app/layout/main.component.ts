@@ -3,7 +3,6 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, computed, DestroyRef
 import { RouterOutlet } from '@angular/router';
 
 import { SessionService } from '@app/core/services/common/session.service';
-import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
 import { Theme } from '@app/layout/setting-drawer/setting-drawer.component';
 import { CollapsedNavWidth, IsFirstLogin, SideNavWidth } from '@config/constant';
 import { DriverService } from '@core/services/common/driver.service';
@@ -69,7 +68,6 @@ export class MainComponent implements AfterViewInit, OnInit {
   themesService = inject(ThemeService); // 用于获取主题
   splitNavStoreService = inject(SplitNavStoreService); // 用于获取分割菜单的store
   sessionService = inject(SessionService);
-  dictService = inject(HttpDictService);
   $themesOptionsEffect = effect(() => {
     const { fixedTab, fixedHead, hasFooterArea, mode, fixedLeftNav, hasNavArea, hasTopArea, hasNavHeadArea, isShowTab, splitNav, theme } = this.themesService.$themesOptions();
 
@@ -146,7 +144,6 @@ export class MainComponent implements AfterViewInit, OnInit {
   }
   ngOnInit(): void {
     this.sessionService.refreshSession();
-    this.dictService.load();
   }
 
   ngAfterViewInit(): void {

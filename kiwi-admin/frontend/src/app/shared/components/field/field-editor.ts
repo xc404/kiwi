@@ -37,6 +37,10 @@ export interface FieldEditorConfig extends FieldConfig {
   props?: Record<string, unknown>;
 }
 
+function isDictRadioEditor(editor: FieldEditorConfig['editor']): boolean {
+  return editor === Editor.Radio || editor === 'radio';
+}
+
 function unifyConfig(config: FieldEditorConfig) {
   config = { ...config };
   config.type = config.type || FieldType.String;
@@ -80,22 +84,29 @@ export function toFormlyConfig(config: FieldEditorConfig, wrapper = 'form-field'
     className += ' hidden';
   }
 
+  const useDictSelect = !!config.dictKey && !config.options?.length;
+  const fieldType = useDictSelect ? 'dict-select' : toFormlyType(config.editor);
+
   return {
     key: config.dataIndex,
     name: config.name,
     wrappers: [wrapper],
     defaultValue: config.defaultValue,
     className,
-    type: toFormlyType(config.editor),
+    type: fieldType,
 
     props: {
       ...(config.props ?? {}),
       ...props,
       description: config.description,
       label: config.name,
-      dictKey: config.dictKey,
-      type: getInputType(config.editor),
-      // indeterminate: false,
+      ...(useDictSelect
+        ? {
+            storeId: config.dictKey,
+            mode: isDictRadioEditor(config.editor) ? 'radio' : 'select'
+          }
+        : {}),
+      type: useDictSelect ? undefined : getInputType(config.editor),
       required: config.required,
       readonly: props?.readonly || config.readonly,
       disabled: props?.readonly || config.readonly || props?.disabled,

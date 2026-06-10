@@ -7,7 +7,7 @@ this.accidentTypeOptions = [...MapPipe.transformMapToArray(MapSet.accidentType)]
 import { DatePipe } from '@angular/common';
 import { inject, Pipe, PipeTransform } from '@angular/core';
 
-import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
+import { DictStoreService } from '@app/shared/datastore/dict-store.service';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 
@@ -53,7 +53,7 @@ export interface MapItem {
 })
 export class MapPipe implements PipeTransform {
   private datePipe: DatePipe = new DatePipe('en-US');
-  dictService = inject(HttpDictService);
+  dictStoreService = inject(DictStoreService);
   static transformMapToArray(data: NzSafeAny, mapKeyType: MapKeyType = MapKeyType.Number): MapItem[] {
     return Object.keys(data || {}).map(key => {
       let value: NzSafeAny;
@@ -89,7 +89,7 @@ export class MapPipe implements PipeTransform {
       case 'date':
         return this.datePipe.transform(value, param);
       case 'dict':
-        return this.dictService.getDictValue(param, value);
+        return this.dictStoreService.getStore({ storeId: param, autoLoad: true }).getDisplayName(value);
       default:
         return value;
     }
