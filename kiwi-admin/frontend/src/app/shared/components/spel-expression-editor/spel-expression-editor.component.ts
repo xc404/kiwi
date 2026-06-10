@@ -99,7 +99,7 @@ export class SpelExpressionEditorComponent implements OnDestroy {
   /** 单行输入框占位符 */
   placeholder = input('点击右侧图标编辑 SpEL');
 
-  valueChange = output<string>();
+  readonly valueChange = output<string>();
 
   readonly snippets = SPEL_EXPRESSION_SNIPPETS;
 

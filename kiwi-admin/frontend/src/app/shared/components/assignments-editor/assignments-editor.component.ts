@@ -27,7 +27,7 @@ export class AssignmentsEditorComponent {
   /** 运行时变量名列表（属性面板传入） */
   variables = input<Array<{ name?: string | null; [key: string]: unknown }>>([]);
 
-  valueChange = output<string>();
+  readonly valueChange = output<string>();
 
   protected rows = signal<AssignmentRow[]>([{ key: '', valueText: '' }]);
 

@@ -90,7 +90,9 @@ openspec instructions apply --change "<name>" --json           # get context fil
 # implement; tick tasks.md: - [x]
 openspec archive --change "<name>"                             # move to openspec/changes/archive/
 ```
-Small obvious fixes can skip spec creation. Plan files must be saved to `.cursor/plans/` in the workspace root.
+Small obvious fixes can skip spec creation.
+
+**Plan files:** Any implementation plan the agent produces must be **written to disk in the same turn** at `.cursor/plans/<feature>_<hash>.plan.md` (see `.cursor/rules/plans-in-workspace.mdc`). Do not leave plans only in chat.
 
 ## Key Config & Integration Points
 

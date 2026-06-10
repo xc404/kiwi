@@ -15,6 +15,9 @@ import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
   {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'warn'
+    },
     ignores: [
       '.*/',
       'publish/',

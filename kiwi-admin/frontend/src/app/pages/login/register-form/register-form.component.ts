@@ -43,7 +43,6 @@ export class RegisterFormComponent implements OnInit {
     }
     this.messageService.success('注册成功，请重新登录');
     this.router.navigateByUrl('login/login-form');
-    const param = this.validateForm.getRawValue();
 
     /* this.dataService.login(param).subscribe((res) => {
        this.router.navigateByUrl('hazard');

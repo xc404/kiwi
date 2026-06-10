@@ -12,7 +12,10 @@
     "deploy": "ng deploy",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint",
+    "lint": "eslint \"src/**/*.{ts,html}\"",
+    "lint:ci": "eslint \"src/**/*.{ts,html}\" --max-warnings 400",
+    "lint:ci:next": "eslint \"src/**/*.{ts,html}\" --max-warnings 300",
+    "lint:ci:strict": "eslint \"src/**/*.{ts,html}\" --max-warnings 0",
     "lint:fix": "eslint --fix --cache . --ext .ts,.html",
     "lint:style": "npx stylelint \"src/**/*.less\" --fix"
   },

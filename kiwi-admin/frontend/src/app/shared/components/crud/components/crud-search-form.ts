@@ -29,7 +29,7 @@ export class CrudSearchForm {
    */
   fields = input([] as CrudFieldConfig[]);
 
-  search = output<any>();
+  readonly doSearch = output<Record<string, unknown>>();
 
   //  searchFormChange = output();
 
@@ -43,7 +43,7 @@ export class CrudSearchForm {
   /**
    * 搜索表单字段
    */
-  searchFormFieldsOptions: any = {};
+  searchFormFieldsOptions: Record<string, unknown> = {};
 
   collapsed = signal(true);
 
@@ -81,8 +81,8 @@ export class CrudSearchForm {
     return fields;
   });
 
-  doSearch(event?: any) {
-    this.search.emit(this.searchForm.value);
+  triggerSearch() {
+    this.doSearch.emit(this.searchForm.value as Record<string, unknown>);
   }
 
   onSearchFormChange() {}
@@ -90,7 +90,7 @@ export class CrudSearchForm {
   reset() {
     this.searchForm.reset();
     this.formState.set({});
-    this.doSearch();
+    this.triggerSearch();
   }
 
   toggleCollapse() {

@@ -99,9 +99,9 @@ public class ShellActivityBehavior implements JavaDelegate {
 }
 ```
 
-**External Task 组件**（如 Slurm）额外添加 `@ExternalTaskSubscription(topicName = "slurm")`，类型自动识别为 `SpringExternalTask`。参考 [SlurmExternalTaskHandler.java](../kiwi-bpmn/kiwi-bpmn-component/src/main/java/com/kiwi/bpmn/component/slurm/SlurmExternalTaskHandler.java)。
+**External Task 组件**（如 Slurm）额外添加 `@ExternalTaskSubscription(topicName = "slurm")`，类型自动识别为 `SpringExternalTask`。参考 [SlurmExternalTaskHandler.java](../kiwi-bpmn/kiwi-bpmn-component-slurm/src/main/java/com/kiwi/bpmn/component/slurm/SlurmExternalTaskHandler.java)（独立模块 `kiwi-bpmn-component-slurm`）。
 
-运行时读取参数统一使用 `ExecutionUtils.getStringInputVariable(execution, "xxx")` 等顶层 API；`@ComponentParameter` 的 `key` **禁止使用 `.`**，用下划线扁平命名（见 `.cursor/rules/component-parameter-key-no-dot.mdc`）。
+运行时读取参数统一使用 [`ExecutionUtils`](../kiwi-bpmn/kiwi-bpmn-core/src/main/java/com/kiwi/bpmn/core/utils/ExecutionUtils.java)（`kiwi-bpmn-core`）的 `getStringInputVariable(execution, "xxx")` 等顶层 API；`@ComponentParameter` 的 `key` **禁止使用 `.`**，用下划线扁平命名（见 `.cursor/rules/component-parameter-key-no-dot.mdc`）。
 
 ### 方式 B：管理端「组件管理」
 
@@ -110,6 +110,7 @@ public class ShellActivityBehavior implements JavaDelegate {
 - **手动新建**：填写名称、继承父组件（`parentId`）、自定义输入/输出参数。
 - **CLI 生成**：解析 `--help` 输出，基于 `shell` 父组件批量生成。
 - **OpenAPI 生成**：基于 `httpRequest` 父组件从 Swagger 生成 HTTP 组件。
+- **JDBC 表结构生成**：选择 `jdbc-connections` 连接与表，每张表生成 5 个继承 `jdbcActivity` 的 CRUD 子组件（`POST /bpm/component/from-jdbc-schema`，`source=dbschema`）。
 
 子组件通过 `parentId` 继承父组件参数，可只覆盖或追加差异字段（`BpmComponentService.fillComponentProperties`）。
 
@@ -238,12 +239,145 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 六、相关文档
+## 六、第三方组件开发（示例模块）
+
+仓库提供 [`kiwi-bpmn-component-example`](../kiwi-bpmn/kiwi-bpmn-component-example/README.md)：
+
+- `DemoGreetingActivity`：`@Component("demoGreeting")` + `@ComponentDescription`
+- 在 `kiwi-admin/backend/pom.xml` 增加对 `kiwi-bpmn-component-example` 的依赖即可编入 classpath
+- 启动后自动注册为 `classpath_demoGreeting`，设计器「示例」分组可见
+
+契约：`kiwi-bpmn-core`（注解 + `ExecutionUtils`）+ `JavaDelegate` + Spring `@Component`；第三方**无需**依赖 `kiwi-bpmn-component`。
+
+---
+
+## 七、项目环境变量
+
+每个 BPM **项目**可配置环境变量（Mongo 集合 `bpmProjectEnvVar`，`projectId` 外键）：
+
+| 字段 | 说明 |
+|------|------|
+| `key` | 变量名（项目内唯一），如 `API_URL`、`API_KEY` |
+| `value` | 值；`encrypted=true` 时 AES 存储，API 不回显 |
+| `encrypted` | 敏感项开启；启动时以 Operaton **瞬态变量**注入，避免进历史 |
+
+**管理**：工作流 → 项目流程 → 选择项目 → **环境变量** Tab。
+
+**启动注入**：`BpmProcessStartService` 读取流程所属 `projectId` 的 env，与用户启动 variables 合并（**同名 key 用户优先**）。组件 BPMN 中可写 `${API_URL}`、`${API_KEY}` 等。
+
+**约定**：勿在 BPMN 属性面板明文填写生产密钥；非敏感配置（URL、桶名）可 `encrypted=false`。
+
+---
+
+## 八、内置组件扩充（阶段一）
+
+`kiwi-bpmn-component` 在原有 Shell / HTTP / JDBC / Mongo 等基础上新增：
+
+| Bean Key | 名称 | 分组 |
+|----------|------|------|
+| `webhookOutbound` | Webhook 出站（流程内调外部/内部 HTTP） | 通知 |
+| `emailSend` | 发送邮件 | 通知 |
+| `sftpTransfer` | SFTP 传输 | 文件 |
+| `sleep` | 延时等待 | 通用 |
+| `digestHash` | 摘要哈希 | 通用 |
+| `base64Codec` | Base64 编解码 | 通用 |
+| `uuidGenerate` | 生成 UUID | 通用 |
+
+敏感 SMTP/SFTP 凭据请通过**项目环境变量**注入，BPMN 使用 `${SMTP_PASSWORD}` 等形式引用。
+
+### 独立可选模块（按项目拆分）
+
+重型集成不塞进 `kiwi-bpmn-component`，各自独立 Maven 模块，backend 按需依赖或打 JAR 放 `plugins/`：
+
+| 模块 | Bean Key | 分组 |
+|------|----------|------|
+| `kiwi-bpmn-component-slack` | `slackNotify` | 通知 |
+| `kiwi-bpmn-component-kafka` | `kafkaPublish` | 消息 |
+| `kiwi-bpmn-component-rabbitmq` | `rabbitMqPublish` | 消息 |
+| `kiwi-bpmn-component-s3` | `s3Object` | 存储 |
+
+各模块 README 见 `kiwi-bpmn/kiwi-bpmn-component-*/README.md`。
+
+---
+
+## 九、插件 JAR 加载（阶段二）
+
+配置项（`application.yml`）：
+
+| 配置 | 默认 | 说明 |
+|------|------|------|
+| `bpm.component.plugins-dir` | `plugins` | 插件 JAR 目录（相对工作目录） |
+| `bpm.component.plugins-enabled` | `true` | 是否扫描插件 |
+
+- 将含 `@ComponentDescription` + `JavaDelegate` 的 JAR 放入 `plugins/`，启动时由 `PluginBpmComponentProvider` 注册 Bean 并同步 Mongo（`source=plugin`）。
+- **上传安装**：`POST /bpm/component/plugins/upload`（multipart `file`）
+- **手动刷新**：`POST /bpm/component/plugins/reload`
+- **卸载**：`DELETE /bpm/component/plugins/{fileName}`
+- 管理端入口：**工作流 → 组件插件**（`/bpm/plugins`，上传 / 重新扫描 / 卸载）。
+- 第三方开发仍推荐参考 `kiwi-bpmn-component-example`；插件方式适合运维侧热更新。
+
+---
+
+## 十、Camunda 8 Element Template 互操作（阶段三）
+
+与 **Camunda 8** Modeler / `connectors-bundle` 的 Connector Element Template 互操作：仅迁移**设计时元数据**（属性面板字段 → Kiwi `BpmComponent`），执行仍由 Kiwi 组件（`JavaDelegate` / External Task）完成，**不绑定 Zeebe Job Worker**。
+
+字段映射：`camunda:inputParameter` / `outputParameter` → Kiwi 组件输入/输出参数。
+
+### 管理端（工作流 → 组件管理）
+
+| 操作 | 入口 |
+|------|------|
+| **导入** | 工具栏「生成组件」→「**从 Camunda 8 Template 导入**」：粘贴或上传 Camunda 8 Element Template JSON；REST Connector 类模板建议勾选「继承 HTTP 请求」 |
+| **导出** | 行操作「**导出 Camunda 8 Template**」→ 下载 `{sourceKey}.element-template.json`，可供 Camunda Modeler 协作 |
+
+导入后若 `sourceKey` 与库中或本批重复，会弹出与 OpenAPI 生成相同的冲突确认（覆盖 / 新增 / 取消）。
+
+### API
+
+- **导出**：`GET /bpm/component/{id}/element-template` → Camunda 8 兼容 Element Template JSON
+- **导入草稿**：`POST /bpm/component/from-element-template`，body `{ "template": "...", "inheritHttpRequest": true }`
+
+---
+
+## 十一、阶段四：内部集成与插件安装
+
+Kiwi 的**默认集成方式**是集群内服务通过已认证 API 与流程协作，而不是对外暴露 Webhook 入站。
+
+### 内部服务调用（推荐）
+
+| 场景 | 做法 |
+|------|------|
+| 另一服务**启动**流程 | `POST /bpm/process/{processId}/start`，body 传 `variables`；自动合并该项目环境变量（见第七节） |
+| 流程**调用**内部 REST | 使用 `httpRequest` / `webhookOutbound` 组件；基址、Token 用项目 env 的 `${API_URL}`、`${API_KEY}` |
+| 长耗时 / 异步回调 | External Task（如 Slurm），或业务服务完成后调引擎/管理端 API（须携带登录 Token） |
+
+以上路径**不需要**入站注册表，也**不需要**在 BPMN 里画 Message Catch 专门等外部 POST。
+
+### 插件包安装（组件市场轻量形态）
+
+- `POST /bpm/component/plugins/upload`：上传第三方组件 JAR 至 `plugins/`
+- `POST /bpm/component/plugins/reload`：重新扫描并同步组件库
+- 无需改 `backend/pom.xml` 即可试用可选组件
+
+### 附录：外部 Webhook 入站（可选，可忽略）
+
+仅当存在**未经登录的第三方**（如 GitHub、支付网关）需要 POST 唤醒**已在运行、且停在 Message Catch 上**的流程实例时，才使用下列 API。  
+**无此类需求时整块可忽略**；不提供管理端 UI，由脚本或运维一次性配置即可。
+
+1. **注册**（需登录）：`POST /bpm/inbound/registration` — `componentKey`、`messageName`、可选 `projectId` / `secretToken`
+2. **触发**（无需登录）：`POST /bpm/inbound/{componentKey}`，body 为流程变量 JSON；可选请求头 `X-Kiwi-Inbound-Token`
+
+BPMN 中须有 **Intermediate Message Catch Event**，message 名称与注册一致。
+
+---
+
+## 十二、相关文档
 
 | 文档 | 内容 |
 |------|------|
 | [README.zh-CN.md](../README.zh-CN.md) | 平台总览与快速开始 |
-| [slurm-workdir-cleanup.md](../kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) | Slurm 组件运维 |
+| [slurm-workdir-cleanup.md](../kiwi-bpmn/kiwi-bpmn-component-slurm/docs/slurm-workdir-cleanup.md) | Slurm 组件运维 |
 | `.cursor/rules/component-parameter-key-no-dot.mdc` | `@ComponentParameter` key 命名 |
 | `.cursor/rules/component-parameter-htmltype.mdc` | `htmlType` 使用约定 |
 | `.cursor/rules/java-minimize-static-methods.mdc` | 组件实现优先实例方法 |

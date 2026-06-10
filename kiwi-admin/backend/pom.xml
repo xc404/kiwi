@@ -217,6 +217,30 @@
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-external-task</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-example</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-slack</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-rabbitmq</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component-slurm</artifactId>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

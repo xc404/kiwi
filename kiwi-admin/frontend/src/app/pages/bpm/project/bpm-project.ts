@@ -4,10 +4,12 @@ import { Router } from '@angular/router';
 import { CrudPage, PageConfig } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { ColumnToken } from '@app/shared/components/table/column';
+import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
 
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 
+import { BpmProjectEnvModalComponent } from './bpm-project-env-modal.component';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 
 @Component({
@@ -29,6 +31,7 @@ import { BpmWorkspaceService } from './bpm-workspace.service';
 export class BpmProject implements OnInit {
   router = inject(Router);
   private readonly workspace = inject(BpmWorkspaceService);
+  private readonly modalWrap = inject(NzModalWrapService);
 
   /** 存在记忆时展示快捷入口 */
   readonly lastWorkspaceId = signal<string | null>(null);
@@ -44,6 +47,16 @@ export class BpmProject implements OnInit {
     }
   }
 
+  openProjectEnvModal(projectId: string): void {
+    this.modalWrap.create({
+      nzTitle: '环境变量',
+      nzWidth: '75vw',
+      nzContent: BpmProjectEnvModalComponent,
+      nzData: { projectId },
+      nzFooter: null
+    });
+  }
+
   pageConfig: PageConfig = {
     title: '项目管理',
     initializeData: true,
@@ -55,6 +68,17 @@ export class BpmProject implements OnInit {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
             void this.router.navigate(['/bpm/process-definition'], { queryParams: { projectId: record.id } });
+          }
+        }
+      },
+      {
+        icon: 'key',
+        tooltip: '环境变量',
+        handler: () => {
+          const record = inject(ColumnToken, { optional: true })?.getRecord();
+          const id = record?.id?.trim();
+          if (id) {
+            this.openProjectEnvModal(id);
           }
         }
       }

@@ -18,12 +18,6 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
-interface DataItem {
-  name: string;
-  chinese: number;
-  math: number;
-  english: number;
-}
 
 @Component({
   selector: 'app-analysis',

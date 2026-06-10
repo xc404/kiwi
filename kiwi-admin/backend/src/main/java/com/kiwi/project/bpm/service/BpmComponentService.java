@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.DependsOn("bpmComponentPluginLoader")
 public class BpmComponentService implements InitializingBean, Refreshable
 {
 
@@ -187,6 +188,18 @@ public class BpmComponentService implements InitializingBean, Refreshable
             }
         }
         return "classpath_httpRequest";
+    }
+
+    /**
+     * 解析继承「JDBC/SQL」(jdbcActivity) 父组件时使用的 {@code parentId}。
+     */
+    public String resolveJdbcParentComponentId() {
+        for (BpmComponent c : cachedComponents.values()) {
+            if ("jdbcActivity".equals(c.getKey())) {
+                return c.getId();
+            }
+        }
+        return "classpath_jdbcActivity";
     }
 
     public BpmComponent resolveComponentById(String componentId) {

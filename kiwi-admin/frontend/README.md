@@ -68,6 +68,9 @@ npm start
 | `npm run watch` | development 监听构建 |
 | `npm test` | Karma 单元测试 |
 | `npm run lint` / `npm run lint:fix` | ESLint |
+| `npm run lint:ci` | CI 质量门禁：`error=0` 且 warning ≤ 400 |
+| `npm run lint:ci:next` | 下一阶段门禁：`error=0` 且 warning ≤ 300 |
+| `npm run lint:ci:strict` | 严格门禁：`error=0` 且 warning = 0 |
 | `npm run lint:style` | Stylelint（Less） |
 | `npm run prettier` | 格式化 TS / HTML / Less / `public` 下 JSON |
 | `npm run ng-high-memory-start` | 大内存 dev server |

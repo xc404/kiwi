@@ -60,20 +60,17 @@ class HttpRequestActivityTest {
             when(execution.getVariableTyped("readTimeoutSeconds")).thenReturn(null);
             when(execution.getVariableTyped("headers")).thenReturn(null);
             when(execution.getVariableTyped("body")).thenReturn(null);
-            when(execution.getVariableTyped("statusCode")).thenReturn(Variables.stringValue("sc"));
-            when(execution.getVariableTyped("responseBody")).thenReturn(Variables.stringValue("rb"));
-            when(execution.getVariableTyped("responseHeaders")).thenReturn(Variables.stringValue("rh"));
 
             HttpRequestActivity activity = spy(new HttpRequestActivity());
             doNothing().when((AbstractBpmnActivityBehavior) activity).leave(any(ActivityExecution.class));
 
             activity.execute(execution);
 
-            verify(execution).setVariable(eq("sc"), eq(200));
-            verify(execution).setVariable(eq("rb"), eq("{\"ok\":true}"));
+            verify(execution).setVariable(eq("statusCode"), eq(200));
+            verify(execution).setVariable(eq("responseBody"), eq("{\"ok\":true}"));
             verify(execution)
                     .setVariable(
-                            eq("rh"),
+                            eq("responseHeaders"),
                             org.mockito.ArgumentMatchers.argThat(
                                     (Object json) ->
                                             json != null

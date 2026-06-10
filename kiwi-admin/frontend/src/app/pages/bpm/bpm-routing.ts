@@ -3,6 +3,12 @@ import { Route } from '@angular/router';
 export default [
   { path: '', redirectTo: 'project', pathMatch: 'full' },
   { path: 'component', title: '组件管理', data: { key: 'bpm-component' }, loadComponent: () => import('./flow-elements/bpm-component').then(m => m.BpmComponent) },
+  {
+    path: 'plugins',
+    title: '组件插件',
+    data: { key: 'bpm-component-plugin' },
+    loadComponent: () => import('./flow-elements/bpm-component-plugin').then(m => m.BpmComponentPlugin)
+  },
   { path: 'project', title: '项目管理', data: { key: 'bpm-project' }, loadComponent: () => import('./project/bpm-project').then(m => m.BpmProject) },
   { path: 'process-definition', title: '项目流程', data: { key: 'bpm-project-process' }, loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess) },
   {

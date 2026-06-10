@@ -111,7 +111,7 @@ export class ImportDatabaseWizardComponent {
             this.messageService.success('导入成功');
             this.destroyModal();
           },
-          error: err => {
+          error: _err => {
             this.messageService.error('导入失败');
           }
         });

@@ -2,7 +2,7 @@ package com.kiwi.bpmn.component.activity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kiwi.common.utils.JsonUtils;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import io.swagger.v3.oas.annotations.media.Schema;

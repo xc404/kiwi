@@ -18,8 +18,10 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
 import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
+import { BpmProjectEnv } from './bpm-project-env';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 import { ProcessDesignService } from '../design/service/process-design.service';
 import type { BpmProcess } from '../types/bpm-process';
@@ -72,10 +74,17 @@ interface BpmProjectOption {
         </div>
       </nz-dropdown-menu>
 
-      <crud-page [pageConfig]="pageConfig"> </crud-page>
+      <nz-tabs>
+        <nz-tab nzTitle="流程">
+          <crud-page [pageConfig]="pageConfig"> </crud-page>
+        </nz-tab>
+        <nz-tab nzTitle="环境变量">
+          <app-bpm-project-env [projectId]="projectId()" />
+        </nz-tab>
+      </nz-tabs>
     </section>
   `,
-  imports: [PageHeaderComponent, CrudPage, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule],
+  imports: [PageHeaderComponent, CrudPage, BpmProjectEnv, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule, NzTabsModule],
   styleUrls: ['./bpm-project-process.less'],
   encapsulation: ViewEncapsulation.None
 })

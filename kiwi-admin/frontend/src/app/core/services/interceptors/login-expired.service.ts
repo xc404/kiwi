@@ -78,7 +78,7 @@ export class LoginExpiredService implements HttpInterceptor {
           this.loginModalService
             .show({ nzTitle: '登录信息过期，重新登录' })
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(({ modalValue: token, status }) => {
+            .subscribe(({ modalValue: _token, status }) => {
               if (status === ModalBtnStatus.Cancel) {
                 // 这么做是为了登录状态下token过期，刷新页面，登录窗口点击取消，需要在startUp中的获取menu的接口完成掉,
                 // 不然进不去angular应用，路由不跳转

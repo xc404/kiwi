@@ -64,7 +64,7 @@ export class MenuPermissionComponent implements OnInit {
   });
   constructor() {
     effect(() => {
-      const menuId = this.menuId();
+      const _menuId = this.menuId();
       this.loadMenuPermissions();
     });
 

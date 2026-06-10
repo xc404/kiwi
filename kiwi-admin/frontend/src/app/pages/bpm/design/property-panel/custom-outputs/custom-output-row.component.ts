@@ -23,8 +23,8 @@ export class CustomOutputRowComponent {
   row = input.required<CustomOutputRow>();
   variables = input<Array<{ name?: string | null; [key: string]: unknown }>>([]);
 
-  rowChange = output<CustomOutputRow>();
-  remove = output<void>();
+  readonly rowChange = output<CustomOutputRow>();
+  readonly remove = output<void>();
 
   protected readonly varNames = computed(() => {
     const raw = this.variables();

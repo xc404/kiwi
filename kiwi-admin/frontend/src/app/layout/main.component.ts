@@ -91,7 +91,7 @@ export class MainComponent implements AfterViewInit, OnInit {
   });
   $themeStyleEffect = effect(() => {
     // 引用single以触发effect
-    const source = this.themesService.$themeStyle();
+    const _source = this.themesService.$themeStyle();
     // 切换风格模式时也要重新计算margin，这个跟themesOptions$里貌似时重复的代码，考虑用combineLatest来进行合并的话，会有性能损失（切换风格时也会执行themeOptions里面的逻辑），所以这里分开来写了
     this.contentMarginTop = this.judgeMarginTop();
   });

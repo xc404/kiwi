@@ -10,17 +10,6 @@ export interface KiwiAppendComponentConfig {
   append: (sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined) => void;
 }
 
-function isEventType(businessObject: any, type: string, eventDefinitionType: string): boolean {
-  const isType = businessObject.$instanceOf(type);
-  let isDefinition = false;
-  const definitions = businessObject.eventDefinitions || [];
-  for (const def of definitions) {
-    if (def.$type === eventDefinitionType) {
-      isDefinition = true;
-    }
-  }
-  return isType && isDefinition;
-}
 
 function canAppendComponent(element: Element): boolean {
   const bo: any = element.businessObject;

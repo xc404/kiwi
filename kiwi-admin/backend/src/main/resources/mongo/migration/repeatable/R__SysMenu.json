@@ -21,22 +21,32 @@
     "visible": true
   },
   {
+    "id": "bpm_component_plugin",
+    "parentId": "bpm",
+    "name": "组件插件",
+    "menuType": "C",
+    "path": "/bpm/plugins",
+    "sort": 2,
+    "status": "0",
+    "visible": true
+  },
+  {
     "id": "bpm_project",
     "parentId": "bpm",
     "name": "项目管理",
     "menuType": "C",
     "path": "/bpm/project",
-    "sort": 2,
+    "sort": 3,
     "status": "0",
     "visible": true
   },
   {
     "id": "bpm_process_definition",
     "parentId": "bpm",
-    "name": "项目流程",
+    "name": "流程管理",
     "menuType": "C",
     "path": "/bpm/process-definition",
-    "sort": 3,
+    "sort": 4,
     "status": "0",
     "visible": true
   },
@@ -46,7 +56,7 @@
     "name": "运行实例",
     "menuType": "C",
     "path": "/bpm/process-instances",
-    "sort": 4,
+    "sort": 5,
     "status": "0",
     "visible": true
   },
@@ -139,6 +149,16 @@
     "menuType": "C",
     "path": "/system/role",
     "sort": 5,
+    "status": "0",
+    "visible": true
+  },
+  {
+    "id": "system_monitor",
+    "parentId": "system",
+    "name": "系统监控",
+    "menuType": "C",
+    "path": "/dashboard/monitor",
+    "sort": 6,
     "status": "0",
     "visible": true
   }

@@ -118,7 +118,7 @@ export class BizTreeSelect implements ControlValueAccessor, AfterViewInit, OnIni
 
   formControl = input<any>();
 
-  update = output<any>();
+  readonly update = output<unknown>();
 
   idProperty = input('id');
 

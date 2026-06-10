@@ -22,7 +22,7 @@ export class EditCell implements AfterViewInit {
   field = input.required<ColumnConfig>();
   model = model<any>();
 
-  valueChange = output<any>();
+  readonly valueChange = output<unknown>();
 
   formBuilder = inject(FormlyFormBuilder);
   formGroup = new FormGroup({});
@@ -62,7 +62,7 @@ export interface RowChangeEvent {
   imports: [NzTableModule, NzResizableModule, NgClass, TableHeaderCell, TableCell, EditCell]
 })
 export class AppEditTableComponent extends BaseTableComponent {
-  rowChange = output<RowChangeEvent>();
+  readonly rowChange = output<RowChangeEvent>();
 
   toFormlyField(column: ColumnConfig): any {
     return toFormlyConfig({ ...column }, 'column-edit');
