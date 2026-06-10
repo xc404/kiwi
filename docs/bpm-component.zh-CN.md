@@ -312,7 +312,7 @@ JavaDelegate.execute() 读取参数、写回输出变量
 - **上传安装**：`POST /bpm/component/plugins/upload`（multipart `file`）
 - **手动刷新**：`POST /bpm/component/plugins/reload`
 - **卸载**：`DELETE /bpm/component/plugins/{fileName}`
-- 管理端入口：**工作流 → 组件插件**（`/bpm/component-plugin`，上传 / 重新扫描 / 卸载）。
+- 管理端入口：**工作流 → 组件插件**（`/bpm/plugins`，上传 / 重新扫描 / 卸载）。
 - 第三方开发仍推荐参考 `kiwi-bpmn-component-example`；插件方式适合运维侧热更新。
 
 ---

@@ -4,7 +4,7 @@ export default [
   { path: '', redirectTo: 'project', pathMatch: 'full' },
   { path: 'component', title: '组件管理', data: { key: 'bpm-component' }, loadComponent: () => import('./flow-elements/bpm-component').then(m => m.BpmComponent) },
   {
-    path: 'component-plugin',
+    path: 'plugins',
     title: '组件插件',
     data: { key: 'bpm-component-plugin' },
     loadComponent: () => import('./flow-elements/bpm-component-plugin').then(m => m.BpmComponentPlugin)

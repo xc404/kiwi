@@ -25,7 +25,7 @@
     "parentId": "bpm",
     "name": "组件插件",
     "menuType": "C",
-    "path": "/bpm/component-plugin",
+    "path": "/bpm/plugins",
     "sort": 2,
     "status": "0",
     "visible": true
