@@ -11,9 +11,11 @@ import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
 import com.kiwi.project.bpm.utils.ElementTemplateExporter;
 import com.kiwi.project.bpm.utils.ElementTemplateImporter;
+import com.kiwi.project.bpm.utils.JdbcSchemaComponentGenerator;
 import com.kiwi.project.bpm.utils.OpenApiComponentGenerator;
 import com.kiwi.project.bpm.utils.OpenApiSpecFetcher;
 import com.kiwi.project.bpm.service.BpmComponentBundleService;
+import com.kiwi.project.tools.jdbc.connection.service.ConnectionService;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
@@ -54,6 +56,7 @@ public class BpmComponentCtl extends BaseCtl
     private final BpmComponentService bpmComponentService;
     private final BpmComponentRecentUsageService bpmComponentRecentUsageService;
     private final BpmComponentBundleService bpmComponentBundleService;
+    private final ConnectionService connectionService;
 
     /**
      * 不落库：从当前用户已保存流程的 BPMN 中按需解析「最近使用的组件」；
@@ -263,6 +266,36 @@ public class BpmComponentCtl extends BaseCtl
      * 组件继承 {@code httpRequest}（{@link com.kiwi.bpmn.component.activity.HttpRequestActivity}）父定义，仅覆盖
      * url、method、headers、body 等默认值。
      */
+    /**
+     * 根据 {@code jdbc-connections} 中已保存连接的表结构，为每张表生成 5 个继承 {@code jdbcActivity} 的 CRUD 子组件草稿。
+     */
+    @Operation(
+            operationId = "bpmComp_fromJdbcSchema",
+            summary = "根据 JDBC 连接表结构生成 CRUD 类 BPM 组件草稿列表",
+            description = "每张表生成 get / list / insert / update / delete 五个子组件；connectionId 为工具模块 JDBC 连接 id。")
+    @PostMapping("from-jdbc-schema")
+    @ResponseBody
+    public List<BpmComponent> generateFromJdbcSchema(@RequestBody JdbcSchemaGenerateRequest request) {
+        if (request == null || StringUtils.isBlank(request.getConnectionId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "connectionId 不能为空");
+        }
+        if (request.getTables() == null || request.getTables().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tables 不能为空");
+        }
+        String parentId = bpmComponentService.resolveJdbcParentComponentId();
+        try (var connection = connectionService.getConnection(request.getConnectionId().trim())) {
+            return JdbcSchemaComponentGenerator.buildComponents(
+                    connection,
+                    request.getConnectionId().trim(),
+                    request.getTables(),
+                    parentId);
+        } catch (java.sql.SQLException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "读取表结构失败: " + e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
     @Operation(operationId = "bpmComp_fromOpenApi", summary = "根据 OpenAPI/Swagger 文档生成 HTTP 类 BPM 组件草稿列表")
     @PostMapping("from-openapi")
     @ResponseBody
@@ -313,7 +346,7 @@ public class BpmComponentCtl extends BaseCtl
         private String sourceKey;
     }
 
-    @Operation(operationId = "bpmComp_exportElementTemplate", summary = "导出组件为 Camunda Element Template JSON")
+    @Operation(operationId = "bpmComp_exportElementTemplate", summary = "导出组件为 Camunda 8 Element Template JSON")
     @GetMapping("{id}/element-template")
     @ResponseBody
     public String exportElementTemplate(@PathVariable String id) {
@@ -322,7 +355,7 @@ public class BpmComponentCtl extends BaseCtl
         return ElementTemplateExporter.exportJson(bpmComponentService.fillComponentProperties(comp));
     }
 
-    @Operation(operationId = "bpmComp_importElementTemplate", summary = "从 Element Template JSON 导入组件草稿")
+    @Operation(operationId = "bpmComp_importElementTemplate", summary = "从 Camunda 8 Element Template JSON 导入组件草稿")
     @PostMapping("from-element-template")
     @ResponseBody
     public List<BpmComponent> importElementTemplate(@RequestBody ElementTemplateImportRequest request) {
@@ -397,6 +430,14 @@ public class BpmComponentCtl extends BaseCtl
          * 与 path 拼接为默认 {@code url} 参数。
          */
         private String baseUrl;
+    }
+
+    @Data
+    public static class JdbcSchemaGenerateRequest {
+        /** 工具模块 {@code jdbc-connections} 中的连接 id */
+        private String connectionId;
+        /** 要生成 CRUD 子组件的表名列表 */
+        private List<String> tables;
     }
 
 }

@@ -20,8 +20,14 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { DictSelector } from '@shared/components/dict-selector/dict-selector';
 
 import { BpmInputOutputParameters } from './bpm-parameters';
+import { ComponentProvider } from './component-provider';
 
 /** 与后端 BpmComponentPreviewConflictItem DTO 对齐 */
 export interface BpmPreviewConflictItem {
@@ -69,6 +75,11 @@ type ConflictSaveAction = 'cancel' | 'overwrite' | 'add';
     NzIconModule,
     NzTooltipModule,
     NzRadioModule,
+    NzCheckboxModule,
+    NzEmptyModule,
+    NzSelectModule,
+    NzSpinModule,
+    DictSelector,
     ModalDragDirective
   ]
 })
@@ -95,11 +106,30 @@ export class BpmComponent implements AfterViewInit {
   /** 可选，对应后端 OpenApiGenerateRequest.baseUrl */
   openApiBaseUrlInput = '';
 
+  jdbcSchemaModalVisible = signal(false);
+  jdbcConnectionId: string | null = null;
+  jdbcTables = signal<{ name: string; comment?: string }[]>([]);
+  jdbcSelectedTableNames = signal<string[]>([]);
+  jdbcTablesLoading = signal(false);
+
+  elementTemplateModalVisible = signal(false);
+  elementTemplateInput = '';
+  elementTemplateInheritHttpRequest = signal(true);
+  elementTemplateParentId = signal<string | null>(null);
+
   crudPage = viewChild(CrudPage);
   /** 工具栏「生成组件」下拉，于 ngAfterViewInit 绑定到 toolbarActions */
   generateDropdownTpl = viewChild<TemplateRef<void>>('generateDropdownTpl');
   http = inject(BaseHttpService);
   message = inject(NzMessageService);
+  componentProvider = inject(ComponentProvider);
+
+  parentComponentOptions = computed(() =>
+    this.componentProvider.components().map(c => ({
+      label: c.name,
+      value: c.id
+    }))
+  );
 
   pageConfig = computed(() => {
     return {
@@ -111,7 +141,7 @@ export class BpmComponent implements AfterViewInit {
         toolbarAction({
           name: '生成组件',
           icon: 'down',
-          tooltip: '从命令行或 OpenAPI / Swagger 文档生成',
+          tooltip: '从命令行、OpenAPI、JDBC 生成，或从 Camunda 8 Element Template 导入',
           template: this.generateDropdownTpl()
         })
       ],
@@ -122,6 +152,13 @@ export class BpmComponent implements AfterViewInit {
             const item = inject(ColumnToken).getRecord();
             this.selectedComponent.set(item);
             this.parametersModalVisible.set(true);
+          }
+        },
+        {
+          name: '导出 Camunda 8 Template',
+          handler: () => {
+            const item = inject(ColumnToken).getRecord();
+            this.exportElementTemplate(item);
           }
         }
       ],
@@ -156,6 +193,193 @@ export class BpmComponent implements AfterViewInit {
     this.openApiSpecInput = '';
     this.openApiBaseUrlInput = '';
     this.openApiModalVisible.set(true);
+  }
+
+  openGenerateFromJdbcSchema(): void {
+    this.jdbcConnectionId = null;
+    this.jdbcTables.set([]);
+    this.jdbcSelectedTableNames.set([]);
+    this.jdbcSchemaModalVisible.set(true);
+  }
+
+  openImportFromElementTemplate(): void {
+    this.elementTemplateInput = '';
+    this.elementTemplateInheritHttpRequest.set(true);
+    this.elementTemplateParentId.set(null);
+    this.elementTemplateModalVisible.set(true);
+  }
+
+  onElementTemplateFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    file
+      .text()
+      .then(text => {
+        this.elementTemplateInput = text;
+      })
+      .catch(() => {
+        this.message.error('读取 JSON 文件失败');
+      });
+  }
+
+  confirmImportFromElementTemplate() {
+    const template = this.elementTemplateInput?.trim();
+    if (!template) {
+      this.message.warning('请粘贴 Camunda 8 Element Template JSON，或上传 .json 文件');
+      return;
+    }
+    const body: { template: string; inheritHttpRequest: boolean; parentId?: string } = {
+      template,
+      inheritHttpRequest: this.elementTemplateInheritHttpRequest()
+    };
+    if (!this.elementTemplateInheritHttpRequest()) {
+      const parentId = this.elementTemplateParentId()?.trim();
+      if (parentId) {
+        body.parentId = parentId;
+      }
+    }
+    this.http
+      .post<ArrayResult<any>>('/bpm/component/from-element-template', body)
+      .pipe(
+        switchMap(res => {
+          const list = this.normalizeComponentList(res);
+          if (!list.length) {
+            this.message.warning('未解析到任何组件');
+            return of(false);
+          }
+          return this.afterGeneratePersistPipeline(
+            list,
+            () => {
+              this.elementTemplateModalVisible.set(false);
+              this.elementTemplateInput = '';
+              this.elementTemplateInheritHttpRequest.set(true);
+              this.elementTemplateParentId.set(null);
+            },
+            'element-template'
+          );
+        }),
+        catchError(e => {
+          this.message.error(`导入或保存失败${e.message ?? ''}`);
+          return of(false);
+        })
+      )
+      .subscribe();
+  }
+
+  exportElementTemplate(record: { id?: string; sourceKey?: string; key?: string; name?: string }): void {
+    const id = record?.id?.trim();
+    if (!id) {
+      this.message.warning('组件 id 无效');
+      return;
+    }
+    this.http
+      .get<string>(`/bpm/component/${id}/element-template`)
+      .pipe(
+        catchError(e => {
+          this.message.error(`导出失败${e.message ?? ''}`);
+          return of('');
+        })
+      )
+      .subscribe(json => {
+        if (!json) {
+          return;
+        }
+        const baseName = (record.sourceKey || record.key || record.name || 'component').replace(/[^\w.-]+/g, '_');
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${baseName}.element-template.json`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.message.success('已导出 Camunda 8 Element Template');
+      });
+  }
+
+  onJdbcConnectionChange(connectionId: string | null): void {
+    this.jdbcConnectionId = connectionId;
+    this.jdbcSelectedTableNames.set([]);
+    this.loadJdbcTables();
+  }
+
+  loadJdbcTables(): void {
+    const connId = this.jdbcConnectionId;
+    if (!connId) {
+      this.jdbcTables.set([]);
+      return;
+    }
+    this.jdbcTablesLoading.set(true);
+    this.http
+      .get<{ content?: { name: string; comment?: string }[] }>(`tools/connection/${connId}/tables`, undefined, {
+        showLoading: false
+      })
+      .pipe(
+        catchError(e => {
+          this.message.error(`加载表列表失败${e.message ?? ''}`);
+          return of({ content: [] as { name: string; comment?: string }[] });
+        })
+      )
+      .subscribe(res => {
+        this.jdbcTables.set(res.content ?? []);
+        this.jdbcTablesLoading.set(false);
+      });
+  }
+
+  toggleJdbcTable(name: string, checked: boolean): void {
+    const cur = [...this.jdbcSelectedTableNames()];
+    if (checked) {
+      if (!cur.includes(name)) {
+        cur.push(name);
+      }
+    } else {
+      const idx = cur.indexOf(name);
+      if (idx >= 0) {
+        cur.splice(idx, 1);
+      }
+    }
+    this.jdbcSelectedTableNames.set(cur);
+  }
+
+  confirmGenerateFromJdbcSchema() {
+    const connectionId = this.jdbcConnectionId?.trim();
+    const tables = this.jdbcSelectedTableNames();
+    if (!connectionId) {
+      this.message.warning('请选择 JDBC 连接');
+      return;
+    }
+    if (!tables.length) {
+      this.message.warning('请至少选择一张表');
+      return;
+    }
+    this.http
+      .post<any[]>('/bpm/component/from-jdbc-schema', { connectionId, tables })
+      .pipe(
+        switchMap(list => {
+          if (!list?.length) {
+            this.message.warning('未生成任何组件');
+            return of(false);
+          }
+          return this.afterGeneratePersistPipeline(
+            list,
+            () => {
+              this.jdbcSchemaModalVisible.set(false);
+              this.jdbcConnectionId = null;
+              this.jdbcTables.set([]);
+              this.jdbcSelectedTableNames.set([]);
+            },
+            'dbschema'
+          );
+        }),
+        catchError(e => {
+          this.message.error(`生成或保存失败${e.message}`);
+          return of(false);
+        })
+      )
+      .subscribe();
   }
 
   /**
@@ -241,7 +465,21 @@ export class BpmComponent implements AfterViewInit {
   /**
    * @returns 已全部保存或已打开冲突弹窗（后者返回 false，以免关闭生成来源弹窗）
    */
-  private afterGeneratePersistPipeline(drafts: any[], afterSuccess: () => void, source: 'cli' | 'openapi'): Observable<boolean> {
+  private normalizeComponentList(res: any[] | ArrayResult<any> | null | undefined): any[] {
+    if (!res) {
+      return [];
+    }
+    if (Array.isArray(res)) {
+      return res;
+    }
+    return res.content ?? [];
+  }
+
+  private afterGeneratePersistPipeline(
+    drafts: any[],
+    afterSuccess: () => void,
+    source: 'cli' | 'openapi' | 'dbschema' | 'element-template'
+  ): Observable<boolean> {
     return this.http.post<ArrayResult<BpmPreviewConflictItem>>('/bpm/component/preview-conflicts', { components: drafts }).pipe(
       switchMap(preview => {
         const previewItems: BpmPreviewConflictItem[] = preview.content || [];
@@ -252,6 +490,10 @@ export class BpmComponent implements AfterViewInit {
               this.crudPage()?.reloadTable();
               if (source === 'cli') {
                 this.message.success('已根据 CLI help 生成并保存组件');
+              } else if (source === 'dbschema') {
+                this.message.success(`已根据表结构生成并保存 ${drafts.length} 个组件`);
+              } else if (source === 'element-template') {
+                this.message.success(`已从 Camunda 8 Template 导入并保存 ${drafts.length} 个组件`);
               } else {
                 this.message.success(`已根据文档生成并保存 ${drafts.length} 个组件`);
               }

@@ -24,6 +24,7 @@
         <module>kiwi-bpmn/kiwi-bpmn-component-kafka</module>
         <module>kiwi-bpmn/kiwi-bpmn-component-rabbitmq</module>
         <module>kiwi-bpmn/kiwi-bpmn-component-s3</module>
+        <module>kiwi-bpmn/kiwi-bpmn-component-slurm</module>
     </modules>
     <properties>
         <cryoems-bpm.version>1.0.0-SNAPSHOT</cryoems-bpm.version>
@@ -176,6 +177,11 @@
             <dependency>
                 <groupId>com.kiwi</groupId>
                 <artifactId>kiwi-bpmn-component-s3</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>kiwi-bpmn-component-slurm</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

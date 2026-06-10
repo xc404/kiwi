@@ -9,6 +9,10 @@
       @if (snapshot()?.collectedAt) {
         <span class="collected-at" nz-typography nzType="secondary"> 采集时间 {{ snapshot()!.collectedAt | date: 'yyyy-MM-dd HH:mm:ss' }} </span>
       }
+      <label class="auto-refresh-toggle">
+        <span nz-typography nzType="secondary">自动刷新（10分钟）</span>
+        <nz-switch nzSize="small" [ngModel]="autoRefreshEnabled()" (ngModelChange)="setAutoRefresh($event)" />
+      </label>
       <button nz-button nzType="default" (click)="refresh()">刷新</button>
     </div>
   </div>

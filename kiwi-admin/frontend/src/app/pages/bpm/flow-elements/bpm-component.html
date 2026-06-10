@@ -8,7 +8,7 @@
       nz-dropdown
       nz-tooltip
       nzPlacement="bottomRight"
-      nzTooltipTitle="从命令行或 OpenAPI / Swagger 文档生成"
+      nzTooltipTitle="从命令行、OpenAPI、JDBC 生成，或从 Camunda 8 Element Template 导入"
       nzTrigger="click"
       [nzDropdownMenu]="generateMenu"
     >
@@ -24,6 +24,14 @@
         <li nz-menu-item (click)="openGenerateFromOpenApi()">
           <nz-icon class="m-r-8" nzTheme="outline" nzType="import"></nz-icon>
           从 HTTP 文档生成
+        </li>
+        <li nz-menu-item (click)="openGenerateFromJdbcSchema()">
+          <nz-icon class="m-r-8" nzTheme="outline" nzType="database"></nz-icon>
+          从 JDBC 表结构生成
+        </li>
+        <li nz-menu-item (click)="openImportFromElementTemplate()">
+          <nz-icon class="m-r-8" nzTheme="outline" nzType="file-text"></nz-icon>
+          从 Camunda 8 Template 导入
         </li>
       </ul>
     </nz-dropdown-menu>
@@ -75,6 +83,105 @@
         <input name="openApiBaseUrl" nz-input placeholder="可选，servers 为空或相对路径时填写，如 https://api.example.com" style="width: calc(100% - 92px)" [(ngModel)]="openApiBaseUrlInput" />
       </div>
       <textarea name="openApiSpec" nz-input placeholder="或直接粘贴全文（与文档链接二选一）" rows="14" [(ngModel)]="openApiSpecInput"></textarea>
+    </div>
+  </nz-modal>
+
+  <nz-modal
+    nzCancelText="取消"
+    nzOkText="生成并保存"
+    nzTitle="从 JDBC 表结构生成组件"
+    nzWidth="720px"
+    nzxModalDrag
+    [nzVisible]="jdbcSchemaModalVisible()"
+    (nzOnCancel)="jdbcSchemaModalVisible.set(false)"
+    (nzOnOk)="confirmGenerateFromJdbcSchema()"
+    (nzVisibleChange)="jdbcSchemaModalVisible.set($event)"
+  >
+    <div *nzModalContent>
+      <p class="cli-help-hint">
+        选择工具模块中已保存的 JDBC 连接与表，每张表将生成 5 个子组件（按主键查询 / 列表 / 新增 / 更新 / 删除），继承「JDBC/SQL」父组件。
+      </p>
+      <div style="margin-bottom: 12px">
+        <span style="display: inline-block; width: 88px; color: rgba(0, 0, 0, 0.65)">JDBC 连接</span>
+        <app-dict-selector
+          name="jdbcConnection"
+          style="width: calc(100% - 92px); display: inline-block"
+          [groupKey]="'jdbc-connections'"
+          [(model)]="jdbcConnectionId"
+          (modelChange)="onJdbcConnectionChange($event)"
+        ></app-dict-selector>
+      </div>
+      <nz-spin [nzSpinning]="jdbcTablesLoading()">
+        @if (jdbcTables().length) {
+          <div style="max-height: 320px; overflow: auto; border: 1px solid #f0f0f0; border-radius: 4px; padding: 8px">
+            @for (t of jdbcTables(); track t.name) {
+              <label nz-checkbox style="display: block; margin: 4px 0" [ngModel]="jdbcSelectedTableNames().includes(t.name)" (ngModelChange)="toggleJdbcTable(t.name, $event)">
+                <span>{{ t.name }}</span>
+                @if (t.comment) {
+                  <span style="color: rgba(0, 0, 0, 0.45); margin-left: 8px">{{ t.comment }}</span>
+                }
+              </label>
+            }
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="请选择连接或该连接下无表" />
+        }
+      </nz-spin>
+    </div>
+  </nz-modal>
+
+  <nz-modal
+    nzCancelText="取消"
+    nzOkText="导入并保存"
+    nzTitle="从 Camunda 8 Element Template 导入"
+    nzWidth="720px"
+    nzxModalDrag
+    [nzVisible]="elementTemplateModalVisible()"
+    (nzOnCancel)="elementTemplateModalVisible.set(false)"
+    (nzOnOk)="confirmImportFromElementTemplate()"
+    (nzVisibleChange)="elementTemplateModalVisible.set($event)"
+  >
+    <div *nzModalContent>
+      <p class="cli-help-hint">
+        兼容 <strong>Camunda 8</strong> / Camunda Modeler 的 Connector Element Template JSON（单对象或数组，如
+        <code>connectors-bundle</code> 社区模板）。导入为 Kiwi 组件草稿；Camunda 8 REST Connector 类模板建议勾选「继承 HTTP 请求」父组件（执行仍走 Kiwi 运行时，非 Zeebe Job Worker）。
+      </p>
+      <div style="margin-bottom: 12px">
+        <label
+          nz-checkbox
+          [ngModel]="elementTemplateInheritHttpRequest()"
+          (ngModelChange)="elementTemplateInheritHttpRequest.set($event)"
+        >
+          自动继承「HTTP 请求」父组件
+        </label>
+      </div>
+      @if (!elementTemplateInheritHttpRequest()) {
+        <div style="margin-bottom: 12px">
+          <span style="display: inline-block; width: 88px; color: rgba(0, 0, 0, 0.65)">父组件</span>
+          <nz-select
+            nzAllowClear
+            nzPlaceHolder="可选，指定其它父组件"
+            style="width: calc(100% - 92px)"
+            [ngModel]="elementTemplateParentId()"
+            [nzOptions]="parentComponentOptions()"
+            (ngModelChange)="elementTemplateParentId.set($event)"
+          ></nz-select>
+        </div>
+      }
+      <div style="margin-bottom: 12px">
+        <input #elementTemplateFile accept=".json,application/json" hidden type="file" (change)="onElementTemplateFileSelected($event)" />
+        <button nz-button type="button" (click)="elementTemplateFile.click()">
+          <nz-icon nzTheme="outline" nzType="upload" />
+          选择 JSON 文件
+        </button>
+      </div>
+      <textarea
+        name="elementTemplateJson"
+        nz-input
+        placeholder="粘贴 Camunda 8 Element Template JSON（与上传文件可组合使用）"
+        rows="16"
+        [(ngModel)]="elementTemplateInput"
+      ></textarea>
     </div>
   </nz-modal>
 

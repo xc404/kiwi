@@ -99,7 +99,7 @@ public class ShellActivityBehavior implements JavaDelegate {
 }
 ```
 
-**External Task 组件**（如 Slurm）额外添加 `@ExternalTaskSubscription(topicName = "slurm")`，类型自动识别为 `SpringExternalTask`。参考 [SlurmExternalTaskHandler.java](../kiwi-bpmn/kiwi-bpmn-component/src/main/java/com/kiwi/bpmn/component/slurm/SlurmExternalTaskHandler.java)。
+**External Task 组件**（如 Slurm）额外添加 `@ExternalTaskSubscription(topicName = "slurm")`，类型自动识别为 `SpringExternalTask`。参考 [SlurmExternalTaskHandler.java](../kiwi-bpmn/kiwi-bpmn-component-slurm/src/main/java/com/kiwi/bpmn/component/slurm/SlurmExternalTaskHandler.java)（独立模块 `kiwi-bpmn-component-slurm`）。
 
 运行时读取参数统一使用 [`ExecutionUtils`](../kiwi-bpmn/kiwi-bpmn-core/src/main/java/com/kiwi/bpmn/core/utils/ExecutionUtils.java)（`kiwi-bpmn-core`）的 `getStringInputVariable(execution, "xxx")` 等顶层 API；`@ComponentParameter` 的 `key` **禁止使用 `.`**，用下划线扁平命名（见 `.cursor/rules/component-parameter-key-no-dot.mdc`）。
 
@@ -110,6 +110,7 @@ public class ShellActivityBehavior implements JavaDelegate {
 - **手动新建**：填写名称、继承父组件（`parentId`）、自定义输入/输出参数。
 - **CLI 生成**：解析 `--help` 输出，基于 `shell` 父组件批量生成。
 - **OpenAPI 生成**：基于 `httpRequest` 父组件从 Swagger 生成 HTTP 组件。
+- **JDBC 表结构生成**：选择 `jdbc-connections` 连接与表，每张表生成 5 个继承 `jdbcActivity` 的 CRUD 子组件（`POST /bpm/component/from-jdbc-schema`，`source=dbschema`）。
 
 子组件通过 `parentId` 继承父组件参数，可只覆盖或追加差异字段（`BpmComponentService.fillComponentProperties`）。
 
@@ -317,12 +318,25 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 十、Element Template 导入/导出（阶段三）
+## 十、Camunda 8 Element Template 互操作（阶段三）
 
-- **导出**：`GET /bpm/component/{id}/element-template` → Camunda Element Template JSON
+与 **Camunda 8** Modeler / `connectors-bundle` 的 Connector Element Template 互操作：仅迁移**设计时元数据**（属性面板字段 → Kiwi `BpmComponent`），执行仍由 Kiwi 组件（`JavaDelegate` / External Task）完成，**不绑定 Zeebe Job Worker**。
+
+字段映射：`camunda:inputParameter` / `outputParameter` → Kiwi 组件输入/输出参数。
+
+### 管理端（工作流 → 组件管理）
+
+| 操作 | 入口 |
+|------|------|
+| **导入** | 工具栏「生成组件」→「**从 Camunda 8 Template 导入**」：粘贴或上传 Camunda 8 Element Template JSON；REST Connector 类模板建议勾选「继承 HTTP 请求」 |
+| **导出** | 行操作「**导出 Camunda 8 Template**」→ 下载 `{sourceKey}.element-template.json`，可供 Camunda Modeler 协作 |
+
+导入后若 `sourceKey` 与库中或本批重复，会弹出与 OpenAPI 生成相同的冲突确认（覆盖 / 新增 / 取消）。
+
+### API
+
+- **导出**：`GET /bpm/component/{id}/element-template` → Camunda 8 兼容 Element Template JSON
 - **导入草稿**：`POST /bpm/component/from-element-template`，body `{ "template": "...", "inheritHttpRequest": true }`
-
-可与 Camunda Modeler 的 Connector Template 互操作（字段映射为 `camunda:inputParameter` / `outputParameter`）。
 
 ---
 
@@ -363,7 +377,7 @@ BPMN 中须有 **Intermediate Message Catch Event**，message 名称与注册一
 | 文档 | 内容 |
 |------|------|
 | [README.zh-CN.md](../README.zh-CN.md) | 平台总览与快速开始 |
-| [slurm-workdir-cleanup.md](../kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) | Slurm 组件运维 |
+| [slurm-workdir-cleanup.md](../kiwi-bpmn/kiwi-bpmn-component-slurm/docs/slurm-workdir-cleanup.md) | Slurm 组件运维 |
 | `.cursor/rules/component-parameter-key-no-dot.mdc` | `@ComponentParameter` key 命名 |
 | `.cursor/rules/component-parameter-htmltype.mdc` | `htmlType` 使用约定 |
 | `.cursor/rules/java-minimize-static-methods.mdc` | 组件实现优先实例方法 |
