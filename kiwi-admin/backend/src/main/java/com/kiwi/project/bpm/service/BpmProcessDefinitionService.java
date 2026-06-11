@@ -59,10 +59,10 @@ public class BpmProcessDefinitionService implements InitializingBean
     public static void updateIdAndName(BpmProcess bpmProcess) {
         String processReplace = "<bpmn:process id=\"${definition_id}\" isExecutable=\"true\" name=\"${definition_name}\">"
                 .replace("${definition_id}", bpmProcess.getId()).replace("${definition_name}", bpmProcess.getName());
-        String xml = bpmProcess.getBpmnXml().replaceAll("<bpmn:process.*\">", processReplace);
+        String xml = bpmProcess.getBpmnXml().replaceAll("<bpmn:process.*?\">", processReplace);
         String BPMNPlaneReplace = "<bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"${definition_id}\">"
                 .replace("${definition_id}", bpmProcess.getId());
-        xml = xml.replaceAll("<bpmndi:BPMNPlane id=\"BPMNPlane_1\".*\">", BPMNPlaneReplace);
+        xml = xml.replaceAll("<bpmndi:BPMNPlane id=\"BPMNPlane_1\".*?\">", BPMNPlaneReplace);
         bpmProcess.setBpmnXml(xml);
     }
 

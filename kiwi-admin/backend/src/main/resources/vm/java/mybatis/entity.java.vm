@@ -1,0 +1,28 @@
+package ${packageName}.entity;
+
+#foreach ($import in $importList)
+import ${import};
+#end
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.kiwi.common.entity.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+/**
+ * ${functionName} ${tableName}
+ *
+ * @author ${author}
+ */
+@EqualsAndHashCode(callSuper = true)
+@Data
+@TableName("${tableName}")
+public class ${ClassName} extends BaseEntity<String> {
+
+#foreach($field in $entityFields)
+    /**
+     * $field.columnComment
+     */
+    private $field.javaType $field.javaField;
+
+#end
+}

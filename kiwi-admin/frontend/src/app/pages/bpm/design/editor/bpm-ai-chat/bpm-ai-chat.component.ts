@@ -1,13 +1,11 @@
 import { Component, computed, inject, input } from '@angular/core';
-import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
-import { ChatComponent } from '@shared/components/chat/chat.component';
-import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
 
-import {
-  createBpmDesignerAssistantHandlers,
-  type BpmDesignerAssistantDeps,
-} from '../../assistant/bpm-designer-assistant.handlers';
+import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
+import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
+import { ChatComponent } from '@shared/components/chat/chat.component';
+
 import { ComponentProvider } from '../../../flow-elements/component-provider';
+import { createBpmDesignerAssistantHandlers, type BpmDesignerAssistantDeps } from '../../assistant/bpm-designer-assistant.handlers';
 import { BpmEditorAppendService } from '../../service/bpm-editor-append.service';
 import { BpmDesignerToolbarService } from '../../toolbar/bpm-designer-toolbar.service';
 import type { BpmDesignerToolbarContext } from '../../toolbar/bpm-designer-toolbar.types';
@@ -18,7 +16,7 @@ import { BpmEditorToken } from '../bpm-editor-token';
   standalone: true,
   imports: [ChatComponent],
   templateUrl: './bpm-ai-chat.component.html',
-  styleUrl: './bpm-ai-chat.component.scss',
+  styleUrl: './bpm-ai-chat.component.scss'
 })
 export class BpmAiChatComponent {
   private readonly editor = inject(BpmEditorToken);
@@ -34,18 +32,15 @@ export class BpmAiChatComponent {
   });
 
   private readonly assistantDeps: BpmDesignerAssistantDeps = {
-    importBpmnXmlAndSave: (xml) => this.editor.importBpmnXmlAndSave(xml),
-    applyMatchedComponent: (componentId, sourceElementId) =>
-      this.append.appendComponentForAi(componentId, sourceElementId),
-    runToolbarCommand: (command, options) => this.runToolbarCommand(command, options),
+    importBpmnXmlAndSave: xml => this.editor.importBpmnXmlAndSave(xml),
+    applyMatchedComponent: (componentId, sourceElementId) => this.append.appendComponentForAi(componentId, sourceElementId),
+    runToolbarCommand: (command, options) => this.runToolbarCommand(command, options)
   };
 
-  readonly assistantHandlers: AssistantActionHandler[] = createBpmDesignerAssistantHandlers(
-    this.assistantDeps,
-  );
+  readonly assistantHandlers: AssistantActionHandler[] = createBpmDesignerAssistantHandlers(this.assistantDeps);
 
   enrichDesignerMessages = (messages: AiChatMessage[]): Promise<AiChatMessage[]> => {
-    return this.buildDesignerContextMessage().then((ctx) => [ctx, ...messages]);
+    return this.buildDesignerContextMessage().then(ctx => [ctx, ...messages]);
   };
 
   private runToolbarCommand(command: string, options?: Record<string, unknown>): void {
@@ -92,7 +87,7 @@ export class BpmAiChatComponent {
       '当前 BPMN XML:',
       '```xml',
       xmlBlock || '（空）',
-      '```',
+      '```'
     ].filter(Boolean);
     return { role: 'system', content: lines.join('\n') };
   }
@@ -104,7 +99,7 @@ export class BpmAiChatComponent {
     }
     const max = 60;
     const slice = list.slice(0, max);
-    const catalog = slice.map((c) => `${c.id}|${c.name}`).join('; ');
+    const catalog = slice.map(c => `${c.id}|${c.name}`).join('; ');
     const suffix = list.length > max ? `; …共 ${list.length} 个` : '';
     return `组件库 componentId|name: ${catalog}${suffix}`;
   }

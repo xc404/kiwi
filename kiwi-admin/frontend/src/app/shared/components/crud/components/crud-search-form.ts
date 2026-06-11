@@ -1,103 +1,99 @@
-import { Component, computed, inject, input, output, signal } from "@angular/core";
-import { FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { FormlyFieldConfig, FormlyFormBuilder, FormlyModule } from "@ngx-formly/core";
-import { NzButtonModule } from "ng-zorro-antd/button";
-import { NzCardModule } from "ng-zorro-antd/card";
-import { NzGridModule } from "ng-zorro-antd/grid";
-import { NzIconModule } from "ng-zorro-antd/icon";
-import { CrudFieldConfig, toFormField } from "../utils";
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
+import { FormlyFieldConfig, FormlyFormBuilder, FormlyModule } from '@ngx-formly/core';
+
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+
+import { CrudFieldConfig, toFormField } from '../utils';
 
 @Component({
-    selector: 'crud-search-form',
-    templateUrl: './crud-search-form.html',
-    imports: [
-        NzCardModule, FormsModule, ReactiveFormsModule, NzGridModule, FormlyModule, NzButtonModule, NzIconModule
-    ],
-    standalone: true
+  selector: 'crud-search-form',
+  templateUrl: './crud-search-form.html',
+  imports: [NzCardModule, FormsModule, ReactiveFormsModule, NzGridModule, FormlyModule, NzButtonModule, NzIconModule],
+  standalone: true
 })
 export class CrudSearchForm {
-    builder = inject(FormlyFormBuilder);
+  builder = inject(FormlyFormBuilder);
 
-    /*
-    * 搜索默认值
-    **/
-    searchModel = input({});
+  /*
+   * 搜索默认值
+   **/
+  searchModel = input({});
 
-    /**
-     * 搜索表单字段
-     */
-    fields = input([] as CrudFieldConfig[]);
+  /**
+   * 搜索表单字段
+   */
+  fields = input([] as CrudFieldConfig[]);
 
-    search = output<any>();
+  readonly doSearch = output<Record<string, unknown>>();
 
-    //  searchFormChange = output();
+  //  searchFormChange = output();
 
-    /**
-     * 搜索表单
-     */
-    searchForm = new FormGroup({});
+  /**
+   * 搜索表单
+   */
+  searchForm = new FormGroup({});
 
+  formState = signal({});
 
-    formState = signal({});
+  /**
+   * 搜索表单字段
+   */
+  searchFormFieldsOptions: Record<string, unknown> = {};
 
+  collapsed = signal(true);
 
+  defaultSize = 2;
 
-    /**
-     * 搜索表单字段
-     */
-    searchFormFieldsOptions: any = {};
+  allFields = computed(() => {
+    return this.fields()
+      .map(field => {
+        const f: FormlyFieldConfig | null = toFormField(field, 'search');
+        return f!;
+      })
+      .filter(f => f);
+  });
 
-    collapsed = signal(true);
+  needCollapse = computed(() => {
+    return this.allFields().length > this.defaultSize;
+  });
 
-    defaultSize = 2;
+  _searchModel = computed(() => {
+    this.formState();
+    return { ...this.searchModel() };
+  });
 
-    allFields = computed(() => {
-        return this.fields().map(field => {
-            let f: FormlyFieldConfig|null =  toFormField(field, 'search') ;
-            return f!;
-        }).filter((f) => f);
+  searchFormFields = computed(() => {
+    const fields = this.allFields().filter((f, index) => {
+      if (this.collapsed()) {
+        return index < this.defaultSize;
+      }
+      return true;
     });
-
-    needCollapse = computed(() => {
-        return this.allFields().length > this.defaultSize;
+    fields.forEach(f => {
+      f.resetOnHide = true;
     });
+    this.builder.buildForm(this.searchForm, fields, this._searchModel(), {});
+    return fields;
+  });
 
-    _searchModel = computed(() => {
-        this.formState();
-        return {...this.searchModel()};
-    });
-    
-    searchFormFields = computed(() => {
-        let fields = this.allFields().filter((f,index) => {
-            if(this.collapsed()){
-                return index < this.defaultSize;
-            }
-            return true;
-        });
-        fields.forEach(f => {
-           f.resetOnHide = true;
-        });
-        this.builder.buildForm(this.searchForm, fields, this._searchModel(), {});
-        return fields;
-    });
+  triggerSearch() {
+    this.doSearch.emit(this.searchForm.value as Record<string, unknown>);
+  }
 
-    doSearch(event?: any) {
-        this.search.emit(this.searchForm.value);
-    }
+  onSearchFormChange() {}
 
-    onSearchFormChange() {
+  reset() {
+    this.searchForm.reset();
+    this.formState.set({});
+    this.triggerSearch();
+  }
 
-    }
-
-    reset() {
-        this.searchForm.reset();
-        this.formState.set({});
-        this.doSearch();
-    }
-
-    toggleCollapse() {
-        this.collapsed.update(v => !v);
-    }
-
+  toggleCollapse() {
+    this.collapsed.update(v => !v);
+  }
 }

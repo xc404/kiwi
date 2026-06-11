@@ -2,12 +2,12 @@ package com.kiwi.bpmn.component.activity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kiwi.common.utils.JsonUtils;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -128,19 +128,10 @@ public class HttpRequestActivity extends AbstractBpmnActivityBehavior {
             throw new IllegalStateException("HTTP 请求被中断", e);
         }
 
-        String statusVar = ExecutionUtils.getOutputVariableName(execution, "statusCode");
-        String bodyVar = ExecutionUtils.getOutputVariableName(execution, "responseBody");
-        String headersVar = ExecutionUtils.getOutputVariableName(execution, "responseHeaders");
 
-        if (statusVar != null) {
-            execution.setVariable(statusVar, response.statusCode());
-        }
-        if (bodyVar != null) {
-            execution.setVariable(bodyVar, response.body());
-        }
-        if (headersVar != null) {
-            execution.setVariable(headersVar, responseHeadersToJson(response.headers()));
-        }
+            execution.setVariable("statusCode", response.statusCode());
+            execution.setVariable("responseBody", response.body());
+            execution.setVariable("responseHeaders", responseHeadersToJson(response.headers()));
 
         super.leave(execution);
     }

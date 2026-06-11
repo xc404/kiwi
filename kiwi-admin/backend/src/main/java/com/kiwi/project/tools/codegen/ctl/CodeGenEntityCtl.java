@@ -1,5 +1,6 @@
 package com.kiwi.project.tools.codegen.ctl;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
@@ -18,8 +19,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +41,7 @@ import java.util.Map;
 @Tag(name = "代码生成实体", description = "GenTable CRUD 与导入预览")
 @RestController
 @RequestMapping("/tools/codegen/entity")
+@SaCheckLogin
 @RequiredArgsConstructor
 public class CodeGenEntityCtl {
     private final GenEntityDao genTabledao;
@@ -129,6 +133,19 @@ public class CodeGenEntityCtl {
     @GetMapping("/{id}/preview")
     public Map<String, String> previewCode(@PathVariable("id") String id) {
         return this.genService.previewCode(id);
+    }
+
+    @Operation(operationId = "codeEnt_download", summary = "下载某实体 id 的生成代码 ZIP 包")
+    @SaCheckPermission("gen:entity:generate")
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> downloadCode(@PathVariable("id") String id) {
+        GenEntity genEntity = genTabledao.findById(id).orElseThrow();
+        byte[] zip = genService.buildZip(id);
+        String filename = genEntity.getClassName() + "-codegen.zip";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(zip);
     }
 
     @Data

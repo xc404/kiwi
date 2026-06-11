@@ -11,7 +11,6 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection
 } from '@angular/core';
-import { provideBpmDefaultPropertyProviderContributors } from './pages/bpm/design/property-panel/property-provider';
 import { FormsModule } from '@angular/forms';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, RouteReuseStrategy, TitleStrategy, withComponentInputBinding, withHashLocation, withInMemoryScrolling, withPreloading, withViewTransitions } from '@angular/router';
@@ -40,7 +39,7 @@ import {
   SnippetsOutline,
   UndoOutline,
   ZoomInOutline,
-  ZoomOutOutline,
+  ZoomOutOutline
 } from '@ant-design/icons-angular/icons';
 import { appRoutes } from '@app/app.routes';
 import { CustomPageTitleResolverService } from '@core/services/common/custom-page-title-resolver.service';
@@ -53,22 +52,22 @@ import { SubLockedStatusService } from '@core/services/common/sub-locked-status.
 import { SubWindowWithService } from '@core/services/common/sub-window-with.service';
 import { ThemeSkinService } from '@core/services/common/theme-skin.service';
 import { httpInterceptorService } from '@core/services/interceptors/http-interceptor';
-import { getDeepReuseStrategyKeyFn } from '@utils/tools';
-import { LoginExpiredService } from './core/services/interceptors/login-expired.service';
-
 import { FORMLY_CONFIG, provideFormlyCore } from '@ngx-formly/core';
+import { provideFormlyPreset } from '@ngx-formly/core/preset';
 import { withFormlyNgZorroAntd } from '@ngx-formly/ng-zorro-antd';
+import { getDeepReuseStrategyKeyFn } from '@utils/tools';
+
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NZ_I18N, zh_CN } from 'ng-zorro-antd/i18n';
 import { NZ_ICONS } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { HttpDictService } from './core/services/store/common-store/dict.service';
+
+import { LoginExpiredService } from './core/services/interceptors/login-expired.service';
 import { CamundaElementModel } from './pages/bpm/design/extension/camunda/camunda-element-model';
 import { ElementModel } from './pages/bpm/design/extension/element-model';
-import { FlowableElementModel } from './pages/bpm/design/extension/flowable/flowable-element-model';
-import { IDictService } from './shared/dict/dict';
+import { provideBpmDefaultPropertyProviderContributors } from './pages/bpm/design/property-panel/property-provider';
 import { formlyConfig } from './shared/formly/public_api';
-import { provideFormlyPreset } from '@ngx-formly/core/preset';
+
 const icons = [
   MenuFoldOutline,
   MenuUnfoldOutline,
@@ -93,11 +92,10 @@ const icons = [
   PlayCircleOutline,
   CodeOutline,
   FileImageOutline,
-  FileTextOutline,
+  FileTextOutline
 ];
 
 registerLocaleData(zh);
-
 
 export function LoadAliIconCdnFactory(loadAliIconCdnService: LoadAliIconCdnService) {
   return () => loadAliIconCdnService.load();
@@ -187,36 +185,31 @@ export const appConfig: ApplicationConfig = {
     {
       provide: HTTP_INTERCEPTORS,
       useClass: LoginExpiredService,
-      multi: true,
+      multi: true
     },
     provideFormlyPreset(),
-    provideFormlyCore([...withFormlyNgZorroAntd(),
+    provideFormlyCore([
+      ...withFormlyNgZorroAntd(),
 
-    {
-      presets: [
-        {
-          name: 'text',
-          config: {
-            type: 'input',
-            wrappers: ['edit-form'],
-            props: {
-            },
-          },
-        },
-      ],
-    }
+      {
+        presets: [
+          {
+            name: 'text',
+            config: {
+              type: 'input',
+              wrappers: ['edit-form'],
+              props: {}
+            }
+          }
+        ]
+      }
     ]),
-    { provide: FORMLY_CONFIG, multi: true, useFactory: formlyConfig, deps: [IDictService] },
+    { provide: FORMLY_CONFIG, multi: true, useFactory: formlyConfig },
     provideZonelessChangeDetection(), // 开启 zoneless,
-    {
-      provide: IDictService,
-      multi: false,
-      useExisting: HttpDictService,
-    },
     provideHttpClient(withInterceptorsFromDi()),
     {
       provide: ElementModel,
       useClass: CamundaElementModel
-    },
+    }
   ]
 };

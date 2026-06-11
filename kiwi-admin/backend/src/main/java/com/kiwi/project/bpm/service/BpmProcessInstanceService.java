@@ -1,24 +1,34 @@
 package com.kiwi.project.bpm.service;
 
 import com.kiwi.project.bpm.dto.BpmActivityPointerDto;
+import com.kiwi.project.bpm.dto.BpmHistoricActivityInstanceDto;
+import com.kiwi.project.bpm.dto.BpmHistoricVariableInstanceDto;
 import com.kiwi.project.bpm.dto.BpmOpenIncidentDto;
+import com.kiwi.project.bpm.dto.BpmProcessDefinitionXmlDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceDto;
 import com.kiwi.project.bpm.dto.BpmProcessInstanceStateDto;
 import com.kiwi.project.bpm.dto.ProcessInstanceState;
-import org.camunda.bpm.engine.HistoryService;
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.RepositoryService;
-import org.camunda.bpm.engine.RuntimeService;
-import org.camunda.bpm.engine.history.HistoricActivityInstance;
-import org.camunda.bpm.engine.history.HistoricProcessInstance;
-import org.camunda.bpm.engine.runtime.Incident;
-import org.camunda.bpm.engine.runtime.ProcessInstance;
-import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.bpm.model.bpmn.instance.FlowNode;
-import org.camunda.bpm.model.xml.instance.ModelElementInstance;
+import org.operaton.bpm.engine.HistoryService;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.RepositoryService;
+import org.operaton.bpm.engine.RuntimeService;
+import org.operaton.bpm.engine.history.HistoricActivityInstance;
+import org.operaton.bpm.engine.history.HistoricProcessInstance;
+import org.operaton.bpm.engine.history.HistoricVariableInstance;
+import org.operaton.bpm.engine.repository.ProcessDefinition;
+import org.operaton.bpm.engine.runtime.Incident;
+import org.operaton.bpm.engine.runtime.ProcessInstance;
+import org.operaton.bpm.model.bpmn.BpmnModelInstance;
+import org.operaton.bpm.model.bpmn.instance.FlowNode;
+import org.operaton.bpm.model.xml.instance.ModelElementInstance;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -292,6 +302,89 @@ public class BpmProcessInstanceService {
         }
     }
 
+    public Optional<HistoricProcessInstance> findHistoricProcessInstance(String processInstanceId) {
+        if (!StringUtils.hasText(processInstanceId)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(historyService.createHistoricProcessInstanceQuery()
+                .processInstanceId(processInstanceId.trim())
+                .singleResult());
+    }
+
+    public BpmProcessDefinitionXmlDto definitionXmlForInstance(String processInstanceId) {
+        HistoricProcessInstance hip = findHistoricProcessInstance(processInstanceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "process instance not found"));
+        String defId = hip.getProcessDefinitionId();
+        if (!StringUtils.hasText(defId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "process definition id not found");
+        }
+        BpmProcessDefinitionXmlDto dto = new BpmProcessDefinitionXmlDto();
+        dto.setBpmn20Xml(readProcessModelXml(defId.trim()));
+        return dto;
+    }
+
+    public List<BpmHistoricActivityInstanceDto> historyActivitiesForInstance(String processInstanceId) {
+        if (!findHistoricProcessInstance(processInstanceId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "process instance not found");
+        }
+        List<HistoricActivityInstance> rows = historyService.createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId.trim())
+                .orderByHistoricActivityInstanceStartTime()
+                .asc()
+                .list();
+        List<BpmHistoricActivityInstanceDto> out = new ArrayList<>(rows.size());
+        for (HistoricActivityInstance row : rows) {
+            out.add(toHistoricActivityDto(row));
+        }
+        return out;
+    }
+
+    public List<BpmHistoricVariableInstanceDto> historicVariablesForInstance(String processInstanceId) {
+        if (!findHistoricProcessInstance(processInstanceId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "process instance not found");
+        }
+        List<HistoricVariableInstance> rows = historyService.createHistoricVariableInstanceQuery()
+                .processInstanceId(processInstanceId.trim())
+                .list();
+        List<BpmHistoricVariableInstanceDto> out = new ArrayList<>(rows.size());
+        for (HistoricVariableInstance row : rows) {
+            BpmHistoricVariableInstanceDto dto = new BpmHistoricVariableInstanceDto();
+            dto.setName(row.getName());
+            dto.setType(row.getTypeName());
+            dto.setValue(row.getValue());
+            dto.setActivityInstanceId(row.getActivityInstanceId());
+            dto.setCreateTime(row.getCreateTime());
+            out.add(dto);
+        }
+        return out;
+    }
+
+    private BpmHistoricActivityInstanceDto toHistoricActivityDto(HistoricActivityInstance row) {
+        BpmHistoricActivityInstanceDto dto = new BpmHistoricActivityInstanceDto();
+        dto.setId(row.getId());
+        dto.setActivityId(row.getActivityId());
+        dto.setActivityType(row.getActivityType());
+        dto.setStartTime(row.getStartTime());
+        dto.setEndTime(row.getEndTime());
+        dto.setCanceled(row.isCanceled());
+        dto.setCalledProcessInstanceId(row.getCalledProcessInstanceId());
+        boolean completed = row.getEndTime() != null;
+        dto.setCompleted(completed);
+        dto.setActive(!completed);
+        return dto;
+    }
+
+    private String readProcessModelXml(String processDefinitionId) {
+        try (InputStream in = repositoryService.getProcessModel(processDefinitionId)) {
+            if (in == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "process model not found");
+            }
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to read process model", e);
+        }
+    }
+
     /**
      * 历史实例 → 分页列表行（仅列表维度字段）。
      */
@@ -319,7 +412,7 @@ public class BpmProcessInstanceService {
         dto.setStartTime(hip.getStartTime());
         dto.setProcessDefinitionId(hip.getProcessDefinitionId());
         dto.setProcessDefinitionKey(hip.getProcessDefinitionKey());
-        dto.setProcessDefinitionName(hip.getProcessDefinitionName());
+        dto.setProcessDefinitionName(resolveProcessDefinitionName(hip));
         dto.setDeleteReason(hip.getDeleteReason());
 
         if (hip.getEndTime() == null) {
@@ -343,9 +436,8 @@ public class BpmProcessInstanceService {
                 dto.setSuspended(false);
                 dto.setState(!incidents.isEmpty() ? ProcessInstanceState.ERROR : ProcessInstanceState.ACTIVE);
             }
-        }else {
-
-        dto.setEnded(true);
+        } else {
+            dto.setEnded(true);
         boolean canceled = StringUtils.hasText(hip.getDeleteReason());
         dto.setState(canceled ? ProcessInstanceState.CANCELED : ProcessInstanceState.COMPLETED);
         }
@@ -419,6 +511,22 @@ public class BpmProcessInstanceService {
             out.add(row);
         }
         return out;
+    }
+
+    private String resolveProcessDefinitionName(HistoricProcessInstance hip) {
+        if (StringUtils.hasText(hip.getProcessDefinitionName())) {
+            return hip.getProcessDefinitionName();
+        }
+        String defId = hip.getProcessDefinitionId();
+        if (!StringUtils.hasText(defId)) {
+            return null;
+        }
+        try {
+            ProcessDefinition def = repositoryService.getProcessDefinition(defId.trim());
+            return def != null ? def.getName() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private BpmnModelInstance loadBpmnModel(String processDefinitionId) {

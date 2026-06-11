@@ -1,7 +1,9 @@
 // panel-wrapper.component.ts
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+
 import { FieldWrapper, FormlyFieldConfig, FormlyValidationMessage, FormlyFieldProps as CoreFormlyFieldProps } from '@ngx-formly/core';
+
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -18,20 +20,20 @@ export interface FormlyFieldProps extends CoreFormlyFieldProps {
   selector: 'formly-wrapper',
   styleUrl: './formly-field-wrapper.css',
   template: `
-       <nz-form-item>
-        @if (props.label && (props.hideLabel !== true)) {
-          <nz-form-label nzLabelWrap  class="app-form-label" [nzXs]="24" [nzRequired]="props.required && props.hideRequiredMarker !== true" [nzFor]="id">
-            {{ props.label }}
-          </nz-form-label>
-        }
-      <nz-form-control class="app-form-control" [nzXs]="24" [nzValidateStatus]="errorState" [nzErrorTip]="errorTpl" [nzExtra]="props.hideOuterDescription ? undefined : props.description">
+    <nz-form-item>
+      @if (props.label && props.hideLabel !== true) {
+        <nz-form-label class="app-form-label" nzLabelWrap [nzFor]="id" [nzRequired]="props.required && props.hideRequiredMarker !== true" [nzXs]="24">
+          {{ props.label }}
+        </nz-form-label>
+      }
+      <nz-form-control class="app-form-control" [nzErrorTip]="errorTpl" [nzExtra]="props.hideOuterDescription ? undefined : props.description" [nzValidateStatus]="errorState" [nzXs]="24">
         <ng-container #fieldComponent></ng-container>
         <ng-template #errorTpl let-control>
           <formly-validation-message [field]="field"></formly-validation-message>
         </ng-template>
       </nz-form-control>
     </nz-form-item>
-`,
+  `,
   imports: [NzFormModule, CommonModule, NzGridModule, FormlyValidationMessage]
 })
 export class HorizontalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<FormlyFieldProps>> {
@@ -40,7 +42,6 @@ export class HorizontalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<F
   }
 }
 
-
 @Component({
   selector: 'formly-wrapper',
   styleUrl: './formly-field-wrapper.css',
@@ -48,47 +49,23 @@ export class HorizontalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<F
     <nz-form-item class="app-formly-vertical-item">
       @if (props.label && props.hideLabel !== true) {
         <div class="app-formly-vertical-item__label-row">
-          <nz-form-label
-            nzNoColon="true"
-            class="app-formly-vertical-item__label"
-            [nzRequired]="props.required && props.hideRequiredMarker !== true"
-            [nzFor]="id"
-          >
+          <nz-form-label class="app-formly-vertical-item__label" nzNoColon="true" [nzFor]="id" [nzRequired]="props.required && props.hideRequiredMarker !== true">
             {{ props.label }}
           </nz-form-label>
           @if (descriptionTooltip) {
-            <span
-              class="app-formly-vertical-item__tip"
-              nz-icon
-              nzType="question-circle"
-              nzTheme="outline"
-              nz-tooltip
-              [nzTooltipTitle]="descriptionTooltip"
-            ></span>
+            <span class="app-formly-vertical-item__tip" nz-icon nz-tooltip nzTheme="outline" nzType="question-circle" [nzTooltipTitle]="descriptionTooltip"></span>
           }
         </div>
       }
-      <nz-form-control
-        class="app-formly-vertical-item__control"
-        [nzValidateStatus]="errorState"
-        [nzErrorTip]="errorTpl"
-      >
+      <nz-form-control class="app-formly-vertical-item__control" [nzErrorTip]="errorTpl" [nzValidateStatus]="errorState">
         <ng-container #fieldComponent></ng-container>
         <ng-template #errorTpl let-control>
           <formly-validation-message [field]="field"></formly-validation-message>
         </ng-template>
       </nz-form-control>
     </nz-form-item>
-`,
-  imports: [
-    NzFormModule,
-    CommonModule,
-    NzGridModule,
-    FormlyValidationMessage,
-    NzLayoutModule,
-    NzIconModule,
-    NzTooltipModule,
-  ],
+  `,
+  imports: [NzFormModule, CommonModule, NzGridModule, FormlyValidationMessage, NzLayoutModule, NzIconModule, NzTooltipModule]
 })
 export class VerticalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<FormlyFieldProps>> {
   /** 标签右侧提示：字符串说明且未禁止外层说明时展示（与原先 nzExtra 展示条件一致，改为 tooltip） */
@@ -109,23 +86,21 @@ export class VerticalFormFieldWrapper extends FieldWrapper<FormlyFieldConfig<For
   }
 }
 
-
-
 @Component({
   selector: 'column-edit-field',
   styleUrl: './formly-field-wrapper.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-      <!-- <ng-container *ngIf="props.label && (props.hideLabel !== true)">
+    <!-- <ng-container *ngIf="props.label && (props.hideLabel !== true)">
         <nz-form-label  [nzSm]="5" [nzXs]="24" [nzRequired]="props.required && props.hideRequiredMarker !== true" [nzFor]="id">
           {{ props.label }}
         </nz-form-label>
       </ng-container> -->
-        <ng-container #fieldComponent></ng-container>
-        <ng-template #errorTpl let-control>
-          <formly-validation-message [field]="field"></formly-validation-message>
-        </ng-template>
-`,
+    <ng-container #fieldComponent></ng-container>
+    <ng-template #errorTpl let-control>
+      <formly-validation-message [field]="field"></formly-validation-message>
+    </ng-template>
+  `,
   imports: [NzFormModule, CommonModule, NzGridModule, FormlyValidationMessage]
 })
 export class ColumnEditField extends FieldWrapper<FormlyFieldConfig<FormlyFieldProps>> {
@@ -133,4 +108,3 @@ export class ColumnEditField extends FieldWrapper<FormlyFieldConfig<FormlyFieldP
     return this.showError ? 'error' : '';
   }
 }
-

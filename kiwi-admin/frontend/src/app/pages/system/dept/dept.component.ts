@@ -2,17 +2,17 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, computed, inject, On
 import { FormGroup, FormsModule } from '@angular/forms';
 import { map } from 'rxjs/operators';
 
+import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import { AppButtonConfig } from '@app/shared/components/button/app.button';
+import { FormPanel } from '@app/shared/formly/panel/form-panel';
+import { TreeUtils } from '@app/utils/treeUtils';
 import { Dept } from '@services/system/dept.service';
 
-import { BaseHttpService } from '@app/core/services/http/base-http.service';
-import { AppButton, AppButtonConfig } from "@app/shared/components/button/app.button";
-import { FormPanel } from "@app/shared/formly/panel/form-panel";
-import { TreeUtils } from '@app/utils/treeUtils';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzWaveModule } from 'ng-zorro-antd/core/wave';
-import { NzContextMenuService, NzDropdownMenuComponent, NzDropDownModule } from "ng-zorro-antd/dropdown";
+import { NzContextMenuService, NzDropdownMenuComponent, NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -21,34 +21,14 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzFormatEmitEvent, NzTreeComponent, NzTreeModule, NzTreeNode } from 'ng-zorro-antd/tree';
 
-interface SearchParam {
-  departmentName: string;
-  state: boolean;
-}
 
 @Component({
   selector: 'app-dept',
   templateUrl: './dept.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NzCardModule,
-    FormsModule,
-    NzFormModule,
-    NzGridModule,
-    NzInputModule,
-    NzSelectModule,
-    NzButtonModule,
-    NzWaveModule,
-    NzIconModule,
-    NzTagModule,
-    NzTreeModule,
-    FormPanel,
-    NzDropDownModule
-  ]
+  imports: [NzCardModule, FormsModule, NzFormModule, NzGridModule, NzInputModule, NzSelectModule, NzButtonModule, NzWaveModule, NzIconModule, NzTagModule, NzTreeModule, FormPanel, NzDropDownModule]
 })
 export class DeptComponent implements OnInit, AfterViewInit {
-
-
   httpService = inject(BaseHttpService);
   nzContextMenuService = inject(NzContextMenuService);
 
@@ -91,9 +71,9 @@ export class DeptComponent implements OnInit, AfterViewInit {
       props: {
         label: '上级部门',
         placeholder: '请选择上级部门',
-        rootNode : this.root,
+        rootNode: this.root,
         showRoot: true,
-        groupCode: 'sys-dept',
+        groupCode: 'sys-dept'
       }
     },
     {
@@ -109,8 +89,6 @@ export class DeptComponent implements OnInit, AfterViewInit {
   ];
   model = signal<any>({});
 
-
-
   form = new FormGroup({});
 
   selectedNode = signal<NzTreeNode | null>(null);
@@ -121,9 +99,7 @@ export class DeptComponent implements OnInit, AfterViewInit {
     handler: () => {
       this.model.set({});
     }
-  }
-
-
+  };
 
   ngOnInit(): void {
     // 初始加载根节点
@@ -131,14 +107,19 @@ export class DeptComponent implements OnInit, AfterViewInit {
   }
 
   loadChildren(node: NzTreeNode) {
-    let id = node.key;
-    return this.httpService.get<Dept[]>(`/system/dept/${id}/children`).pipe(map((res: any) => {
-      return res.content;
-    })).subscribe(data => {
-      const children = TreeUtils.convertToTreeNode(data);
-      node.clearChildren();
-      node.addChildren(children);
-    });
+    const id = node.key;
+    return this.httpService
+      .get<Dept[]>(`/system/dept/${id}/children`)
+      .pipe(
+        map((res: any) => {
+          return res.content;
+        })
+      )
+      .subscribe(data => {
+        const children = TreeUtils.convertToTreeNode(data);
+        node.clearChildren();
+        node.addChildren(children);
+      });
   }
 
   submit() {
@@ -146,9 +127,7 @@ export class DeptComponent implements OnInit, AfterViewInit {
       this.httpService.put<NzSafeAny>(`/system/dept/${this.model().id}`, this.model()).subscribe(res => {
         console.log('保存成功', res);
       });
-    }
-    else {
-
+    } else {
       this.httpService.post<NzSafeAny>('/system/dept', this.model()).subscribe(res => {
         console.log('保存成功', res);
       });
@@ -165,7 +144,6 @@ export class DeptComponent implements OnInit, AfterViewInit {
     this.model.set({ parentId: parentNode ? parentNode.key : '0' });
   }
   editCurrent(node?: NzTreeNode) {
-
     // const currentNode = this.selectedNode();
     if (node) {
       this.selectedNode.set(node);
@@ -175,7 +153,7 @@ export class DeptComponent implements OnInit, AfterViewInit {
       return;
     }
     this.model.set({
-      ...currentNode.origin,
+      ...currentNode.origin
     });
   }
 
@@ -189,13 +167,10 @@ export class DeptComponent implements OnInit, AfterViewInit {
     });
   }
 
-
   ngAfterViewInit(): void {
     setTimeout(() => {
       this.deptTree().getTreeNodeByKey('0')!.setExpanded(true);
       this.loadChildren(this.deptTree().getTreeNodeByKey('0')!);
     });
   }
-
-
 }

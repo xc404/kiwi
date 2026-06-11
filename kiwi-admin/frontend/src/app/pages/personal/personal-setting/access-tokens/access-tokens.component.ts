@@ -3,11 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, 
 import { FormsModule } from '@angular/forms';
 import { take } from 'rxjs';
 
-import {
-  CreatePersonalAccessTokenResult,
-  PersonalAccessTokenRow,
-  PersonalAccessTokenService
-} from '@services/system/personal-access-token.service';
+import { CreatePersonalAccessTokenResult, PersonalAccessTokenRow, PersonalAccessTokenService } from '@services/system/personal-access-token.service';
 
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -23,17 +19,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
   templateUrl: './access-tokens.component.html',
   styleUrls: ['./access-tokens.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NzCardModule,
-    NzAlertModule,
-    NzInputModule,
-    NzButtonModule,
-    NzWaveModule,
-    NzTableModule,
-    NzPopconfirmModule,
-    FormsModule,
-    DatePipe
-  ]
+  imports: [NzCardModule, NzAlertModule, NzInputModule, NzButtonModule, NzWaveModule, NzTableModule, NzPopconfirmModule, FormsModule, DatePipe]
 })
 export class AccessTokensComponent implements OnInit {
   readonly data = input.required<{

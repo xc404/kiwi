@@ -1,0 +1,226 @@
+[
+  {
+    "id": "system_menu_type_M",
+    "groupCode": "system_menu_type",
+    "code": "M",
+    "name": "目录",
+    "dictSort": 1
+  },
+  {
+    "id": "system_menu_type_C",
+    "groupCode": "system_menu_type",
+    "code": "C",
+    "name": "菜单",
+    "dictSort": 2
+  },
+  {
+    "id": "system_menu_type_F",
+    "groupCode": "system_menu_type",
+    "code": "F",
+    "name": "按钮",
+    "dictSort": 3
+  },
+  {
+    "id": "system_status_0",
+    "groupCode": "system_status",
+    "code": "0",
+    "name": "正常",
+    "dictSort": 1
+  },
+  {
+    "id": "system_status_1",
+    "groupCode": "system_status",
+    "code": "1",
+    "name": "停用",
+    "dictSort": 2
+  },
+  {
+    "id": "field_editor_Text",
+    "groupCode": "field_editor",
+    "code": "Text",
+    "name": "文本",
+    "dictSort": 1
+  },
+  {
+    "id": "field_editor_TextArea",
+    "groupCode": "field_editor",
+    "code": "TextArea",
+    "name": "多行文本",
+    "dictSort": 2
+  },
+  {
+    "id": "field_editor_Int",
+    "groupCode": "field_editor",
+    "code": "Int",
+    "name": "整数",
+    "dictSort": 3
+  },
+  {
+    "id": "field_editor_Double",
+    "groupCode": "field_editor",
+    "code": "Double",
+    "name": "浮点数",
+    "dictSort": 4
+  },
+  {
+    "id": "field_editor_Date",
+    "groupCode": "field_editor",
+    "code": "Date",
+    "name": "日期",
+    "dictSort": 5
+  },
+  {
+    "id": "field_editor_DateTime",
+    "groupCode": "field_editor",
+    "code": "DateTime",
+    "name": "日期时间",
+    "dictSort": 6
+  },
+  {
+    "id": "field_editor_CheckBox",
+    "groupCode": "field_editor",
+    "code": "CheckBox",
+    "name": "复选框",
+    "dictSort": 7
+  },
+  {
+    "id": "field_editor_Radio",
+    "groupCode": "field_editor",
+    "code": "Radio",
+    "name": "单选",
+    "dictSort": 8
+  },
+  {
+    "id": "field_editor_ComboBox",
+    "groupCode": "field_editor",
+    "code": "ComboBox",
+    "name": "下拉",
+    "dictSort": 9
+  },
+  {
+    "id": "field_editor_CheckboxGroup",
+    "groupCode": "field_editor",
+    "code": "CheckboxGroup",
+    "name": "复选框组",
+    "dictSort": 10
+  },
+  {
+    "id": "field_editor_MultiCheckBox",
+    "groupCode": "field_editor",
+    "code": "MultiCheckBox",
+    "name": "多选复选框",
+    "dictSort": 11
+  },
+  {
+    "id": "field_editor_EditComboBox",
+    "groupCode": "field_editor",
+    "code": "EditComboBox",
+    "name": "可编辑下拉",
+    "dictSort": 12
+  },
+  {
+    "id": "field_editor_Enum",
+    "groupCode": "field_editor",
+    "code": "Enum",
+    "name": "枚举",
+    "dictSort": 13
+  },
+  {
+    "id": "field_editor_ImageSelector",
+    "groupCode": "field_editor",
+    "code": "ImageSelector",
+    "name": "图片选择",
+    "dictSort": 14
+  },
+  {
+    "id": "field_editor_Template",
+    "groupCode": "field_editor",
+    "code": "Template",
+    "name": "模板",
+    "dictSort": 15
+  },
+  {
+    "id": "field_editor_input",
+    "groupCode": "field_editor",
+    "code": "input",
+    "name": "单行输入",
+    "dictSort": 16
+  },
+  {
+    "id": "field_editor_textarea",
+    "groupCode": "field_editor",
+    "code": "textarea",
+    "name": "多行输入",
+    "dictSort": 17
+  },
+  {
+    "id": "field_editor_hash_text",
+    "groupCode": "field_editor",
+    "code": "#text",
+    "name": "只读文本",
+    "dictSort": 18
+  },
+  {
+    "id": "field_editor_expression",
+    "groupCode": "field_editor",
+    "code": "expression",
+    "name": "表达式",
+    "dictSort": 19
+  },
+  {
+    "id": "field_editor_spel-expression",
+    "groupCode": "field_editor",
+    "code": "spel-expression",
+    "name": "SpEL 表达式",
+    "dictSort": 20
+  },
+  {
+    "id": "field_editor_juel-expression",
+    "groupCode": "field_editor",
+    "code": "juel-expression",
+    "name": "JUEL 表达式",
+    "dictSort": 21
+  },
+  {
+    "id": "field_editor_assignments-editor",
+    "groupCode": "field_editor",
+    "code": "assignments-editor",
+    "name": "键值对编辑器",
+    "dictSort": 22
+  },
+  {
+    "id": "field_editor_icon-select",
+    "groupCode": "field_editor",
+    "code": "icon-select",
+    "name": "图标选择",
+    "dictSort": 23
+  },
+  {
+    "id": "field_editor_biz-tree-select",
+    "groupCode": "field_editor",
+    "code": "biz-tree-select",
+    "name": "业务树选择",
+    "dictSort": 24
+  },
+  {
+    "id": "field_editor_component-selector",
+    "groupCode": "field_editor",
+    "code": "component-selector",
+    "name": "组件选择",
+    "dictSort": 25
+  },
+  {
+    "id": "field_editor_process-selector",
+    "groupCode": "field_editor",
+    "code": "process-selector",
+    "name": "流程选择",
+    "dictSort": 26
+  },
+  {
+    "id": "field_editor_bpm-declared-output",
+    "groupCode": "field_editor",
+    "code": "bpm-declared-output",
+    "name": "声明输出",
+    "dictSort": 27
+  }
+]

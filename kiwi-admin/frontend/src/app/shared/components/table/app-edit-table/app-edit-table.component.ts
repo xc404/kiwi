@@ -1,22 +1,16 @@
 import { NgClass } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, computed, inject, input, model, output } from '@angular/core';
+import { FormGroup } from '@angular/forms';
 
+import { FormlyField, FormlyFormBuilder } from '@ngx-formly/core';
 
 import { NzResizableModule } from 'ng-zorro-antd/resizable';
 import { NzTableModule } from 'ng-zorro-antd/table';
 
+import { CrudFieldConfig } from '../../crud/utils';
+import { toFormlyConfig } from '../../field/field-editor';
 import { ColumnConfig, TableCell, TableHeaderCell } from '../column';
 import { BaseTableComponent, TableComponentToken } from '../table';
-import { FormlyField, FormlyFormBuilder } from "@ngx-formly/core";
-import { FieldComp, FieldConfig } from '../../field/field';
-import { FieldEditorConfig, toFormlyConfig } from '../../field/field-editor';
-import { AppFormlyField } from '@app/shared/formly/app-formly-field';
-import { FormGroup } from '@angular/forms';
-import { CrudFieldConfig } from '../../crud/utils';
-
-
-
-
 
 @Component({
   selector: 'edit-cell',
@@ -25,44 +19,38 @@ import { CrudFieldConfig } from '../../crud/utils';
   imports: [FormlyField]
 })
 export class EditCell implements AfterViewInit {
-
   field = input.required<ColumnConfig>();
   model = model<any>();
 
-  valueChange = output<any>();
+  readonly valueChange = output<unknown>();
 
   formBuilder = inject(FormlyFormBuilder);
   formGroup = new FormGroup({});
 
-  constructor() {
-
-  }
+  constructor() {}
   ngAfterViewInit(): void {
-    this.formGroup.valueChanges.subscribe((value:any) => {
+    this.formGroup.valueChanges.subscribe((value: any) => {
       this.valueChange.emit(value[this.field().dataIndex!]);
     });
   }
 
   _formlyField = computed(() => {
-    let field = toFormlyConfig(this.field(), "column-edit");
+    const field = toFormlyConfig(this.field(), 'column-edit');
     field.modelOptions = {
-      updateOn: "blur"
-    }
-    let formModel: any = {};
+      updateOn: 'blur'
+    };
+    const formModel: any = {};
     formModel[field.key as string] = this.model();
     this.formBuilder.buildForm(this.formGroup, [field], formModel, {});
     return field;
   });
-
-
 }
 
 export interface RowChangeEvent {
   row: any;
   column: string;
-  value: any
+  value: any;
 }
-
 
 @Component({
   selector: 'app-edit-table',
@@ -71,16 +59,13 @@ export interface RowChangeEvent {
   providers: [{ provide: TableComponentToken, useExisting: AppEditTableComponent }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [NzTableModule, NzResizableModule,
-    NgClass, TableHeaderCell, TableCell,  EditCell]
+  imports: [NzTableModule, NzResizableModule, NgClass, TableHeaderCell, TableCell, EditCell]
 })
 export class AppEditTableComponent extends BaseTableComponent {
-
-
-  rowChange = output<RowChangeEvent>();
+  readonly rowChange = output<RowChangeEvent>();
 
   toFormlyField(column: ColumnConfig): any {
-    return toFormlyConfig({ ...column }, "column-edit");
+    return toFormlyConfig({ ...column }, 'column-edit');
   }
 
   editable(field: CrudFieldConfig): boolean {
@@ -89,7 +74,5 @@ export class AppEditTableComponent extends BaseTableComponent {
 
   _rowChange = (row: any, column: ColumnConfig, value: any) => {
     this.rowChange.emit({ row: row, column: column.dataIndex!, value: value });
-  }
+  };
 }
-
-

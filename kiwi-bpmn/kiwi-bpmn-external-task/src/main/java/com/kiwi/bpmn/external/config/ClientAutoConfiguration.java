@@ -16,8 +16,8 @@
  */
 package com.kiwi.bpmn.external.config;
 
-import org.camunda.bpm.client.spring.impl.client.ClientPostProcessor;
-import org.camunda.bpm.client.spring.impl.subscription.SubscriptionPostProcessor;
+import org.operaton.bpm.client.spring.impl.client.ClientPostProcessor;
+import org.operaton.bpm.client.spring.impl.subscription.SubscriptionPostProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

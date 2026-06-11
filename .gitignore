@@ -56,3 +56,8 @@ kiwi-common/target/
 kiwi-bpmn/**/target/
 /data/
 **/target/**
+kiwi-admin/frontend/deploy/__pycache__/
+/**/*local*.yml
+/kiwi-admin/frontend/src/environments/environment.stage.ts
+.cursor/
+kiwi-admin/frontend/dist-verify/

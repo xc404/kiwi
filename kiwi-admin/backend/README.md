@@ -1,108 +1,154 @@
-# Kiwi Admin 后端
+# kiwi-admin backend
 
-**Kiwi** 管理端 **Spring Boot** 主应用：REST API、**Camunda BPM**（引擎 REST 与 Web 控制台）、Sa-Token 鉴权、MyBatis 与 MongoDB 等业务数据访问，以及与前端 `kiwi-admin/frontend` 协作的低代码与流程能力。
+Spring Boot 主应用：REST API、嵌入式 **Operaton 2.x** BPM 引擎、系统管理（用户/菜单/字典等）、BPM 项目与流程、AI/MCP、通知与监控。与 [frontend](../frontend/README.md) 通过 HTTP 协作；平台总览见仓库根 [README.zh-CN.md](../../README.zh-CN.md)（[English](../../README.md)）。
 
-更完整的平台说明、仓库结构与 Maven 多模块说明见仓库根 [README.md](../../README.md)。
+**Camunda 7 回滚**：检出 Git 标签/分支 **`camunda`** 可回到迁移前 Camunda 7.24 + Boot 3.5 代码基线；引擎库须用迁移前备份恢复。
 
-## 技术栈
+## 代码结构
 
-| 类别 | 说明 |
+```
+src/main/java/com/kiwi/
+├── framework/          # 横切与基础设施
+│   ├── springboot/     # Application 入口、自动配置
+│   ├── mongo/          # Mongock、JSON 迁移
+│   ├── error/          # 全局异常与统一响应
+│   └── …               # 安全、Sa-Token、Web 等
+└── project/            # 业务域
+    ├── system/         # 用户、角色、菜单、部门、字典
+    ├── bpm/            # 流程定义、项目、组件元数据
+    ├── ai/             # Spring AI 对话与助手
+    ├── tools/          # 代码生成、JDBC 等
+    ├── monitor/
+    └── notification/
+```
+
+资源与配置：`src/main/resources/application*.yml`、`mongo/migration/`（JSON 参考数据）。
+
+## 配置与 Profile
+
+| Profile | 典型用途 |
+|---------|----------|
+| `local` | 加载 `application-local.yml`（连接串、密钥；文件已 `.gitignore`） |
+| `dev` | Operaton 引擎库使用 H2（`./data/dev-bpm`）、端口 **8000**、MyBatis StdOut 等 |
+| `redis` | Sa-Token 存 Redis（需 `application-redis.yml` + Redis 连接） |
+
+本地推荐启动参数：
+
+```text
+--spring.profiles.active=local,dev
+```
+
+复制并按环境修改模板：
+
+```bash
+cp src/main/resources/application.example.yml src/main/resources/application-local.yml
+```
+
+未激活 `dev` 时，默认 `application.yml` 中 `server.port` 为 **8080**；`dev` profile 覆盖为 **8000**。前端 `environment.ts` 的 `port` 须与当前生效端口一致。
+
+### 常用环境变量
+
+| 变量 | 说明 |
 |------|------|
-| 运行时 | Java 17、Spring Boot 3.4.x |
-| Web / 文档 | Spring Web、SpringDoc OpenAPI（Swagger UI） |
-| 鉴权 | Sa-Token（`kiwi.sa-token.storage`：`mongodb` 默认，或 `redis`） |
-| 数据 | MyBatis-Plus、MySQL；Spring Data MongoDB；可选 Redis（仅 Sa-Token 为 redis 时） |
-| 流程 | Camunda BPM（Spring Boot Starter、REST、`/engine-rest`、Webapp） |
-| AI（可选） | Spring AI Alibaba（DashScope / 通义）、MCP Server（SSE；业务工具来自 OpenAPI 扫描；`assistant_*` 前端动作为 ChatClient 进程内 `@Tool`） |
-| 其他 | Hutool、Velocity（代码生成模板）等 |
+| `SPRING_DATA_MONGODB_URI` | 主 MongoDB |
+| `SPRING_DATASOURCE_URL` / `USERNAME` / `PASSWORD` | Operaton/MyBatis 关系库（非 `dev`） |
+| `OPERATON_ADMIN_USER` / `OPERATON_ADMIN_PASSWORD` | Operaton Webapp/Tasklist 演示管理员（原 `CAMUNDA_*`） |
+| `KIWI_MONGODB_MIGRATION_ENABLED` | 是否执行 Mongo 迁移，默认 `true` |
+| `KIWI_INIT_ADMIN_PASSWORD` / `kiwi.mongodb.init.admin-password` | 首次管理员密码（迁移必填） |
+| `KIWI_MONGODB_INIT_ADMIN_USERNAME` / `KIWI_MONGODB_INIT_ADMIN_NICK_NAME` | 管理员用户名、昵称 |
+| `APP_CORS_ALLOWED_ORIGINS` | 允许的前端 Origin（逗号分隔） |
+| `APP_PASSWORD_SECRET` | 密码哈希密钥 |
+| `KIWI_AI_API_KEY` / `DEEPSEEK_API_KEY` | DeepSeek API Key |
+| `KIWI_AI_ENABLED` | 是否启用 AI，默认 `true` |
+| `KIWI_SA_TOKEN_STORAGE` | `mongodb`（默认）或 `redis` |
+| `MONGOCK_TRANSACTIONAL` | Mongock 事务，本地单机 Mongo 保持 `false` |
 
-模块依赖：`kiwi-common`、`kiwi-bpmn-core`、`kiwi-bpmn-component`、`kiwi-bpmn-external-task`（由父工程 `com.kiwi:kiwi-parent` 聚合版本）。
+完整键名与默认值见 [application.yml](src/main/resources/application.yml)、[application.example.yml](src/main/resources/application.example.yml)。
 
-## 环境要求
+## 本地启动
 
-- **JDK 17**
-- **Maven 3.8+**
-- 运行期：**MySQL**、**MongoDB**；若 `kiwi.sa-token.storage=redis`，另需 **Redis**
+1. 准备 MongoDB（及非 `dev` 时的 MySQL）。
+2. 配置 `application-local.yml`（含 `kiwi.mongodb.init.admin-password`、`app.password.secret` 等）。
+3. 在**仓库根目录**编译依赖模块：
 
-## 快速开始
+   ```bash
+   mvn -pl kiwi-admin/backend -am compile -DskipTests
+   ```
 
-在**仓库根目录**（推荐，便于解析父 POM 并构建依赖模块）：
+4. IDE 运行 `com.kiwi.framework.springboot.Application`，Profile `local,dev`。
+5. 默认（`local,dev`）API：**http://localhost:8000**；Operaton **`/engine-rest` HTTP 默认关闭**（`kiwi.bpm.engine-rest-http-enabled=false`）；需调试时可设 `KIWI_BPM_ENGINE_REST_HTTP_ENABLED=true`。Swagger 路径见启动日志。
 
-```bash
-mvn -pl kiwi-admin/backend -am spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
+### Operaton 依赖与 Maven Central
 
-仅在本目录时（需已 `mvn install` 过父工程或依赖模块）：
+Operaton **2.1.x** 发布在 [Maven Central](https://repo1.maven.org/maven2/org/operaton/)。若私服/阿里云镜像未同步，根 `pom.xml` 已声明仓库 `operaton-maven-central`；仍失败时可执行 `mvn -U` 并清理 `~/.m2/repository/org/operaton` 中损坏缓存。
 
-```bash
-cd kiwi-admin/backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
+配置前缀为 **`operaton.bpm.*`**（替代原 `camunda.bpm.*`）。引擎库自 Camunda 7.24 升级前请 **备份** 关系库。
 
-- 默认 HTTP 端口：**8088**（`server.port`）。
-- 若未使用 `application-local.yml`，可去掉上述 profile，并确保环境变量或默认占位符与本地数据库一致；否则启动会因连库失败而报错。
+首次启动且迁移开启时会写入管理员与菜单/字典等参考数据。
 
-## 配置说明
+### CORS
 
-| 项 | 说明 |
-|----|------|
-| 主配置 | `src/main/resources/application.yml`（端口、数据源、MongoDB、`kiwi.sa-token.storage`、Camunda、`app.cors`、AI/MCP 等） |
-| MCP 端点 | `spring.ai.mcp.server.sse-endpoint`、`spring.ai.mcp.server.sse-message-endpoint`（及 `SPRING_AI_MCP_SERVER_*` 环境变量）；助手回环基址 `kiwi.ai.mcp.loopback-base-url` |
-| 本地覆盖 | 复制 `application-local.example.yml` 为 `application-local.yml` 填写真实连接信息；**勿提交** `application-local.yml`（已在 `.gitignore`） |
-| CORS | `app.cors.allowed-origins`，生产环境用环境变量 `APP_CORS_ALLOWED_ORIGINS` 配置实际前端 Origin |
-| 敏感项 | 数据库密码、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD`、AI 密钥（如 `KIWI_AI_API_KEY` / `DASHSCOPE_API_KEY`）等建议用环境变量 |
+`app.cors.allowed-origins` 默认包含 `http://localhost:4201`。自定义前端地址时设置 `APP_CORS_ALLOWED_ORIGINS`。
 
-`dev` profile 常用于本地将 MyBatis SQL 输出到控制台（见 `application-dev.yml`），仅调试使用。
-
-### AI 对话与助手
-
-实现类位于 `com.kiwi.project.ai`：普通补全由 `AiChatService` 提供；**统一助手**由 `AiAssistantService` 提供（单一 `kiwiChatClient` + MCP；模型自行选用工具）。菜单跳转、BPM 设计器建议等前端动作由工具登记至 `AssistantClientActionContext`，经 `actions` 返回（工具定义见 `com.kiwi.project.system.ai`）。
-
-| 配置 / 环境变量 | 说明 |
-|-----------------|------|
-| `kiwi.ai.enabled` | 是否启用 AI 接口，默认 `true`；可用 **`KIWI_AI_ENABLED`** 覆盖。关闭后相关请求会失败并提示。 |
-| `spring.ai.dashscope.api-key` | 阿里云 DashScope API Key；通常使用 **`KIWI_AI_API_KEY`** 或 **`DASHSCOPE_API_KEY`**。 |
-| `spring.ai.dashscope.chat.options.model` | 模型名，默认 **`qwen-plus`**；可用 **`KIWI_AI_MODEL`** 覆盖。 |
-| `spring.ai.mcp.server` | 内置 MCP Server（SSE），与助手共用工具回调；可用 **`SPRING_AI_MCP_SERVER_ENABLED=false`** 关闭。外部 HTTP 调用需携带与业务 API 相同的 **`Authorization: Bearer`** 加登录 Token（见 `application.yml` 中 `instructions` 说明）。 |
-
-| HTTP 接口 | 说明 |
-|-----------|------|
-| `POST /ai/chat` | 请求体 `{ "messages": [ { "role": "user"\|"assistant"\|"system", "content": "..." } ] }`，返回 `{ "content": "..." }`。需登录（`@SaCheckLogin`）。 |
-| `POST /ai/assistant` | 同上消息格式；模型通过 MCP 自选工具。返回 `content` 与可选 **`actions`**（如 `navigate`、`toolbar`、`bpmnXml`、`appendComponent` 等，由 `assistant_*` / `assistant_designer_*` 工具登记）。BPM 设计器场景由前端在 `messages` 中附带 BPMN/流程上下文，**无单独 BPM 接口**。 |
-
-本地示例密钥占位见 **`application-local.example.yml`**。前端使用说明见 **[kiwi-admin/frontend/README.md](../frontend/README.md)** 中「AI 辅助」一节。
-
-## 构建产物
-
-在仓库根：
+### 打包
 
 ```bash
-mvn -pl kiwi-admin/backend -am clean package
+# 仓库根目录
+mvn -pl kiwi-admin/backend -am package -DskipTests
 ```
 
-可执行包由 `spring-boot-maven-plugin` 重打包生成（具体路径以构建输出为准）。
+远程部署见 [deploy/README.md](deploy/README.md)。
 
-## 开发与联调
+## MongoDB 迁移
 
-- **OpenAPI / Swagger UI**：服务启动后可通过 SpringDoc 访问，例如 **`/swagger-ui.html`**、**`/swagger-ui/`**；OpenAPI JSON 一般为 **`/v3/api-docs`**（与 `SaTokenConfigure` 中放行路径一致）。
-- **Camunda**：与主应用同端口；流程引擎 REST 路径与前端 `camundaEngineRestPath`（默认 `/engine-rest`）保持一致即可。
-- **前端**：`kiwi-admin/frontend` 中 `environment.ts` 的 `api.baseUrl` 需指向本服务（默认 `http://localhost:8088`）。
+`kiwi.mongodb.migration.enabled=true`（默认）时执行两类迁移：
 
-## 源码结构（简要）
+| 类型 | 机制 | 适用 |
+|------|------|------|
+| **命令式** | [Mongock](https://docs.mongock.io/) `@ChangeUnit`（如 `InitAdminUserChangeUnit`） | 密码哈希、复杂逻辑 |
+| **参考数据 JSON** | classpath 扫描，changelog 集合 `kiwi_json_migration` | 字典、菜单等 upsert |
 
-| 路径 | 说明 |
-|------|------|
-| `src/main/java/com/kiwi/framework/` | 框架层（启动类、安全、Web、Swagger 等） |
-| `src/main/java/com/kiwi/project/` | 业务：`bpm`、`system`、`tools`（代码生成 / JDBC）、`ai`、`monitor`、`notification` 等 |
-| `src/main/resources/` | `application*.yml`、MyBatis XML、Velocity 模板、权限与 BPM 资源等 |
+### JSON 脚本约定（类 Flyway）
 
-## MCP 与 AI 工具
+- **版本化（只执行一次）**：`src/main/resources/mongo/migration/versioned/`  
+  文件名：`V{version}__{EntitySimpleName}.json`  
+  示例：`V20250601_001__SysDictGroup.json`
+- **可重复（checksum 变化时重跑）**：`mongo/migration/repeatable/`  
+  文件名：`R__{EntitySimpleName}.json`  
+  示例：`R__SysMenu.json`
 
-- **MCP Server**：`spring-ai-starter-mcp-server-webmvc`；工具由 **`KiwiOpenApiSyncMcpToolsConfiguration`** 根据控制器 **`@Operation(operationId, summary)`** 经 `McpToolUtils` 转为 `SyncToolSpecification`。
-- **助手**：`ChatClient` 对 OpenAPI 业务工具经本机 `McpSyncClient` 回环 MCP；`assistant_navigate`、`assistant_designer_*` 经进程内 `MethodToolCallback`（`KiwiAssistantInProcessToolsConfiguration`），与 `AssistantClientActionContext` 同线程登记 `actions`。
+JSON 为**对象数组**，每项须含非空 `id`。新增参考数据时**只加文件**；版本化脚本通过提高 `V` 前缀保证顺序。
+
+### 从开发库导出参考数据
+
+1. 在已配置好的环境用 `mongosh` 查询集合并复制为 JSON 数组；或  
+2. 手写最小集：覆盖前端路由所需菜单（如 `menu`、`user`、`role`、`dict`）及常用 `groupCode`。
+
+```javascript
+// mongosh（库名按环境修改）
+const docs = db.sysMenu.find().toArray();
+// 保存为 R__SysMenu.json，保留 id、parentId、path、menuType、status 等字段
+```
+
+### 迁移配置与排错
+
+```yaml
+kiwi.mongodb.migration.enabled: true
+kiwi.mongodb.init.admin-password: # 001 管理员迁移必填
+```
+
+关闭迁移：`KIWI_MONGODB_MIGRATION_ENABLED=false`。
+
+Mongock 事务：默认 `mongock.transactional=false`。单机 Mongo 勿设为 `true`；若出现 `Transaction numbers are only allowed on a replica set`，确认配置已生效并重新打包；`deploy` 启动时需同步 `bin/config/`。
+
+### 验证
+
+1. 空库启动：`mongockChangeLog` 含 `001`；`kiwi_json_migration` 有 versioned/repeatable 记录。  
+2. 修改 `R__SysMenu.json` 后重启：菜单更新且 checksum 变化。  
+3. 新增 `V20250602_001__SysRole.json`：仅新脚本执行一次。
 
 ## 相关文档
 
-- 根目录：**[README](../../README.md)**（平台概览、Maven 多模块、配置与运行）
-- 前端：**[kiwi-admin/frontend/README.md](../frontend/README.md)**
-- 远程部署脚本：**[kiwi-admin/script/README.md](../script/README.md)**
+- [../../README.zh-CN.md](../../README.zh-CN.md) — 仓库总览与目录 Map（[English](../../README.md)）  
+- [../frontend/README.md](../frontend/README.md) — 前端配置与联调  
+- [deploy/README.md](deploy/README.md) — 远程部署脚本  

@@ -1,22 +1,18 @@
 // This file can be replaced during build by using the `fileReplacements` array.
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
-// const ip = '10.19.227.46';
-const ip = '10.15.56.173';
-// const ip = 'localhost';
-const port = '8000';
+const ip = 'localhost';
+const port = '8080';
 export const localUrl = `http://${ip}:${port}`;
-
-
 
 export const environment = {
   production: false,
   appName: 'Kiwi Admin',
+  /** 登录成功后的默认跳转路径 */
+  postLoginPath: '/dashboard/analysis',
   api: {
-    baseUrl: localUrl,
-    /** Camunda spring-boot-starter-rest 默认 `/engine-rest`，若改 context 请同步 */
-    camundaEngineRestPath: '/engine-rest',
-  },
+    baseUrl: localUrl
+  }
 };
 
 /*

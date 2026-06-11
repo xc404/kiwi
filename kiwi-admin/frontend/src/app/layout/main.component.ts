@@ -2,10 +2,12 @@ import { NgClass, NgStyle, NgTemplateOutlet } from '@angular/common';
 import { AfterViewInit, ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, viewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
-import { SettingDrawerComponent, Theme } from '@app/layout/setting-drawer/setting-drawer.component';
+import { SessionService } from '@app/core/services/common/session.service';
+import { Theme } from '@app/layout/setting-drawer/setting-drawer.component';
 import { CollapsedNavWidth, IsFirstLogin, SideNavWidth } from '@config/constant';
 import { DriverService } from '@core/services/common/driver.service';
 import { WindowService } from '@core/services/common/window.service';
+import { environment } from '@env/environment';
 import { LayoutHeadRightMenuComponent } from '@shared/biz-components/layout-components/layout-head-right-menu/layout-head-right-menu.component';
 import { ChatComponent } from '@shared/components/chat/chat.component';
 import { TopProgressBarComponent } from '@shared/components/top-progress-bar/top-progress-bar.component';
@@ -13,14 +15,11 @@ import { SplitNavStoreService } from '@store/common-store/split-nav-store.servic
 import { ThemeService } from '@store/common-store/theme.service';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 
-import { environment } from '@env/environment';
-import { SessionService } from '@app/core/services/common/session.service';
-import { HttpDictService } from '@app/core/services/store/common-store/dict.service';
-import { NzNoAnimationDirective } from 'ng-zorro-antd/core/animation';
 import { NavBarComponent } from './nav-bar/nav-bar.component';
 import { NavDrawerComponent } from './nav-drawer/nav-drawer.component';
 import { SideNavComponent } from './side-nav/side-nav.component';
@@ -56,7 +55,6 @@ import { ToolBarComponent } from './tool-bar/tool-bar.component';
   ]
 })
 export class MainComponent implements AfterViewInit, OnInit {
-
   readonly appName = environment.appName;
   readonly footerYear = new Date().getFullYear();
 
@@ -70,7 +68,6 @@ export class MainComponent implements AfterViewInit, OnInit {
   themesService = inject(ThemeService); // 用于获取主题
   splitNavStoreService = inject(SplitNavStoreService); // 用于获取分割菜单的store
   sessionService = inject(SessionService);
-  dictService = inject(HttpDictService);
   $themesOptionsEffect = effect(() => {
     const { fixedTab, fixedHead, hasFooterArea, mode, fixedLeftNav, hasNavArea, hasTopArea, hasNavHeadArea, isShowTab, splitNav, theme } = this.themesService.$themesOptions();
 
@@ -92,7 +89,7 @@ export class MainComponent implements AfterViewInit, OnInit {
   });
   $themeStyleEffect = effect(() => {
     // 引用single以触发effect
-    const source = this.themesService.$themeStyle();
+    const _source = this.themesService.$themeStyle();
     // 切换风格模式时也要重新计算margin，这个跟themesOptions$里貌似时重复的代码，考虑用combineLatest来进行合并的话，会有性能损失（切换风格时也会执行themeOptions里面的逻辑），所以这里分开来写了
     this.contentMarginTop = this.judgeMarginTop();
   });
@@ -147,7 +144,6 @@ export class MainComponent implements AfterViewInit, OnInit {
   }
   ngOnInit(): void {
     this.sessionService.refreshSession();
-    this.dictService.load();
   }
 
   ngAfterViewInit(): void {

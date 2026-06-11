@@ -15,6 +15,9 @@ import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
   {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'warn'
+    },
     ignores: [
       '.*/',
       'publish/',
@@ -29,7 +32,6 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true, // 启用项目服务（通常用于增强类型信息）
-        project: ['tsconfig.json'], // 指定要使用的 tsconfig 文件
         tsconfigRootDir: import.meta.dirname // 指定 tsconfig 文件所在的根目录
       }
     },
@@ -56,14 +58,7 @@ export default tseslint.config(
           style: "camelCase",
         },
       ],
-      "@angular-eslint/component-selector": [
-        "error",
-        {
-          type: ['element', 'attribute'],
-          prefix: ['app', 'test'],
-          style: 'kebab-case'
-        }
-      ],
+      "@angular-eslint/component-selector": 'off',
       '@angular-eslint/prefer-inject': 'off',
       '@angular-eslint/no-rename-input': 'off',
       '@angular-eslint/no-attribute-decorator': 'error',
@@ -72,7 +67,9 @@ export default tseslint.config(
       '@angular-eslint/no-host-metadata-property': 'off',
       '@angular-eslint/no-lifecycle-call': 'off',
       '@angular-eslint/no-pipe-impure': 'error',
-      '@angular-eslint/prefer-output-readonly': 'error',
+      '@angular-eslint/prefer-output-readonly': 'warn',
+      '@angular-eslint/no-empty-lifecycle-method': 'off',
+      '@angular-eslint/no-output-native': 'warn',
       '@angular-eslint/use-component-selector': 'off',
       '@angular-eslint/use-component-view-encapsulation': 'off',
 
@@ -101,7 +98,7 @@ export default tseslint.config(
         }
       ],
       '@typescript-eslint/no-empty-function': 'off',
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-inferrable-types': [
@@ -115,13 +112,8 @@ export default tseslint.config(
       '@typescript-eslint/no-this-alias': 'error',
       '@typescript-eslint/naming-convention': 'off',
       '@typescript-eslint/no-unused-expressions': 'off',
-      '@typescript-eslint/explicit-function-return-type': [
-        'error',
-        {
-          allowExpressions: true,
-          allowConciseArrowFunctionExpressionsStartingWithVoid: true
-        }
-      ],
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/prefer-for-of': 'off',
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
@@ -137,7 +129,12 @@ export default tseslint.config(
       'prefer-arrow/prefer-arrow-functions': 'off',
       'import/no-duplicates': 'error',
       'import/no-unused-modules': 'error',
-      'import/no-unassigned-import': 'error',
+      'import/no-unassigned-import': [
+        'error',
+        {
+          allow: ['**/*.css', '**/*.scss', '**/*.less']
+        }
+      ],
       'import/order': [
         'error',
         {

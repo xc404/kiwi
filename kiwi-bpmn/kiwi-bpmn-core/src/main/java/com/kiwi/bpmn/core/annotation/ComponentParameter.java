@@ -62,6 +62,9 @@ public @interface ComponentParameter
 
     String htmlType() default "";
 
+    /** 设计器字典下拉，如 jdbc-connections */
+    String dictKey() default "";
+
     String type() default "string";
 
     boolean important() default false;

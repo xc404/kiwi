@@ -2,7 +2,7 @@
 
 `deploy.py` 在本地通过 **OpenSSH**（`ssh` / `scp`）与 **Maven** 将 kiwi-admin 后端构建产物**构建并上传到远程主机**。连接与部署选项默认读取 **`conf/build.local.yaml`**（`ssh`、`deploy` 块），也可通过 `-c/--config` 指定其他配置文件；示例见 `conf/build.example.yaml`。
 
-构建与仓库根 [README](../../README.md) 一致：在 **kiwi 仓库根**执行 `mvn -pl kiwi-admin/backend -am package -DskipTests`，以按顺序编译 **kiwi-common**、**kiwi-bpmn-*** 等依赖模块。Maven 输出在 `target/`，`deploy.py` 会将其同步到 **`backend/bin/`**（应用 jar + 依赖 lib jar）再上传。请使用完整克隆的仓库，勿只拷贝 `kiwi-admin` 子目录。
+构建与仓库根 [README](../../../README.md)（[中文](../../../README.zh-CN.md)）一致：在 **kiwi 仓库根**执行 `mvn -pl kiwi-admin/backend -am package -DskipTests`，以按顺序编译 **kiwi-common**、**kiwi-bpmn-*** 等依赖模块。Maven 输出在 `target/`，`deploy.py` 会将其同步到 **`backend/bin/`**（应用 jar + 依赖 lib jar）再上传。请使用完整克隆的仓库，勿只拷贝 `kiwi-admin` 子目录。
 
 ## 前置条件
 

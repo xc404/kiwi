@@ -1,8 +1,10 @@
 package com.kiwi.project.system.ctl;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.kiwi.common.query.QueryField;
 import com.kiwi.common.query.QueryParams;
+import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.system.dao.SysDeptDao;
 import com.kiwi.project.system.entity.SysDept;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,8 +32,9 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/system/dept")
+@SaCheckLogin
 @Tag(name = "系统部门", description = "部门 CRUD 与查询")
-public class SysDeptController {
+public class SysDeptController extends BaseCtl {
     @Autowired
     private SysDeptDao sysDeptDao;
 

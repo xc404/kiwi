@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.core.retry;
 
-import org.camunda.bpm.engine.delegate.BpmnError;
+import org.operaton.bpm.engine.delegate.BpmnError;
 
 /**
  * 表示「可重试 / 需由流程侧按错误码处理」的 BPMN 业务错误，继承自 {@link BpmnError}，并实现 {@link IRetry} 标记。

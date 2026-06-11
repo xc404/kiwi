@@ -1,16 +1,16 @@
 package com.kiwi.bpmn.external;
 
 import com.kiwi.bpmn.external.utils.DtoUtils;
-import org.camunda.bpm.client.impl.EngineClient;
-import org.camunda.bpm.client.task.ExternalTask;
-import org.camunda.bpm.client.task.OrderingConfig;
-import org.camunda.bpm.client.topic.impl.dto.FetchAndLockRequestDto;
-import org.camunda.bpm.client.topic.impl.dto.TopicRequestDto;
-import org.camunda.bpm.engine.ExternalTaskService;
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.RuntimeService;
-import org.camunda.bpm.engine.externaltask.ExternalTaskQueryBuilder;
-import org.camunda.bpm.engine.externaltask.LockedExternalTask;
+import org.operaton.bpm.client.impl.EngineClient;
+import org.operaton.bpm.client.task.ExternalTask;
+import org.operaton.bpm.client.task.OrderingConfig;
+import org.operaton.bpm.client.topic.impl.dto.FetchAndLockRequestDto;
+import org.operaton.bpm.client.topic.impl.dto.TopicRequestDto;
+import org.operaton.bpm.engine.ExternalTaskService;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.RuntimeService;
+import org.operaton.bpm.engine.externaltask.ExternalTaskQueryBuilder;
+import org.operaton.bpm.engine.externaltask.LockedExternalTask;
 
 import java.util.List;
 import java.util.Map;

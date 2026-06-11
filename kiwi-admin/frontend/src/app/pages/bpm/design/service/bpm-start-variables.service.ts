@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
  * 启动流程变量在 localStorage 中的读写（按流程 ID 隔离）。
  */
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class BpmStartVariablesService {
   private readonly prefix = 'kiwi.bpm.editor.startVariables.v1';

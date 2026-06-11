@@ -1,12 +1,14 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, EventEmitter, Output, computed, input } from '@angular/core';
+
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
-import { BpmProcessInstanceDto } from '../service/process-instance.service';
+
 import { BPM_ACTIVITY_MARKER_LEGEND } from './bpm-activity-markers';
+import { BpmProcessInstanceDto } from '../service/process-instance.service';
 
 /** 工具栏错误区单行：可选节点名 + 说明 */
 export interface BpmViewerToolbarErrorLine {
@@ -18,16 +20,8 @@ export interface BpmViewerToolbarErrorLine {
   selector: 'bpm-viewer-header',
   templateUrl: './bpm-viewer-header.component.html',
   styleUrl: './bpm-viewer-header.component.scss',
-  imports: [
-    DatePipe,
-    NgClass,
-    NzButtonModule,
-    NzIconModule,
-    NzPopconfirmModule,
-    NzTagModule,
-    NzTypographyModule,
-  ],
-  standalone: true,
+  imports: [DatePipe, NgClass, NzButtonModule, NzIconModule, NzPopconfirmModule, NzTagModule, NzTypographyModule],
+  standalone: true
 })
 export class BpmViewerHeaderComponent {
   /** 流程实例详情；未加载完成时为 `undefined`。 */
@@ -132,13 +126,11 @@ export class BpmViewerHeaderComponent {
     const incidents = v.openIncidents;
     if (incidents?.length) {
       for (const inc of incidents) {
-        const nameRaw =
-          typeof inc.activityName === 'string' ? inc.activityName.trim() : '';
+        const nameRaw = typeof inc.activityName === 'string' ? inc.activityName.trim() : '';
         const idRaw = typeof inc.activityId === 'string' ? inc.activityId.trim() : '';
         const nodeLabel = nameRaw || idRaw || null;
         const msg = typeof inc.message === 'string' ? inc.message.trim() : '';
-        const typeStr =
-          inc.incidentType != null ? String(inc.incidentType).trim() : '';
+        const typeStr = inc.incidentType != null ? String(inc.incidentType).trim() : '';
         const text = msg || typeStr || '—';
         out.push({ nodeLabel, text });
       }
@@ -151,8 +143,8 @@ export class BpmViewerHeaderComponent {
   /** 合并文案，供 title 等使用 */
   readonly errorSummaryText = computed(() =>
     this.errorLines()
-      .map((l) => (l.nodeLabel ? `${l.nodeLabel}：${l.text}` : l.text))
-      .join('；'),
+      .map(l => (l.nodeLabel ? `${l.nodeLabel}：${l.text}` : l.text))
+      .join('；')
   );
 
   /** 展示用流程名称：优先 API 名称，其次定义 Key */

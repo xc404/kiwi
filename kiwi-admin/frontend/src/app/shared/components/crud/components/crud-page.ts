@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-
+import { EMPTY, forkJoin, throwError } from 'rxjs';
+import { catchError, take, tap } from 'rxjs/operators';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { UserInfoStoreService } from '@app/core/services/store/common-store/userInfo-store.service';
-import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
 import { FormlyConfig, FormlyFormBuilder } from '@ngx-formly/core';
+import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
+
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzWaveModule } from 'ng-zorro-antd/core/wave';
@@ -18,25 +20,23 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableQueryParams } from 'ng-zorro-antd/table';
-import { EMPTY, forkJoin, Observable, throwError } from 'rxjs';
-import { catchError, take, tap } from 'rxjs/operators';
+
+import { CrudEditForm, EditMode } from './crud-edit-form';
+import { CrudSearchForm } from './crud-search-form';
 import { AppButtonConfig } from '../../button/app.button';
-import { AppTableWrapComponent } from '../../table/app-table-wrap/app-table-wrap.component';
+import { AppEditTableComponent, RowChangeEvent } from '../../table/app-edit-table/app-edit-table.component';
 import { AppTableComponent } from '../../table/app-table/app-table.component';
+import { AppTableWrapComponent } from '../../table/app-table-wrap/app-table-wrap.component';
 import { AppTreeTableComponent } from '../../table/app-tree-table/app-tree-table.component';
 import { actionColumn, ColumnActionConfig, ColumnConfig } from '../../table/column';
-import { AppTableConfig, TableComponentToken, TableType } from '../../table/table';
+import { AppTableConfig, TableType } from '../../table/table';
 import { AddAction, columnAction, DeleteAction, DeleteBatchAction, EditAction } from '../actions';
 import { CrudDataSource } from '../crud-datastore';
 import { crudConfig, CrudHttp, CrudHttpConfig } from '../crud-http';
+import { collectDictStoreConfigs, DictStoreConfig, DictStoreService } from '@app/shared/datastore';
 import { CrudFieldConfig, getActionColumnWidth } from '../utils';
-import { CrudEditForm, EditMode } from './crud-edit-form';
-import { CrudSearchForm } from './crud-search-form';
-import { AppEditTableComponent, RowChangeEvent } from '../../table/app-edit-table/app-edit-table.component';
-
 
 export abstract class CrudPageToken {
-
   abstract popupEdit(record: any): void;
 
   abstract popupAdd(record?: any): void;
@@ -50,17 +50,18 @@ export abstract class CrudPageToken {
   abstract deleteItems(items: any[]): void;
 }
 
-
-
 export interface PageConfig {
   title: string;
-  crud: string | CrudHttpConfig | {
-    get?: string | CrudHttpConfig | boolean;
-    create?: string | CrudHttpConfig | boolean;
-    update?: string | CrudHttpConfig | boolean;
-    delete?: string | CrudHttpConfig | boolean;
-    search?: string | CrudHttpConfig | boolean;
-  };
+  crud:
+    | string
+    | CrudHttpConfig
+    | {
+        get?: string | CrudHttpConfig | boolean;
+        create?: string | CrudHttpConfig | boolean;
+        update?: string | CrudHttpConfig | boolean;
+        delete?: string | CrudHttpConfig | boolean;
+        search?: string | CrudHttpConfig | boolean;
+      };
   tableConfig?: {
     needNoScroll?: boolean; //列表是否需要滚动条
     xScroll?: number; //列表横向滚动条
@@ -81,12 +82,12 @@ export interface PageConfig {
     disabled?: boolean;
   };
   fields: CrudFieldConfig[]; // 列设置
+  /** 页面需预载的字典 Store，对标 ExtJS View stores 配置 */
+  stores?: DictStoreConfig[];
   toolbarActions?: AppButtonConfig[];
   columnActions?: ColumnActionConfig[];
   initializeData?: boolean;
 }
-
-
 
 @Component({
   selector: 'crud-page',
@@ -113,23 +114,22 @@ export interface PageConfig {
     AppEditTableComponent,
     AppTreeTableComponent,
     CrudSearchForm,
-    CrudEditForm,
+    CrudEditForm
   ]
 })
 export class CrudPage implements OnInit, CrudPageToken {
-
-
   httpService = inject(BaseHttpService);
   userInfoService = inject(UserInfoStoreService);
   builder = inject(FormlyFormBuilder);
   formlyConfig = inject(FormlyConfig);
   modalService = inject(NzModalService);
   messageService = inject(NzMessageService);
+  dictStoreService = inject(DictStoreService);
 
   /** app-table 经 app-table-wrap 的 ng-content 投影，须用 viewChild 而非 contentChild */
   readonly tableWrap = viewChild(AppTableWrapComponent);
   editModalVisible = signal(false);
-  editTitle = signal("")
+  editTitle = signal('');
   editRecord = signal({} as any);
   defaultEditRecord: any = {};
   editMode = signal<EditMode>('create');
@@ -137,11 +137,10 @@ export class CrudPage implements OnInit, CrudPageToken {
 
   pageConfig = input.required<PageConfig>();
 
-  tableRowClick = output<any>();
+  readonly tableRowClick = output<unknown>();
   pageData = computed(() => {
     return this.crudDatasource().items();
   });
-
 
   searchFormFields = computed(() => {
     return this.pageConfig().fields.filter(field => field.search);
@@ -155,7 +154,7 @@ export class CrudPage implements OnInit, CrudPageToken {
 
   editModalOptions = computed(() => {
     return {
-      width: "75vw",
+      width: '75vw',
       columns: 2,
       ...this.pageConfig().editModal
     };
@@ -175,10 +174,13 @@ export class CrudPage implements OnInit, CrudPageToken {
   });
 
   crudDatasource = computed(() => {
-    let http = this.crudHttp();
-    let sort = this.pageConfig().fields.filter(field => field.showSort && field.sortDirection).map(field => {
-      return field.dataIndex + ' ' + field.sortDirection;
-    }).join(',');
+    const http = this.crudHttp();
+    const sort = this.pageConfig()
+      .fields.filter(field => field.showSort && field.sortDirection)
+      .map(field => {
+        return `${field.dataIndex} ${field.sortDirection}`;
+      })
+      .join(',');
     return new CrudDataSource(http, {
       pageSize: this.pageConfig().tableConfig?.pageSize,
       sortParams: sort,
@@ -190,12 +192,12 @@ export class CrudPage implements OnInit, CrudPageToken {
     if (this.pageConfig().editModal?.disabled === true) {
       return false;
     }
-    let op = this._crudConfig().update;
+    const op = this._crudConfig().update;
     return op && this.userInfoService.hasPermission(op.permission);
   });
 
   enableDelete = computed(() => {
-    let op = this._crudConfig().delete;
+    const op = this._crudConfig().delete;
     return op && this.userInfoService.hasPermission(op.permission);
   });
 
@@ -203,10 +205,9 @@ export class CrudPage implements OnInit, CrudPageToken {
     if (this.pageConfig().editModal?.disabled === true) {
       return false;
     }
-    let op = this._crudConfig().create;
+    const op = this._crudConfig().create;
     return op && this.userInfoService.hasPermission(op.permission);
   });
-
 
   crudHttp = computed(() => {
     return new CrudHttp(this.httpService, this._crudConfig());
@@ -226,12 +227,13 @@ export class CrudPage implements OnInit, CrudPageToken {
     return actions;
   });
 
-
   columns = computed((): ColumnConfig[] => {
     const columns: ColumnConfig[] = [];
-    this.pageConfig().fields.filter(field => field.column != 'disabled' && field.column != false).forEach(field => {
-      columns.push(this.toColumnField(field));
-    });
+    this.pageConfig()
+      .fields.filter(field => field.column != 'disabled' && field.column != false)
+      .forEach(field => {
+        columns.push(this.toColumnField(field));
+      });
     const columnActions: AppButtonConfig[] = [];
     if (this.enableEdit()) {
       columnActions.push(EditAction);
@@ -244,15 +246,17 @@ export class CrudPage implements OnInit, CrudPageToken {
     if (this.enableDelete()) {
       columnActions.push(DeleteAction);
     }
-    let width = getActionColumnWidth(columnActions);
+    const width = getActionColumnWidth(columnActions);
     if (columnActions.length) {
-      columns.push(actionColumn({
-        name: "操作",
-        width: width,
-        fixed: true, // 是否固定单元格 （只有从最左边或最右边连续固定才有效）
-        fixedDir: 'right', // 固定在左边还是右边，需要配合fixed来使用
-        actions: columnActions
-      }));
+      columns.push(
+        actionColumn({
+          name: '操作',
+          width: width,
+          fixed: true, // 是否固定单元格 （只有从最左边或最右边连续固定才有效）
+          fixedDir: 'right', // 固定在左边还是右边，需要配合fixed来使用
+          actions: columnActions
+        })
+      );
     }
     return columns;
   });
@@ -271,7 +275,6 @@ export class CrudPage implements OnInit, CrudPageToken {
   onRowClick(item: any) {
     this.tableRowClick.emit(item);
   }
-
 
   load(params: Record<string, unknown>) {
     const ds = this.crudDatasource();
@@ -299,11 +302,9 @@ export class CrudPage implements OnInit, CrudPageToken {
     return actionColumn(field);
   }
 
-
   popupAdd(record?: any) {
     this._popupEditModal('create', record);
   }
-
 
   popupEdit(record: any) {
     this._popupEditModal('update', record);
@@ -314,15 +315,13 @@ export class CrudPage implements OnInit, CrudPageToken {
     record = record ?? { ...this.defaultEditRecord };
     this.editRecord.set(record);
     this.editMode.set(mode);
-    let title = mode == 'create' ? '新增' : '修改';
+    const title = mode == 'create' ? '新增' : '修改';
     this.editTitle.set(title + this.pageConfig().title);
-
   }
 
   delete(record: any) {
     this.deleteItem(record);
   }
-
 
   /**
    * 必须在内部 subscribe：模板 `(nzOnOk)="saveItem()"` 经 EventEmitter 调用时，
@@ -336,8 +335,7 @@ export class CrudPage implements OnInit, CrudPageToken {
       return false;
     }
     const formValue = { ...item, ...this.editForm.value };
-    const save =
-      mode === 'create' ? this.crudHttp().create(formValue) : this.crudHttp().update(formValue, item.id);
+    const save = mode === 'create' ? this.crudHttp().create(formValue) : this.crudHttp().update(formValue, item.id);
     const message = mode === 'create' ? '新增成功' : '修改成功';
     const failMsg = mode === 'create' ? '新增失败' : '修改失败';
     save
@@ -378,8 +376,6 @@ export class CrudPage implements OnInit, CrudPageToken {
     this.editModalVisible.set(false);
   }
 
-
-
   deleteItems(items: any[]) {
     if (!items?.length) {
       this.messageService.error('请选择要删除的记录');
@@ -391,18 +387,20 @@ export class CrudPage implements OnInit, CrudPageToken {
       nzContent: '确定要删除所选记录吗？',
       nzOkText: '确定',
       nzCancelText: '取消',
-      nzOnOk: () =>{
-        forkJoin(items.map(item => this.crudHttp().delete(item.id))).pipe(
-          take(1),
-          tap(() => {
-            this.messageService.success('删除成功');
-            this.reloadTable();
-          }),
-          catchError(err => {
-            this.messageService.error('删除失败');
-            return throwError(() => err);
-          })
-        ).subscribe();
+      nzOnOk: () => {
+        forkJoin(items.map(item => this.crudHttp().delete(item.id)))
+          .pipe(
+            take(1),
+            tap(() => {
+              this.messageService.success('删除成功');
+              this.reloadTable();
+            }),
+            catchError(err => {
+              this.messageService.error('删除失败');
+              return throwError(() => err);
+            })
+          )
+          .subscribe();
       }
     });
   }
@@ -412,10 +410,13 @@ export class CrudPage implements OnInit, CrudPageToken {
   }
 
   ngOnInit(): void {
-    if (this.pageConfig().initializeData) {
+    const config = this.pageConfig();
+    const storeConfigs = collectDictStoreConfigs(config);
+    if (storeConfigs.length > 0) {
+      this.dictStoreService.registerStores(storeConfigs);
+    }
+    if (config.initializeData) {
       this.reloadTable();
     }
   }
 }
-
-

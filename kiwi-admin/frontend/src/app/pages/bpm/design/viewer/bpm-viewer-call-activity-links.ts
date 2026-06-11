@@ -1,11 +1,16 @@
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
+
 import { CamundaHistoricActivityInstance } from '../service/process-instance.service';
 
 export const CALL_ACTIVITY_LINK_OVERLAY_TYPE = 'call-activity-instance-link';
 
-type DiagramElement = { id: string; type?: string; businessObject?: { id?: string } };
+interface DiagramElement {
+  id: string;
+  type?: string;
+  businessObject?: { id?: string };
+}
 
-type OverlaysService = {
+interface OverlaysService {
   remove: (filter: { type?: string }) => void;
   add: (
     element: DiagramElement | string,
@@ -13,16 +18,14 @@ type OverlaysService = {
     attrs: {
       position: { top?: number; right?: number; bottom?: number; left?: number };
       html: HTMLElement;
-    },
+    }
   ) => string;
-};
+}
 
 /**
  * CallActivity 历史活动 -> 子流程实例 ID（同一 activityId 多条时与 buildActivityStateMap 策略一致）。
  */
-export function buildCalledProcessInstanceMap(
-  activities: CamundaHistoricActivityInstance[],
-): Map<string, string> {
+export function buildCalledProcessInstanceMap(activities: CamundaHistoricActivityInstance[]): Map<string, string> {
   const byActivityId = new Map<string, CamundaHistoricActivityInstance>();
 
   for (const activity of activities) {
@@ -89,16 +92,14 @@ function historicActivityStartMs(activity: CamundaHistoricActivityInstance): num
 /**
  * 在 CallActivity 节点右上角叠加「查看子流程实例」链接（仅当存在 calledProcessInstanceId 时）。
  */
-export function syncCallActivityLinkOverlays(
-  viewer: NavigatedViewer,
-  calledMap: Map<string, string>,
-  openChildInstance: (childProcessInstanceId: string) => void,
-): void {
+export function syncCallActivityLinkOverlays(viewer: NavigatedViewer, calledMap: Map<string, string>, openChildInstance: (childProcessInstanceId: string) => void): void {
   const overlays = viewer.get('overlays') as OverlaysService | undefined;
-  const elementRegistry = viewer.get('elementRegistry') as {
-    getAll: () => DiagramElement[];
-    get: (id: string) => DiagramElement | undefined;
-  } | undefined;
+  const elementRegistry = viewer.get('elementRegistry') as
+    | {
+        getAll: () => DiagramElement[];
+        get: (id: string) => DiagramElement | undefined;
+      }
+    | undefined;
 
   if (!overlays || !elementRegistry) {
     return;
@@ -136,18 +137,18 @@ export function syncCallActivityLinkOverlays(
       '<path d="M854.6 288.6L639.4 73.4c-48.4-48.4-127.1-48.4-175.5 0l-71.9 71.9c-48.4 48.4-48.4 127.1 0 175.5l53.3 53.3c7.8 7.8 20.5 7.8 28.3 0l81-81c7.8-7.8 7.8-20.5 0-28.3l-53.3-53.3c-17.1-17.1-17.1-45 0-62.1l43.4-43.4c17.1-17.1 45-17.1 62.1 0l215.2 215.2c17.1 17.1 17.1 45 0 62.1l-43.4 43.4c-7.8 7.8-7.8 20.5 0 28.3l81 81c7.8 7.8 20.5 7.8 28.3 0l53.3-53.3c48.5-48.5 48.5-127.2 0-175.5z"/>' +
       '</svg></span>';
 
-    button.addEventListener('click', (ev) => {
+    button.addEventListener('click', ev => {
       ev.preventDefault();
       ev.stopPropagation();
       openChildInstance(childId);
     });
-    button.addEventListener('mousedown', (ev) => {
+    button.addEventListener('mousedown', ev => {
       ev.stopPropagation();
     });
 
     overlays.add(el, CALL_ACTIVITY_LINK_OVERLAY_TYPE, {
       position: { top: -8, right: 4 },
-      html: button,
+      html: button
     });
   }
 }

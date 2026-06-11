@@ -33,7 +33,7 @@ export class SessionService {
     return this.loginService.getUserMenus();
   }
 
-  setSession(token: String) {
+  setSession(token: string) {
     this.windowServe.setStorage(TokenKey, TokenPre + token);
   }
 
@@ -57,28 +57,25 @@ export class SessionService {
         });
     }
     return new Promise(resolve => {
-      forkJoin(this.loginService.getUserInfo(),
-        this.loginService.getUserMenus(),
-        this.loginService.getUserPermissions())
+      forkJoin(this.loginService.getUserInfo(), this.loginService.getUserMenus(), this.loginService.getUserPermissions())
         .pipe(
           finalize(() => {
             resolve();
           }),
           takeUntilDestroyed(this.destroyRef)
-        ).subscribe(res => {
-          let userInfo = res[0];
-          let menus = res[1];
-          let permissions = res[2];
+        )
+        .subscribe(res => {
+          const userInfo = res[0];
+          const menus = res[1];
+          const permissions = res[2];
           userInfo.permissions = permissions;
           this.userInfoService.$userInfo.set(userInfo);
 
           this.menuService.setMenuArrayStore(menus);
           resolve();
         });
-
     });
   }
-
 
   // 清除Tab缓存,是与路由复用相关的东西
   clearTabCash(): Promise<void> {

@@ -1,152 +1,140 @@
 # Kiwi
 
-**Kiwi 是一款面向企业的低代码开发平台**：在统一技术栈上提供可配置的管理能力、**可视化 BPMN 流程设计与运行**，以及可扩展的流程组件与外部任务集成，减少重复编码、缩短业务上线周期。
+[中文](README.zh-CN.md)
 
-实现上，本仓库为**前后端一体**的多模块 Maven 工程：后端基于 **Spring Boot** 与 **Camunda BPM**，前端为 **Angular** 管理界面（`kiwi-admin/frontend`，由 [ng-antd-admin](https://github.com/huajian123/ng-antd-admin) 模板演进而来）。
+[![License: MIT](https://img.shields.io/github/license/xc404/kiwi)](LICENSE)
+[![CI](https://github.com/xc404/kiwi/actions/workflows/ci.yml/badge.svg)](https://github.com/xc404/kiwi/actions/workflows/ci.yml)
 
-## 平台定位（低代码）
+**Kiwi** is a BPMN-based workflow orchestration and management platform built on [Operaton](https://www.operaton.org/) (the community continuation of Camunda 7): visual BPMN designer, pluggable process delegates, admin console, and AI assistant. This repository is a Maven multi-module monorepo with a separate admin frontend and backend.
 
-| 能力 | 说明 |
-|------|------|
-| 流程低代码 | 基于 **BPMN.js** 的流程建模、与 **Camunda** 部署/运行对接，支持流程实例查看与变量洞察。 |
-| 业务与管理端 | 管理端页面与权限、数据服务可组合扩展，面向「配置 + 少量代码」交付典型后台场景。 |
-| 可扩展 | **kiwi-bpmn** 等模块承载流程扩展、外部任务等，便于按需接入业务系统。 |
+> **Camunda 7 baseline**: Git tag and branch **`camunda`** preserve the pre-migration Camunda 7.24 + Spring Boot 3.5 state for rollback and comparison (`git checkout camunda`).
 
-## 技术栈
+**Live demo:** [https://www.kiwi-admin.cn](https://www.kiwi-admin.cn)
 
-| 层级 | 技术 |
-|------|------|
-| 后端 | Java 17、Spring Boot 3.4.x、Spring Data MongoDB、MyBatis、Sa-Token |
-| 流程 | Camunda Platform 7.24（Spring Boot Starter、REST、Web 控制台、External Task Client） |
-| 数据 | MongoDB、MySQL（Camunda/业务数据源） |
-| 前端 | Angular 21、ng-zorro-antd、BPMN.js（流程设计相关页面） |
+![AI-assisted workflow design demo](docs/screenshots/kiwi-ai-process-design.gif)
 
-## 仓库结构
+## Features
+
+- **BPMN design**: Angular + BPMN.js; property panel synced with backend component metadata
+- **Operaton engine**: process definitions/instances, External Tasks, async jobs with configurable retries; `/engine-rest` HTTP **off by default** (enable for debugging)
+- **Pluggable delegates**: Shell, HTTP, JDBC, MongoDB, file I/O, SFTP, email/webhook, variable assignment, Kafka, RabbitMQ, S3, Slack, Slurm, and more — core in `kiwi-bpmn-component`, optional integrations in sibling modules
+- **Admin console**: users, roles, menus, departments, dictionaries, Sa-Token, Personal Access Tokens
+- **Low-code tools**: code generation, JDBC and schema browser
+- **AI assistant**: Spring AI (DeepSeek), built-in MCP; page navigation and BPMN designer orchestration
+- **Data migrations**: Mongock + JSON reference data (Flyway-like convention)
+
+## Tech stack
+
+| Layer | Stack |
+|-------|-------|
+| Backend | Java **25**, Spring Boot **4.0**, Operaton **2.1**, MongoDB, MyBatis, Sa-Token |
+| Frontend | Angular **21**, ng-zorro-antd, BPMN.js, ECharts, @antv/x6 |
+| Build | Maven (multi-module), npm |
+| Specs | [OpenSpec](openspec/) (`spec-driven`) |
+
+## Repository layout
 
 ```
 kiwi/
-├── pom.xml                 # 父 POM（聚合模块与统一版本）
-├── kiwi-common/            # 公共 Java 模块（实体与 Mongo 等共用能力）
+├── kiwi-common/                      # Shared entities, Mongo/MyBatis utilities
+├── kiwi-bpmn/
+│   ├── kiwi-bpmn-core/               # Component annotations, variable mapping, job retry
+│   ├── kiwi-bpmn-component/          # Core delegates (Shell, HTTP, JDBC, MongoDB, …)
+│   ├── kiwi-bpmn-component-kafka/    # Optional: Kafka publish
+│   ├── kiwi-bpmn-component-rabbitmq/ # Optional: RabbitMQ publish
+│   ├── kiwi-bpmn-component-s3/       # Optional: S3 object ops
+│   ├── kiwi-bpmn-component-slack/    # Optional: Slack notify
+│   ├── kiwi-bpmn-component-slurm/    # Optional: Slurm external tasks
+│   ├── kiwi-bpmn-component-example/  # Example / template module
+│   └── kiwi-bpmn-external-task/      # External Task abstraction and retry
 ├── kiwi-admin/
-│   ├── backend/            # Spring Boot 主应用（端口见配置）
-│   └── frontend/           # Angular 应用
-└── kiwi-bpmn/              # BPMN 相关模块
-    ├── kiwi-bpmn-core/
-    ├── kiwi-bpmn-component/
-    └── kiwi-bpmn-external-task/
+│   ├── backend/                      # Spring Boot main app (see sub README)
+│   └── frontend/                     # Angular admin UI (see sub README)
+├── docker/                           # Docker Compose and Dockerfiles
+├── docs/                             # Screenshots, Maven snippets, BPM component guide
+├── openspec/                         # Change specs and tasks
+├── AGENTS.md                         # AI agent / contributor codebase guide
+└── LICENSE
 ```
 
-## IntelliJ IDEA 与 Maven 多模块
+### Modules and key paths
 
-- **导入方式**：在 IntelliJ IDEA 中**优先以仓库根目录**（例如 `d:\Projects\kiwi`）作为项目根导入，按 **Maven 多模块** 识别，便于与 Reactor 构建顺序、模块依赖保持一致。
-
-- **单独编 backend**：`kiwi-admin/backend` 的 POM 已包含指向根父 POM 的 `<relativePath>`；在此前提下，若只关心 backend，仍建议：
-  - 在仓库根对父 POM 先执行一次 **`mvn install`**，或
-  - 始终在根目录使用 **`mvn -pl kiwi-admin/backend -am`**（`-am` 会顺带按顺序构建 **kiwi-common**、**kiwi-bpmn-*** 等 backend 所依赖的模块）。
-
-- **本地仓库缓存**：若此前因父 POM 解析失败在 `~/.m2/repository` 中留下不完整产物，在 **relativePath 已正确** 时一般**不必**清空整个本地仓库；若仍异常，可对根 **`pom.xml`** 执行 **`mvn -U`** 强制更新元数据，或删除本地目录 **`~/.m2/repository/com/kiwi/kiwi-parent`**（对应 `com.kiwi:kiwi-parent:1.0.0-SNAPSHOT`）后重试。
-
-## Snapshot 开发（内部构件）
-
-内部模块与跨仓库依赖（如 `cryoems-bpm`）当前使用 **`1.0.0-SNAPSHOT`**。从远程 Maven 仓库拉取 SNAPSHOT 时，建议启用「每次构建检查最新 snapshot」：
-
-1. 将 [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) 中的 `<profiles>` / `<activeProfiles>` 合并进 `%USERPROFILE%\.m2\settings.xml`。
-2. 或单次构建使用 **`mvn -U ...`**。
-3. 若仅依赖同事本机 `mvn install` 的 `~/.m2` 副本，`alwaysUpdateSnapshots` **不会**自动更新；需对方重新 install，或改用远程仓库 / **`-Pcryoems-bpm-local`** 联调（与同级 `../cryoems-bpm` 同一 reactor）。
-
-## 环境要求
-
-- **JDK 17**
-- **Maven 3.8+**
-- **Node.js**（建议 LTS，与 Angular 21 兼容的版本）
-- 运行期依赖：**MongoDB**、**MySQL**（具体库名与用途以 `application.yml` 为准）
-
-## 配置说明
-
-1. **后端**  
-   - 主配置：`kiwi-admin/backend/src/main/resources/application.yml`（默认不含真实密钥，敏感项使用环境变量占位，如 `SPRING_DATASOURCE_PASSWORD`、`APP_PASSWORD_SECRET`、`CAMUNDA_ADMIN_PASSWORD` 等）。  
-   - 本地覆盖：复制 `application-local.example.yml` 为 `application-local.yml`，填写数据库等；**`application-local.yml` 已加入 `.gitignore`，勿提交。** 启动时建议：`--spring.profiles.active=local,dev`（`dev` 可选，用于开启 MyBatis SQL 输出到控制台，仅调试用）。  
-   - **CORS**：由 `app.cors.allowed-origins` 配置（逗号分隔）。本地默认包含 `http://localhost:4201` 等；**生产环境**请通过环境变量 `APP_CORS_ALLOWED_ORIGINS` 设置为实际前端 Origin，勿使用 `*`。
-
-2. **前端 API**  
-   - `kiwi-admin/frontend/src/environments/environment.ts` 中的 `api.baseUrl` 需指向后端（默认与后端 `server.port` 一致，例如 `http://localhost:8088`）。  
-   - `proxy.conf.json` 将 `/site/api` 代理到 `http://localhost:3001/`，若你未单独起该服务，请按需调整或忽略相关路径。
-
-3. **Camunda**  
-   - 管理员账号等在 `application.yml` 的 `camunda.bpm.admin-user` 中配置；流程引擎 REST 与 Webapp 随 Spring Boot 应用一同启动。
-
-## 本地运行
-
-### 1. 启动后端
-
-在仓库根目录：
-
-```bash
-mvn -pl kiwi-admin/backend -am spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
-
-（若未使用 `application-local.yml`，可去掉 profile 参数，并确保环境变量或默认占位符与本地数据库一致。）
-
-或在模块目录：
-
-```bash
-cd kiwi-admin/backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local,dev"
-```
-
-确保 MySQL、MongoDB 已按配置可用，否则启动会失败。
-
-### 2. 启动前端
-
-```bash
-cd kiwi-admin/frontend
-npm install
-npm start
-```
-
-开发服务器默认 **http://localhost:4201**（见 `package.json` 中 `ng serve` 参数）。
-
-### 3. 构建
-
-- 后端：在仓库根执行 `mvn -pl kiwi-admin/backend -am clean package`（与上文「Maven 多模块」一致，`-am` 会构建依赖模块）。  
-- 前端：`cd kiwi-admin/frontend && npm run build`（生产环境会替换为 `environment.prod.ts`）
-
-## AI 辅助功能
-
-管理后台内置 **AI 对话与助手**（基于后端 **Spring AI Alibaba** 对接阿里云 **DashScope / 通义**）。登录后可在界面中使用：
-
-- **右下角浮窗「Kiwi · AI」**：在默认布局中常驻，可折叠对话；适合边操作后台边提问。
-- **仪表盘「AI 对话」页**：嵌入同一套对话组件，适合全屏查看长回复。
-
-对话走 **`/ai/assistant`**：模型通过 MCP 自选工具；除文本外，响应中 **`actions`** 可含页面导航、BPM 设计器建议等（由 `assistant_*` / `assistant_designer_*` 工具登记）。BPM 等场景由前端在 **`messages`** 中附带上下文，无单独 BPM 接口。纯补全为 **`/ai/chat`**（一般供集成或调试）。
-
-使用前请在后端配置 **API Key** 并视需要开启或关闭总开关；可选开启 **MCP Server**（SSE），供外部客户端以与 REST API 相同方式携带登录 Token 调用工具。详细环境变量、接口说明与前端联调注意见：
-
-- **[kiwi-admin/backend/README.md](kiwi-admin/backend/README.md)**（密钥、`kiwi.ai.enabled`、模型名、MCP）
-- **[kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md)**（入口位置、`api.baseUrl` 配置）
-
-## 其他说明
-
-- **kiwi-bpmn** 子模块为流程扩展与外部任务等能力，随父工程一并构建。  
-
-## 合作开发
-
-欢迎对 **Kiwi 低代码平台** 感兴趣的同学**一起参与开发与维护**。你可以：
-
-- 通过 **Issue** 讨论需求与方案、认领任务或反馈缺陷（请尽量写清背景与复现方式）；  
-- 提交 **Pull Request**（较大改动建议先开 Issue 对齐方向，避免与现有路线冲突）；  
-- 通过下方 **开发者联系** 中的邮箱沟通技术路线、模块分工或长期协作意向。
-
-我们重视可读的提交说明与可复现的问题描述；代码与目录结构请尽量贴近现有模块习惯。期待你的参与。
-
-## 开发者联系
-
-| 方式 | 说明 |
+| Path | Role |
 |------|------|
-| Issue | 在代码托管仓库提交 Issue，建议附上复现步骤、环境与关键日志。 |
-| 邮件 | 418315052@qq.com |
+| [kiwi-common/](kiwi-common/) | Cross-module entities and data-access base classes |
+| [kiwi-bpmn/kiwi-bpmn-core/](kiwi-bpmn/kiwi-bpmn-core/) | `@ComponentDescription` / `@ComponentParameter`, variable mapping, JUEL tolerance, job retry |
+| [kiwi-bpmn/kiwi-bpmn-component/](kiwi-bpmn/kiwi-bpmn-component/) | Core process components (Shell, HTTP, JDBC, MongoDB, email, SFTP, etc.) |
+| [kiwi-bpmn/kiwi-bpmn-component-kafka/](kiwi-bpmn/kiwi-bpmn-component-kafka/) | Kafka publish delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-rabbitmq/](kiwi-bpmn/kiwi-bpmn-component-rabbitmq/) | RabbitMQ publish delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-s3/](kiwi-bpmn/kiwi-bpmn-component-s3/) | S3 object delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-slack/](kiwi-bpmn/kiwi-bpmn-component-slack/) | Slack notification delegate |
+| [kiwi-bpmn/kiwi-bpmn-component-slurm/](kiwi-bpmn/kiwi-bpmn-component-slurm/) | Slurm external tasks; ops: [slurm-workdir-cleanup.md](kiwi-bpmn/kiwi-bpmn-component/docs/slurm-workdir-cleanup.md) |
+| [kiwi-bpmn/kiwi-bpmn-external-task/](kiwi-bpmn/kiwi-bpmn-external-task/) | External Task abstraction and retry |
+| [kiwi-admin/backend/](kiwi-admin/backend/) | `com.kiwi.framework` (boot, security, Mongo migrations, exception handling) + `com.kiwi.project.{system,bpm,ai,tools,monitor,notification}` |
+| [kiwi-admin/frontend/](kiwi-admin/frontend/) | `src/app/{core,layout,pages,shared,config,utils}`; BPMN editor under `pages/bpm` |
+| [docs/screenshots/](docs/screenshots/) | Admin UI screenshots and demo GIFs |
+| [docs/maven/settings-dev-snippet.xml](docs/maven/settings-dev-snippet.xml) | Maven settings snippet for SNAPSHOT dev |
 
+## Screenshots
 
-## 许可证
+![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110413.png)
+![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110437.png)
+![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110447.png)
+![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110512.png)
+![](docs/screenshots/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20110602.png)
 
-MIT — 详见仓库根目录 [LICENSE](LICENSE)。
+More screenshots: [docs/screenshots/](docs/screenshots/).
+
+## Quick start
+
+### Docker (full stack — recommended)
+
+Requires [Docker](https://docs.docker.com/get-docker/) and Docker Compose. Starts **MongoDB**, **backend**, and **frontend** (Nginx serving the Angular app and proxying API to the backend). Compose and Dockerfiles live under [`docker/`](docker/).
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Or from the `docker/` directory: `docker compose up -d --build`
+
+- **Admin UI:** http://localhost:8080/kiwi-admin/
+- **Default admin:** `admin` / `kiwi-demo` (override with `KIWI_INIT_ADMIN_PASSWORD`)
+- **Notes:** `docker` profile uses embedded H2 for the Operaton engine DB; MongoDB is provided by compose; AI is disabled by default; first build may take several minutes (Maven + npm)
+
+Services: `mongodb` · `backend` (internal `:8080`) · `frontend` (Nginx, host `:8080` → container `:80`).
+
+### Local development (summary)
+
+**Prerequisites:** JDK 25, Maven 3.x, MongoDB; MySQL for the Operaton engine DB unless using the `dev` profile (embedded H2); Node.js compatible with Angular 21. Operaton artifacts resolve from Maven Central (see backend README).
+
+1. **Backend:** Copy [application.example.yml](kiwi-admin/backend/src/main/resources/application.example.yml) → `application-local.yml`, fill in connections and `kiwi.mongodb.init.admin-password`; from repo root run `mvn -pl kiwi-admin/backend -am compile -DskipTests`; run `com.kiwi.framework.springboot.Application` in your IDE with profiles `local,dev` (port **8000**). See [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md).
+
+2. **Frontend:** `cd kiwi-admin/frontend && npm install && npm start` → **http://localhost:4201**; match `api.baseUrl` in `environment.ts` to your backend port. See [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md).
+
+**Package backend:** `mvn -pl kiwi-admin/backend -am package -DskipTests`
+
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [AGENTS.md](AGENTS.md) | Codebase guide for AI agents and contributors (workflows, conventions, config) |
+| [docs/bpm-component.zh-CN.md](docs/bpm-component.zh-CN.md) | BPM component architecture, add/configure/use (Chinese) |
+| [kiwi-admin/backend/README.md](kiwi-admin/backend/README.md) | Backend architecture, config, local run, Mongo migrations |
+| [kiwi-admin/frontend/README.md](kiwi-admin/frontend/README.md) | Frontend architecture, env, scripts, AI integration |
+| [kiwi-admin/backend/deploy/README.md](kiwi-admin/backend/deploy/README.md) | Backend remote deploy |
+| [kiwi-admin/frontend/deploy/README.md](kiwi-admin/frontend/deploy/README.md) | Frontend remote deploy |
+
+For non-trivial features, use **OpenSpec** (`openspec list`); Java/process-component and frontend async conventions are in `.cursor/rules/`.
+
+## Contributing
+
+Contributions welcome — BPMN components, admin features, docs, and bug fixes.
+
+1. **Local setup:** Follow [Quick start](#quick-start) and [Documentation](#documentation) above.
+2. **Specs & tasks:** For non-trivial work, start with [OpenSpec](openspec/) (`openspec new change "<name>"`), then implement from `tasks.md`.
+3. **Conventions:** Java delegates, frontend integration, `@ComponentParameter` rules — see `.cursor/rules/` and [AGENTS.md](AGENTS.md).
+4. **Submit:** Fork, branch, open a Pull Request; questions welcome in [Issues](https://github.com/xc404/kiwi/issues).
+
+## License
+
+[MIT License](LICENSE)

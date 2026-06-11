@@ -6,8 +6,8 @@ import { Router } from '@angular/router';
 import { Observable, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { LockedKey, salt } from '@config/constant';
 import { SessionService } from '@app/core/services/common/session.service';
+import { LockedKey, salt } from '@config/constant';
 import { WindowService } from '@core/services/common/window.service';
 import { LockScreenStoreService } from '@store/common-store/lock-screen-store.service';
 import { fnCheckForm, fnEncrypt } from '@utils/tools';

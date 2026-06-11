@@ -7,36 +7,22 @@
       <div class="bpm-editor-process-meta__fields">
         <span class="bpm-editor-process-meta__field">
           <span class="bpm-editor-process-meta__label">最后修改</span>
-          <span class="bpm-editor-process-meta__value">{{
-            m.updatedTime ? (m.updatedTime | date: 'yyyy-MM-dd HH:mm:ss') : '—'
-          }}</span>
+          <span class="bpm-editor-process-meta__value">{{ m.updatedTime ? (m.updatedTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}</span>
         </span>
         <span class="bpm-editor-process-meta__field">
           <span class="bpm-editor-process-meta__label">部署时间</span>
-          <span class="bpm-editor-process-meta__value">{{
-            m.deployedAt ? (m.deployedAt | date: 'yyyy-MM-dd HH:mm:ss') : '未部署'
-          }}</span>
+          <span class="bpm-editor-process-meta__value">{{ m.deployedAt ? (m.deployedAt | date: 'yyyy-MM-dd HH:mm:ss') : '未部署' }}</span>
         </span>
         <span class="bpm-editor-process-meta__field bpm-editor-process-meta__field--secondary">
           <span class="bpm-editor-process-meta__label">版本</span>
-          <span class="bpm-editor-process-meta__value"
-            >{{ m.version ?? '—' }} / 已部署 {{ m.deployedVersion ?? '—' }}</span
-          >
+          <span class="bpm-editor-process-meta__value">{{ m.version ?? '—' }} / 已部署 {{ m.deployedVersion ?? '—' }}</span>
         </span>
         @if (m.id) {
           <span class="bpm-editor-process-meta__label">ID</span>
           <div class="bpm-editor-process-meta__id-body">
             <code class="bpm-editor-process-meta__id-text">{{ m.id }}</code>
-            <button
-              type="button"
-              nz-button
-              nzType="text"
-              nzSize="small"
-              class="bpm-editor-process-meta__id-copy"
-              title="复制 ID"
-              (click)="copyProcessId(m.id)"
-            >
-              <nz-icon nzType="copy" nzTheme="outline" />
+            <button class="bpm-editor-process-meta__id-copy" type="button" nz-button nzSize="small" nzType="text" title="复制 ID" (click)="copyProcessId(m.id)">
+              <nz-icon nzTheme="outline" nzType="copy" />
             </button>
           </div>
         }

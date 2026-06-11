@@ -1,12 +1,5 @@
 import { DatePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  OnInit,
-  signal
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { catchError, of, take } from 'rxjs';
 
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
@@ -124,9 +117,7 @@ export class NotificationsComponent implements OnInit {
 
   markAllReadInChannel(): void {
     const ch = this.currentChannel();
-    this.items.update(arr =>
-      arr.map(x => (x.channel === ch ? { ...x, read: true } : x))
-    );
+    this.items.update(arr => arr.map(x => (x.channel === ch ? { ...x, read: true } : x)));
     this.message.success('已全部标记为已读');
   }
 

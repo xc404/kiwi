@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
-import { FieldType, FieldTypeConfig, FormlyFieldProps } from '@ngx-formly/core';
-import { SpelExpressionEditorComponent } from '@app/shared/components/spel-expression-editor/spel-expression-editor.component';
+
 import { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
+import { SpelExpressionEditorComponent } from '@app/shared/components/spel-expression-editor/spel-expression-editor.component';
+import { FieldType, FieldTypeConfig, FormlyFieldProps } from '@ngx-formly/core';
 
 interface SpelExpressionProps extends FormlyFieldProps {
   /** 来自属性面板：图中引用变量 + 上游输出 */
@@ -12,14 +13,7 @@ interface SpelExpressionProps extends FormlyFieldProps {
   selector: 'spel-expression-editor-type',
   standalone: true,
   imports: [SpelExpressionEditorComponent],
-  template: `
-    <app-spel-expression-editor
-      [value]="formControl.value"
-      (valueChange)="onValueChange($event)"
-      [readonly]="!!field.props.readonly"
-      [variables]="variables"
-    />
-  `,
+  template: ` <app-spel-expression-editor [readonly]="!!field.props.readonly" [value]="formControl.value" [variables]="variables" (valueChange)="onValueChange($event)" /> `
 })
 export class SpelExpressionEditorType extends FieldType<FieldTypeConfig<SpelExpressionProps>> {
   get variables(): SpelVariableSuggestion[] {

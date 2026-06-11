@@ -1,13 +1,13 @@
 package com.kiwi.bpmn.core.retry;
 
-import org.camunda.bpm.engine.impl.interceptor.Command;
-import org.camunda.bpm.engine.impl.jobexecutor.DefaultFailedJobCommandFactory;
-import org.camunda.bpm.engine.impl.jobexecutor.FailedJobCommandFactory;
+import org.operaton.bpm.engine.impl.interceptor.Command;
+import org.operaton.bpm.engine.impl.jobexecutor.DefaultFailedJobCommandFactory;
+import org.operaton.bpm.engine.impl.jobexecutor.FailedJobCommandFactory;
 
 import java.util.List;
 
 /**
- * 根据 {@link JobRetryExceptionClassifier} 在默认 {@link org.camunda.bpm.engine.impl.cmd.DefaultJobRetryCmd}
+ * 根据 {@link JobRetryExceptionClassifier} 在默认 {@link org.operaton.bpm.engine.impl.cmd.DefaultJobRetryCmd}
  * 与立即耗尽 retries 之间二选一。
  */
 final class SelectiveFailedJobCommandFactory implements FailedJobCommandFactory {

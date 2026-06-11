@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 不落库：仅在查询时从当前用户已保存流程的 BPMN 中解析「最近使用的组件」，
@@ -74,9 +75,7 @@ public class BpmComponentRecentUsageService
                 BpmComponent meta = bpmComponentService.resolveComponentById(cid);
                 BpmComponent row;
                 if (meta != null) {
-                    BpmComponent detached = new BpmComponent();
-                    BeanUtils.copyProperties(meta, detached);
-                    row = bpmComponentService.fillComponentProperties(detached);
+                    row = deepCopyComponent(meta);
                 } else {
                     row = new BpmComponent();
                     row.setId(cid);
@@ -126,6 +125,25 @@ public class BpmComponentRecentUsageService
                 break;
             }
         }
+    }
+
+    private static BpmComponent deepCopyComponent(BpmComponent source) {
+        BpmComponent copy = new BpmComponent();
+        BeanUtils.copyProperties(source, copy);
+        copy.setInputParameters(copyParameterList(source.getInputParameters()));
+        copy.setOutputParameters(copyParameterList(source.getOutputParameters()));
+        return copy;
+    }
+
+    private static List<BpmComponentParameter> copyParameterList(List<BpmComponentParameter> list) {
+        if (list == null) {
+            return null;
+        }
+        return list.stream().map(p -> {
+            BpmComponentParameter copy = new BpmComponentParameter();
+            BeanUtils.copyProperties(p, copy);
+            return copy;
+        }).collect(Collectors.toList());
     }
 
     /**

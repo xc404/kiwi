@@ -4,13 +4,13 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import net.dreamlu.mica.core.utils.JsonUtil;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.Resource;
 import org.springframework.web.method.HandlerMethod;
@@ -25,10 +25,13 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class PermissionService implements InitializingBean, ApplicationContextAware
+@RequiredArgsConstructor
+public class PermissionService implements InitializingBean
 {
     private static final String permissionFile = "classpath:permission/permission.json";
-    private ApplicationContext context;
+    private final ApplicationContext context;
+    @Qualifier("requestMappingHandlerMapping")
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private Map<String, Permission> permissionMap = new HashMap<>();
     @Getter
     private List<Permission> permissions;
@@ -49,8 +52,7 @@ public class PermissionService implements InitializingBean, ApplicationContextAw
     }
 
     private void loadPermissionsFromContext() {
-        RequestMappingHandlerMapping mapping = context.getBean(RequestMappingHandlerMapping.class);
-        Map<RequestMappingInfo, HandlerMethod> handlerMethods = mapping.getHandlerMethods();
+        Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
         handlerMethods.values().forEach(handlerMethod -> {
             Method method = handlerMethod.getMethod();
             if( method == null ) {
@@ -92,12 +94,6 @@ public class PermissionService implements InitializingBean, ApplicationContextAw
             }
         }
         return bean.getClass().getSimpleName();
-    }
-
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.context = applicationContext;
     }
 
 }

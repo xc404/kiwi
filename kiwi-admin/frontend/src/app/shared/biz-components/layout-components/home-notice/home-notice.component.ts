@@ -21,17 +21,7 @@ const PREVIEW_LIMIT = 5;
   templateUrl: './home-notice.component.html',
   styleUrls: ['./home-notice.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NzCardModule,
-    NzTabsModule,
-    NzListModule,
-    NzTypographyModule,
-    NzTagModule,
-    RouterLink,
-    NzSpinModule,
-    NzEmptyModule,
-    DatePipe
-  ]
+  imports: [NzCardModule, NzTabsModule, NzListModule, NzTypographyModule, NzTagModule, RouterLink, NzSpinModule, NzEmptyModule, DatePipe]
 })
 export class HomeNoticeComponent implements OnInit {
   private readonly notifications = inject(NotificationsService);

@@ -1,14 +1,13 @@
-import { AfterViewInit, Component, computed, effect, input, InputSignal, OnInit, output, signal } from '@angular/core';
-
+import {AfterViewInit, Component, computed, effect, input, InputSignal, OnInit, output, signal} from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
 import { NzResizeEvent } from 'ng-zorro-antd/resizable';
 import { NzTableQueryParams, NzTableSize } from 'ng-zorro-antd/table';
+
 import { ColumnConfig } from './column';
-import { toObservable } from '@angular/core/rxjs-interop';
 
-export type TableType = "tree" | "normal" | 'edit';
-
+export type TableType = 'tree' | 'normal' | 'edit';
 
 export interface AppTableConfig {
   needNoScroll?: boolean; //列表是否需要滚动条
@@ -41,10 +40,9 @@ export interface PageEvent {
 }
 
 @Component({
-  template: '',
+  template: ''
 })
-export class BaseTableComponent implements AfterViewInit {
-
+export class BaseTableComponent implements AfterViewInit, OnInit {
   dataInited = false;
 
   readonly selectedItems = signal<NzSafeAny[]>([]);
@@ -65,10 +63,9 @@ export class BaseTableComponent implements AfterViewInit {
 
   showPagination = computed(() => {
     return this.pageSize() > 0;
-  })
+  });
 
-
-  _tableSize = signal("default" as NzTableSize);
+  _tableSize = signal('default' as NzTableSize);
   set tableSize(value: NzTableSize) {
     this._tableSize.set(value);
   }
@@ -100,8 +97,6 @@ export class BaseTableComponent implements AfterViewInit {
     });
   }
 
-
-
   setScrollConfig(value: AppTableConfig): { x: string; y: string } | {} {
     if (!value || value.needNoScroll) {
       return {};
@@ -120,11 +115,9 @@ export class BaseTableComponent implements AfterViewInit {
     return data.id;
   }
 
-
   isItemSelected(item: NzSafeAny): boolean {
     return this.selectedItems().some(selectedItem => selectedItem.id === item.id);
   }
-
 
   public trackByTableHead(index: number, item: NzSafeAny): string {
     return `${item.title}-${index}`;
@@ -133,8 +126,6 @@ export class BaseTableComponent implements AfterViewInit {
   public trackByTableBody(index: number, item: NzSafeAny): string {
     return `${item.id}-${index}`;
   }
-
-
 
   onQueryParamsChange(tableQueryParams: NzTableQueryParams): void {
     tableQueryParams.sort = tableQueryParams.sort.filter(item => item.value && item.key);
@@ -152,9 +143,9 @@ export class BaseTableComponent implements AfterViewInit {
     this.tableConfig().columns = this.tableConfig().columns.map(e =>
       e.name === col
         ? {
-          ...e,
-          width: +`${width}`
-        }
+            ...e,
+            width: +`${width}`
+          }
         : e
     ) as ColumnConfig[];
   }
@@ -175,8 +166,6 @@ export class BaseTableComponent implements AfterViewInit {
     });
   }
 
-
-
   // 单选
   public checkRowSingle(isChecked: boolean, item: any): void {
     this.checkFn(item, isChecked);
@@ -195,15 +184,12 @@ export class BaseTableComponent implements AfterViewInit {
 
   // 刷新复选框状态
   refreshCheckStatus(): void {
-    let allChecked = this._dataList().length > 0 && this._dataList().every((item) => this.isItemSelected(item));
-    let indeterminateChecked = this._dataList().length > 0 && this._dataList().some((item) => this.isItemSelected(item)) && !allChecked;
+    const allChecked = this._dataList().length > 0 && this._dataList().every(item => this.isItemSelected(item));
+    const indeterminateChecked = this._dataList().length > 0 && this._dataList().some(item => this.isItemSelected(item)) && !allChecked;
     this._allChecked.set(allChecked);
     this._indeterminateChecked.set(indeterminateChecked);
   }
 
-
-  ngOnInit(): void {
-  }
-  ngAfterViewInit(): void {
-  }
+  ngOnInit(): void {}
+  ngAfterViewInit(): void {}
 }

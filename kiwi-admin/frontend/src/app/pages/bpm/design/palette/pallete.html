@@ -1,54 +1,45 @@
 <div class="bpm-pallete">
-    <div class="bpm-pallete__search">
-        <nz-input-group nzPrefixIcon="search" nzSize="small">
-            <input
-                type="text"
-                nz-input
-                placeholder="搜索"
-                [ngModel]="searchQuery()"
-                (ngModelChange)="searchQuery.set($event)"
-            />
-        </nz-input-group>
-    </div>
-    @if (filteredPalleteTabs().length === 0 && searchQuery().trim()) {
+  <div class="bpm-pallete__search">
+    <nz-input-group nzPrefixIcon="search" nzSize="small">
+      <input type="text" nz-input placeholder="搜索" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+    </nz-input-group>
+  </div>
+  @if (filteredPalleteTabs().length === 0 && searchQuery().trim()) {
     <div class="bpm-pallete__empty">无匹配项</div>
-    } @else {
+  } @else {
     <nz-tabs>
-        @for (item of filteredPalleteTabs(); track item.providerIndex) {
+      @for (item of filteredPalleteTabs(); track item.providerIndex) {
         <nz-tab [nzTitle]="item.name">
-            <div class="bpm-pallete__collapse-scroll">
-                <nz-collapse>
-                    @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
-
-                    <nz-collapse-panel [nzHeader]="group.group" nzShowArrow="true" nzActive>
-                        <div class="palette-items">
-                            @for (paletteItem of group.palettes; let paletteIndex = $index; track paletteIndex) {
-                            <button
-                                type="button"
-                                nz-button
-                                nzType="dashed"
-                                class="palette-item"
-                                draggable="true"
-                                nz-tooltip
-                                [nzTooltipTitle]="paletteItem.title"
-                                (dragstart)="onDragStart($event, item.providerIndex, paletteItem)"
-                                (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
-                            >
-                                <span class="palette-item__icon" aria-hidden="true">
-                                    <span [class]="paletteItem.icon"></span>
-                                </span>
-                                <span class="palette-item__name">{{ paletteItem.title }}</span>
-                            </button>
-                            }
-                        </div>
-                    </nz-collapse-panel>
-
+          <div class="bpm-pallete__collapse-scroll">
+            <nz-collapse>
+              @for (group of item.paletteGroup; let groupIndex = $index; track $index) {
+                <nz-collapse-panel nzActive nzShowArrow="true" [nzHeader]="group.group">
+                  <div class="palette-items">
+                    @for (paletteItem of group.palettes; let paletteIndex = $index; track paletteIndex) {
+                      <button
+                        class="palette-item"
+                        type="button"
+                        draggable="true"
+                        nz-button
+                        nz-tooltip
+                        nzType="dashed"
+                        [nzTooltipTitle]="paletteItem.title"
+                        (click)="onPaletteItemClick($event, item.providerIndex, paletteItem)"
+                        (dragstart)="onDragStart($event, item.providerIndex, paletteItem)"
+                      >
+                        <span class="palette-item__icon" aria-hidden="true">
+                          <span [class]="paletteItem.icon"></span>
+                        </span>
+                        <span class="palette-item__name">{{ paletteItem.title }}</span>
+                      </button>
                     }
-                </nz-collapse>
-            </div>
+                  </div>
+                </nz-collapse-panel>
+              }
+            </nz-collapse>
+          </div>
         </nz-tab>
-        }
+      }
     </nz-tabs>
-    }
-
+  }
 </div>

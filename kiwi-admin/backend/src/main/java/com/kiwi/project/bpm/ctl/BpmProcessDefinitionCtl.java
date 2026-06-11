@@ -9,16 +9,17 @@ import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmProcess;
 import com.kiwi.project.bpm.service.BpmComponentService;
+import com.kiwi.project.bpm.service.BpmOwnershipAccessService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
 import com.kiwi.project.bpm.service.BpmProcessIoAnalysisService;
 import com.kiwi.project.bpm.service.BpmProcessStartService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.repository.DeploymentBuilder;
-import org.camunda.bpm.engine.repository.DeploymentWithDefinitions;
-import org.camunda.bpm.engine.repository.ProcessDefinition;
-import org.camunda.bpm.engine.rest.dto.runtime.ProcessInstanceDto;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.repository.DeploymentBuilder;
+import org.operaton.bpm.engine.repository.DeploymentWithDefinitions;
+import org.operaton.bpm.engine.repository.ProcessDefinition;
+import org.operaton.bpm.engine.rest.dto.runtime.ProcessInstanceDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -62,6 +63,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     private final BpmComponentService bpmComponentService;
     private final ProcessEngine processEngine;
     private final BpmProcessStartService bpmProcessStartService;
+    private final BpmOwnershipAccessService bpmOwnershipAccessService;
 
 
     @Data
@@ -76,6 +78,9 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     {
         @QueryField(condition = QueryField.Type.EQ, value = "projectId")
         private String projectId;
+
+        @QueryField(condition = QueryField.Type.EQ, value = "createdBy")
+        private String createdBy;
     }
 
     @Data
@@ -125,7 +130,9 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @GetMapping()
     @ResponseBody
     public Page<BpmProcess> page(QueryInput queryInput, Pageable pageable) {
-        return this.bpmProcessDefinitionDao.findBy(QueryParams.of(queryInput), pageable);
+        QueryInput query = queryInput != null ? queryInput : new QueryInput();
+        applyOwnershipFilterToQuery(query);
+        return this.bpmProcessDefinitionDao.findBy(QueryParams.of(query), pageable);
     }
 
     @Operation(
@@ -149,6 +156,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @GetMapping("{id}")
     @ResponseBody
     public BpmProcess getProcessDefinition(@PathVariable String id) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         return this.bpmProcessDefinitionDao.findById(id).orElseThrow();
     }
 
@@ -156,6 +164,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @DeleteMapping("{id}")
     @ResponseBody
     public void deleteProcessDefinition(@PathVariable String id) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         this.bpmProcessDefinitionDao.deleteById(id);
     }
 
@@ -166,6 +175,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @GetMapping("{id}/as-component")
     @ResponseBody
     public BpmComponent getProcessAsComponent(@PathVariable String id) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess process = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         return this.bpmProcessIoAnalysisService.wrapProcessAsComponent(process);
     }
@@ -194,9 +204,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @PostMapping("{id}/save-as-component")
     @ResponseBody
     public BpmComponent saveAsComponent(@PathVariable String id, @RequestBody SaveAsComponentInput body) {
-//        if (body == null || StringUtils.isBlank(body.getKey()) || StringUtils.isBlank(body.getName())) {
-//            throw new IllegalArgumentException("key 与 name 不能为空");
-//        }
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess process = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         BpmComponent toSave = this.bpmProcessIoAnalysisService.wrapProcessAsComponent(process);
         toSave.setName(body.getName());
@@ -224,6 +232,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @PutMapping("{id}")
     @ResponseBody
     public BpmProcess saveProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess bpmProcess = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
 
         if( saveInput.name != null ) {
@@ -268,14 +277,15 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     }
 
     @Operation(operationId = "bpmPd_saveAs", summary = "将流程另存为新 id 的流程")
-    @PostMapping("{id}/saveAs")
+    @PostMapping("{id}/save-as")
     @ResponseBody
     public BpmProcess saveAsProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess src = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         BpmProcess bpmProcess = new BpmProcess();
         bpmProcess.setId(getNewProcessId());
         bpmProcess.setName(saveInput.name);
-        bpmProcess.setBpmnXml(saveInput.bpmnXml);
+        bpmProcess.setBpmnXml(saveInput.bpmnXml != null ? saveInput.bpmnXml : src.getBpmnXml());
         updateIdAndName(bpmProcess);
         bpmProcess.setCreatedBy(getCurrentUserId());
         bpmProcess.setCreatedTime(new Date());
@@ -287,6 +297,7 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @PostMapping("{id}/clone")
     @ResponseBody
     public BpmProcess cloneProcessDefinition(@PathVariable String id, @RequestBody CloneInput cloneInput) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess src = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         BpmProcess bpmProcess = new BpmProcess();
         bpmProcess.setId(getNewProcessId());
@@ -303,11 +314,12 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @PostMapping("{id}/deploy")
     @ResponseBody
     public BpmProcess deployProcessDefinition(@PathVariable String id) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess bpmProcess = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         DeploymentBuilder deploymentBuilder = processEngine.getRepositoryService().createDeployment();
         deploymentBuilder.name(bpmProcess.getName());
         deploymentBuilder.addString(bpmProcess.getName() + ".bpmn", bpmProcess.getBpmnXml());
-//        deploymentBuilder.tenantId(bpmProcess.getCreatedBy());
+        deploymentBuilder.tenantId(bpmProcess.getCreatedBy());
         deploymentBuilder.source(BpmProcessDefinitionService.XBPM);
         DeploymentWithDefinitions deploymentWithDefinitions = deploymentBuilder.deployWithResult();
         ProcessDefinition processDefinition = deploymentWithDefinitions.getDeployedProcessDefinitions().get(0);
@@ -323,9 +335,18 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @PostMapping("{id}/start")
     @ResponseBody
     public ProcessInstanceDto startProcessDefinition(@PathVariable String id, @RequestBody(required = false) StartProcessInput body) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         Map<String, Object> variables = body != null ? body.getVariables() : null;
         return this.bpmProcessStartService.start(id, variables);
     }
 
+    private void applyOwnershipFilterToQuery(QueryInput queryInput) {
+        if (queryInput == null) {
+            return;
+        }
+        if (!bpmOwnershipAccessService.isBpmAdmin()) {
+            queryInput.setCreatedBy(getCurrentUserId());
+        }
+    }
 
 }

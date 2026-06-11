@@ -1,7 +1,7 @@
-import  BpmnModeler  from 'bpmn-js/lib/Modeler';
-import { Element } from 'bpmn-js/lib/model/Types';
-import { Observable } from "rxjs";
+import { Observable } from 'rxjs';
 
+import BpmnModeler from 'bpmn-js/lib/Modeler';
+import { Element } from 'bpmn-js/lib/model/Types';
 
 type PaletteItem = {
   title: string;
@@ -15,13 +15,12 @@ type PaletteItem = {
   eventDefinitionType?: string;
 } & {
   [additionalProperties: string]: any;
-}
+};
 
 declare interface PaletteGroup {
   group: string;
   palettes: PaletteItem[];
 }
-
 
 /**
  * A palette provider for BPMN 2.0 elements.
@@ -34,8 +33,4 @@ declare interface PaletteProvider {
   getPaletteGroup(): Observable<PaletteGroup[]> | PaletteGroup[];
 }
 
-
 export type { PaletteProvider, PaletteGroup, PaletteItem };
-
-
-

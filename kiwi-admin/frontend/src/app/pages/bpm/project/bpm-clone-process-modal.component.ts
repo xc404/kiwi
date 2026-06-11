@@ -1,8 +1,9 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
+
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 
 export interface BpmCloneProcessModalData {
   defaultName: string;
@@ -18,7 +19,7 @@ export interface BpmCloneProcessModalData {
       <p class="bpm-clone-process-dialog__hint">将复制当前流程的 BPMN 定义，生成一条新的流程记录。</p>
       <div class="bpm-clone-process-dialog__field">
         <div class="bpm-clone-process-dialog__label">新流程名称</div>
-        <input nz-input name="cloneProcessName" [(ngModel)]="name" placeholder="请输入名称" />
+        <input name="cloneProcessName" nz-input placeholder="请输入名称" [(ngModel)]="name" />
       </div>
     </div>
   `,
@@ -37,8 +38,8 @@ export interface BpmCloneProcessModalData {
       .bpm-clone-process-dialog__label {
         font-size: 14px;
       }
-    `,
-  ],
+    `
+  ]
 })
 export class BpmCloneProcessModalComponent implements OnInit {
   private readonly message = inject(NzMessageService);

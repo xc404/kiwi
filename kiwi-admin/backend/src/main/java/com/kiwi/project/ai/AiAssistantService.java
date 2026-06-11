@@ -93,15 +93,14 @@ public class AiAssistantService {
             retryMessages.add(new AssistantMessage(content != null ? content : ""));
             retryMessages.add(new UserMessage(BPM_DESIGNER_RETRY_USER));
 
-            ChatOptions retryOptions = null;
+            ToolCallingChatOptions.Builder retryOptionsBuilder = null;
             String lastUser = lastUserMessageText(springMessages);
             if (lastUser != null && !BPM_DESIGNER_NEEDS_SOURCE_PROCESS.matcher(lastUser).find()) {
-                retryOptions = ToolCallingChatOptions.builder()
-                        .build();
+                retryOptionsBuilder = ToolCallingChatOptions.builder();
             }
 
             assistantClientActionContext.beginRequest();
-            String retryContent = callAssistant(systemPrompt, retryMessages, retryOptions);
+            String retryContent = callAssistant(systemPrompt, retryMessages, retryOptionsBuilder);
             List<ClientAction> retryActions = assistantClientActionContext.drainActions();
             if (!retryActions.isEmpty()) {
                 content = retryContent;
@@ -120,13 +119,14 @@ public class AiAssistantService {
         return out;
     }
 
-    private String callAssistant(String systemPrompt, List<Message> messages, @Nullable ChatOptions options) {
+    private String callAssistant(
+            String systemPrompt, List<Message> messages, @Nullable ChatOptions.Builder<?> optionsBuilder) {
         var spec = kiwiAssistantChatClientProvider.getObject()
                 .prompt()
                 .system(systemPrompt)
                 .messages(messages);
-        if (options != null) {
-            spec = spec.options(options);
+        if (optionsBuilder != null) {
+            spec = spec.options(optionsBuilder);
         }
         return spec.call().content();
     }

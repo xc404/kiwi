@@ -1,52 +1,60 @@
 <div class="juel-expression-editor">
   @if (!readonly()) {
-  <nz-input-wrapper class="juel-expression-editor__inline">
-    <input nz-input type="text" [ngModel]="inlineText()" (ngModelChange)="onInlineChange($event)" autocomplete="off"
-      spellcheck="false" />
-    <nz-icon nzType="code" nzInputAddonAfter nzTheme="outline" (click)="openModal()" />
-  </nz-input-wrapper>
+    <nz-input-wrapper class="juel-expression-editor__inline">
+      <input type="text" autocomplete="off" nz-input spellcheck="false" [ngModel]="inlineText()" (ngModelChange)="onInlineChange($event)" />
+      <nz-icon nzInputAddonAfter nzTheme="outline" nzType="code" (click)="openModal()" />
+    </nz-input-wrapper>
 
-  <nz-modal [nzVisible]="modalVisible()" nzTitle="编辑 JUEL 表达式" [nzWidth]="720" nzOkText="确定" nzCancelText="取消"
-    [nzMaskClosable]="false" (nzOnCancel)="modalVisible.set(false)" (nzVisibleChange)="onModalVisibleChange($event)"
-    (nzAfterOpen)="onModalAfterOpen()" (nzOnOk)="onModalOk()">
-    <ng-container *nzModalContent>
-      <div class="juel-expression-editor__modal-body">
-        <div class="juel-expression-editor__toolbar">
-          <button nz-button nzType="dashed" nzSize="small" type="button" nz-dropdown [nzDropdownMenu]="varMenu">
-            <nz-icon nzType="apartment" nzTheme="outline" />
-            插入变量
-          </button>
-          <nz-dropdown-menu #varMenu="nzDropdownMenu">
-            <ul nz-menu>
-              @for (v of variables(); track v.key) {
-              <li nz-menu-item (click)="insertVariableRef(v)">
-                <code>{{ v.key }}</code>
-                <span class="juel-expression-editor__hint">{{ variableHint(v) }}</span>
-              </li>
-              }
-              @if (variables().length === 0) {
-              <li nz-menu-item nzDisabled>暂无可用变量</li>
-              }
-            </ul>
-          </nz-dropdown-menu>
+    <nz-modal
+      nzCancelText="取消"
+      nzOkText="确定"
+      nzTitle="编辑 JUEL 表达式"
+      [nzMaskClosable]="false"
+      [nzVisible]="modalVisible()"
+      [nzWidth]="720"
+      (nzAfterOpen)="onModalAfterOpen()"
+      (nzOnCancel)="modalVisible.set(false)"
+      (nzOnOk)="onModalOk()"
+      (nzVisibleChange)="onModalVisibleChange($event)"
+    >
+      <ng-container *nzModalContent>
+        <div class="juel-expression-editor__modal-body">
+          <div class="juel-expression-editor__toolbar">
+            <button type="button" nz-button nz-dropdown nzSize="small" nzType="dashed" [nzDropdownMenu]="varMenu">
+              <nz-icon nzTheme="outline" nzType="apartment" />
+              插入变量
+            </button>
+            <nz-dropdown-menu #varMenu="nzDropdownMenu">
+              <ul nz-menu>
+                @for (v of variables(); track v.key) {
+                  <li nz-menu-item (click)="insertVariableRef(v)">
+                    <code>{{ v.key }}</code>
+                    <span class="juel-expression-editor__hint">{{ variableHint(v) }}</span>
+                  </li>
+                }
+                @if (variables().length === 0) {
+                  <li nz-menu-item nzDisabled>暂无可用变量</li>
+                }
+              </ul>
+            </nz-dropdown-menu>
 
-          <button nz-button nzType="dashed" nzSize="small" type="button" nz-dropdown [nzDropdownMenu]="juelMenu">
-            <nz-icon nzType="function" nzTheme="outline" />
-            插入 JUEL
-          </button>
-          <nz-dropdown-menu #juelMenu="nzDropdownMenu">
-            <ul nz-menu>
-              @for (s of snippets; track s.label) {
-              <li nz-menu-item (click)="insertText(s.insert)">{{ s.label }}</li>
-              }
-            </ul>
-          </nz-dropdown-menu>
+            <button type="button" nz-button nz-dropdown nzSize="small" nzType="dashed" [nzDropdownMenu]="juelMenu">
+              <nz-icon nzTheme="outline" nzType="function" />
+              插入 JUEL
+            </button>
+            <nz-dropdown-menu #juelMenu="nzDropdownMenu">
+              <ul nz-menu>
+                @for (s of snippets; track s.label) {
+                  <li nz-menu-item (click)="insertText(s.insert)">{{ s.label }}</li>
+                }
+              </ul>
+            </nz-dropdown-menu>
+          </div>
+          <div #modalHost class="juel-expression-editor__cm"></div>
         </div>
-        <div #modalHost class="juel-expression-editor__cm"></div>
-      </div>
-    </ng-container>
-  </nz-modal>
+      </ng-container>
+    </nz-modal>
   } @else {
-  <div class="juel-expression-editor__readonly-fallback">{{ displayReadonlyValue() }}</div>
+    <div class="juel-expression-editor__readonly-fallback">{{ displayReadonlyValue() }}</div>
   }
 </div>

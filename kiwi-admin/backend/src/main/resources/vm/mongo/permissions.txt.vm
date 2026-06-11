@@ -1,0 +1,4 @@
+${permissionPrefix}:view
+${permissionPrefix}:add
+${permissionPrefix}:update
+${permissionPrefix}:delete

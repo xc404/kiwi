@@ -1,12 +1,9 @@
 package ${packageName}.dao;
 
-import com.kiwi.framework.mongo.BaseMongoRepository;
-import ${packageName}.${ClassName};
-import org.springframework.data.mongodb.repository.DeleteQuery;
-import org.springframework.data.mongodb.repository.Query;
+import com.kiwi.common.mongo.BaseMongoRepository;
+import ${packageName}.entity.${ClassName};
+import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
-public interface ${ClassName}Dao extends BaseMongoRepository<${ClassName}, String>
-{
+@Repository
+public interface ${ClassName}Dao extends BaseMongoRepository<${ClassName}, String> {
 }

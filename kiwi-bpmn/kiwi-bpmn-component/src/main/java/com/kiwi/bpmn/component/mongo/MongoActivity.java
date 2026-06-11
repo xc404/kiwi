@@ -1,6 +1,6 @@
 package com.kiwi.bpmn.component.mongo;
 
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -8,8 +8,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
-import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
+import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;

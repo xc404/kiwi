@@ -1,6 +1,8 @@
 package com.kiwi.project.system.ctl;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.system.dao.SysUserDao;
 import com.kiwi.project.system.entity.SysUser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,8 +19,9 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/system/user")
+@SaCheckLogin
 @Tag(name = "系统用户", description = "用户 CRUD")
-public class SysUserCtl {
+public class SysUserCtl extends BaseCtl {
     @Autowired
     private SysUserDao sysUserDao;
 
@@ -47,6 +50,7 @@ public class SysUserCtl {
     @PutMapping("/{id}")
     @SaCheckPermission("sa:user:update")
     public SysUser update(@PathVariable("id") String id, @RequestBody SysUser user) {
+        user.setId(id);
         sysUserDao.updateSelective(user);
         return user;
     }

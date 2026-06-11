@@ -16,12 +16,13 @@
  */
 package com.kiwi.bpmn.external.config;
 
-import org.camunda.bpm.client.spring.impl.subscription.SpringTopicSubscriptionImpl;
-import org.camunda.bpm.client.spring.impl.subscription.SubscriptionConfiguration;
-
+import org.operaton.bpm.client.ExternalTaskClient;
+import org.operaton.bpm.client.spring.impl.subscription.SpringTopicSubscriptionImpl;
+import org.operaton.bpm.client.spring.impl.subscription.SubscriptionConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.function.Predicate;
 
@@ -30,8 +31,13 @@ public class PropertiesAwareSpringTopicSubscription extends SpringTopicSubscript
   @Autowired
   protected ClientProperties clientProperties;
 
+  public PropertiesAwareSpringTopicSubscription(
+          ExternalTaskClient client, ApplicationEventPublisher applicationEventPublisher) {
+    super(client, applicationEventPublisher);
+  }
+
   @Override
-  public void afterPropertiesSet() throws Exception {
+  public void afterPropertiesSet() {
     mergeSubscriptionWithProperties();
     super.afterPropertiesSet();
   }

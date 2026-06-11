@@ -1,9 +1,9 @@
 package com.kiwi.bpmn.core.async;
 
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
-import org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin;
-import org.camunda.bpm.spring.boot.starter.configuration.Ordering;
+import org.operaton.bpm.engine.ProcessEngine;
+import org.operaton.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.operaton.bpm.engine.impl.cfg.ProcessEnginePlugin;
+import org.operaton.bpm.spring.boot.starter.configuration.Ordering;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Order(Ordering.DEFAULT_ORDER + 10)
-@ConditionalOnProperty(prefix = "kiwi.bpm", name = "default-async-before-enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "kiwi.bpm", name = "default-async-before-enabled", havingValue = "true", matchIfMissing = true)
 public class DefaultAsyncBeforeProcessEnginePlugin implements ProcessEnginePlugin {
 
     @Override

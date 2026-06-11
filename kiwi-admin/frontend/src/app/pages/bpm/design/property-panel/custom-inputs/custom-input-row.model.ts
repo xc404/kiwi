@@ -1,1 +1,4 @@
-export type CustomInputRow = { name: string; valueText: string };
+export interface CustomInputRow {
+  name: string;
+  valueText: string;
+}

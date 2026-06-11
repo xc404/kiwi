@@ -1,0 +1,35 @@
+# 复制为 application-local.yml（已 .gitignore），按环境改值即可；与 application.yml 中 ${VAR:default} 对应。
+# 启动：--spring.profiles.active=local,dev
+# 使用 profile redis 时再配置 SPRING_DATA_REDIS_* 与 KIWI_SA_TOKEN_STORAGE=redis
+
+SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/kiwi?createDatabaseIfNotExist=true&nullCatalogMeansCurrent=true
+SPRING_DATASOURCE_USERNAME: root
+SPRING_DATASOURCE_PASSWORD: change-me
+
+SPRING_DATA_MONGODB_URI: mongodb://127.0.0.1:27017/kiwi?authSource=admin&retryWrites=false
+SPRING_DATA_MONGODB_DATABASE: kiwi
+
+SPRING_DATA_REDIS_HOST: 127.0.0.1
+SPRING_DATA_REDIS_PORT: 6379
+SPRING_DATA_REDIS_DATABASE: 1
+SPRING_DATA_REDIS_PASSWORD:
+
+APP_CORS_ALLOWED_ORIGINS: http://localhost:4201,http://localhost:8000
+APP_PASSWORD_SECRET: change-me-generate-a-long-random-secret
+
+KIWI_SA_TOKEN_STORAGE: mongodb
+KIWI_INIT_ADMIN_USERNAME: admin
+KIWI_INIT_ADMIN_PASSWORD: change-me-local-admin-password
+KIWI_INIT_ADMIN_NICK_NAME: Administrator
+
+OPERATON_ADMIN_USER: demo
+OPERATON_ADMIN_PASSWORD: change-me
+
+KIWI_BPM_SLURM_ENABLED: false
+KIWI_BPM_SLURM_WORK_DIRECTORY:
+KIWI_BPM_EXTERNAL_TASK_LOCK_DURATION: 10000
+KIWI_BPM_EXTERNAL_TASK_WORKER_ID: kiwi-admin
+
+DEEPSEEK_API_KEY:
+
+MONGOCK_TRANSACTIONAL: false

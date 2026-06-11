@@ -1,15 +1,15 @@
 import { inject, Injectable } from '@angular/core';
+
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import type { Element } from 'bpmn-js/lib/model/Types';
-import {
-  ComponentDescription,
-} from '../../flow-elements/component-provider';
+
+import { ComponentDescription } from '../../flow-elements/component-provider';
 import { ComponentService } from '../../flow-elements/component-service';
 import { ElementModel } from '../extension/element-model';
 import { PropertyNamespace } from '../property-panel/types';
 
 function catalogOutputKeys(component: ComponentDescription | undefined): Set<string> {
-  return new Set((component?.outputParameters ?? []).map((p) => p.key));
+  return new Set((component?.outputParameters ?? []).map(p => p.key));
 }
 
 /** 上下文菜单：原地替换 ServiceTask 业务组件并合并参数 */
@@ -68,35 +68,17 @@ export class BpmEditorReplaceService {
 
     const inputParams = newComponent.inputParameters ?? [];
     for (const p of inputParams) {
-      this.elementModel.setValue(
-        modeler,
-        element,
-        PropertyNamespace.inputParameter,
-        p.key,
-        p.defaultValue ?? '',
-      );
+      this.elementModel.setValue(modeler, element, PropertyNamespace.inputParameter, p.key, p.defaultValue ?? '');
     }
     for (const p of inputParams) {
       if (!preservedInputs.has(p.key)) {
         continue;
       }
-      this.elementModel.setValue(
-        modeler,
-        element,
-        PropertyNamespace.inputParameter,
-        p.key,
-        preservedInputs.get(p.key)!,
-      );
+      this.elementModel.setValue(modeler, element, PropertyNamespace.inputParameter, p.key, preservedInputs.get(p.key)!);
     }
 
     for (const [name, valueText] of customOutputs.entries()) {
-      this.elementModel.setValue(
-        modeler,
-        element,
-        PropertyNamespace.outputParameter,
-        name,
-        valueText,
-      );
+      this.elementModel.setValue(modeler, element, PropertyNamespace.outputParameter, name, valueText);
     }
   }
 }

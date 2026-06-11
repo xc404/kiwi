@@ -4,10 +4,9 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import com.kiwi.common.tree.TreeNode;
 import com.kiwi.common.tree.Tree;
-import com.kiwi.framework.permission.PermissionService;
+import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.framework.session.SessionService;
 import com.kiwi.framework.session.SessionUser;
-import com.kiwi.project.system.dao.SysMenuDao;
 import com.kiwi.project.system.entity.SysMenu;
 import com.kiwi.project.system.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,10 +28,11 @@ import java.util.stream.Collectors;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "认证与当前用户", description = "登录、用户信息、菜单与权限")
-public class AuthCtl {
+public class AuthCtl extends BaseCtl {
+    @Data
     public static class LoginInput {
-        public String userName;
-        public String password;
+        private String userName;
+        private String password;
     }
 
     @Data
@@ -43,15 +43,13 @@ public class AuthCtl {
 
     private final SessionService sessionService;
     private final MenuService menuService;
-    private final PermissionService permissionService;
-    private final SysMenuDao sysMenuDao;
 
     @Operation(operationId = "auth_signin", summary = "用户登录（返回 Sa-Token）")
     @PostMapping("/auth/signin")
     @ResponseBody
     public LoginOutput signin(@RequestBody LoginInput input) {
-        String username = input.userName;
-        this.sessionService.login(username, input.password);
+        String username = input.getUserName();
+        this.sessionService.login(username, input.getPassword());
 
         return new LoginOutput(StpUtil.getTokenValue());
     }
@@ -85,7 +83,7 @@ public class AuthCtl {
         }
 
         Set<String> menus = sessionService.getRoles().stream().map(role -> role.getMenuIds())
-                .flatMap(menuIds -> menuIds.stream()).collect(Collectors.toSet());
+                .flatMap(Set::stream).collect(Collectors.toSet());
         visibleMenus = visibleMenus.stream().filter(menu -> menus.contains(menu.getId())).toList();
         return Tree.build(visibleMenus).getByParentId(SysMenu.Root);
     }

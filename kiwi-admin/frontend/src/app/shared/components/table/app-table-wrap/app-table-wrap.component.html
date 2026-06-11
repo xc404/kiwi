@@ -8,7 +8,7 @@
     @if (actions) {
       <div class="ant-pro-table-toolbar-option">
         @for (item of actions; track $index) {
-          <app-button  [config]="item" class="m-l-10"></app-button>
+          <app-button class="m-l-10" [config]="item"></app-button>
         }
       </div>
     }
@@ -87,7 +87,7 @@
 <ng-template #popoverTitle>
   <div class="space-between">
     <span>
-      @if(currentTableComponent().tableConfig().showCheckbox){
+      @if (currentTableComponent().tableConfig().showCheckbox) {
         <!-- <label nz-checkbox [(nzChecked)]="currentTableComponent().tableConfig().showCheckbox" (nzCheckedChange)="changeTableCheckBoxShow($event)">勾选列</label> -->
       }
       <label nz-checkbox [nzIndeterminate]="allTableFieldIndeterminate" [(nzChecked)]="allTableFieldChecked" (nzCheckedChange)="changeAllTableTableConfigShow($event)">列展示</label>

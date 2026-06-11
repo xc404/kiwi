@@ -1,54 +1,45 @@
-import { Component, computed, input } from "@angular/core";
-import { FormGroup, ReactiveFormsModule } from "@angular/forms";
-import { FormlyFieldConfig, FormlyModule } from "@ngx-formly/core";
+import { Component, computed, input } from '@angular/core';
+import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+
+import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 
 @Component({
-    selector: 'app-formly-panel',
-    templateUrl: './form-panel.html',
-    styleUrls: ['./form-panel.css'],
-    standalone: true,
-    imports: [
-        FormlyModule,
-        ReactiveFormsModule
-    ]
+  selector: 'app-formly-panel',
+  templateUrl: './form-panel.html',
+  styleUrls: ['./form-panel.css'],
+  standalone: true,
+  imports: [FormlyModule, ReactiveFormsModule]
 })
 export class FormPanel {
+  form = input<FormGroup>(new FormGroup({}));
 
+  model = input({} as any);
 
-    form = input<FormGroup>(new FormGroup({}));
+  fields = input<FormlyFieldConfig[]>([]);
 
-    model = input({} as any);
+  wrapper = input<string>('edit-form');
 
-    fields = input<FormlyFieldConfig[]>([]);
+  columns = input(1);
 
-    wrapper = input<string>('edit-form');
-
-
-    columns = input(1);
-
-
-    layoutFields = computed(() => {
-
-        this.fields().forEach(field => {
-            field.wrappers = [this.wrapper()];
-        });
-
-        return [
-            {
-
-                fieldGroupClassName: 'ant-row app-formly-panel-row',
-                fieldGroup: this.fields().map(field => {
-                    let className = (field.className || '') + ' ant-col-' + (24 / this.columns());
-                    if (this.columns() > 1) {
-                        className += ' padding-right-24';
-                    }
-                    console.log(field.className, className);
-                    return {
-                        ...field,
-                        className: className
-                    }
-                })
-            }
-        ]
+  layoutFields = computed(() => {
+    this.fields().forEach(field => {
+      field.wrappers = [this.wrapper()];
     });
+
+    return [
+      {
+        fieldGroupClassName: 'ant-row app-formly-panel-row',
+        fieldGroup: this.fields().map(field => {
+          let className = `${field.className || ''} ant-col-${24 / this.columns()}`;
+          if (this.columns() > 1) {
+            className += ' padding-right-24';
+          }
+          return {
+            ...field,
+            className: className
+          };
+        })
+      }
+    ];
+  });
 }

@@ -34,7 +34,7 @@ import java.util.stream.Stream;
  * MCP Server 工具来源：各 {@link RestController} 上 {@link Operation}（{@code operationId} + {@code summary}）→ OpenAPI 扫描。
  * <p>
  * {@code assistant_navigate}、{@code assistant_designer_*} 等写 {@link com.kiwi.project.ai.AssistantClientActionContext}
- * 的工具由 {@link KiwiAssistantInProcessToolsConfiguration} 挂在 {@code kiwiChatClient} 进程内执行，不在此注册。
+ * 的工具由 {@link KiwiAssistantInProcessToolsFactory} 挂在 {@code kiwiChatClient} 进程内执行，不在此注册。
  * 再经 {@link McpToolUtils#toSyncToolSpecifications(ToolCallback...)} 转为 MCP 规格。
  */
 @Configuration

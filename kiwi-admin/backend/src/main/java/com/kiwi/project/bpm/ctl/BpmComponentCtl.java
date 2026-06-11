@@ -9,8 +9,13 @@ import com.kiwi.project.bpm.service.BpmComponentRecentUsageService;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.utils.CliHelpExecutionException;
 import com.kiwi.project.bpm.utils.CliHelpParser;
+import com.kiwi.project.bpm.utils.ElementTemplateExporter;
+import com.kiwi.project.bpm.utils.ElementTemplateImporter;
+import com.kiwi.project.bpm.utils.JdbcSchemaComponentGenerator;
 import com.kiwi.project.bpm.utils.OpenApiComponentGenerator;
 import com.kiwi.project.bpm.utils.OpenApiSpecFetcher;
+import com.kiwi.project.bpm.service.BpmComponentBundleService;
+import com.kiwi.project.tools.jdbc.connection.service.ConnectionService;
 import org.apache.commons.lang3.StringUtils;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.AllArgsConstructor;
@@ -31,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,6 +55,8 @@ public class BpmComponentCtl extends BaseCtl
     private final BpmComponentDao bpmComponentDao;
     private final BpmComponentService bpmComponentService;
     private final BpmComponentRecentUsageService bpmComponentRecentUsageService;
+    private final BpmComponentBundleService bpmComponentBundleService;
+    private final ConnectionService connectionService;
 
     /**
      * 不落库：从当前用户已保存流程的 BPMN 中按需解析「最近使用的组件」；
@@ -142,13 +150,11 @@ public class BpmComponentCtl extends BaseCtl
     @ResponseBody
     public List<ComponentGroup> getComponentsGrouped() {
         Map<String, List<BpmComponent>> map = bpmComponentDao.findAll().stream()
-                .map(c -> {
-                    return this.bpmComponentService.fillComponentProperties(c);
-                })
+                .map(bpmComponentService::fillComponentProperties)
                 .collect(Collectors.groupingBy(BpmComponent::getGroup));
-        return map.entrySet().stream().map(e -> {
-            return new ComponentGroup(e.getKey(), e.getValue());
-        }).toList();
+        return map.entrySet().stream()
+                .map(e -> new ComponentGroup(e.getKey(), e.getValue()))
+                .toList();
     }
 
     @Data
@@ -260,6 +266,36 @@ public class BpmComponentCtl extends BaseCtl
      * 组件继承 {@code httpRequest}（{@link com.kiwi.bpmn.component.activity.HttpRequestActivity}）父定义，仅覆盖
      * url、method、headers、body 等默认值。
      */
+    /**
+     * 根据 {@code jdbc-connections} 中已保存连接的表结构，为每张表生成 5 个继承 {@code jdbcActivity} 的 CRUD 子组件草稿。
+     */
+    @Operation(
+            operationId = "bpmComp_fromJdbcSchema",
+            summary = "根据 JDBC 连接表结构生成 CRUD 类 BPM 组件草稿列表",
+            description = "每张表生成 get / list / insert / update / delete 五个子组件；connectionId 为工具模块 JDBC 连接 id。")
+    @PostMapping("from-jdbc-schema")
+    @ResponseBody
+    public List<BpmComponent> generateFromJdbcSchema(@RequestBody JdbcSchemaGenerateRequest request) {
+        if (request == null || StringUtils.isBlank(request.getConnectionId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "connectionId 不能为空");
+        }
+        if (request.getTables() == null || request.getTables().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tables 不能为空");
+        }
+        String parentId = bpmComponentService.resolveJdbcParentComponentId();
+        try (var connection = connectionService.getConnection(request.getConnectionId().trim())) {
+            return JdbcSchemaComponentGenerator.buildComponents(
+                    connection,
+                    request.getConnectionId().trim(),
+                    request.getTables(),
+                    parentId);
+        } catch (java.sql.SQLException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "读取表结构失败: " + e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
     @Operation(operationId = "bpmComp_fromOpenApi", summary = "根据 OpenAPI/Swagger 文档生成 HTTP 类 BPM 组件草稿列表")
     @PostMapping("from-openapi")
     @ResponseBody
@@ -310,6 +346,74 @@ public class BpmComponentCtl extends BaseCtl
         private String sourceKey;
     }
 
+    @Operation(operationId = "bpmComp_exportElementTemplate", summary = "导出组件为 Camunda 8 Element Template JSON")
+    @GetMapping("{id}/element-template")
+    @ResponseBody
+    public String exportElementTemplate(@PathVariable String id) {
+        BpmComponent comp = bpmComponentDao.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "组件不存在: " + id));
+        return ElementTemplateExporter.exportJson(bpmComponentService.fillComponentProperties(comp));
+    }
+
+    @Operation(operationId = "bpmComp_importElementTemplate", summary = "从 Camunda 8 Element Template JSON 导入组件草稿")
+    @PostMapping("from-element-template")
+    @ResponseBody
+    public List<BpmComponent> importElementTemplate(@RequestBody ElementTemplateImportRequest request) {
+        if (request == null || StringUtils.isBlank(request.getTemplate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "template 不能为空");
+        }
+        String parentId = StringUtils.trimToNull(request.getParentId());
+        if (parentId == null && request.isInheritHttpRequest()) {
+            parentId = bpmComponentService.resolveHttpRequestParentComponentId();
+        }
+        try {
+            return ElementTemplateImporter.importMany(request.getTemplate(), parentId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        }
+    }
+
+    @Operation(operationId = "bpmComp_listPlugins", summary = "列出已安装的组件插件 JAR")
+    @GetMapping("plugins")
+    @ResponseBody
+    public List<String> listPlugins() {
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_uploadPlugin", summary = "上传组件插件 JAR 并热加载")
+    @PostMapping("plugins/upload")
+    @ResponseBody
+    public List<String> uploadPlugin(@RequestParam("file") MultipartFile file) {
+        bpmComponentBundleService.uploadJar(file);
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_reloadPlugins", summary = "重新扫描插件目录并同步组件库")
+    @PostMapping("plugins/reload")
+    @ResponseBody
+    public List<String> reloadPlugins() {
+        bpmComponentBundleService.reload();
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_deletePlugin", summary = "卸载组件插件 JAR 并同步组件库")
+    @DeleteMapping("plugins/{fileName}")
+    @ResponseBody
+    public List<String> deletePlugin(@PathVariable String fileName) {
+        bpmComponentBundleService.deleteJar(fileName);
+        return bpmComponentBundleService.listInstalled();
+    }
+
+    @Data
+    public static class ElementTemplateImportRequest {
+        /** Element Template JSON（单对象或数组） */
+        private String template;
+        /** 可选父组件 id */
+        private String parentId;
+        /** true 时自动继承 httpRequest 父组件 */
+        private boolean inheritHttpRequest;
+    }
+
     @Data
     public static class OpenApiGenerateRequest {
         /**
@@ -326,6 +430,14 @@ public class BpmComponentCtl extends BaseCtl
          * 与 path 拼接为默认 {@code url} 参数。
          */
         private String baseUrl;
+    }
+
+    @Data
+    public static class JdbcSchemaGenerateRequest {
+        /** 工具模块 {@code jdbc-connections} 中的连接 id */
+        private String connectionId;
+        /** 要生成 CRUD 子组件的表名列表 */
+        private List<String> tables;
     }
 
 }

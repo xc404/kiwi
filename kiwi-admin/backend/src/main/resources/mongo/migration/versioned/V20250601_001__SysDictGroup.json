@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sys_user_sex",
+    "groupCode": "sys_user_sex",
+    "groupName": "用户性别",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "sys_normal_disable",
+    "groupCode": "sys_normal_disable",
+    "groupName": "系统开关",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "user_status",
+    "groupCode": "user_status",
+    "groupName": "用户状态",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  }
+]

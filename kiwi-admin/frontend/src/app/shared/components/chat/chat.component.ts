@@ -1,34 +1,16 @@
 import { NgClass } from '@angular/common';
-import {
-  Component,
-  OnInit,
-  ChangeDetectionStrategy,
-  ElementRef,
-  OnDestroy,
-  ChangeDetectorRef,
-  inject,
-  output,
-  viewChild,
-  computed,
-  input,
-  signal,
-  DestroyRef,
-  effect
-} from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, OnDestroy, ChangeDetectorRef, inject, output, viewChild, computed, input, signal, DestroyRef, effect } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { from, of } from 'rxjs';
 import { catchError, finalize, switchMap, tap } from 'rxjs/operators';
 
-import { ThemeService } from '@store/common-store/theme.service';
 import { AiChatMessage, AiChatService } from '@services/ai-chat/ai-chat.service';
-import {
-  AiChatConversation,
-  AiConversationScope,
-  AiConversationService
-} from '@services/ai-chat/ai-conversation.service';
-import { AssistantActionOrchestratorService } from '@shared/ai-assistant/assistant-action-orchestrator.service';
+import { AiChatConversation, AiConversationScope, AiConversationService } from '@services/ai-chat/ai-conversation.service';
 import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
+import { AssistantActionOrchestratorService } from '@shared/ai-assistant/assistant-action-orchestrator.service';
+import { MarkdownPipe } from '@shared/pipes/markdown.pipe';
+import { ThemeService } from '@store/common-store/theme.service';
 
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -68,7 +50,8 @@ const CHAT_PANEL_DEFAULT_HEIGHT = 560;
     FormsModule,
     ReactiveFormsModule,
     NzInputModule,
-    NgClass
+    NgClass,
+    MarkdownPipe
   ]
 })
 export class ChatComponent implements OnInit, OnDestroy {
@@ -79,9 +62,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   readonly embed = input(false);
   readonly defaultOpen = input(false);
   readonly actionHandlers = input<AssistantActionHandler[]>([]);
-  readonly messagesEnricher = input<
-    ((messages: AiChatMessage[]) => AiChatMessage[] | Promise<AiChatMessage[]>) | undefined
-  >(undefined);
+  readonly messagesEnricher = input<((messages: AiChatMessage[]) => AiChatMessage[] | Promise<AiChatMessage[]>) | undefined>(undefined);
   readonly conversationScope = input<AiConversationScope>('global');
   readonly scopeRef = input<string | undefined>(undefined);
 
@@ -188,8 +169,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   scrollToBottom(): void {
     setTimeout(() => {
       try {
-        this.myScrollContainer().nativeElement.scrollTop =
-          this.myScrollContainer().nativeElement.scrollHeight;
+        this.myScrollContainer().nativeElement.scrollTop = this.myScrollContainer().nativeElement.scrollHeight;
       } catch (err) {
         console.error(err);
       }

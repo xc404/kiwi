@@ -4,11 +4,11 @@ import com.kiwi.bpmn.core.retry.IRetry;
 import com.kiwi.bpmn.core.retry.JobRetryExceptionClassifier;
 import com.kiwi.bpmn.core.retry.JobRetryFailureSupport;
 import com.kiwi.bpmn.core.retry.RetryPlan;
-import org.camunda.bpm.client.task.ExternalTask;
-import org.camunda.bpm.engine.impl.bpmn.parser.FailedJobRetryConfiguration;
-import org.camunda.bpm.engine.impl.calendar.DurationHelper;
-import org.camunda.bpm.engine.impl.util.ClockUtil;
-import org.camunda.bpm.engine.impl.util.ParseUtil;
+import org.operaton.bpm.client.task.ExternalTask;
+import org.operaton.bpm.engine.impl.bpmn.parser.FailedJobRetryConfiguration;
+import org.operaton.bpm.engine.impl.calendar.DurationHelper;
+import org.operaton.bpm.engine.impl.util.ClockUtil;
+import org.operaton.bpm.engine.impl.util.ParseUtil;
 
 import java.util.Date;
 import java.util.List;

@@ -16,9 +16,9 @@ import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
 import { NzTableSize } from 'ng-zorro-antd/table';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 import { AntTableComponentToken, TableHeader } from '../table/ant-table/ant-table.component';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 interface TableSizeItem {
   sizeName: string;

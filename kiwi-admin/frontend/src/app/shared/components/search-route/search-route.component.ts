@@ -7,9 +7,9 @@ import { fromEvent, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 
 import { Menu } from '@core/services/types';
+import { BasicConfirmModalComponent } from '@shared/modal/base-modal';
 import { MenuStoreService } from '@store/common-store/menu-store.service';
 import { ThemeService } from '@store/common-store/theme.service';
-import { BasicConfirmModalComponent } from '@shared/modal/base-modal';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
@@ -197,5 +197,5 @@ export class SearchRouteComponent extends BasicConfirmModalComponent implements 
     this.resultListFactory();
   }
 
-  override getCurrentValue(): NzSafeAny { }
+  override getCurrentValue(): NzSafeAny {}
 }

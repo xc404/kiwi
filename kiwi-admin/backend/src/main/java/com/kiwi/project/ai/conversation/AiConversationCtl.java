@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "AI 会话", description = "AI 助手历史会话持久化")
 @RestController
 @RequestMapping("/ai/conversations")
+@SaCheckLogin
 @RequiredArgsConstructor
 public class AiConversationCtl extends BaseCtl {
 
@@ -48,7 +49,6 @@ public class AiConversationCtl extends BaseCtl {
     }
 
     @Operation(operationId = "ai_conversation_page", summary = "分页查询当前用户会话")
-    @SaCheckLogin
     @GetMapping("")
     public Page<AiChatConversation> page(
             @RequestParam(required = false) String scope,
@@ -65,28 +65,24 @@ public class AiConversationCtl extends BaseCtl {
     }
 
     @Operation(operationId = "ai_conversation_get", summary = "获取会话详情（含消息）")
-    @SaCheckLogin
     @GetMapping("/{id}")
     public AiChatConversation get(@PathVariable String id) {
         return conversationService.get(id, requireUserId(), hasAudit());
     }
 
     @Operation(operationId = "ai_conversation_create", summary = "创建会话")
-    @SaCheckLogin
     @PostMapping("")
     public AiChatConversation create(@RequestBody CreateConversationRequest body) {
         return conversationService.create(requireUserId(), body != null ? body : new CreateConversationRequest());
     }
 
     @Operation(operationId = "ai_conversation_update", summary = "更新会话（标题或消息 append/replace）")
-    @SaCheckLogin
     @PutMapping("/{id}")
     public AiChatConversation update(@PathVariable String id, @RequestBody UpdateConversationRequest body) {
         return conversationService.update(id, requireUserId(), body != null ? body : new UpdateConversationRequest());
     }
 
     @Operation(operationId = "ai_conversation_delete", summary = "删除会话")
-    @SaCheckLogin
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
         conversationService.delete(id, requireUserId());

@@ -1,14 +1,12 @@
 import type { Router } from '@angular/router';
-import BpmnModeler from 'bpmn-js/lib/Modeler';
-import type { NzMessageService } from 'ng-zorro-antd/message';
 
 import type { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
+import BpmnModeler from 'bpmn-js/lib/Modeler';
+
+import type { NzMessageService } from 'ng-zorro-antd/message';
 
 import type { BpmEditorToken } from '../editor/bpm-editor-token';
-import type {
-  BpmSaveAsComponentModalData,
-  SaveAsComponentFormPayload,
-} from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
+import type { BpmSaveAsComponentModalData, SaveAsComponentFormPayload } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
 
 /** 与后端 AssistantDesignerTools.DEFAULT_TOOLBAR_COMMANDS 对齐 */
 export const BPM_AI_TOOLBAR_COMMAND_IDS = [
@@ -26,7 +24,7 @@ export const BPM_AI_TOOLBAR_COMMAND_IDS = [
   'start',
   'saveAsComponent',
   'exportXml',
-  'exportSvg',
+  'exportSvg'
 ] as const;
 
 export type BpmDesignerToolbarGroup = 'tools' | 'edit' | 'view' | 'file';

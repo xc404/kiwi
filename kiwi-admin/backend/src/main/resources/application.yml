@@ -1,18 +1,13 @@
 server:
-  port: 8000
-  servlet:
-    encoding:
-      charset: UTF-8
-      enabled: true
-
+  port: 8080
 # CORS：逗号分隔；对全站及 Camunda /engine-rest 生效；生产环境务必配置为实际前端 Origin，勿使用 *
-# AI 对话：Spring AI Alibaba DashScope（通义）；密钥见 KIWI_AI_API_KEY 或 DASHSCOPE_API_KEY
+# AI 对话：Spring AI DeepSeek；密钥见 KIWI_AI_API_KEY 或 DEEPSEEK_API_KEY
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
-    # 助手 ChatClient 回环 MCP 的 HTTP 基址；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
+    # 助手 ChatClient 回环 MCP 的 HTTP 基址（须含 context-path）；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
     mcp:
-      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8000}}
+      loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8080}${server.servlet.context-path:}}
       # WebServer 已开始监听后再触发 MCP 回环 warmup，避免启动早期 ConnectException / SSE connection error
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
@@ -27,6 +22,27 @@ kiwi:
     session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_SESSION_TIMEOUT_SECONDS:${KIWI_INTEGRATION_API_TOKEN_TIMEOUT:31536000}}
     # 单次兑换所得 Sa-Token 会话有效期（秒）
     exchange-session-timeout-seconds: ${KIWI_PERSONAL_ACCESS_TOKEN_EXCHANGE_SESSION_TIMEOUT:7200}
+  mongodb:
+    migration:
+      enabled: ${KIWI_MONGODB_MIGRATION_ENABLED:true}
+      json:
+        entity-base-package: com.kiwi.project.system.entity
+        versioned-location: classpath:mongo/migration/versioned/
+        repeatable-location: classpath:mongo/migration/repeatable/
+        changelog-collection: kiwi_json_migration
+    init:
+      admin-username: ${KIWI_INIT_ADMIN_USERNAME:admin}
+      admin-password: ${KIWI_INIT_ADMIN_PASSWORD:}
+      admin-nick-name: ${KIWI_INIT_ADMIN_NICK_NAME:Administrator}
+
+mongock:
+  migration-scan-package:
+    - com.kiwi.framework.mongo.migration.primary
+  # 显式关闭 Mongock 原生事务（Mongock 5.5+ 推荐始终配置 transactional）：
+  # - 本地单机 Mongo 无副本集，无法使用多文档事务；
+  # - 同时存在 JDBC 时，驱动可能误根据 PlatformTransactionManager 推断可事务，导致 rollback 二次提交异常。
+  # 生产副本集需事务时可设 MONGOCK_TRANSACTIONAL=true。
+  transactional: ${MONGOCK_TRANSACTIONAL:false}
 
 app:
   cors:
@@ -45,14 +61,12 @@ spring:
     # 由 SaTokenDaoConfiguration 按 kiwi.sa-token.storage 注册唯一 SaTokenDao；mongodb 为默认时不启用 Redis
     exclude:
       - cn.dev33.satoken.dao.SaTokenDaoForRedisTemplate
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   ai:
-    dashscope:
-      api-key: ${KIWI_AI_API_KEY:${DASHSCOPE_API_KEY:}}
+    deepseek:
+      api-key: ${KIWI_AI_API_KEY:${DEEPSEEK_API_KEY:}}
       chat:
         options:
-          model: ${KIWI_AI_MODEL:qwen-plus}
+          model: ${KIWI_AI_MODEL:deepseek-chat}
     # MCP Server（WebMVC + SSE）：端点见 spring.ai.mcp.server.*
     mcp:
       server:
@@ -60,33 +74,33 @@ spring:
         name: ${SPRING_AI_MCP_SERVER_NAME:kiwi-admin}
         version: ${SPRING_AI_MCP_SERVER_VERSION:1.0.0}
         instructions: "Kiwi 管理后台 MCP：字典与页面导航等工具。HTTP 调用请携带与 API 相同的登录 Token（Authorization: Bearer ...）。"
+        # 与 server.servlet.context-path 对齐，否则 SSE 下发的 message 端点缺少前缀，本机回环 initialize 会失败（spring-ai#2512）
+        base-url: ${SPRING_AI_MCP_SERVER_BASE_URL:${server.servlet.context-path:}}
         # SSE：事件流路径 + JSON-RPC POST 路径（与 Spring AI WebMvc SSE 约定一致；若与运行版本不符请用环境变量覆盖）
         sse-endpoint: ${SPRING_AI_MCP_SERVER_SSE_ENDPOINT:/sse}
         sse-message-endpoint: ${SPRING_AI_MCP_SERVER_SSE_MESSAGE_ENDPOINT:/message}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/bpm?&nullCatalogMeansCurrent=true}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/kiwi?&nullCatalogMeansCurrent=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:change-me}
     type: com.zaxxer.hikari.HikariDataSource
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/x404?authSource=admin}
-      database: ${SPRING_DATA_MONGODB_DATABASE:x404}
+      # 单机 Mongo 非副本集：默认 retryWrites=false，避免事务/可重试写与部署能力不匹配
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://127.0.0.1:27017/kiwi?authSource=admin&retryWrites=false}
+      database: ${SPRING_DATA_MONGODB_DATABASE:kiwi}
       auto-index-creation: true
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
 
-# CryoEMS 业务 Mongo（MovieResult 等与 cryo-web-server 共用库）
 
-cryoems:
-  mongodb:
-    uri: ${CRYOEMS_MONGODB_URI:mongodb://127.0.0.1:27017/cryoems?authSource=admin}
-    database: ${CRYOEMS_MONGODB_DATABASE:cryoems}
-    auto-index-creation: true
-
-camunda.bpm:
+operaton.bpm:
   admin-user:
-    id: ${CAMUNDA_ADMIN_USER:demo}
-    password: ${CAMUNDA_ADMIN_PASSWORD:change-me}
+    id: ${OPERATON_ADMIN_USER:demo}
+    password: ${OPERATON_ADMIN_PASSWORD:change-me}
     firstName: Demo
   filter:
     create: All tasks
@@ -95,27 +109,41 @@ camunda.bpm:
   # 流程变量对象的默认序列化格式：JSON（Jackson，via Camunda Spin）
   # 切换后：setVariable("xxx", pojo) 不再要求 Serializable，避免 ENGINE-02042
   # 注意：已存在的 Java 序列化历史变量仍按写入时的格式反序列化；只影响新写入
-  # 回退：环境变量设 CAMUNDA_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
-  default-serialization-format: ${CAMUNDA_DEFAULT_SERIALIZATION_FORMAT:application/json}
+  # 回退：环境变量设 OPERATON_DEFAULT_SERIALIZATION_FORMAT=application/x-java-serialized-object
+  default-serialization-format: ${OPERATON_DEFAULT_SERIALIZATION_FORMAT:application/json}
   generic-properties:
     properties:
       skip-isolation-level-check: true
       historyTimeToLive: P15D
       # 未捕获的 BpmnError 时抛 ProcessEngineException，而非按「none end」静默结束（ACT_HI_PROCINST 易为 COMPLETED）
-      # 关闭：环境变量 CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
-      enableExceptionsAfterUnhandledBpmnError: ${CAMUNDA_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
+      # 关闭：环境变量 OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR=false
+      enableExceptionsAfterUnhandledBpmnError: ${OPERATON_ENABLE_EXCEPTIONS_AFTER_UNHANDLED_BPMN_ERROR:true}
       # 异步 Job（async 延续、定时器等）失败时的全局重试策略（ISO 8601）；BPMN 上 camunda:failedJobRetryTimeCycle 可覆盖本项
-      failedJobRetryTimeCycle: ${CAMUNDA_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
+      failedJobRetryTimeCycle: ${OPERATON_FAILED_JOB_RETRY_TIME_CYCLE:R3/PT1M}
 
 # Camunda JUEL：在 SpringExpressionManager 解析链末尾追加容错（缺失流程变量 → null，不影响 ${assignmentActivity} 等 Bean）
 # 关闭以恢复严格模式：kiwi.bpm.juel-null-for-missing-variables=false
 kiwi.bpm:
+  # 是否对外暴露 Operaton /engine-rest HTTP（Jersey）；默认关闭，仅调试/遗留集成时显式开启
+  engine-rest-http-enabled: ${KIWI_BPM_ENGINE_REST_HTTP_ENABLED:false}
   juel-null-for-missing-variables: ${KIWI_BPM_JUEL_NULL_FOR_MISSING_VARIABLES:true}
   # BPM 全局变量：通过 Bean ${bpmGlobalVariables.<field>} 暴露给 BPMN EL（网关条件、Service Task 输入参数等）
   # 字段定义见 com.kiwi.cryoems.bpm.config.BpmGlobalVariables；新增字段时 yml 用 kebab-case，Java 用 camelCase
   global:
     mdoc-auto-filter-enabled: ${KIWI_BPM_MDOC_AUTO_FILTER_ENABLED:false}
     manual-rebuild-enabled: ${KIWI_BPM_MANUAL_REBUILD_ENABLED:true}
+  # Slurm 外部任务（sbatch、sacct/Mongo 跟踪）；local 中配置 KIWI_BPM_SLURM_*，无 Slurm 集群时可设 KIWI_BPM_SLURM_ENABLED=false
+  slurm:
+    enabled: ${KIWI_BPM_SLURM_ENABLED:true}
+    work-directory: ${KIWI_BPM_SLURM_WORK_DIRECTORY:}
+
+# BPM 组件库：classpath 自动部署、插件 JAR 目录
+bpm:
+  component:
+    auto-deploy: ${BPM_COMPONENT_AUTO_DEPLOY:true}
+    delete-not-exist: ${BPM_COMPONENT_DELETE_NOT_EXIST:true}
+    plugins-enabled: ${BPM_COMPONENT_PLUGINS_ENABLED:true}
+    plugins-dir: ${BPM_COMPONENT_PLUGINS_DIR:plugins}
 
 # External Task 统一重试（AbstractExternalTaskHandler）：默认开启；单节点周期见 BPMN extensionElements/camunda:failedJobRetryTimeCycle
 # kiwi.bpm.external-task-retry:

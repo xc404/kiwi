@@ -10,7 +10,7 @@
       <nz-form-item>
         <nz-form-label nzFor="nickName" nzSpan="24">昵称</nz-form-label>
         <nz-form-control nzSpan="24">
-          <input id="nickName" formControlName="nickName" nz-input maxlength="64" placeholder="昵称" />
+          <input id="nickName" formControlName="nickName" maxlength="64" nz-input placeholder="昵称" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
@@ -37,13 +37,13 @@
       </nz-form-item>
       <nz-form-item>
         <nz-form-label nzFor="avatar" nzSpan="24">头像地址</nz-form-label>
-        <nz-form-control nzSpan="24" nzExtra="填写可访问的图片 URL，或相对 API 根路径的资源路径。">
+        <nz-form-control nzExtra="填写可访问的图片 URL，或相对 API 根路径的资源路径。" nzSpan="24">
           <input id="avatar" formControlName="avatar" nz-input placeholder="例如 /upload/avatar.png" />
         </nz-form-control>
       </nz-form-item>
       <nz-form-item nz-row>
         <nz-form-control [nzSpan]="14">
-          <button nz-button nzType="primary" [nzLoading]="submitting" [disabled]="submitting">更新基本信息</button>
+          <button nz-button nzType="primary" [disabled]="submitting" [nzLoading]="submitting">更新基本信息</button>
         </nz-form-control>
       </nz-form-item>
     </form>

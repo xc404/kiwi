@@ -1,0 +1,31 @@
+# Docker Compose 快速体验：--spring.profiles.active=docker
+# Camunda 使用内嵌 H2；MongoDB 指向 compose 服务 mongodb
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/docker-bpm;MODE=MySQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    username: sa
+    password:
+    type: com.zaxxer.hikari.HikariDataSource
+  data:
+    mongodb:
+      uri: mongodb://mongodb:27017/kiwi?authSource=admin&retryWrites=false
+
+app:
+  cors:
+    allowed-origins: http://localhost:8080,http://127.0.0.1:8080
+
+kiwi:
+  ai:
+    enabled: false
+  mongodb:
+    init:
+      admin-password: ${KIWI_INIT_ADMIN_PASSWORD:kiwi-demo}
+
+operaton.bpm:
+  admin-user:
+    password: ${OPERATON_ADMIN_PASSWORD:demo}

@@ -17,25 +17,20 @@
 package com.kiwi.bpmn.component.activity;
 
 import com.kiwi.common.process.ProcessHelper;
-import com.kiwi.bpmn.component.utils.ExecutionUtils;
+import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
-import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.camunda.bpm.engine.delegate.JavaDelegate;
-import org.camunda.bpm.engine.impl.ProcessEngineLogger;
-import org.camunda.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
-import org.camunda.bpm.engine.impl.bpmn.behavior.BpmnBehaviorLogger;
-import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
-import org.camunda.commons.utils.IoUtil;
+import org.operaton.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.delegate.JavaDelegate;
+import org.operaton.bpm.engine.impl.ProcessEngineLogger;
+import org.operaton.bpm.engine.impl.bpmn.behavior.BpmnBehaviorLogger;
+import org.operaton.commons.utils.IoUtil;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -65,13 +60,12 @@ public class ShellActivityBehavior implements JavaDelegate
     public void execute(DelegateExecution execution) {
 
         String commandStr = ExecutionUtils.getStringInputVariable(execution, "command").orElseThrow(() -> new IllegalArgumentException("Missing required input variable: command"));
-        List<String> argList = new ArrayList<String>(Arrays.stream(commandStr.split(" ")).toList());
         Boolean waitFlag = ExecutionUtils.getBooleanInputVariable(execution, "waitFlag").orElse(true);
         boolean redirectErrorFlag = ExecutionUtils.getBooleanInputVariable(execution, "redirectError").orElse(false);
         Boolean cleanEnv = ExecutionUtils.getBooleanInputVariable(execution, "cleanEnv").orElse(false);
         String directoryStr = ExecutionUtils.getStringInputVariable(execution, "directory").orElse(null);
 
-        ProcessBuilder processBuilder = new ProcessBuilder(argList);
+        ProcessBuilder processBuilder = buildShellProcessBuilder(commandStr);
 
         try {
             processBuilder.redirectErrorStream(redirectErrorFlag);
@@ -102,9 +96,17 @@ public class ShellActivityBehavior implements JavaDelegate
 
     }
 
-    public static String convertStreamToStr(InputStream is) throws IOException {
+    public static String convertStreamToStr(InputStream is) {
 
         return IoUtil.inputStreamAsString(is);
+    }
+
+    private static ProcessBuilder buildShellProcessBuilder(String commandStr) {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        if (os.contains("win")) {
+            return new ProcessBuilder("cmd.exe", "/c", commandStr);
+        }
+        return new ProcessBuilder("sh", "-c", commandStr);
     }
 
 

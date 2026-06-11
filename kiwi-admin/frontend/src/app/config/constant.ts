@@ -30,9 +30,8 @@ export const SideNavWidth = 208; // 如果修改，请同步修改@left-nav-widt
 // Collapsed状态下左侧菜单的宽度
 export const CollapsedNavWidth = 48; // 如果修改，请同步修改@collapsed-nav-width的值
 
-export const successCode = [1] 
+export const successCode = [1];
 
 export const curd_page_size_options = [10, 20, 50, 100, 200];
 
-export const  crud_form_mode = "form"; // 表单模式, record 数据模式；
-
+export const crud_form_mode = 'form'; // 表单模式, record 数据模式；

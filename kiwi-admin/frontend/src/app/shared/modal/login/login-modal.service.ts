@@ -1,10 +1,9 @@
 import { inject, Injectable, Type } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { ModalResponse, ModalWrapService } from '../base-modal';
-
 import { ModalOptions } from 'ng-zorro-antd/modal';
 
+import { ModalResponse, ModalWrapService } from '../base-modal';
 import { LoginModalComponent } from './login-modal.component';
 @Injectable({
   providedIn: 'root'

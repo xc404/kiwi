@@ -4,6 +4,7 @@ import { map, Observable } from 'rxjs';
 // import { MENU_TOKEN } from '@config/menu';
 import { Menu } from '@core/services/types';
 import { BaseHttpService } from '@services/base-http.service';
+
 import { UserInfo } from '../../store/common-store/userInfo-store.service';
 // import { MenusService } from '@services/system/menus.service';
 
@@ -15,7 +16,6 @@ export interface UserLogin {
 export interface LoginOutput {
   token: string;
 }
-
 
 @Injectable({
   providedIn: 'root'
@@ -33,9 +33,10 @@ export class LoginService {
   }
 
   public getUserMenus(): Observable<Menu[]> {
-    return this.http.get(`/auth/menus`).pipe(map((result: any) => {
-      return result.content;
-    })
+    return this.http.get(`/auth/menus`).pipe(
+      map((result: any) => {
+        return result.content;
+      })
     );
   }
 
@@ -44,8 +45,10 @@ export class LoginService {
   }
 
   public getUserPermissions(): Observable<string[]> {
-    return this.http.get('/auth/permissions').pipe(map((result: any) => {
-      return result.content;
-    }));
+    return this.http.get('/auth/permissions').pipe(
+      map((result: any) => {
+        return result.content;
+      })
+    );
   }
 }
