@@ -84,7 +84,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   processMeta = computed((): BpmProcess | null => this.bpmProcess());
 
-  stackIdx = undefined;
+  stackIdx: number | undefined = undefined;
   commandStack: any;
 
   constructor() {

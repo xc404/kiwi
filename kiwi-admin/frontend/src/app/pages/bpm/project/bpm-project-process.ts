@@ -21,7 +21,6 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
 import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
-import { BpmProjectEnv } from './bpm-project-env';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 import { ProcessDesignService } from '../design/service/process-design.service';
 import type { BpmProcess } from '../types/bpm-process';
@@ -87,7 +86,7 @@ interface BpmProjectOption {
       </nz-tabs>
     </section>
   `,
-  imports: [PageHeaderComponent, CrudPage, BpmProjectEnv, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule, NzTabsModule],
+  imports: [PageHeaderComponent, CrudPage, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule, NzTabsModule],
   styleUrls: ['./bpm-project-process.less'],
   encapsulation: ViewEncapsulation.None
 })
