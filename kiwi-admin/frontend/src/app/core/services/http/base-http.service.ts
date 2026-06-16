@@ -4,7 +4,7 @@ import { Observable, of } from 'rxjs';
 import { filter, map, switchMap } from 'rxjs/operators';
 
 import { Utils } from '@app/utils/utils';
-import { successCode } from '@config/constant';
+import { successCode, warningCode } from '@config/constant';
 import { environment } from '@env/environment';
 import { SpinService } from '@store/common-store/spin.service';
 import * as qs from 'qs';
@@ -33,6 +33,7 @@ export class BaseHttpService {
   message = inject(NzMessageService);
   spinService = inject(SpinService);
   successCode = successCode;
+  warningCode = warningCode;
   protected constructor() {
     this.uri = environment.api.baseUrl;
   }
@@ -119,7 +120,7 @@ export class BaseHttpService {
           return this.handleFilter(item, config);
         }),
         map(item => {
-          if (!this.successCode.includes(item.code)) {
+          if (!this.isOkCode(item.code)) {
             throw new Error(item.msg);
           }
           return item.data;
@@ -132,12 +133,18 @@ export class BaseHttpService {
     if (config.showLoading) {
       this.spinService.$globalSpinStore.set(false);
     }
-    if (!this.successCode.includes(item.code)) {
+    if (!this.isOkCode(item.code)) {
       this.message.error(item.msg);
+    } else if (this.warningCode.includes(item.code) && item.msg?.trim()) {
+      this.message.warning(item.msg.trim());
     } else if (config.needSuccessInfo) {
       this.message.success('操作成功');
     }
     return true;
+  }
+
+  private isOkCode(code: number): boolean {
+    return this.successCode.includes(code) || this.warningCode.includes(code);
   }
 
   before(config: HttpCustomConfig): Observable<boolean> {

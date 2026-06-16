@@ -147,11 +147,12 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     }
     return new Promise(resolve => {
       this.bpmnModeler.saveXML({ format: true }).then((bpmn: any) => {
-        this.processDefinitionService.updateProcess(this.bpmProcess()!.id!, { bpmnXml: bpmn.xml }).subscribe((data: BpmProcess) => {
-          this.bpmProcess.set(data);
-          this.stackIdx = stackIdx;
-          this.refreshRecentComponentUsages();
-          resolve(data);
+        const sentXml = bpmn.xml as string;
+        this.processDefinitionService.updateProcess(this.bpmProcess()!.id!, { bpmnXml: sentXml }).subscribe((data: BpmProcess) => {
+          void this.applySavedProcess(data, stackIdx, sentXml).then(saved => {
+            this.refreshRecentComponentUsages();
+            resolve(saved);
+          });
         });
       });
     });
@@ -184,12 +185,12 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
           new Promise<void>((resolve, reject) => {
             this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
               next: (data: BpmProcess) => {
-                this.bpmProcess.set(data);
-                this.stackIdx = this.commandStack._stackIdx;
-                this.refreshRecentComponentUsages();
-                const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
-                canvas.resized?.();
-                resolve();
+                void this.applySavedProcess(data, this.commandStack._stackIdx, bpmn.xml).then(() => {
+                  this.refreshRecentComponentUsages();
+                  const canvas = this.bpmnModeler.get('canvas') as { resized?: () => void };
+                  canvas.resized?.();
+                  resolve();
+                });
               },
               error: (err: unknown) => reject(err)
             });
@@ -220,9 +221,11 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         return Promise.resolve(this.bpmProcess());
       }
       return new Promise(resolve => {
+        const beforeXml = (this.bpmProcess()?.bpmnXml ?? '').trim();
         this.processDefinitionService.deployProcess(this.bpmProcess()!.id!).subscribe((data: BpmProcess) => {
-          this.bpmProcess.set(data);
-          resolve(data);
+          void this.applySavedProcess(data, this.commandStack._stackIdx, beforeXml).then(saved => {
+            resolve(saved);
+          });
         });
       });
     });
@@ -242,6 +245,24 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
           this.bpmProcess.set(null);
         }
       });
+  }
+
+  private applySavedProcess(data: BpmProcess, stackIdx?: number, sentXml?: string): Promise<BpmProcess> {
+    this.bpmProcess.set(data);
+    if (stackIdx !== undefined) {
+      this.stackIdx = stackIdx;
+    }
+    const serverXml = (data.bpmnXml ?? '').trim();
+    const normalizedSent = (sentXml ?? '').trim();
+    if (!serverXml || !normalizedSent || serverXml === normalizedSent) {
+      return Promise.resolve(data);
+    }
+    return importBpmnXmlToModeler(this.bpmnModeler, serverXml, this.message, () => this.clearSelection(), {
+      notifySuccess: false
+    }).then(() => {
+      this.syncLocalBpmnXml(serverXml);
+      return data;
+    });
   }
 
   private refreshRecentComponentUsages(): void {

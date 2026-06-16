@@ -38,13 +38,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import com.kiwi.framework.web.response.RWarning;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
-import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.getNewProcessId;
-import static com.kiwi.project.bpm.service.BpmProcessDefinitionService.updateIdAndName;
 
 
 @SaCheckLogin
@@ -231,13 +229,12 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @Operation(operationId = "bpmPd_save", summary = "保存流程名称与 BPMN XML")
     @PutMapping("{id}")
     @ResponseBody
-    public BpmProcess saveProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
+    public Object saveProcessDefinition(@PathVariable String id, @RequestBody SaveInput saveInput) {
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess bpmProcess = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
 
         if( saveInput.name != null ) {
             bpmProcess.setName(saveInput.name);
-            updateIdAndName(bpmProcess);
         }
         if( saveInput.bpmnXml != null ) {
             bpmProcess.setBpmnXml(saveInput.bpmnXml);
@@ -255,7 +252,15 @@ public class BpmProcessDefinitionCtl extends BaseCtl
             bpmProcess.setEntry(saveInput.entry);
         }
 
+        boolean identityCorrected = false;
+        if( saveInput.name != null || saveInput.bpmnXml != null ) {
+            identityCorrected = this.bpmProcessDefinitionService.syncBpmnIdentity(bpmProcess);
+        }
+
         this.bpmProcessDefinitionDao.updateSelective(bpmProcess);
+        if( identityCorrected ) {
+            return RWarning.of(bpmProcess, BpmProcessDefinitionService.BpmnIdentityCorrectedMsg);
+        }
         return bpmProcess;
     }
 
@@ -283,10 +288,10 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess src = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         BpmProcess bpmProcess = new BpmProcess();
-        bpmProcess.setId(getNewProcessId());
+        bpmProcess.setId(this.bpmProcessDefinitionService.getNewProcessId());
         bpmProcess.setName(saveInput.name);
         bpmProcess.setBpmnXml(saveInput.bpmnXml != null ? saveInput.bpmnXml : src.getBpmnXml());
-        updateIdAndName(bpmProcess);
+        this.bpmProcessDefinitionService.syncBpmnIdentity(bpmProcess);
         bpmProcess.setCreatedBy(getCurrentUserId());
         bpmProcess.setCreatedTime(new Date());
         return this.bpmProcessDefinitionDao.save(bpmProcess);
@@ -300,11 +305,11 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess src = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
         BpmProcess bpmProcess = new BpmProcess();
-        bpmProcess.setId(getNewProcessId());
+        bpmProcess.setId(this.bpmProcessDefinitionService.getNewProcessId());
         bpmProcess.setName(cloneInput.name);
         bpmProcess.setBpmnXml(src.getBpmnXml());
         bpmProcess.setProjectId(src.getProjectId());
-        updateIdAndName(bpmProcess);
+        this.bpmProcessDefinitionService.syncBpmnIdentity(bpmProcess);
         bpmProcess.setCreatedBy(getCurrentUserId());
         bpmProcess.setCreatedTime(new Date());
         return this.bpmProcessDefinitionDao.save(bpmProcess);
@@ -313,9 +318,10 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     @Operation(operationId = "bpmPd_deploy", summary = "部署流程到 Camunda 引擎")
     @PostMapping("{id}/deploy")
     @ResponseBody
-    public BpmProcess deployProcessDefinition(@PathVariable String id) {
+    public Object deployProcessDefinition(@PathVariable String id) {
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         BpmProcess bpmProcess = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
+        boolean identityCorrected = this.bpmProcessDefinitionService.syncBpmnIdentity(bpmProcess);
         DeploymentBuilder deploymentBuilder = processEngine.getRepositoryService().createDeployment();
         deploymentBuilder.name(bpmProcess.getName());
         deploymentBuilder.addString(bpmProcess.getName() + ".bpmn", bpmProcess.getBpmnXml());
@@ -327,6 +333,9 @@ public class BpmProcessDefinitionCtl extends BaseCtl
         bpmProcess.setDeployedAt(new Date());
         bpmProcess.setDeployedProcessDefinitionId(processDefinition.getId());
         this.bpmProcessDefinitionDao.save(bpmProcess);
+        if( identityCorrected ) {
+            return RWarning.of(bpmProcess, BpmProcessDefinitionService.BpmnIdentityCorrectedMsg);
+        }
         return bpmProcess;
 
     }

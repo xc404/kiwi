@@ -31,6 +31,8 @@ export const SideNavWidth = 208; // 如果修改，请同步修改@left-nav-widt
 export const CollapsedNavWidth = 48; // 如果修改，请同步修改@collapsed-nav-width的值
 
 export const successCode = [1];
+/** 与后端 {@link AppResultCode.Warning} 一致：成功但需 warning 提示 */
+export const warningCode = [2];
 
 export const curd_page_size_options = [10, 20, 50, 100, 200];
 
