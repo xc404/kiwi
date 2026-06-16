@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 /**
  */
 @ComponentDescription(
-        name = "赋值组件",
+        name = "变量组件",
         group = "通用",
         version = "1.0",
-        description = "赋值组件，通过自定义输出参数实现流程变量赋值",
+        description = "变量组件，通过自定义变量实现流程变量赋值",
         inputs = {},
         outputs = {})
 @Component("assignmentActivity")
