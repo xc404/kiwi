@@ -1,0 +1,51 @@
+[
+  {
+    "id": "sys_user_sex",
+    "groupCode": "sys_user_sex",
+    "groupName": "用户性别",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "sys_normal_disable",
+    "groupCode": "sys_normal_disable",
+    "groupName": "系统开关",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "user_status",
+    "groupCode": "user_status",
+    "groupName": "用户状态",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "field_editor",
+    "groupCode": "field_editor",
+    "groupName": "字段编辑器",
+    "status": "0",
+    "remark": "BPM 组件参数 htmlType / 表单编辑器类型"
+  },
+  {
+    "id": "system_menu_type",
+    "groupCode": "system_menu_type",
+    "groupName": "菜单类型",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  },
+  {
+    "id": "system_status",
+    "groupCode": "system_status",
+    "groupName": "系统状态",
+    "status": "0",
+    "remark": "字典分组等通用启用/停用"
+  },
+  {
+    "id": "menu_status",
+    "groupCode": "menu_status",
+    "groupName": "菜单状态",
+    "status": "0",
+    "remark": "Mongock 初始数据"
+  }
+]

@@ -46,6 +46,7 @@ public class InitAdminUserChangeUnit {
             return;
         }
         SysUser user = new SysUser();
+        user.setId(adminUsername);
         user.setUserName(adminUsername);
         user.setNickName(adminNickName);
         user.setPassword(passwordService.encodePassword(adminPassword));

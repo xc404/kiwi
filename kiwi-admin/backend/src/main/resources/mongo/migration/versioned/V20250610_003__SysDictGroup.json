@@ -1,9 +1,0 @@
-[
-  {
-    "id": "menu_status",
-    "groupCode": "menu_status",
-    "groupName": "菜单状态",
-    "status": "0",
-    "remark": "Mongock 初始数据"
-  }
-]

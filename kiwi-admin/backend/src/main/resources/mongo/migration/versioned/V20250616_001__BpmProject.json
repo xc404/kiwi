@@ -1,0 +1,10 @@
+{
+  "entity": "com.kiwi.project.bpm.model.BpmProject",
+  "records": [
+    {
+      "id": "default",
+      "name": "默认项目",
+      "createdBy": "admin"
+    }
+  ]
+}

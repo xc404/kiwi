@@ -2,6 +2,7 @@ package com.kiwi.framework.mongo.migration.json;
 
 import com.kiwi.common.entity.IdEntity;
 import com.kiwi.framework.mongo.migration.support.ClasspathJsonMigrationSupport;
+import com.kiwi.framework.mongo.migration.support.JsonMigrationPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -76,29 +77,24 @@ public class MongoJsonMigrationExecutor {
 
     private void applyScript(MongoJsonMigrationScript script) {
         String checksum = checksum(script.getResource());
-        applyScript(script, resolveEntityType(script.getEntitySimpleName()), checksum);
+        applyPayload(
+                script,
+                checksum,
+                jsonMigrationSupport.readPayload(
+                        script.getResource(),
+                        script.getEntitySimpleName(),
+                        properties.getEntityBasePackage()));
     }
 
-    private <T extends IdEntity<String>> void applyScript(
-            MongoJsonMigrationScript script, Class<T> entityType, String checksum) {
-        MongoRepository<T, String> repository = repositoryResolver.resolve(entityType);
-        jsonMigrationSupport.loadAndUpsert(script.getResource(), entityType, repository);
+    private <T extends IdEntity<String>> void applyPayload(
+            MongoJsonMigrationScript script, String checksum, JsonMigrationPayload<T> payload) {
+        MongoRepository<T, String> repository = repositoryResolver.resolve(payload.entityType());
+        jsonMigrationSupport.upsert(script.getResource().getDescription(), payload, repository);
         changelogService.recordSuccess(script, checksum);
-        log.info("Applied JSON migration {} ({})", script.getScriptKey(), script.getEntitySimpleName());
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T extends IdEntity<String>> Class<T> resolveEntityType(String entitySimpleName) {
-        String className = properties.getEntityBasePackage() + "." + entitySimpleName;
-        try {
-            Class<?> type = Class.forName(className);
-            if (!IdEntity.class.isAssignableFrom(type)) {
-                throw new IllegalStateException(className + " does not implement IdEntity");
-            }
-            return (Class<T>) type;
-        } catch (ClassNotFoundException ex) {
-            throw new IllegalStateException("Unknown migration entity class: " + className, ex);
-        }
+        log.info(
+                "Applied JSON migration {} ({})",
+                script.getScriptKey(),
+                payload.entityType().getName());
     }
 
     private List<MongoJsonMigrationScript> loadScripts(
