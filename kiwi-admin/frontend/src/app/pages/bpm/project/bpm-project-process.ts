@@ -78,9 +78,12 @@ interface BpmProjectOption {
         <nz-tab nzTitle="流程">
           <crud-page [pageConfig]="pageConfig"> </crud-page>
         </nz-tab>
-        <nz-tab nzTitle="环境变量">
-          <app-bpm-project-env [projectId]="projectId()" />
-        </nz-tab>
+        <!-- 环境变量 
+         <nz-tab nzTitle="环境变量">
+           <app-bpm-project-env [projectId]="projectId()" />
+         </nz-tab>
+
+         -->
       </nz-tabs>
     </section>
   `,
@@ -325,7 +328,7 @@ export class BpmProjectProcess implements OnInit {
     ],
     columnActions: [
       {
-        icon: 'right-square',
+        icon: 'deployment-unit',
         tooltip: '流程管理',
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
@@ -337,7 +340,7 @@ export class BpmProjectProcess implements OnInit {
         }
       },
       {
-        icon: 'cluster',
+        icon: 'unordered-list',
         tooltip: '流程实例',
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
@@ -375,7 +378,7 @@ export class BpmProjectProcess implements OnInit {
         name: '入口流程',
         dataIndex: 'entry',
         type: FieldType.Boolean,
-        description: '勾选后该流程会出现在 cryoEMS 等下游系统的工作流选择列表中'
+        description: '勾选后该流程可以被外部系统调用'
       },
       {
         name: '项目ID',

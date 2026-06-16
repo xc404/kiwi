@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
+import { ArrayResult } from '@app/core/services/types';
 
 /**
  * 与后端 {@code BpmProcessInstanceDto} 一致（单实例查询 {@code GET /bpm/process-instance/{id}}）。
@@ -104,7 +105,10 @@ export class ProcessInstanceService {
 
   /** GET /bpm/process-instance/{instanceId}/history-activities */
   getHistoryActivityInstances(processInstanceId: string): Observable<CamundaHistoricActivityInstance[]> {
-    return this.baseHttp.get<CamundaHistoricActivityInstance[]>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`).pipe(
+    return this.baseHttp
+      .get<ArrayResult<CamundaHistoricActivityInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`)
+      .pipe(
+      map(res => res?.content ?? []),
       map(items =>
         items.map(item => {
           const completed = item.completed ?? (item.endTime != null && item.endTime !== '');
@@ -129,6 +133,8 @@ export class ProcessInstanceService {
 
   /** GET /bpm/process-instance/{instanceId}/variables */
   getProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
-    return this.baseHttp.get<CamundaHistoricVariableInstance[]>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`);
+    return this.baseHttp
+      .get<ArrayResult<CamundaHistoricVariableInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`)
+      .pipe(map(res => res?.content ?? []));
   }
 }

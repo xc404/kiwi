@@ -35,15 +35,16 @@ export interface AppButtonConfig {
       <button
         nz-button
         [disabled]="disabled()"
-        [nz-tooltip]="config().tooltip"
+        nz-tooltip
         [nzDanger]="config().nzDanger"
         [nzGhost]="config().nzGhost"
         [nzLoading]="config().nzLoading"
         [nzSearch]="config().nzSearch"
         [nzShape]="config().nzShape || null"
         [nzSize]="config().nzSize || 'default'"
+        [nzTooltipTitle]="config().tooltip"
+        [nzTooltipTrigger]="config().tooltip ? 'hover' : null"
         [nzType]="config().nzType || null"
-        [title]="config().name"
         (click)="handle(); $event.stopPropagation()"
       >
         @if (config().icon) {

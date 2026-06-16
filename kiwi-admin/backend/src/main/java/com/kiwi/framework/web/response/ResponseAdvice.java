@@ -52,6 +52,8 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object>
         if( o instanceof R ) {
             return o;
         }
+        // Collection 与数组统一封装为 CollectionResult（data.content），与分页接口输出形态一致，
+        // 便于前端按同一契约消费列表数据，后续扩展 page/total 等分页字段时无需改动 R 外层结构。
         if( o instanceof Collection ) {
             return R.success(new CollectionResult<>((Collection<?>) o));
         }

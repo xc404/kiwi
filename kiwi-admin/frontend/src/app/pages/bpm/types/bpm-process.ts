@@ -17,7 +17,7 @@ export interface BpmProcess {
    */
   maxProcessInstances?: number | null;
   /**
-   * 是否为「入口流程」：勾选后该流程会出现在 cryoEMS 等下游系统的工作流选择列表
+   * 是否为「入口流程」：勾选后该流程可以被外部系统调用
    * （`GET /bpm/process/entries`）中。默认 `false`。
    */
   entry?: boolean;

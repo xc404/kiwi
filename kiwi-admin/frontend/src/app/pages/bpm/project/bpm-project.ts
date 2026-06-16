@@ -62,7 +62,7 @@ export class BpmProject implements OnInit {
     initializeData: true,
     columnActions: [
       {
-        icon: 'right-square',
+        icon: 'deployment-unit',
         tooltip: '流程管理',
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();

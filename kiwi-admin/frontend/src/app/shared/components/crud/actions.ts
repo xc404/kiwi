@@ -15,14 +15,16 @@ export function crudPage() {
 export function columnAction(config: AppButtonConfig): AppButtonConfig {
   return {
     ...config,
-    nzSize: config.nzSize || 'small'
+    nzSize: config.nzSize || 'small',
+    tooltip: config.tooltip ?? config.name
   };
 }
 
 export function toolbarAction(config: AppButtonConfig): AppButtonConfig {
   return {
     ...config,
-    nzSize: config.nzSize || 'small'
+    nzSize: config.nzSize || 'small',
+    tooltip: config.tooltip ?? config.name
   };
 }
 
