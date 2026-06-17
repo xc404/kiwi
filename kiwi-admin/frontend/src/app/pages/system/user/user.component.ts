@@ -20,12 +20,10 @@ export class UserComponent implements OnInit {
   deptNameMap = signal<Map<string, { name: string }>>(new Map());
 
   ngOnInit(): void {
-    this.http
-      .get<{ content: Array<{ id: string; name: string; children?: unknown[] }> }>('common/tree/sys-dept/0', { loadAll: true })
-      .subscribe(res => {
-        const map = TreeUtils.buildMap(res.content ?? [], 'id');
-        this.deptNameMap.set(map);
-      });
+    this.http.get<{ content: Array<{ id: string; name: string; children?: unknown[] }> }>('common/tree/sys-dept/0', { loadAll: true }).subscribe(res => {
+      const map = TreeUtils.buildMap(res.content ?? [], 'id');
+      this.deptNameMap.set(map);
+    });
   }
 
   pageConfig = computed(() => {

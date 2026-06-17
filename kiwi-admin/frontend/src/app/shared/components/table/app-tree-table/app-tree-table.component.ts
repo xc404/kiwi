@@ -31,7 +31,7 @@ export class AppTreeTableComponent extends BaseTableComponent {
     return this.treeModel.flatternItems();
   });
 
-  collapse(data: any, $event: boolean): void {
+  collapse(data: any, _event: boolean): void {
     this.treeModel.toggleCollapse(data.id);
   }
 

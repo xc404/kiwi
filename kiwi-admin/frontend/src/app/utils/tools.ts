@@ -114,13 +114,13 @@ const fnGetBase64 = function getBase64(file: File): Promise<string | ArrayBuffer
 // todo https://stackoverflow.com/questions/78263714/the-package-crypto-wasnt-found-on-the-file-system-but-is-built-into-node
 // https://stackoverflow.com/questions/77918038/problem-while-ng-build-using-the-new-angular-17-application-builder
 // 加密
-const fnEncrypt = function encrypt(word: NzSafeAny, keyStr: string): string {
+const fnEncrypt = function encrypt(word: NzSafeAny, _keyStr: string): string {
   return JSON.stringify(word);
   // return CryptoJS.AES.encrypt(JSON.stringify(word), keyStr).toString();
 };
 
 // 解密
-const fnDecrypt = function decrypt(word: NzSafeAny, keyStr: string): LockScreenFlag {
+const fnDecrypt = function decrypt(word: NzSafeAny, _keyStr: string): LockScreenFlag {
   return JSON.parse(word);
   // const bytes = CryptoJS.AES.decrypt(word, keyStr);
   // return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));

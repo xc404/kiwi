@@ -97,7 +97,6 @@ export abstract class ElementModel {
   }
 
   updateProperties(bpmnModeler: BaseViewer, element: Element, properties: any) {
-    const bpmnFactory: BpmnFactory = bpmnModeler.get('bpmnFactory');
     const modeling: Modeling = bpmnModeler.get('modeling');
     modeling.updateProperties(element, properties);
   }

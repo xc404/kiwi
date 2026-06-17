@@ -19,11 +19,10 @@ import { NzTableModule } from 'ng-zorro-antd/table';
   template: `
     <nz-card class="bpm-component-plugins-card" nzTitle="组件插件">
       <p class="bpm-component-plugins-hint">
-        将含 <code>@ComponentDescription</code> 的 JAR 上传至 <code>plugins/</code> 目录，无需修改 backend
-        <code>pom.xml</code>。安装后组件来源为 <code>plugin</code>，会出现在设计器面板。
+        将含 <code>@ComponentDescription</code> 的 JAR 上传至 <code>plugins/</code> 目录，无需修改 backend <code>pom.xml</code>。安装后组件来源为 <code>plugin</code>，会出现在设计器面板。
       </p>
       <div class="bpm-component-plugins-toolbar">
-        <input #fileInput accept=".jar,application/java-archive" hidden type="file" (change)="onFileSelected($event)" />
+        <input #fileInput type="file" accept=".jar,application/java-archive" hidden (change)="onFileSelected($event)" />
         <button nz-button nzType="primary" [disabled]="loading()" [nzLoading]="uploading()" (click)="fileInput.click()">
           <nz-icon nzTheme="outline" nzType="upload" />
           上传 JAR
@@ -47,7 +46,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
                 <tr>
                   <td>{{ name }}</td>
                   <td>
-                    <button nz-button nzDanger nzSize="small" type="button" [disabled]="loading()" (click)="confirmDelete(name)">卸载</button>
+                    <button type="button" nz-button nzDanger nzSize="small" [disabled]="loading()" (click)="confirmDelete(name)">卸载</button>
                   </td>
                 </tr>
               }
@@ -88,7 +87,7 @@ export class BpmComponentPlugins implements OnInit {
   readonly uploading = signal(false);
 
   /** 插件列表变更后通知父页刷新组件表 */
-  changed = output<void>();
+  readonly changed = output<void>();
 
   ngOnInit(): void {
     this.loadPlugins(false);

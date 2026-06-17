@@ -4,12 +4,7 @@ export interface DictRecord {
   name: string;
 }
 
-export function normalizeDictRecord(raw: {
-  code?: string;
-  name?: string;
-  key?: string;
-  value?: string;
-}): DictRecord {
+export function normalizeDictRecord(raw: { code?: string; name?: string; key?: string; value?: string }): DictRecord {
   return {
     code: String(raw.code ?? raw.key ?? ''),
     name: String(raw.name ?? raw.value ?? '')

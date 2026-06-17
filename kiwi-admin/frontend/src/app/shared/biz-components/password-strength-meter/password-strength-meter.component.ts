@@ -4,7 +4,6 @@ import { PasswordStrengthMeterService } from './password-strength-meter.service'
 import { PSMProgressBarDirective } from './psm-progress-bar.directive';
 
 @Component({
-  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'password-strength-meter',
   templateUrl: './password-strength-meter.component.html',
   styleUrls: ['./password-strength-meter.component.less'],

@@ -42,7 +42,6 @@ export class JudgeAuthGuardService {
 
   // 保存当前的menu到this.selMenu
   getMenu(menu: Menu[], url: string): void {
-    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < menu.length; i++) {
       if (url === menu[i].path) {
         this.selMenu = menu[i];

@@ -14,7 +14,7 @@ export class ElementModelProxyHandler {
     private variables: any[] = []
   ) {}
 
-  get(target: any, prop: string, receiver: any) {
+  get(target: any, prop: string, _receiver: any) {
     const property = this.properties.find(p => p.key == prop);
     if (property) {
       const value = this.elementModel.getValue(this.bpmnModeler, this.element, property.namespace ?? 'bpmn', property.key);
@@ -31,7 +31,7 @@ export class ElementModelProxyHandler {
     }
   }
 
-  set(target: any, prop: string, value: any, receiver: any) {
+  set(target: any, prop: string, value: any, _receiver: any) {
     if (this.viewMode) {
       return true;
     }

@@ -24,11 +24,7 @@ export interface CodegenPreviewModalData {
         <div class="codegen-preview-files">
           <nz-list nzSize="small" [nzDataSource]="filePaths()" [nzRenderItem]="fileItem">
             <ng-template #fileItem let-path>
-              <nz-list-item
-                class="codegen-preview-file-item"
-                [class.codegen-preview-file-item--active]="path === selectedPath()"
-                (click)="selectPath(path)"
-              >
+              <nz-list-item class="codegen-preview-file-item" [class.codegen-preview-file-item--active]="path === selectedPath()" (click)="selectPath(path)">
                 {{ path }}
               </nz-list-item>
             </ng-template>

@@ -61,16 +61,6 @@ function isPlane(element: any) {
   return is(di, 'bpmndi:BPMNPlane');
 }
 
-function getTemplate(element: any, elementTemplates: any) {
-  return elementTemplates.get(element);
-}
-
-function getTemplateDocumentation(element: any, elementTemplates: any) {
-  const template = getTemplate(element, elementTemplates);
-
-  return template && template.documentationRef;
-}
-
 export function getConcreteType(element: any) {
   const { type: elementType } = element;
 
@@ -147,18 +137,12 @@ export class PanelHeader {
   }
 
   getElementIcon() {
-    const concreteType = getConcreteType(this.element());
-
     // const config = useService('config.elementTemplateIconRenderer', false);
-
     // const { iconProperty = 'zeebe:modelerTemplateIcon' } = config || {};
-
     // const templateIcon = getBusinessObject(this.element()).get(iconProperty);
-
     // if (templateIcon) {
     //   return () => <img class="bio-properties-panel-header-template-icon" width = "32" height = "32" src = { templateIcon } alt = "" />;
     // }
-
     // return iconsByType[concreteType];
   }
 

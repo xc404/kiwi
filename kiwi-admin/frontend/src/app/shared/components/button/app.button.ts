@@ -34,8 +34,8 @@ export interface AppButtonConfig {
     } @else {
       <button
         nz-button
-        [disabled]="disabled()"
         nz-tooltip
+        [disabled]="disabled()"
         [nzDanger]="config().nzDanger"
         [nzGhost]="config().nzGhost"
         [nzLoading]="config().nzLoading"

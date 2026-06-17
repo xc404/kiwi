@@ -105,9 +105,7 @@ export class ProcessInstanceService {
 
   /** GET /bpm/process-instance/{instanceId}/history-activities */
   getHistoryActivityInstances(processInstanceId: string): Observable<CamundaHistoricActivityInstance[]> {
-    return this.baseHttp
-      .get<ArrayResult<CamundaHistoricActivityInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`)
-      .pipe(
+    return this.baseHttp.get<ArrayResult<CamundaHistoricActivityInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/history-activities`).pipe(
       map(res => res?.content ?? []),
       map(items =>
         items.map(item => {
@@ -133,8 +131,6 @@ export class ProcessInstanceService {
 
   /** GET /bpm/process-instance/{instanceId}/variables */
   getProcessInstanceVariables(processInstanceId: string): Observable<CamundaHistoricVariableInstance[]> {
-    return this.baseHttp
-      .get<ArrayResult<CamundaHistoricVariableInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`)
-      .pipe(map(res => res?.content ?? []));
+    return this.baseHttp.get<ArrayResult<CamundaHistoricVariableInstance>>(`/bpm/process-instance/${encodeURIComponent(processInstanceId)}/variables`).pipe(map(res => res?.content ?? []));
   }
 }

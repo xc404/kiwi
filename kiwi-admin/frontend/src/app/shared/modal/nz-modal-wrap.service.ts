@@ -34,7 +34,7 @@ export class NzModalWrapService {
     this.modal.closeAll();
   }
 
-  confirm<T>(options: ModalOptions<T>, confirmType?: ConfirmType): NzModalRef<T> {
+  confirm<T>(options: ModalOptions<T>, _confirmType?: ConfirmType): NzModalRef<T> {
     return this.createModalWidthDrag(options, c => this.modal.confirm(c));
   }
 

@@ -18,8 +18,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
 
-import { CodegenPreviewModalComponent } from './codegen-preview-modal';
 import { CodegenColumnComponent } from './codegen-fields.component';
+import { CodegenPreviewModalComponent } from './codegen-preview-modal';
 import { ImportDatabaseWizardComponent } from './import-database-wizard';
 
 @Component({
@@ -218,5 +218,4 @@ export class CodegenComponent {
         }
       });
   }
-
 }

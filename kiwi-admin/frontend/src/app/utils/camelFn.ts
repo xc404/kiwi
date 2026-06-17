@@ -15,4 +15,4 @@ const fnKebabCase = function kebabCase(value: string): string {
     .toLowerCase();
 };
 
-export { fnKebabCase };
+export { fnKebabCase, camelCase, upperCamelCase };

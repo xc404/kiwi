@@ -1,8 +1,8 @@
-import { NzTableQueryParams, NzTableSortOrder } from 'ng-zorro-antd/table';
-
 import { DataStore, DataStoreConfig } from '@app/shared/datastore/data-store';
 import { Page } from '@app/shared/datastore/page';
 import { CrudProxy } from '@app/shared/datastore/proxy/crud-proxy';
+
+import { NzTableQueryParams, NzTableSortOrder } from 'ng-zorro-antd/table';
 
 import { CrudHttp } from './crud-http';
 
@@ -25,10 +25,7 @@ export { Page };
 export class CrudDataSource<T> extends DataStore<T> {
   readonly crudProxy: CrudProxy;
 
-  constructor(
-    crud: CrudHttp,
-    config?: Omit<DataStoreConfig, 'autoLoad'> & { autoLoad?: boolean }
-  ) {
+  constructor(crud: CrudHttp, config?: Omit<DataStoreConfig, 'autoLoad'> & { autoLoad?: boolean }) {
     const crudProxy = new CrudProxy(crud);
     super(crudProxy, config);
     this.crudProxy = crudProxy;
@@ -39,14 +36,7 @@ export class CrudDataSource<T> extends DataStore<T> {
   }
 
   search(params: NzTableQueryParams | Record<string, unknown>) {
-    if (
-      params &&
-      typeof params === 'object' &&
-      'pageIndex' in params &&
-      params.pageIndex != null &&
-      'filter' in params &&
-      (params as NzTableQueryParams).filter
-    ) {
+    if (params && typeof params === 'object' && 'pageIndex' in params && params.pageIndex != null && 'filter' in params && (params as NzTableQueryParams).filter) {
       const p = params as NzTableQueryParams;
       this.pageIndex = p.pageIndex - 1;
       this.pageSize = p.pageSize;

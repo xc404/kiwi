@@ -21,7 +21,6 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzFormatEmitEvent, NzTreeComponent, NzTreeModule, NzTreeNode } from 'ng-zorro-antd/tree';
 
-
 @Component({
   selector: 'app-dept',
   templateUrl: './dept.component.html',

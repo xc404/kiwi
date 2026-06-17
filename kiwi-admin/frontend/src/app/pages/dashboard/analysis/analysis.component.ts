@@ -18,7 +18,6 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
 
-
 @Component({
   selector: 'app-analysis',
   templateUrl: './analysis.component.html',

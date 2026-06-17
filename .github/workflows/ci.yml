@@ -50,6 +50,8 @@ jobs:
           cache: npm
           cache-dependency-path: kiwi-admin/frontend/package-lock.json
       - run: npm ci
+      - name: ESLint
+        run: npm run lint:ci:next
       - name: ng build
         run: npm run build
         env:

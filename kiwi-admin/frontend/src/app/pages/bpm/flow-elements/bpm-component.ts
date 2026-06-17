@@ -9,22 +9,22 @@ import { AddAction, toolbarAction } from '@app/shared/components/crud/actions';
 import { CrudPage } from '@app/shared/components/crud/components/crud-page';
 import { PageHeaderComponent } from '@app/shared/components/page-header/page-header.component';
 import { ColumnToken } from '@app/shared/components/table/column';
+import { DictSelector } from '@shared/components/dict-selector/dict-selector';
 import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { DictSelector } from '@shared/components/dict-selector/dict-selector';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 import { BpmInputOutputParameters } from './bpm-parameters';
 import { ComponentProvider } from './component-provider';
@@ -108,7 +108,7 @@ export class BpmComponent implements AfterViewInit {
 
   jdbcSchemaModalVisible = signal(false);
   jdbcConnectionId: string | null = null;
-  jdbcTables = signal<{ name: string; comment?: string }[]>([]);
+  jdbcTables = signal<Array<{ name: string; comment?: string }>>([]);
   jdbcSelectedTableNames = signal<string[]>([]);
   jdbcTablesLoading = signal(false);
 
@@ -314,13 +314,13 @@ export class BpmComponent implements AfterViewInit {
     }
     this.jdbcTablesLoading.set(true);
     this.http
-      .get<{ content?: { name: string; comment?: string }[] }>(`tools/connection/${connId}/tables`, undefined, {
+      .get<{ content?: Array<{ name: string; comment?: string }> }>(`tools/connection/${connId}/tables`, undefined, {
         showLoading: false
       })
       .pipe(
         catchError(e => {
           this.message.error(`加载表列表失败${e.message ?? ''}`);
-          return of({ content: [] as { name: string; comment?: string }[] });
+          return of({ content: [] as Array<{ name: string; comment?: string }> });
         })
       )
       .subscribe(res => {
@@ -475,11 +475,7 @@ export class BpmComponent implements AfterViewInit {
     return res.content ?? [];
   }
 
-  private afterGeneratePersistPipeline(
-    drafts: any[],
-    afterSuccess: () => void,
-    source: 'cli' | 'openapi' | 'dbschema' | 'element-template'
-  ): Observable<boolean> {
+  private afterGeneratePersistPipeline(drafts: any[], afterSuccess: () => void, source: 'cli' | 'openapi' | 'dbschema' | 'element-template'): Observable<boolean> {
     return this.http.post<ArrayResult<BpmPreviewConflictItem>>('/bpm/component/preview-conflicts', { components: drafts }).pipe(
       switchMap(preview => {
         const previewItems: BpmPreviewConflictItem[] = preview.content || [];

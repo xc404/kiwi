@@ -16,7 +16,7 @@
     "lint:ci": "eslint \"src/**/*.{ts,html}\" --max-warnings 400",
     "lint:ci:next": "eslint \"src/**/*.{ts,html}\" --max-warnings 300",
     "lint:ci:strict": "eslint \"src/**/*.{ts,html}\" --max-warnings 0",
-    "lint:fix": "eslint --fix --cache . --ext .ts,.html",
+    "lint:fix": "eslint --fix \"src/**/*.{ts,html}\"",
     "lint:style": "npx stylelint \"src/**/*.less\" --fix"
   },
   "private": true,

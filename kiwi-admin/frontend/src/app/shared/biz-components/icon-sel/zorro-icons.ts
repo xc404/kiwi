@@ -1,6 +1,6 @@
-const common = [];
+const _common = [];
 
-const direction = [
+const _direction = [
   'StepBackward',
   'StepForward',
   'FastBackward',
@@ -66,7 +66,7 @@ const direction = [
   'FullscreenExit'
 ];
 
-const suggestion = [
+const _suggestion = [
   'Question',
   'QuestionCircle',
   'Plus',
@@ -93,7 +93,7 @@ const suggestion = [
   'Stop'
 ];
 
-const edit = [
+const _edit = [
   'Edit',
   'Form',
   'Copy',
@@ -129,9 +129,9 @@ const edit = [
   'ColumnHeight'
 ];
 
-const data = ['AreaChart', 'PieChart', 'BarChart', 'DotChart', 'LineChart', 'RadarChart', 'HeatMap', 'Fall', 'Rise', 'Stock', 'BoxPlot', 'Fund', 'Sliders'];
+const _data = ['AreaChart', 'PieChart', 'BarChart', 'DotChart', 'LineChart', 'RadarChart', 'HeatMap', 'Fall', 'Rise', 'Stock', 'BoxPlot', 'Fund', 'Sliders'];
 
-const logo = [
+const _logo = [
   'Android',
   'Apple',
   'Windows',
@@ -184,7 +184,7 @@ const logo = [
   'Sketch'
 ];
 
-const newIconNames: string[] = [
+const _newIconNames: string[] = [
   // direction
   // 'border-outter',
   'radius-upright',

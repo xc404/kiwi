@@ -10,7 +10,6 @@ export interface KiwiAppendComponentConfig {
   append: (sourceElement: Element, component: ComponentDescription, event: MouseEvent | undefined) => void;
 }
 
-
 function canAppendComponent(element: Element): boolean {
   const bo: any = element.businessObject;
   if (!bo) {

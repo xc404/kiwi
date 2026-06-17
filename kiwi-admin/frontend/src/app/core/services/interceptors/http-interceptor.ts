@@ -4,8 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, filter } from 'rxjs/operators';
 
 import { TokenKey } from '@config/constant';
-import { ActionResult } from '@core/services/http/base-http.service';
 import { WindowService } from '@core/services/common/window.service';
+import { ActionResult } from '@core/services/http/base-http.service';
 
 import { SessionService } from '../common/session.service';
 
@@ -48,10 +48,12 @@ function handleError(error: HttpErrorResponse): Observable<never> {
   const errMsg = backendMsg || defaultMessageForStatus(error.status);
   const code = typeof backend?.code === 'number' ? backend.code : error.status;
 
-  return throwError((): HttpClientError => ({
-    code,
-    message: errMsg
-  }));
+  return throwError(
+    (): HttpClientError => ({
+      code,
+      message: errMsg
+    })
+  );
 }
 
 export const httpInterceptorService: HttpInterceptorFn = (req, next) => {
@@ -69,10 +71,12 @@ export const httpInterceptorService: HttpInterceptorFn = (req, next) => {
       if (error instanceof HttpErrorResponse) {
         return handleError(error);
       }
-      return throwError((): HttpClientError => ({
-        code: -1,
-        message: '请求失败'
-      }));
+      return throwError(
+        (): HttpClientError => ({
+          code: -1,
+          message: '请求失败'
+        })
+      );
     })
   );
 };

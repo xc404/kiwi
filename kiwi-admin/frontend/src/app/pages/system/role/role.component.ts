@@ -78,7 +78,7 @@ export class RoleComponent implements OnInit {
     }
   ];
   model = signal<RoleFormModel>({});
-  constructor() { }
+  constructor() {}
 
   ngOnInit(): void {
     this.loadRoles();

@@ -5,6 +5,7 @@ import { catchError, take, tap } from 'rxjs/operators';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { UserInfoStoreService } from '@app/core/services/store/common-store/userInfo-store.service';
+import { collectDictStoreConfigs, DictStoreConfig, DictStoreService } from '@app/shared/datastore';
 import { FormlyConfig, FormlyFormBuilder } from '@ngx-formly/core';
 import { ModalDragDirective } from '@shared/modal/modal-drag.directive';
 
@@ -33,7 +34,6 @@ import { AppTableConfig, TableType } from '../../table/table';
 import { AddAction, columnAction, DeleteAction, DeleteBatchAction, EditAction } from '../actions';
 import { CrudDataSource } from '../crud-datastore';
 import { crudConfig, CrudHttp, CrudHttpConfig } from '../crud-http';
-import { collectDictStoreConfigs, DictStoreConfig, DictStoreService } from '@app/shared/datastore';
 import { CrudFieldConfig, getActionColumnWidth } from '../utils';
 
 export abstract class CrudPageToken {

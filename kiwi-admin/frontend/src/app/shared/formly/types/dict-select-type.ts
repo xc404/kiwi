@@ -1,16 +1,16 @@
 import { Component, inject, Injector, OnDestroy, OnInit, runInInjectionContext, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 
-import { DictRecord } from '@app/shared/datastore/model/dict-record';
 import { DictStoreService } from '@app/shared/datastore/dict-store.service';
+import { DictRecord } from '@app/shared/datastore/model/dict-record';
 import { FieldType, FieldTypeConfig, FormlyAttributes } from '@ngx-formly/core';
 import { FormlyFieldProps } from '@ngx-formly/ng-zorro-antd/form-field';
 
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { Subscription } from 'rxjs';
 
 export type DictSelectMode = 'select' | 'radio';
 
@@ -34,13 +34,7 @@ export interface DictSelectProps extends FormlyFieldProps {
         }
       </nz-radio-group>
     } @else {
-      <nz-select
-        nzAllowClear
-        [formControl]="formControl"
-        [formlyAttributes]="field"
-        [nzDropdownRender]="dropdown"
-        (nzScrollToBottom)="loadMore()"
-      >
+      <nz-select nzAllowClear [formControl]="formControl" [formlyAttributes]="field" [nzDropdownRender]="dropdown" (nzScrollToBottom)="loadMore()">
         @for (opt of dictOptions(); track opt.code) {
           <nz-option [nzLabel]="opt.name" [nzValue]="opt.code"></nz-option>
         }
