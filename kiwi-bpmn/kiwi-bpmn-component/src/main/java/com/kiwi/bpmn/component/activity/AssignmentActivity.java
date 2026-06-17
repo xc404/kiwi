@@ -6,6 +6,7 @@ import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.stereotype.Component;
 
 /**
+ * 变量组件：通过 BPMN 服务任务的输入/输出映射配置流程变量，运行时仅负责流转。
  */
 @ComponentDescription(
         name = "变量组件",

@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, filter } from 'rxjs/operators';
 
 import { TokenKey } from '@config/constant';
+import { ActionResult } from '@core/services/http/base-http.service';
 import { WindowService } from '@core/services/common/window.service';
 
 import { SessionService } from '../common/session.service';
@@ -12,28 +13,45 @@ interface CustomHttpConfig {
   headers?: HttpHeaders;
 }
 
-function handleError(error: HttpErrorResponse): Observable<never> {
-  const status = error.status;
-  let errMsg = '';
+interface HttpClientError {
+  code: number;
+  message: string;
+}
+
+function extractBackendPayload(error: HttpErrorResponse): Partial<ActionResult<unknown>> | null {
+  const body = error.error;
+  if (body && typeof body === 'object' && ('msg' in body || 'code' in body)) {
+    return body as Partial<ActionResult<unknown>>;
+  }
+  return null;
+}
+
+function defaultMessageForStatus(status: number): string {
   if (status === 0) {
-    errMsg = '网络出现未知的错误，请检查您的网络。';
+    return '网络出现未知的错误，请检查您的网络。';
   }
   if (status >= 300 && status < 400) {
-    errMsg = `请求被服务器重定向，状态码为${status}`;
+    return `请求被服务器重定向，状态码为${status}`;
   }
   if (status >= 400 && status < 500) {
-    errMsg = `客户端出错，可能是发送的数据有误，状态码为${status}`;
+    return `客户端出错，可能是发送的数据有误，状态码为${status}`;
   }
   if (status >= 500) {
-    errMsg = `服务器发生错误，状态码为${status}`;
+    return `服务器发生错误，状态码为${status}`;
   }
+  return '请求失败';
+}
 
-  return throwError(() => {
-    return {
-      code: status,
-      message: errMsg
-    };
-  });
+function handleError(error: HttpErrorResponse): Observable<never> {
+  const backend = extractBackendPayload(error);
+  const backendMsg = backend?.msg?.trim();
+  const errMsg = backendMsg || defaultMessageForStatus(error.status);
+  const code = typeof backend?.code === 'number' ? backend.code : error.status;
+
+  return throwError((): HttpClientError => ({
+    code,
+    message: errMsg
+  }));
 }
 
 export const httpInterceptorService: HttpInterceptorFn = (req, next) => {
@@ -47,6 +65,14 @@ export const httpInterceptorService: HttpInterceptorFn = (req, next) => {
   const copyReq = req.clone(httpConfig);
   return next(copyReq).pipe(
     filter(e => e.type !== 0),
-    catchError(error => handleError(error))
+    catchError((error: unknown) => {
+      if (error instanceof HttpErrorResponse) {
+        return handleError(error);
+      }
+      return throwError((): HttpClientError => ({
+        code: -1,
+        message: '请求失败'
+      }));
+    })
   );
 };

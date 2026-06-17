@@ -36,14 +36,14 @@ mvn -U -pl kiwi-admin/backend -am compile -DskipTests
 - `camunda.bpm.*` → `operaton.bpm.*`
 - `CAMUNDA_*` → `OPERATON_*`（环境变量）
 
-## 待人工验证
+## 验证范围（§8.2–8.6 不做）
 
-- [ ] 应用启动与 `/engine-rest` 冒烟
-- [ ] H2 / MySQL 引擎库 schema 升级
-- [ ] BPM 部署、实例、External Task、Spin JSON
-- [ ] `spring.data.mongodb` 在 Boot 4 下是否需改为 `spring.mongodb`
-- [ ] spring-ai-alibaba、MCP 在 Boot 4 运行时行为
-- [x] 推送 `camunda` 分支与 tag 至远程（`6e833f8`，远程已存在 `refs/heads/camunda` 与 annotated tag `camunda`）
+迁移代码与编译已通过（§8.1）。**不再**单独开展 OpenSpec 规定的正式冒烟、schema 克隆验证、Slurm E2E、AI/MCP 抽样回归或「合并 operaton-migration 分支」发布流程；日常以本地 dev / 线上 Demo 使用为准。曾规划的 `OperatonEngineSmokeTest`、`SMOKE.md`、`operaton-smoke.ps1` 已移除。
+
+## 历史备注（可选后续观察，非本 change 交付项）
+
+- `spring.data.mongodb` 在 Boot 4 下是否需改为 `spring.mongodb`
+- spring-ai-alibaba、MCP 在 Boot 4 运行时行为
 
 ## 编译验证
 

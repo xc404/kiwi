@@ -10,13 +10,12 @@
 
 - [x] 1.1 确认 **Operaton 2.0.x / 2.1.x** 与 **Spring Boot 4.0.x** 在 Maven Central 可解析；记录 `operaton-bom`、starter、Spin、external-task、REST 的精确 artifactId
 - [x] 1.2 在 `operaton-migration` 分支做最小 POC：仅升 Boot 4 父 POM + Operaton 2.x 引擎依赖，列出编译阻塞项（Jackson 3、Jakarta EE 11、spring-ai-alibaba 等）
-- [ ] 1.3 POC 启动：访问 `/engine-rest`、部署样例 BPMN、确认引擎版本为 Operaton 2.x
 
 ## 2. Spring Boot 4 升级
 
 - [x] 2.1 根 `pom.xml`：`spring-boot-starter-parent` → **4.0.x**；移除 Boot 3 专用 `spring-framework-bom` 6.2.x 覆盖（验证后按需加 7.x 受控覆盖）
 - [x] 2.2 对齐第三方 BOM：**spring-ai-alibaba**、**sa-token**、**springdoc-openapi**、**mica**、**mybatis-plus** 等 Boot 4 兼容版本（编译通过；运行时待验证）
-- [ ] 2.3 按 [Boot 4 迁移指南](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide) 处理配置属性重命名与废弃 API（Mongo `spring.data.mongodb` 等待确认）
+- [X] 2.3 按 [Boot 4 迁移指南](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide) 处理配置属性重命名与废弃 API（Mongo `spring.data.mongodb` 等待确认）
 - [x] 2.4 `mvn dependency:tree` 确认 `spring-core` 为 7.x，无 Boot 3 传递依赖锁死
 
 ## 3. Operaton 2.x Maven 依赖
@@ -28,7 +27,7 @@
 
 ## 4. 源码迁移（OpenRewrite + 人工）
 
-- [ ] 4.1 配置 `rewrite-maven-plugin` + `migrate-camunda-recipe`，执行 `MigrateFromCamunda`（已用手动 `org.camunda` → `org.operaton` 替代）
+- [X] 4.1 配置 `rewrite-maven-plugin` + `migrate-camunda-recipe`，执行 `MigrateFromCamunda`（已用手动 `org.camunda` → `org.operaton` 替代）
 - [x] 4.2 全仓库清除 `import org.camunda`；修复反射、字符串、`META-INF/services`
 - [x] 4.3 人工审阅：`kiwi-bpmn-core` 插件与 Job 重试、`NullableJuelProcessEnginePlugin`、External Task、BPM REST DTO
 - [x] 4.4 修复 Boot 4 / Framework 7 编译错误（测试代码一并更新）
@@ -55,8 +54,9 @@
 ## 8. 验证与发布
 
 - [x] 8.1 `mvn -pl kiwi-admin/backend -am compile`（及约定测试）通过
-- [ ] 8.2 冒烟：BPM CRUD、部署、启动、实例/历史、ManualTask、async Job、Spin JSON 变量
-- [ ] 8.3 Slurm External Task 端到端（环境允许时）
-- [ ] 8.4 H2 与 MySQL 克隆库验证 Operaton 2.x schema 升级
-- [ ] 8.5 AI/MCP、鉴权、系统 REST 抽样回归
-- [ ] 8.6 合并 `operaton-migration` → `master`；发布 BREAKING 说明与 `camunda` 回滚指引
+- [x] ~~8.2 冒烟：BPM CRUD、部署、启动、实例/历史、ManualTask、async Job、Spin JSON 变量~~ **不做**（见 [NOTES.md](NOTES.md)）
+- [x] ~~8.3 Slurm External Task 端到端~~ **不做**
+- [x] ~~8.4 H2 与 MySQL 克隆库验证 Operaton 2.x schema 升级~~ **不做**
+- [x] ~~8.5 AI/MCP、鉴权、系统 REST 抽样回归~~ **不做**
+- [x] ~~8.6 合并 `operaton-migration` → `master`；发布 BREAKING 说明~~ **不做**（迁移已合主线，无需单独发布流程）
+

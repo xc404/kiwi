@@ -1,44 +1,87 @@
-package com.kiwi.project.ai.mcp;
-
-import cn.dev33.satoken.stp.StpUtil;
-import io.modelcontextprotocol.client.McpClient;
-import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-
-import java.time.Duration;
-
-/**
- * 本机 MCP（SSE）客户端，供 {@link KiwiAdminAiMcpConfiguration} 等通过
- * {@link org.springframework.ai.mcp.SyncMcpToolCallbackProvider} 与 MCP Server 对齐工具列表。
- */
-@Configuration
-public class KiwiLocalMcpClientConfiguration {
-
-    @Bean
-    @Lazy
-    public McpSyncClient kiwiLocalMcpSyncClient(
-            @Value("${kiwi.ai.mcp.loopback-base-url}") String loopbackBaseUrl,
-            @Value("${spring.ai.mcp.server.sse-endpoint:/sse}") String sseEndpoint) {
-        // HttpClientSseClientTransport 经 Utils.resolveUri 拼接：base 须以 / 结尾，sse 须为相对路径（无前导 /），
-        // 否则 URI.resolve("/sse") 会丢弃 context-path，请求落到 http://host:port/sse → 404。
-        String base = loopbackBaseUrl.endsWith("/") ? loopbackBaseUrl : loopbackBaseUrl + "/";
-        String ssePath = sseEndpoint.startsWith("/") ? sseEndpoint.substring(1) : sseEndpoint;
-        var transport = HttpClientSseClientTransport.builder(base)
-                .sseEndpoint(ssePath)
-                .httpRequestCustomizer((requestBuilder, method, uri, body, context) -> {
-                    try {
-                        if (StpUtil.isLogin()) {
-                            requestBuilder.header("Authorization", "Bearer " + StpUtil.getTokenValue());
-                        }
-                    } catch (Throwable ignored) {
-                        // 无登录态时回环仍可能匿名失败，由调用方处理
-                    }
-                })
-                .build();
-        return McpClient.sync(transport).requestTimeout(Duration.ofMinutes(3)).build();
-    }
-}
+package com.kiwi.project.ai.mcp;
+
+
+
+import cn.dev33.satoken.stp.StpUtil;
+
+import io.modelcontextprotocol.client.McpClient;
+
+import io.modelcontextprotocol.client.McpSyncClient;
+
+import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
+
+import org.springframework.beans.factory.annotation.Value;
+
+import org.springframework.context.annotation.Bean;
+
+import org.springframework.context.annotation.Configuration;
+
+import org.springframework.context.annotation.Lazy;
+
+
+
+import java.time.Duration;
+
+
+
+/**
+
+ * 本机 MCP（SSE）客户端，供 {@link KiwiAdminAiMcpConfiguration} 等通过
+
+ * {@link org.springframework.ai.mcp.SyncMcpToolCallbackProvider} 与 MCP Server 对齐工具列表。
+
+ */
+
+@Configuration
+public class KiwiLocalMcpClientConfiguration {
+
+
+
+    @Bean
+
+    @Lazy
+
+    public McpSyncClient kiwiLocalMcpSyncClient(
+
+            @Value("${kiwi.ai.mcp.loopback-base-url}") String loopbackBaseUrl,
+
+            @Value("${spring.ai.mcp.server.sse-endpoint:/sse}") String sseEndpoint) {
+
+        // HttpClientSseClientTransport 经 Utils.resolveUri 拼接：base 须以 / 结尾，sse 须为相对路径（无前导 /），
+
+        // 否则 URI.resolve("/sse") 会丢弃 context-path，请求落到 http://host:port/sse → 404。
+
+        String base = loopbackBaseUrl.endsWith("/") ? loopbackBaseUrl : loopbackBaseUrl + "/";
+
+        String ssePath = sseEndpoint.startsWith("/") ? sseEndpoint.substring(1) : sseEndpoint;
+
+        var transport = HttpClientSseClientTransport.builder(base)
+
+                .sseEndpoint(ssePath)
+
+                .httpRequestCustomizer((requestBuilder, method, uri, body, context) -> {
+
+                    try {
+
+                        if (StpUtil.isLogin()) {
+
+                            requestBuilder.header("Authorization", "Bearer " + StpUtil.getTokenValue());
+
+                        }
+
+                    } catch (Throwable ignored) {
+
+                        // 无登录态时回环仍可能匿名失败，由调用方处理
+
+                    }
+
+                })
+
+                .build();
+
+        return McpClient.sync(transport).requestTimeout(Duration.ofMinutes(3)).build();
+
+    }
+
+}
+
