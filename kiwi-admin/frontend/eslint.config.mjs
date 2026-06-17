@@ -98,7 +98,7 @@ export default tseslint.config(
         }
       ],
       '@typescript-eslint/no-empty-function': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-inferrable-types': [
