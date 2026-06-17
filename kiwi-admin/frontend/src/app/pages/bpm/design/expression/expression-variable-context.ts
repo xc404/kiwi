@@ -7,6 +7,7 @@ import { ExpressionVariableProvider, ExpressionVariableProviderContext } from '.
 const KIND_PRIORITY: Record<ExpressionVariableKind, number> = {
   upstreamOutput: 3,
   declaredOutput: 2,
+  projectEnv: 2,
   upstreamInput: 1
 };
 

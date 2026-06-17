@@ -1,9 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { BpmExpressionVariableService } from '@app/pages/bpm/design/expression/bpm-expression-variable.service';
 import type { SpelVariableSuggestion } from '@app/pages/bpm/design/expression/expression-variable';
 import { JuelExpressionEditorComponent } from '@app/shared/components/juel-expression-editor/juel-expression-editor.component';
+import BaseViewer from 'bpmn-js/lib/BaseViewer';
+import { Element } from 'bpmn-js/lib/model/Types';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -20,6 +23,10 @@ import type { CustomOutputRow } from './custom-output-row.model';
   styleUrl: './custom-output-row.component.css'
 })
 export class CustomOutputRowComponent {
+  private readonly expressionVariableService = inject(BpmExpressionVariableService);
+
+  bpmnModeler = input.required<BaseViewer>();
+  element = input.required<Element>();
   row = input.required<CustomOutputRow>();
   variables = input<Array<{ name?: string | null; [key: string]: unknown }>>([]);
 
@@ -35,7 +42,24 @@ export class CustomOutputRowComponent {
     return [...new Set(names)];
   });
 
-  protected readonly expressionVariableSuggestions = computed<SpelVariableSuggestion[]>(() => this.varNames().map(key => ({ key, source: 'referenced' as const })));
+  protected readonly expressionVariableSuggestions = computed<SpelVariableSuggestion[]>(() => {
+    let fromService: SpelVariableSuggestion[] = [];
+    try {
+      fromService = this.expressionVariableService.buildSuggestions(this.bpmnModeler(), this.element());
+    } catch {
+      fromService = [];
+    }
+    const byKey = new Map<string, SpelVariableSuggestion>();
+    for (const v of fromService) {
+      byKey.set(v.key, v);
+    }
+    for (const key of this.varNames()) {
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, source: 'referenced' });
+      }
+    }
+    return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+  });
 
   protected readonly refSelection = computed(() => {
     const text = this.row().valueText.trim();

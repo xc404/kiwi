@@ -23,6 +23,7 @@ import type { BpmProcess } from '../../types/bpm-process';
 import appendComponentModule from '../context-pad/append-component-module';
 import customContextPadModule from '../context-pad/index';
 import replaceComponentModule from '../context-pad/replace-component-module';
+import { BpmDesignerContextService } from '../bpm-designer-context.service';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from '../palette/pallete';
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
@@ -60,6 +61,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   private readonly replace = inject(BpmEditorReplaceService);
   private readonly componentService = inject(ComponentService);
   private readonly message = inject(NzMessageService);
+  private readonly designerContext = inject(BpmDesignerContextService);
 
   @ViewChild(BpmToolbar) private toolbar?: BpmToolbar;
 
@@ -239,10 +241,12 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
       .subscribe({
         next: (data: BpmProcess) => {
           this.bpmProcess.set(data);
+          this.designerContext.setProjectId(data.projectId ?? null);
           this.bpmnModeler.importXML(data.bpmnXml ?? '');
         },
         error: () => {
           this.bpmProcess.set(null);
+          this.designerContext.setProjectId(null);
         }
       });
   }

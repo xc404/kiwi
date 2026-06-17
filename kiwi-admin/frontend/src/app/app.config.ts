@@ -66,6 +66,7 @@ import { LoginExpiredService } from './core/services/interceptors/login-expired.
 import { CamundaElementModel } from './pages/bpm/design/extension/camunda/camunda-element-model';
 import { ElementModel } from './pages/bpm/design/extension/element-model';
 import { provideBpmDefaultPropertyProviderContributors } from './pages/bpm/design/property-panel/property-provider';
+import { provideBpmDefaultExpressionVariableProviders } from './pages/bpm/design/expression/expression-variable-provider.registry';
 import { formlyConfig } from './shared/formly/public_api';
 
 const icons = [
@@ -149,6 +150,7 @@ const APPINIT_PROVIDES: EnvironmentProviders[] = [
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBpmDefaultPropertyProviderContributors(),
+    provideBpmDefaultExpressionVariableProviders(),
     // 在无 Zone.js (Zoneless) 的新模式下，Angular 不再依赖 Zone.js 来感知异步操作和错误。这就导致了原生异步任务（如 setTimeout 或 Promise）中未处理的错误会“逃逸”出 Angular 的管理范围。
     provideBrowserGlobalErrorListeners(), // 在浏览器环境中，设置全局的错误监听器，并自动将捕获到的未处理错误和 Promise 拒绝 (rejection) 转发给 Angular 的 ErrorHandler 进行统一处理。
     { provide: RouteReuseStrategy, useClass: SimpleReuseStrategy, deps: [DOCUMENT, ScrollService] }, // 路由复用

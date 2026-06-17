@@ -1,5 +1,5 @@
-/** 表达式编辑器可用变量来源（设计时上游） */
-export type ExpressionVariableKind = 'upstreamInput' | 'upstreamOutput' | 'declaredOutput';
+/** 表达式编辑器可用变量来源（设计时上游 + 项目环境变量） */
+export type ExpressionVariableKind = 'upstreamInput' | 'upstreamOutput' | 'declaredOutput' | 'projectEnv';
 
 export interface ExpressionVariable {
   key: string;
@@ -26,6 +26,9 @@ export interface SpelVariableSuggestion {
 
 export function spelVariableSuggestionDetail(v: SpelVariableSuggestion): string {
   const kind = expressionVariableKindDetail(v.source);
+  if (v.source === 'projectEnv' && v.name?.trim()) {
+    return `${kind} · ${v.name.trim()}`;
+  }
   return v.originElementLabel ? `${kind} · ${v.originElementLabel}` : kind;
 }
 
@@ -37,6 +40,8 @@ export function expressionVariableKindDetail(kind: ExpressionVariableKind | Spel
       return '上游输出';
     case 'declaredOutput':
       return '声明输出';
+    case 'projectEnv':
+      return '项目环境变量';
     case 'referenced':
       return '运行时变量';
     default:

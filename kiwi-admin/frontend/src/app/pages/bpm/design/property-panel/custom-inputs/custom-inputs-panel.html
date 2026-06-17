@@ -14,7 +14,14 @@
   }
 } @else {
   @for (row of customRows(); track $index; let i = $index) {
-    <bpm-custom-output-row [row]="row" [variables]="variablesProp()" (remove)="removeRow(i)" (rowChange)="onRowChange(i, $event)" />
+    <bpm-custom-output-row
+      [bpmnModeler]="bpmnModeler()"
+      [element]="element()"
+      [row]="row"
+      [variables]="variablesProp()"
+      (remove)="removeRow(i)"
+      (rowChange)="onRowChange(i, $event)"
+    />
   }
   <div class="toolbar">
     <button type="button" nz-button nzSize="small" nzType="dashed" (click)="addRow()">

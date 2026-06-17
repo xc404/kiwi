@@ -55,11 +55,6 @@ export class ReadonlyPropertyRowComponent {
     return '';
   });
 
-  // protected readonly mainLine = computed(() => {
-  //     const p = this.propertyDescription();
-  //     return formatReadonlyPropertyMainLine(this.configuredText(), this.variables(), p.key);
-  // });
-
   protected readonly value = computed(() => {
     if (!this.hasRuntimeValue()) {
       return this.configuredValue();
