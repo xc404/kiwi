@@ -1,24 +1,28 @@
 ---
-description: 修改 kiwi-bpmn-component* 后提醒重新 build-plugins 并更新 plugins/ 目录
-globs: kiwi-bpmn/kiwi-bpmn-component*/**
+description: 修改 kiwi-bpmn-component 插件模块后提醒重新 build-plugins 并更新 plugins/ 目录
+globs: kiwi-bpmn/kiwi-bpmn-component-*/**
 alwaysApply: false
 ---
 
-# BPM 组件改动 → 重新打包 Plugin JAR
+# BPM 插件组件改动 → 重新打包 Plugin JAR
 
-官方 BPM 组件（HTTP、Shell、JDBC、Kafka 等）以 **插件 JAR** 分发，运行时从 `kiwi-admin/backend/plugins/` 加载（`bpm.component.plugins-dir=plugins`，工作目录为 `kiwi-admin/backend`）。**改 Java 源码不会自动生效**，必须重新 shade 打包并更新 `plugins/`。
+可选 BPM 组件（Kafka、RabbitMQ、S3、Slack、Payment 等）以 **插件 JAR** 分发，运行时从 `kiwi-admin/backend/plugins/` 加载。**改 Java 源码不会自动生效**，必须重新 shade 打包并更新 `plugins/`。
 
-打包须遵守 **`provided` 平台依赖 + shade `artifactSet` excludes**（见 `docs/bpm-component.zh-CN.md`「插件 JAR 打包契约」），避免误打 Spring / Operaton 导致 JAR 膨胀。
+**`kiwi-bpmn-component`（HTTP、Shell、JDBC 等核心组件）** 已改为 Maven 依赖，改完后重新编译 backend 即可，**不需要** plugin 打包。
+
+打包须遵守 **`provided` 平台依赖 + shade `artifactSet` excludes**（见 `docs/bpm-component.zh-CN.md`「插件 JAR 打包契约」）。
 
 ## 何时提醒
 
 在完成（或准备提交）对下列路径的**实质性修改**后，**必须**在回复中提醒用户重新打包 plugin：
 
-- `kiwi-bpmn/kiwi-bpmn-component/`
-- `kiwi-bpmn/kiwi-bpmn-component-kafka|rabbitmq|s3|slack|example/`
-- 各模块的 `pom.xml`（shade、`provided` 依赖、插件 profile）
+- `kiwi-bpmn/kiwi-bpmn-component-kafka|rabbitmq|s3|slack|payment|example/`
+- 各插件模块的 `pom.xml`（shade、`provided` 依赖、插件 profile）
 
-**Slurm**（`kiwi-bpmn-component-slurm`）仍走 classpath，**不需要** plugin 打包。
+**不需要** plugin 打包的模块：
+
+- `kiwi-bpmn/kiwi-bpmn-component/`（Maven 依赖，classpath）
+- `kiwi-bpmn/kiwi-bpmn-component-slurm/`（Maven 依赖，classpath）
 
 ## 提醒内容（复制给用户）
 
@@ -36,6 +40,7 @@ git add kiwi-admin/backend/plugins/*.jar
 
 ## Assistant 行为
 
-- 修改 component 模块后：**不要**假设用户已 rebuild；在任务总结中单独列出「请执行 build-plugins」。
+- 修改**插件** component 模块后：**不要**假设用户已 rebuild；在任务总结中单独列出「请执行 build-plugins」。
+- 修改 **`kiwi-bpmn-component`** 后：提醒 `mvn -pl kiwi-admin/backend -am compile` 并重启 backend。
 - 若用户仅改 `kiwi-admin/backend` 且未动 component 模块：**不必**提醒。
-- 验证建议：重启 backend 后检查 `GET /bpm/component/list` 是否仍含预期 `plugin_*` 组件，或相关流程节点可执行。
+- 验证建议：重启 backend 后检查 `GET /bpm/component/list` 是否含预期 `classpath_*`（核心）或 `plugin_*`（可选集成）组件。

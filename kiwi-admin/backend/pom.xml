@@ -211,6 +211,10 @@
         </dependency>
         <dependency>
             <groupId>com.kiwi</groupId>
+            <artifactId>kiwi-bpmn-component</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-component-slurm</artifactId>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->

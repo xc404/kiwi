@@ -4,10 +4,10 @@
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:serviceTask id="Activity_sleep" name="等待支付" camunda:delegateExpression="${sleep}" kiwi:componentId="plugin_sleep">
+    <bpmn:serviceTask id="Activity_sleep" name="等待支付" camunda:delegateExpression="${sleep}" kiwi:componentId="classpath_sleep">
       <bpmn:extensionElements>
         <camunda:properties>
-          <camunda:property name="componentId" value="plugin_sleep" />
+          <camunda:property name="componentId" value="classpath_sleep" />
         </camunda:properties>
         <camunda:inputOutput>
           <camunda:inputParameter name="durationSeconds">${PAY_QUERY_INTERVAL_SECONDS}</camunda:inputParameter>

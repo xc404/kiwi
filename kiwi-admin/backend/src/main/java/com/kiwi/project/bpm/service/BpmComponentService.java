@@ -170,7 +170,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     }
 
     /**
-     * 解析继承「命令行」(shell) 父组件时使用的 {@code parentId}，一般为 {@code plugin_shell}。
+     * 解析继承「命令行」(shell) 父组件时使用的 {@code parentId}，一般为 {@code classpath_shell}。
      */
     public String resolveShellParentComponentId() {
         for (BpmComponent c : cachedComponents.values()) {
@@ -178,7 +178,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
                 return c.getId();
             }
         }
-        return "plugin_shell";
+        return "classpath_shell";
     }
 
     public String resolveHttpRequestParentComponentId() {
@@ -187,7 +187,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
                 return c.getId();
             }
         }
-        return "plugin_httpRequest";
+        return "classpath_httpRequest";
     }
 
     /**
@@ -199,13 +199,16 @@ public class BpmComponentService implements InitializingBean, Refreshable
                 return c.getId();
             }
         }
-        return "plugin_jdbcActivity";
+        return "classpath_jdbcActivity";
     }
 
     public BpmComponent resolveComponentById(String componentId) {
         BpmComponent c = this.cachedComponents.get(componentId);
         if (c == null && componentId != null && componentId.startsWith("classpath_")) {
             c = this.cachedComponents.get("plugin_" + componentId.substring("classpath_".length()));
+        }
+        if (c == null && componentId != null && componentId.startsWith("plugin_")) {
+            c = this.cachedComponents.get("classpath_" + componentId.substring("plugin_".length()));
         }
         if (c == null) {
             return null;

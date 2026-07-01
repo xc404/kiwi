@@ -52,26 +52,26 @@ flowchart LR
 
 ### 启动时自动注册
 
-官方业务组件（HTTP、Shell、JDBC 等）以 **插件 JAR** 形式由 `BpmComponentPluginLoader` 从 `plugins/` 加载，元数据 id 为 `plugin_{key}`（如 `plugin_shell`）。Slurm 仍通过 `ClasspathBpmComponentProvider` 扫描 classpath（`classpath_*`）。二者经 `BpmComponentDeploymentService` 同步到 MongoDB。配置项 `bpm.component.auto-deploy` 默认为 `true`。
+官方核心组件（HTTP、Shell、JDBC 等）通过 **`kiwi-bpmn-component` Maven 依赖**并入 backend，由 `ClasspathBpmComponentProvider` 扫描 Spring Bean，元数据 id 为 `classpath_{key}`（如 `classpath_shell`）。Kafka、S3、Slack、Payment 等可选集成仍以 **插件 JAR** 由 `BpmComponentPluginLoader` 从 `plugins/` 加载（`plugin_{key}`）。二者经 `BpmComponentDeploymentService` 同步到 MongoDB。配置项 `bpm.component.auto-deploy` 默认为 `true`。
 
-**本地开发**：官方 plugin JAR 已随仓库提交在 `kiwi-admin/backend/plugins/`，clone 后从 **`kiwi-admin/backend`** 工作目录启动后端即可加载（如 `plugin_httpRequest`），**日常无需** `build-plugins`。
+**本地开发**：修改 `kiwi-bpmn-component` 后重新编译 backend 即可（`mvn -pl kiwi-admin/backend -am compile`），**无需** `build-plugins`。可选插件 JAR 已提交在 `kiwi-admin/backend/plugins/`；IDE 工作目录须为 **`kiwi-admin/backend`**（否则 `plugins` 路径解析错误）。
 
-**仅修改 `kiwi-bpmn-component*` 模块时**，维护者需重新打包并 commit JAR：
+**修改 `kiwi-bpmn-component-kafka|rabbitmq|s3|slack|payment` 等插件模块时**，维护者需重新打包并 commit JAR：
 
 ```bash
 mvn -pl kiwi-admin/backend -am package -Pbuild-plugins -DskipTests
 git add kiwi-admin/backend/plugins/*.jar && git commit -m "chore: refresh BPM component plugin JARs"
 ```
 
-IDE 工作目录须为 `kiwi-admin/backend`，否则 `plugins` 路径解析错误。详见 [`kiwi-admin/backend/plugins/README.md`](../kiwi-admin/backend/plugins/README.md)。
+详见 [`kiwi-admin/backend/plugins/README.md`](../kiwi-admin/backend/plugins/README.md)。
 
 关键代码路径：
 
 | 路径 | 说明 |
 |------|------|
 | [kiwi-bpmn-core/.../ComponentDescription.java](../kiwi-bpmn/kiwi-bpmn-core/src/main/java/com/kiwi/bpmn/core/annotation/ComponentDescription.java) | 组件元数据注解 |
-| [BpmComponentPluginLoader.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/BpmComponentPluginLoader.java) | 官方/第三方插件 JAR 加载 |
-| [ClasspathBpmComponentProvider.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/ClasspathBpmComponentProvider.java) | Slurm 等 classpath 组件 |
+| [ClasspathBpmComponentProvider.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/ClasspathBpmComponentProvider.java) | 核心组件（`kiwi-bpmn-component`、Slurm 等 classpath 依赖） |
+| [BpmComponentPluginLoader.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/BpmComponentPluginLoader.java) | 可选集成 / 第三方插件 JAR 加载 |
 | [ComponentUtils.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/utils/ComponentUtils.java) | 注解 → `BpmComponent` 转换 |
 | [component-provider.ts](../kiwi-admin/frontend/src/app/pages/bpm/flow-elements/component-provider.ts) | 前端拉取 `GET /bpm/component/list` |
 

@@ -8,7 +8,7 @@ Maven multi-module monorepo: Java 25 + Spring Boot 4.0 backend (Operaton BPM eng
 kiwi-common/              # Shared entities, Mongo/MyBatis base classes
 kiwi-bpmn/
   kiwi-bpmn-core/         # @ComponentDescription / @ComponentParameter annotations, variable mapping, job retry
-  kiwi-bpmn-component/    # Official delegates as plugin JARs (Shell, HTTP, MongoDB, JDBC, …); Slurm stays classpath via kiwi-bpmn-component-slurm
+  kiwi-bpmn-component/    # Official delegates (Shell, HTTP, MongoDB, JDBC, …) as Maven dependency; optional integrations as plugin JARs
   kiwi-bpmn-external-task/ # External Task abstraction
 kiwi-admin/
   backend/                # com.kiwi.framework.* (infra) + com.kiwi.project.{system,bpm,ai,tools,monitor,notification}
@@ -23,9 +23,9 @@ openspec/                 # Spec-driven change proposals (see OpenSpec Workflow 
 # From repo root — compiles all upstream modules
 mvn -pl kiwi-admin/backend -am compile -DskipTests
 # Run Application with profiles: local,dev  (port 8000, H2 engine DB, MyBatis stdout)
-# Working directory MUST be kiwi-admin/backend — official plugin JARs are committed under plugins/
+# Working directory MUST be kiwi-admin/backend — optional plugin JARs are under plugins/
 ```
-Official BPM component plugin JARs live in `kiwi-admin/backend/plugins/` (committed). They are **slim shaded JARs** (~30–50 MB total): platform libs (`kiwi-bpmn-core`, Spring, Operaton) are `provided` at build time and excluded from shade. **Only when changing `kiwi-bpmn-component*` modules**, rebuild and commit:
+Core BPM components (`kiwi-bpmn-component`) are a **Maven dependency** on the backend classpath (`classpath_*`). Optional integrations (Kafka, S3, Slack, Payment, …) ship as **slim shaded plugin JARs** in `kiwi-admin/backend/plugins/`. **Only when changing those plugin modules**, rebuild and commit:
 ```bash
 mvn -pl kiwi-admin/backend -am package -Pbuild-plugins -DskipTests
 ```

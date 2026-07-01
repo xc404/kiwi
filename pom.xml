@@ -313,7 +313,7 @@
                                         <argument>-Dkiwi.build.plugins=true</argument>
                                         <argument>-DskipTests</argument>
                                         <argument>-pl</argument>
-                                        <argument>kiwi-bpmn/kiwi-bpmn-component,kiwi-bpmn/kiwi-bpmn-component-kafka,kiwi-bpmn/kiwi-bpmn-component-rabbitmq,kiwi-bpmn/kiwi-bpmn-component-s3,kiwi-bpmn/kiwi-bpmn-component-slack,kiwi-bpmn/kiwi-bpmn-component-payment</argument>
+                                        <argument>kiwi-bpmn/kiwi-bpmn-component-kafka,kiwi-bpmn/kiwi-bpmn-component-rabbitmq,kiwi-bpmn/kiwi-bpmn-component-s3,kiwi-bpmn/kiwi-bpmn-component-slack,kiwi-bpmn/kiwi-bpmn-component-payment</argument>
                                         <argument>-am</argument>
                                     </arguments>
                                 </configuration>

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class JdbcSchemaComponentGeneratorTest {
 
     private static final String ConnectionId = "conn-demo";
-    private static final String ParentId = "plugin_jdbcActivity";
+    private static final String ParentId = "classpath_jdbcActivity";
 
     @Test
     void buildCrudComponents_forUserTable() {
