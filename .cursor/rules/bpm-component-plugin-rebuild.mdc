@@ -8,6 +8,8 @@ alwaysApply: false
 
 官方 BPM 组件（HTTP、Shell、JDBC、Kafka 等）以 **插件 JAR** 分发，运行时从 `kiwi-admin/backend/plugins/` 加载（`bpm.component.plugins-dir=plugins`，工作目录为 `kiwi-admin/backend`）。**改 Java 源码不会自动生效**，必须重新 shade 打包并更新 `plugins/`。
 
+打包须遵守 **`provided` 平台依赖 + shade `artifactSet` excludes**（见 `docs/bpm-component.zh-CN.md`「插件 JAR 打包契约」），避免误打 Spring / Operaton 导致 JAR 膨胀。
+
 ## 何时提醒
 
 在完成（或准备提交）对下列路径的**实质性修改**后，**必须**在回复中提醒用户重新打包 plugin：

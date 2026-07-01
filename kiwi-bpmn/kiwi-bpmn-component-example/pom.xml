@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.kiwi</groupId>
-        <artifactId>kiwi-parent</artifactId>
+        <artifactId>kiwi-bpmn-component-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../kiwi-bpmn-component-parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>kiwi-bpmn-component-example</artifactId>
@@ -28,6 +28,7 @@
         <dependency>
             <groupId>com.kiwi</groupId>
             <artifactId>kiwi-bpmn-core</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>

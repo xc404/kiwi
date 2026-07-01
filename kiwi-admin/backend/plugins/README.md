@@ -2,6 +2,8 @@
 
 本目录存放官方 BPM 组件的 **plugin JAR**，由 `BpmComponentPluginLoader` 在启动时加载（配置项 `bpm.component.plugins-dir`，默认 `plugins`，相对**工作目录**）。
 
+JAR 经 `maven-shade-plugin` 打包，**仅含本模块与第三方 compile 依赖**；Spring、Operaton、`kiwi-bpmn-core` 等由 backend 宿主提供（`provided` + shade `artifactSet` excludes）。详见 [`docs/bpm-component.zh-CN.md`](../../../docs/bpm-component.zh-CN.md)「插件 JAR 打包契约」。
+
 ## 日常开发
 
 clone 仓库后，在 IDE 中从 **`kiwi-admin/backend`** 运行 `Application`（profile `local,dev`）即可，**无需**先执行 `mvn -Pbuild-plugins`。

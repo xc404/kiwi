@@ -18,6 +18,7 @@
         <module>kiwi-admin/backend</module>
         <module>kiwi-bpmn</module>
         <module>kiwi-bpmn/kiwi-bpmn-external-task</module>
+        <module>kiwi-bpmn/kiwi-bpmn-component-parent</module>
         <module>kiwi-bpmn/kiwi-bpmn-component</module>
         <module>kiwi-bpmn/kiwi-bpmn-component-example</module>
         <module>kiwi-bpmn/kiwi-bpmn-component-slack</module>
@@ -249,6 +250,20 @@
                         <shadedArtifactAttached>true</shadedArtifactAttached>
                         <shadedClassifierName>plugin</shadedClassifierName>
                         <createDependencyReducedPom>false</createDependencyReducedPom>
+                        <artifactSet>
+                            <excludes>
+                                <exclude>org.springframework:*</exclude>
+                                <exclude>org.springframework.boot:*</exclude>
+                                <exclude>org.springframework.data:*</exclude>
+                                <exclude>org.operaton:*</exclude>
+                                <exclude>org.operaton.bpm:*</exclude>
+                                <exclude>org.operaton.bpm.springboot:*</exclude>
+                                <exclude>com.kiwi:kiwi-bpmn-core</exclude>
+                                <exclude>com.kiwi:kiwi-common</exclude>
+                                <exclude>com.kiwi:kiwi-bpmn-external-task</exclude>
+                                <exclude>io.swagger.core.v3:*</exclude>
+                            </excludes>
+                        </artifactSet>
                         <filters>
                             <filter>
                                 <artifact>*:*</artifact>

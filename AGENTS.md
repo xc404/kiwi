@@ -25,7 +25,7 @@ mvn -pl kiwi-admin/backend -am compile -DskipTests
 # Run Application with profiles: local,dev  (port 8000, H2 engine DB, MyBatis stdout)
 # Working directory MUST be kiwi-admin/backend — official plugin JARs are committed under plugins/
 ```
-Official BPM component plugin JARs live in `kiwi-admin/backend/plugins/` (committed). **Only when changing `kiwi-bpmn-component*` modules**, rebuild and commit:
+Official BPM component plugin JARs live in `kiwi-admin/backend/plugins/` (committed). They are **slim shaded JARs** (~30–50 MB total): platform libs (`kiwi-bpmn-core`, Spring, Operaton) are `provided` at build time and excluded from shade. **Only when changing `kiwi-bpmn-component*` modules**, rebuild and commit:
 ```bash
 mvn -pl kiwi-admin/backend -am package -Pbuild-plugins -DskipTests
 ```

@@ -312,6 +312,87 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
+## 八点五、插件 JAR 打包契约
+
+第三方或官方 BPM 组件若以 **plugin JAR** 分发（放入 `plugins/` 或由 `POST /bpm/component/plugins/upload` 安装），须遵守下列约定，避免将 Spring / Operaton / Kiwi 平台库重复打入 JAR（单 jar 可达数十 MB 且易引发类加载冲突）。
+
+### 宿主提供（`provided`，禁止打入 JAR）
+
+| 依赖 | 说明 |
+|------|------|
+| `kiwi-bpmn-core` | 注解、`ExecutionUtils` 等 |
+| `spring-context` | Spring 容器由 backend 提供 |
+| `operaton-engine` | BPM 引擎 API |
+| `kiwi-common` / `kiwi-bpmn-external-task` | 若组件用到，同样 `provided` |
+
+继承 `kiwi-parent` 时，其全局 compile 依赖（`spring-boot-starter-web`、`operaton-bpm-spring-boot-starter` 等）会误入 shade。**官方组件模块**应继承 [`kiwi-bpmn-component-parent`](../kiwi-bpmn/kiwi-bpmn-component-parent/pom.xml)，由 parent 统一覆写为 `provided`。
+
+### 插件自带（`compile`，shade 保留）
+
+仅宿主**没有**的第三方库，例如：
+
+| 模块 | 打入 JAR 的第三方依赖 |
+|------|----------------------|
+| `kiwi-bpmn-component` | `commons-io`、`jsch`、邮件相关（`jakarta.mail` / `angus-mail` 等） |
+| `kiwi-bpmn-component-kafka` | `kafka-clients` |
+| `kiwi-bpmn-component-rabbitmq` | `amqp-client` |
+| `kiwi-bpmn-component-s3` | AWS SDK `s3`、`url-connection-client` |
+| `kiwi-bpmn-component-slack` | 无（纯 JDK） |
+
+### 推荐产物与 ClassLoader
+
+```mermaid
+flowchart TB
+    Backend["kiwi-admin/backend\nApplication ClassLoader"]
+    Plugin["plugin.jar\n本模块 + 第三方 compile"]
+    Backend -->|parent| Plugin
+```
+
+- **无第三方依赖** → thin jar（仅本模块 class）即可，如 Slack 组件。
+- **有第三方依赖** → `maven-shade-plugin` 打 fat jar，并配合根 `pom.xml` `pluginManagement` 中的 `artifactSet` excludes（排除 `org.springframework:*`、`org.operaton:*`、`com.kiwi:kiwi-bpmn-core` 等）。
+- 激活打包：`-Dkiwi.build.plugins=true` 或 `-Pbuild-plugins`（见 [`kiwi-bpmn-component-parent`](../kiwi-bpmn/kiwi-bpmn-component-parent/pom.xml) 的 `plugin-jar` profile）。
+- 运行时 `BpmComponentPluginLoader` 以 `applicationContext.getClassLoader()` 为 **parent**，插件内类可解析宿主已加载的平台类。
+
+### 反模式
+
+- 使用 `spring-boot-maven-plugin` **repackage** 打可执行 fat jar（会捆绑整个 Spring Boot）。
+- shade **无 excludes** 的全量依赖（把 Operaton / MongoDB 等打进 plugin）。
+- 继承带全局 compile 的 parent 却不把平台库标为 `provided`。
+
+### 最小 `pom.xml` 片段（第三方组件）
+
+```xml
+<parent>
+    <groupId>com.kiwi</groupId>
+    <artifactId>kiwi-bpmn-component-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</parent>
+
+<dependencies>
+    <dependency>
+        <groupId>com.kiwi</groupId>
+        <artifactId>kiwi-bpmn-core</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.operaton.bpm</groupId>
+        <artifactId>operaton-engine</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    <!-- 仅示例：宿主没有的库用 compile -->
+    <!-- <dependency><groupId>com.example</groupId><artifactId>client</artifactId></dependency> -->
+</dependencies>
+```
+
+完整示例见 [`kiwi-bpmn-component-example`](../kiwi-bpmn/kiwi-bpmn-component-example/)。
+
+---
+
 ## 九、插件 JAR 加载
 
 官方组件与第三方扩展均通过 `plugins/` 目录分发（见上文「启动时自动注册」）。

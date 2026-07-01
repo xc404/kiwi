@@ -6,7 +6,24 @@
 
 - `DemoGreetingActivity`（`@Component("demoGreeting")`）：读取 `name`，写入 `greeting = "Hello, " + name`
 
-## 接入 kiwi-admin backend
+## 打成 plugin JAR 并上传
+
+继承 `kiwi-bpmn-component-parent` 后，在仓库根目录：
+
+```bash
+mvn -pl kiwi-bpmn/kiwi-bpmn-component-example package -Dkiwi.build.plugins=true -DskipTests
+```
+
+产物：`kiwi-bpmn/kiwi-bpmn-component-example/target/kiwi-bpmn-component-example-*-plugin.jar`
+
+- 复制到 `kiwi-admin/backend/plugins/` 后重启 backend，或
+- 管理端 **工作流 → 组件插件** → 上传 JAR
+
+组件元数据 id 为 `plugin_demoGreeting`（`plugin_` + `@Component` bean key）。
+
+打包契约（`provided`、shade excludes）见 `docs/bpm-component.zh-CN.md`「插件 JAR 打包契约」。
+
+## 接入 kiwi-admin backend（classpath 方式，可选）
 
 在 `kiwi-admin/backend/pom.xml` 增加：
 
@@ -50,6 +67,6 @@ mvn -pl kiwi-admin/backend -am compile -DskipTests
 1. 复制本模块或仅复制 `DemoGreetingActivity` 类
 2. 修改 `@Component("yourBeanKey")` 与 `@ComponentDescription`
 3. 实现 `JavaDelegate#execute`
-4. 作为 Maven 依赖编入 backend，或后续以 plugin JAR 分发
+4. 作为 Maven 依赖编入 backend（classpath），或打成 plugin JAR 分发（推荐第三方热更新）
 
-约定见仓库 `docs/bpm-component.zh-CN.md`。
+约定见仓库 `docs/bpm-component.zh-CN.md`（含「插件 JAR 打包契约」）。
