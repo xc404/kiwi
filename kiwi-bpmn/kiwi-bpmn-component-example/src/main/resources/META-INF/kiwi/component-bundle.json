@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi 组件示例包",
+  "version": "1.0.0",
+  "summary": "第三方组件开发最小示例",
+  "description": "演示如何编写独立插件 JAR 与 component-bundle.json 清单",
+  "components": [
+    {
+      "key": "demoGreeting",
+      "name": "Demo 问候",
+      "group": "示例",
+      "version": "1.0",
+      "description": "读取 name，写入 greeting"
+    }
+  ]
+}

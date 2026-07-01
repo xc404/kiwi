@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi RabbitMQ 组件",
+  "version": "1.0.0",
+  "summary": "向 RabbitMQ 队列发布消息",
+  "components": [
+    {
+      "key": "rabbitMqPublish",
+      "name": "RabbitMQ 发布",
+      "group": "消息",
+      "version": "1.0"
+    }
+  ]
+}

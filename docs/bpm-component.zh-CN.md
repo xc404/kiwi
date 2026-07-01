@@ -403,11 +403,35 @@ flowchart TB
 | `bpm.component.plugins-enabled` | `true` | 是否扫描插件 |
 
 - 将含 `@ComponentDescription` + `JavaDelegate` 的 JAR 放入 `plugins/`，启动时由 `PluginBpmComponentProvider` 注册 Bean 并同步 Mongo（`source=plugin`）。
-- **上传安装**：`POST /bpm/component/plugins/upload`（multipart `file`）
+- **列表**：`GET /bpm/component/plugins` → `BpmComponentPluginDescriptor[]`（包名、版本、组件列表、warnings、sha256）
+- **预览（不落盘）**：`POST /bpm/component/plugins/preview`（multipart `file`）
+- **上传安装**：`POST /bpm/component/plugins/upload`（先校验清单，通过再落盘并 reload）
 - **手动刷新**：`POST /bpm/component/plugins/reload`
 - **卸载**：`DELETE /bpm/component/plugins/{fileName}`
-- 管理端入口：**工作流 → 组件插件**（`/bpm/plugins`，上传 / 重新扫描 / 卸载）。
+- 管理端入口：**工作流 → 组件插件**（`/bpm/plugins`，上传前预览确认、展开查看组件列表）。
 - 第三方开发仍推荐参考 `kiwi-bpmn-component-example`；插件方式适合运维侧热更新。
+
+### 组件包清单 `component-bundle.json`
+
+路径固定为 **`META-INF/kiwi/component-bundle.json`**（不入 classpath 业务资源，避免与 Spring 扫描冲突）。
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `schemaVersion` | 是 | 固定 `"1"` |
+| `name` | 是 | 包显示名 |
+| `version` | 是 | SemVer |
+| `summary` / `description` / `readme` | 否 | 市场/管理端展示 |
+| `author` / `publisher` / `license` / `kiwiMinVersion` / `homepage` / `repository` | 否 | 元数据 |
+| `components` | 是 | 组件条目数组（`key`、`name` 必填；`group`、`version`、`description`、`parentKey`、`requiredParentKeys` 可选） |
+
+**合并规则**（json_primary + 注解回退）：
+
+1. 有 JSON：包级字段以 JSON 为准；`components` 以 JSON 列表顺序为主展示。
+2. JSON 中每个 `key` 必须在 JAR 注解扫描结果中存在，否则 **400**（防止空壳清单）。
+3. JAR 中有注解但 JSON 未列出：记入 `warnings[]`，展示时追加（`source: scanned`），不阻断安装。
+4. 无 JSON：包级 `name` = jar 文件名（去后缀），`components` 全部由 `@ComponentDescription` 扫描填充。
+
+示例见 [`kiwi-bpmn-component-example`](../kiwi-bpmn/kiwi-bpmn-component-example/src/main/resources/META-INF/kiwi/component-bundle.json)。
 
 ---
 

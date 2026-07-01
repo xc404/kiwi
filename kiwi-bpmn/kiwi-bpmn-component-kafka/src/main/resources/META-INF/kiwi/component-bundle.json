@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi Kafka 组件",
+  "version": "1.0.0",
+  "summary": "向 Kafka Topic 发送消息",
+  "components": [
+    {
+      "key": "kafkaPublish",
+      "name": "Kafka 生产",
+      "group": "消息",
+      "version": "1.0",
+      "description": "向 Kafka Topic 发送单条消息"
+    }
+  ]
+}

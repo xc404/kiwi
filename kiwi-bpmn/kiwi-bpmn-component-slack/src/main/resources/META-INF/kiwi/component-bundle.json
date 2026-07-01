@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi Slack 组件",
+  "version": "1.0.0",
+  "summary": "通过 Slack Incoming Webhook 发送通知",
+  "components": [
+    {
+      "key": "slackNotify",
+      "name": "Slack 通知",
+      "group": "通知",
+      "version": "1.0"
+    }
+  ]
+}

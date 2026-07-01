@@ -2,6 +2,7 @@ package com.kiwi.project.bpm.ctl;
 
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dao.BpmComponentDao;
+import com.kiwi.project.bpm.dto.BpmComponentPluginDescriptor;
 import com.kiwi.project.bpm.dto.BpmComponentPreviewConflictItem;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
@@ -373,35 +374,39 @@ public class BpmComponentCtl extends BaseCtl
         }
     }
 
-    @Operation(operationId = "bpmComp_listPlugins", summary = "列出已安装的组件插件 JAR")
+    @Operation(operationId = "bpmComp_listPlugins", summary = "列出已安装的组件插件 JAR（含包清单与组件信息）")
     @GetMapping("plugins")
     @ResponseBody
-    public List<String> listPlugins() {
+    public List<BpmComponentPluginDescriptor> listPlugins() {
         return bpmComponentBundleService.listInstalled();
+    }
+
+    @Operation(operationId = "bpmComp_previewPlugin", summary = "预览组件插件 JAR（不落盘）")
+    @PostMapping("plugins/preview")
+    @ResponseBody
+    public BpmComponentPluginDescriptor previewPlugin(@RequestParam("file") MultipartFile file) {
+        return bpmComponentBundleService.previewJar(file);
     }
 
     @Operation(operationId = "bpmComp_uploadPlugin", summary = "上传组件插件 JAR 并热加载")
     @PostMapping("plugins/upload")
     @ResponseBody
-    public List<String> uploadPlugin(@RequestParam("file") MultipartFile file) {
-        bpmComponentBundleService.uploadJar(file);
-        return bpmComponentBundleService.listInstalled();
+    public List<BpmComponentPluginDescriptor> uploadPlugin(@RequestParam("file") MultipartFile file) {
+        return bpmComponentBundleService.uploadJar(file);
     }
 
     @Operation(operationId = "bpmComp_reloadPlugins", summary = "重新扫描插件目录并同步组件库")
     @PostMapping("plugins/reload")
     @ResponseBody
-    public List<String> reloadPlugins() {
-        bpmComponentBundleService.reload();
-        return bpmComponentBundleService.listInstalled();
+    public List<BpmComponentPluginDescriptor> reloadPlugins() {
+        return bpmComponentBundleService.reload();
     }
 
     @Operation(operationId = "bpmComp_deletePlugin", summary = "卸载组件插件 JAR 并同步组件库")
     @DeleteMapping("plugins/{fileName}")
     @ResponseBody
-    public List<String> deletePlugin(@PathVariable String fileName) {
-        bpmComponentBundleService.deleteJar(fileName);
-        return bpmComponentBundleService.listInstalled();
+    public List<BpmComponentPluginDescriptor> deletePlugin(@PathVariable String fileName) {
+        return bpmComponentBundleService.deleteJar(fileName);
     }
 
     @Data

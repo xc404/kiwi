@@ -1,7 +1,9 @@
 package com.kiwi.project.bpm.service;
 
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
+import com.kiwi.project.bpm.dto.BpmComponentPluginDescriptor;
 import com.kiwi.project.bpm.model.BpmComponent;
+import com.kiwi.project.bpm.utils.BpmComponentBundleReader;
 import com.kiwi.project.bpm.utils.ComponentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
     private final BpmComponentDeploymentService deploymentService;
     private final ObjectProvider<BpmComponentService> componentServiceProvider;
     private final PluginBpmComponentProvider pluginBpmComponentProvider;
+    private final BpmComponentBundleReader bundleReader;
 
     @Value("${bpm.component.plugins-dir:plugins}")
     private String pluginsDir;
@@ -56,11 +59,13 @@ public class BpmComponentPluginLoader implements InitializingBean {
 
     private final Map<String, URLClassLoader> jarClassLoaders = new ConcurrentHashMap<>();
     private final Set<String> pluginRegisteredBeans = ConcurrentHashMap.newKeySet();
+    private volatile List<BpmComponentPluginDescriptor> pluginDescriptors = List.of();
 
     public synchronized void reload() {
         if (!pluginsEnabled) {
             log.info("BPM 组件插件加载已禁用 (bpm.component.plugins-enabled=false)");
             pluginBpmComponentProvider.setComponents(List.of());
+            pluginDescriptors = List.of();
             return;
         }
         Path dir = Path.of(pluginsDir).toAbsolutePath().normalize();
@@ -73,6 +78,7 @@ public class BpmComponentPluginLoader implements InitializingBean {
         closeClassLoaders();
         unregisterPluginBeans();
         List<BpmComponent> discovered = new ArrayList<>();
+        List<BpmComponentPluginDescriptor> descriptors = new ArrayList<>();
 
         try (var stream = Files.list(dir)) {
             List<Path> jars =
@@ -81,12 +87,16 @@ public class BpmComponentPluginLoader implements InitializingBean {
                             .toList();
             for (Path jar : jars) {
                 discovered.addAll(loadJar(jar));
+                BpmComponentPluginDescriptor descriptor = bundleReader.describeJar(jar);
+                descriptors.add(descriptor);
+                logPluginDescriptor(jar, descriptor);
             }
         } catch (IOException e) {
             throw new UncheckedIOException("扫描插件目录失败: " + dir, e);
         }
 
         pluginBpmComponentProvider.setComponents(discovered);
+        pluginDescriptors = List.copyOf(descriptors);
         log.info("BPM 组件插件加载完成: dir={} count={}", dir, discovered.size());
     }
 
@@ -100,6 +110,29 @@ public class BpmComponentPluginLoader implements InitializingBean {
     @Override
     public void afterPropertiesSet() {
         reload();
+    }
+
+    /** 只读返回已安装插件描述（与最近一次 reload 同生命周期；不触发 reload）。 */
+    public List<BpmComponentPluginDescriptor> describeInstalledPlugins() {
+        if (!pluginDescriptors.isEmpty()) {
+            return pluginDescriptors;
+        }
+        return listJarDescriptorsInPluginsDir();
+    }
+
+    public List<BpmComponentPluginDescriptor> listJarDescriptorsInPluginsDir() {
+        Path dir = Path.of(pluginsDir).toAbsolutePath().normalize();
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        try (var stream = Files.list(dir)) {
+            return stream.filter(p -> Files.isRegularFile(p) && p.getFileName().toString().endsWith(".jar"))
+                    .sorted()
+                    .map(bundleReader::describeJar)
+                    .toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public List<String> listInstalledJarNames() {
@@ -154,41 +187,20 @@ public class BpmComponentPluginLoader implements InitializingBean {
 
     private void indexJarFile(Path jarPath, Map<String, String> index) {
         String jarName = jarPath.getFileName().toString();
-        try {
-            URL jarUrl = jarPath.toUri().toURL();
-            URLClassLoader cl = new URLClassLoader(new URL[] {jarUrl}, applicationContext.getClassLoader());
-            try (JarFile jarFile = new JarFile(jarPath.toFile()); cl) {
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    if (entry.isDirectory() || !entry.getName().endsWith(".class")) {
-                        continue;
-                    }
-                    String className = entry.getName().replace('/', '.').replace(".class", "");
-                    if (className.contains("$")) {
-                        continue;
-                    }
-                    Class<?> clazz;
-                    try {
-                        clazz = cl.loadClass(className);
-                    } catch (LinkageError | ClassNotFoundException ex) {
-                        continue;
-                    }
-                    if (!isDelegateClass(clazz)) {
-                        continue;
-                    }
-                    ComponentDescription desc = AnnotationUtils.getAnnotation(clazz, ComponentDescription.class);
-                    if (desc == null) {
-                        continue;
-                    }
-                    String beanName = resolveBeanName(clazz);
-                    String componentId = pluginBpmComponentProvider.getSource() + "_" + beanName;
-                    index.put(componentId, jarName);
-                }
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException("索引插件 JAR 失败: " + jarPath, e);
-        }
+        String source = pluginBpmComponentProvider.getSource();
+        bundleReader.scanJarComponents(jarPath).keySet().forEach(key -> index.put(source + "_" + key, jarName));
+    }
+
+    private void logPluginDescriptor(Path jar, BpmComponentPluginDescriptor descriptor) {
+        boolean hasBundle = bundleReader.readFromJar(jar).isPresent();
+        log.info(
+                "插件包描述: jar={} hasBundle={} name={} version={} components={} warnings={}",
+                jar.getFileName(),
+                hasBundle,
+                descriptor.getBundle() != null ? descriptor.getBundle().getName() : null,
+                descriptor.getBundle() != null ? descriptor.getBundle().getVersion() : null,
+                descriptor.getComponents() != null ? descriptor.getComponents().size() : 0,
+                descriptor.getWarnings() != null ? descriptor.getWarnings().size() : 0);
     }
 
     private List<BpmComponent> loadJar(Path jarPath) {

@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, output, signal } from '@angular/core';
-import { catchError, finalize, map, of } from 'rxjs';
+import { catchError, finalize, map, of, switchMap } from 'rxjs';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
@@ -11,15 +11,20 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+
+import { BpmComponentPluginPreviewModalComponent } from './bpm-component-plugin-preview-modal.component';
+import { BpmComponentPluginDescriptor } from './bpm-component-plugin.types';
 
 @Component({
   selector: 'app-bpm-component-plugins',
   standalone: true,
-  imports: [NzCardModule, NzButtonModule, NzIconModule, NzTableModule, NzEmptyModule, NzSpinModule],
+  imports: [NzCardModule, NzButtonModule, NzIconModule, NzTableModule, NzEmptyModule, NzSpinModule, NzTagModule],
   template: `
     <nz-card class="bpm-component-plugins-card" nzTitle="组件插件">
       <p class="bpm-component-plugins-hint">
-        将含 <code>@ComponentDescription</code> 的 JAR 上传至 <code>plugins/</code> 目录，无需修改 backend <code>pom.xml</code>。安装后组件来源为 <code>plugin</code>，会出现在设计器面板。
+        将含 <code>@ComponentDescription</code> 的 JAR 上传至 <code>plugins/</code> 目录，无需修改 backend <code>pom.xml</code>。可选内嵌
+        <code>META-INF/kiwi/component-bundle.json</code> 提供包名、版本与组件清单；安装后组件来源为 <code>plugin</code>。
       </p>
       <div class="bpm-component-plugins-toolbar">
         <input #fileInput type="file" accept=".jar,application/java-archive" hidden (change)="onFileSelected($event)" />
@@ -37,16 +42,74 @@ import { NzTableModule } from 'ng-zorro-antd/table';
           <nz-table nzSize="small" [nzData]="plugins()" [nzFrontPagination]="false" [nzShowPagination]="false">
             <thead>
               <tr>
+                <th nzWidth="40px"></th>
+                <th>包名</th>
+                <th nzWidth="90px">版本</th>
+                <th>简介</th>
+                <th nzWidth="72px">组件数</th>
                 <th>文件名</th>
                 <th nzWidth="100px">操作</th>
               </tr>
             </thead>
             <tbody>
-              @for (name of plugins(); track name) {
+              @for (row of plugins(); track row.fileName) {
                 <tr>
-                  <td>{{ name }}</td>
+                  <td
+                    nzExpand
+                    [nzExpand]="isExpanded(row.fileName)"
+                    (nzExpandChange)="toggleExpand(row.fileName, $event)"
+                  ></td>
+                  <td>{{ row.bundle?.name ?? row.fileName }}</td>
+                  <td>{{ row.bundle?.version || '—' }}</td>
+                  <td>{{ row.bundle?.summary || '—' }}</td>
+                  <td>{{ row.components?.length ?? 0 }}</td>
+                  <td>{{ row.fileName }}</td>
                   <td>
-                    <button type="button" nz-button nzDanger nzSize="small" [disabled]="loading()" (click)="confirmDelete(name)">卸载</button>
+                    <button type="button" nz-button nzDanger nzSize="small" [disabled]="loading()" (click)="confirmDelete(row.fileName)">
+                      卸载
+                    </button>
+                  </td>
+                </tr>
+                <tr [nzExpand]="isExpanded(row.fileName)">
+                  <td colspan="7" class="bpm-component-plugins-expand">
+                    @if (row.warnings?.length) {
+                      <div class="bpm-component-plugins-warnings">
+                        @for (w of row.warnings; track w) {
+                          <div>{{ w }}</div>
+                        }
+                      </div>
+                    }
+                    <table class="bpm-component-plugins-subtable">
+                      <thead>
+                        <tr>
+                          <th>名称</th>
+                          <th>key</th>
+                          <th>分组</th>
+                          <th>componentId</th>
+                          <th>来源</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (c of row.components ?? []; track c.componentId) {
+                          <tr>
+                            <td>{{ c.name }}</td>
+                            <td><code>{{ c.key }}</code></td>
+                            <td>{{ c.group || '—' }}</td>
+                            <td><code>{{ c.componentId }}</code></td>
+                            <td>
+                              @if (c.source === 'scanned') {
+                                <nz-tag nzColor="orange">扫描</nz-tag>
+                              } @else {
+                                <nz-tag nzColor="blue">清单</nz-tag>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                    @if (row.bundle?.readme) {
+                      <pre class="bpm-component-plugins-readme">{{ row.bundle?.readme }}</pre>
+                    }
                   </td>
                 </tr>
               }
@@ -74,6 +137,36 @@ import { NzTableModule } from 'ng-zorro-antd/table';
         gap: 8px;
         margin-bottom: 12px;
       }
+      .bpm-component-plugins-expand {
+        background: #fafafa;
+        padding: 8px 12px;
+      }
+      .bpm-component-plugins-warnings {
+        color: #d48806;
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      .bpm-component-plugins-subtable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .bpm-component-plugins-subtable th,
+      .bpm-component-plugins-subtable td {
+        border: 1px solid #f0f0f0;
+        padding: 4px 8px;
+        text-align: left;
+      }
+      .bpm-component-plugins-readme {
+        margin: 8px 0 0;
+        max-height: 160px;
+        overflow: auto;
+        font-size: 12px;
+        white-space: pre-wrap;
+        background: #fff;
+        padding: 8px;
+        border: 1px solid #f0f0f0;
+      }
     `
   ]
 })
@@ -82,9 +175,10 @@ export class BpmComponentPlugins implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modalWrap = inject(NzModalWrapService);
 
-  readonly plugins = signal<string[]>([]);
+  readonly plugins = signal<BpmComponentPluginDescriptor[]>([]);
   readonly loading = signal(false);
   readonly uploading = signal(false);
+  private readonly expanded = signal<Record<string, boolean>>({});
 
   /** 插件列表变更后通知父页刷新组件表 */
   readonly changed = output<void>();
@@ -93,15 +187,23 @@ export class BpmComponentPlugins implements OnInit {
     this.loadPlugins(false);
   }
 
+  isExpanded(fileName: string): boolean {
+    return !!this.expanded()[fileName];
+  }
+
+  toggleExpand(fileName: string, expanded: boolean): void {
+    this.expanded.update(map => ({ ...map, [fileName]: expanded }));
+  }
+
   loadPlugins(showLoading = true): void {
     this.loading.set(showLoading);
     this.http
-      .get<{ content?: string[] }>('/bpm/component/plugins', undefined, { showLoading: false })
+      .get<{ content?: BpmComponentPluginDescriptor[] }>('/bpm/component/plugins', undefined, { showLoading: false })
       .pipe(
         map(res => res?.content ?? []),
         catchError(err => {
           this.message.error(`加载插件列表失败${err.message ?? ''}`);
-          return of([] as string[]);
+          return of([] as BpmComponentPluginDescriptor[]);
         }),
         finalize(() => this.loading.set(false))
       )
@@ -124,9 +226,37 @@ export class BpmComponentPlugins implements OnInit {
     this.uploading.set(true);
     this.loading.set(true);
     this.http
-      .post<{ content?: string[] }>('/bpm/component/plugins/upload', formData, { showLoading: false })
+      .post<{ content?: BpmComponentPluginDescriptor }>('/bpm/component/plugins/preview', formData, { showLoading: false })
       .pipe(
-        map(res => res?.content ?? []),
+        switchMap(res => {
+          const descriptor = res?.content;
+          if (!descriptor) {
+            return of(null);
+          }
+          return new Promise<BpmComponentPluginDescriptor | null>(resolve => {
+            this.modalWrap.confirm({
+              nzTitle: '确认安装插件',
+              nzWidth: 640,
+              nzContent: BpmComponentPluginPreviewModalComponent,
+              nzData: { descriptor, fileName: file.name },
+              nzOkText: '安装',
+              nzCancelText: '取消',
+              nzOnOk: () => resolve(descriptor),
+              nzOnCancel: () => resolve(null)
+            });
+          });
+        }),
+        switchMap(confirmed => {
+          if (!confirmed) {
+            return of(null);
+          }
+          const uploadData = new FormData();
+          uploadData.append('file', file);
+          return this.http.post<{ content?: BpmComponentPluginDescriptor[] }>('/bpm/component/plugins/upload', uploadData, {
+            showLoading: false
+          });
+        }),
+        map(res => (res == null ? null : (res?.content ?? []))),
         catchError(err => {
           this.message.error(`上传失败${err.message ?? ''}`);
           return of(null);
@@ -149,12 +279,12 @@ export class BpmComponentPlugins implements OnInit {
   reload(): void {
     this.loading.set(true);
     this.http
-      .post<{ content?: string[] }>('/bpm/component/plugins/reload', {}, { showLoading: false })
+      .post<{ content?: BpmComponentPluginDescriptor[] }>('/bpm/component/plugins/reload', {}, { showLoading: false })
       .pipe(
         map(res => res?.content ?? []),
         catchError(err => {
           this.message.error(`重新扫描失败${err.message ?? ''}`);
-          return of([] as string[]);
+          return of([] as BpmComponentPluginDescriptor[]);
         }),
         finalize(() => this.loading.set(false))
       )
@@ -179,7 +309,9 @@ export class BpmComponentPlugins implements OnInit {
   private deletePlugin(fileName: string): void {
     this.loading.set(true);
     this.http
-      .delete<{ content?: string[] }>(`/bpm/component/plugins/${encodeURIComponent(fileName)}`, undefined, { showLoading: false })
+      .delete<{ content?: BpmComponentPluginDescriptor[] }>(`/bpm/component/plugins/${encodeURIComponent(fileName)}`, undefined, {
+        showLoading: false
+      })
       .pipe(
         map(res => res?.content ?? []),
         catchError(err => {

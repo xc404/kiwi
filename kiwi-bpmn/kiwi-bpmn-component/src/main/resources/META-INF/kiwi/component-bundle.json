@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi 官方核心组件",
+  "version": "1.0.0",
+  "summary": "HTTP、Shell、JDBC、MongoDB、文件与通知等内置组件",
+  "license": "Apache-2.0",
+  "components": [
+    { "key": "httpRequest", "name": "HTTP 请求", "group": "HTTP", "version": "1.0" },
+    { "key": "shell", "name": "命令行", "version": "1.0" },
+    { "key": "jdbcActivity", "name": "JDBC/SQL", "group": "数据", "version": "1.0" },
+    { "key": "mongoActivity", "name": "MongoDB", "group": "数据", "version": "1.0" },
+    { "key": "jsonMapActivity", "name": "JSON 映射", "group": "通用", "version": "1.0" },
+    { "key": "assignmentActivity", "name": "变量组件", "group": "通用", "version": "1.0" },
+    { "key": "sleep", "name": "延时等待", "group": "通用", "version": "1.0" },
+    { "key": "uuidGenerate", "name": "生成 UUID", "group": "通用", "version": "1.0" },
+    { "key": "base64Codec", "name": "Base64 编解码", "group": "通用", "version": "1.0" },
+    { "key": "digestHash", "name": "摘要哈希", "group": "通用", "version": "1.0" },
+    { "key": "fileRead", "name": "文件读取", "group": "文件", "version": "1.0" },
+    { "key": "fileWrite", "name": "文件写入", "group": "文件", "version": "1.0" },
+    { "key": "sftpTransfer", "name": "SFTP 传输", "group": "文件", "version": "1.0" },
+    { "key": "emailSend", "name": "发送邮件", "group": "通知", "version": "1.0" },
+    {
+      "key": "webhookOutbound",
+      "name": "Webhook 出站",
+      "group": "通知",
+      "version": "1.0",
+      "requiredParentKeys": ["httpRequest"]
+    }
+  ]
+}

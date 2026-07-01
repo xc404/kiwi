@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi S3 组件",
+  "version": "1.0.0",
+  "summary": "S3 兼容对象存储读写（含 MinIO）",
+  "components": [
+    {
+      "key": "s3Object",
+      "name": "S3 对象读写",
+      "group": "存储",
+      "version": "1.0"
+    }
+  ]
+}
