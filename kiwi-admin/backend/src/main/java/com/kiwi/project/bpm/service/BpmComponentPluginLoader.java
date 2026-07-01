@@ -121,6 +121,11 @@ public class BpmComponentPluginLoader implements InitializingBean {
         return Path.of(pluginsDir).toAbsolutePath().normalize();
     }
 
+    /** 是否由插件 JAR 注册进主上下文的 Bean（classpath 扫描应排除，避免 plugin_* 与 classpath_* 双份元数据）。 */
+    public boolean isPluginRegisteredBean(String beanName) {
+        return pluginRegisteredBeans.contains(beanName);
+    }
+
     /**
      * 只读扫描 {@code plugins/} 下 JAR，返回 {@code plugin_{key}} → jar 文件名（不 reload、不注册 Bean）。
      */
