@@ -1,0 +1,10 @@
+{
+  "entity": "com.kiwi.project.bpm.model.BpmProject",
+  "records": [
+    {
+      "id": "payment-integration-demo",
+      "name": "通用支付集成套件",
+      "createdBy": "admin"
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "entity": "com.kiwi.project.bpm.model.BpmProjectEnvVar",
+  "records": [
+    {
+      "id": "pev-pay-channel",
+      "projectId": "payment-integration-demo",
+      "key": "PAY_CHANNEL",
+      "value": "alipay",
+      "encrypted": false,
+      "description": "默认支付渠道：alipay 或 wechat",
+      "sort": 10,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-pay-amount",
+      "projectId": "payment-integration-demo",
+      "key": "PAY_AMOUNT",
+      "value": "100",
+      "encrypted": false,
+      "description": "演示金额（分）",
+      "sort": 20,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-pay-subject",
+      "projectId": "payment-integration-demo",
+      "key": "PAY_SUBJECT",
+      "value": "Kiwi 支付演示",
+      "encrypted": false,
+      "description": "商品标题",
+      "sort": 30,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-alipay-app-id",
+      "projectId": "payment-integration-demo",
+      "key": "ALIPAY_APP_ID",
+      "value": "",
+      "encrypted": false,
+      "description": "支付宝沙箱 AppId",
+      "sort": 40,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-alipay-private-key",
+      "projectId": "payment-integration-demo",
+      "key": "ALIPAY_PRIVATE_KEY",
+      "value": "",
+      "encrypted": true,
+      "description": "支付宝应用私钥 PEM",
+      "sort": 50,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-alipay-gateway",
+      "projectId": "payment-integration-demo",
+      "key": "ALIPAY_GATEWAY_URL",
+      "value": "https://openapi-sandbox.dl.alipaydev.com/gateway.do",
+      "encrypted": false,
+      "description": "支付宝网关（默认沙箱）",
+      "sort": 60,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-wechat-app-id",
+      "projectId": "payment-integration-demo",
+      "key": "WECHAT_APP_ID",
+      "value": "",
+      "encrypted": false,
+      "description": "微信 AppId",
+      "sort": 70,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-wechat-mch-id",
+      "projectId": "payment-integration-demo",
+      "key": "WECHAT_MCH_ID",
+      "value": "",
+      "encrypted": false,
+      "description": "微信商户号",
+      "sort": 80,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-wechat-api-v3",
+      "projectId": "payment-integration-demo",
+      "key": "WECHAT_API_V3_KEY",
+      "value": "",
+      "encrypted": true,
+      "description": "微信 APIv3 密钥",
+      "sort": 90,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-wechat-cert-serial",
+      "projectId": "payment-integration-demo",
+      "key": "WECHAT_CERT_SERIAL",
+      "value": "",
+      "encrypted": false,
+      "description": "微信商户证书序列号",
+      "sort": 100,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-wechat-private-key",
+      "projectId": "payment-integration-demo",
+      "key": "WECHAT_PRIVATE_KEY",
+      "value": "",
+      "encrypted": true,
+      "description": "微信商户私钥 PEM",
+      "sort": 110,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-notify-base",
+      "projectId": "payment-integration-demo",
+      "key": "NOTIFY_BASE_URL",
+      "value": "https://example.com/pay/notify",
+      "encrypted": false,
+      "description": "支付回调基址（演示占位）",
+      "sort": 120,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-query-interval",
+      "projectId": "payment-integration-demo",
+      "key": "PAY_QUERY_INTERVAL_SECONDS",
+      "value": "3",
+      "encrypted": false,
+      "description": "查单前等待秒数",
+      "sort": 130,
+      "createdBy": "admin"
+    },
+    {
+      "id": "pev-slack-webhook",
+      "projectId": "payment-integration-demo",
+      "key": "SLACK_WEBHOOK_URL",
+      "value": "",
+      "encrypted": true,
+      "description": "Slack 通知 Webhook（可选）",
+      "sort": 140,
+      "createdBy": "admin"
+    }
+  ]
+}

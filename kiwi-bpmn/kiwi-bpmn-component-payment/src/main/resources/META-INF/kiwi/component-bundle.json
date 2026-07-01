@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "name": "Kiwi 支付组件包",
+  "version": "1.0.0",
+  "summary": "支付宝 / 微信沙箱统一下单与查单",
+  "description": "封装渠道签名与 OpenAPI 调用，BPMN 仅配置 channel、outTradeNo、amount 等业务字段",
+  "components": [
+    {
+      "key": "paymentCreate",
+      "name": "支付下单",
+      "group": "支付",
+      "version": "1.0",
+      "description": "按 channel（alipay|wechat）创建支付单"
+    },
+    {
+      "key": "paymentQuery",
+      "name": "支付查单",
+      "group": "支付",
+      "version": "1.0",
+      "description": "按 channel 与 outTradeNo 查询支付状态"
+    }
+  ]
+}

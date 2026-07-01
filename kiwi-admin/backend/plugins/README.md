@@ -29,5 +29,6 @@ git commit -m "chore: refresh BPM component plugin JARs"
 | `kiwi-bpmn-component-rabbitmq-*-plugin.jar` | RabbitMQ 发布 |
 | `kiwi-bpmn-component-s3-*-plugin.jar` | S3 对象操作 |
 | `kiwi-bpmn-component-slack-*-plugin.jar` | Slack 通知 |
+| `kiwi-bpmn-component-payment-*-plugin.jar` | 支付宝 / 微信沙箱下单与查单 |
 
 Docker/CI 构建仍使用 `docker/plugins/`（构建时生成，不入库）。

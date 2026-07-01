@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:kiwi="http://kiwi.com/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_pay_query" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="p-pay-query-001" name="支付查单" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Activity_sleep" name="等待支付" camunda:delegateExpression="${sleep}" kiwi:componentId="plugin_sleep">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="componentId" value="plugin_sleep" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="durationSeconds">${PAY_QUERY_INTERVAL_SECONDS}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_sleep" />
+    <bpmn:serviceTask id="Activity_query" name="查询支付状态" camunda:delegateExpression="${paymentQuery}" kiwi:componentId="plugin_paymentQuery">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="componentId" value="plugin_paymentQuery" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="channel">${PAY_CHANNEL}</camunda:inputParameter>
+          <camunda:inputParameter name="outTradeNo">${outTradeNo}</camunda:inputParameter>
+          <camunda:inputParameter name="alipay_app_id">${ALIPAY_APP_ID}</camunda:inputParameter>
+          <camunda:inputParameter name="alipay_private_key">${ALIPAY_PRIVATE_KEY}</camunda:inputParameter>
+          <camunda:inputParameter name="alipay_gateway_url">${ALIPAY_GATEWAY_URL}</camunda:inputParameter>
+          <camunda:inputParameter name="wechat_mch_id">${WECHAT_MCH_ID}</camunda:inputParameter>
+          <camunda:inputParameter name="wechat_api_v3_key">${WECHAT_API_V3_KEY}</camunda:inputParameter>
+          <camunda:inputParameter name="wechat_cert_serial">${WECHAT_CERT_SERIAL}</camunda:inputParameter>
+          <camunda:inputParameter name="wechat_private_key">${WECHAT_PRIVATE_KEY}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_sleep" targetRef="Activity_query" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Activity_query" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-pay-query-001">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_sleep_di" bpmnElement="Activity_sleep">
+        <dc:Bounds x="250" y="78" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_query_di" bpmnElement="Activity_query">
+        <dc:Bounds x="400" y="78" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="552" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

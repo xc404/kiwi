@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:kiwi="http://kiwi.com/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_pay_create" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="p-pay-create-001" name="创建支付单" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Activity_uuid" name="生成订单号" camunda:delegateExpression="${uuidGenerate}" kiwi:componentId="plugin_uuidGenerate">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="componentId" value="plugin_uuidGenerate" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_uuid" />
+    <bpmn:serviceTask id="Activity_assign" name="组装订单变量" camunda:delegateExpression="${assignmentActivity}" kiwi:componentId="plugin_assignmentActivity">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="componentId" value="plugin_assignmentActivity" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="assignments">[{"key":"outTradeNo","value":"${uuid}"},{"key":"payAmount","value":"${PAY_AMOUNT}"},{"key":"paySubject","value":"${PAY_SUBJECT}"}]</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_uuid" targetRef="Activity_assign" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Activity_assign" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-pay-create-001">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_uuid_di" bpmnElement="Activity_uuid">
+        <dc:Bounds x="250" y="78" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_assign_di" bpmnElement="Activity_assign">
+        <dc:Bounds x="400" y="78" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="552" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:kiwi="http://kiwi.com/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_pay_main" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="p-pay-main-001" name="支付主流程" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_start_create</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:callActivity id="Call_create" name="创建订单" calledElement="p-pay-create-001">
+      <bpmn:incoming>Flow_start_create</bpmn:incoming>
+      <bpmn:outgoing>Flow_create_gateway</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="Flow_start_create" sourceRef="StartEvent_1" targetRef="Call_create" />
+    <bpmn:exclusiveGateway id="Gateway_channel" name="支付渠道">
+      <bpmn:incoming>Flow_create_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_alipay</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_wechat</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_create_gateway" sourceRef="Call_create" targetRef="Gateway_channel" />
+    <bpmn:sequenceFlow id="Flow_to_alipay" name="支付宝" sourceRef="Gateway_channel" targetRef="Call_alipay">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${PAY_CHANNEL == 'alipay'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_to_wechat" name="微信" sourceRef="Gateway_channel" targetRef="Call_wechat">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${PAY_CHANNEL == 'wechat'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:callActivity id="Call_alipay" name="支付宝下单" calledElement="p-pay-alipay-001">
+      <bpmn:incoming>Flow_to_alipay</bpmn:incoming>
+      <bpmn:outgoing>Flow_alipay_join</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="Call_wechat" name="微信下单" calledElement="p-pay-wechat-001">
+      <bpmn:incoming>Flow_to_wechat</bpmn:incoming>
+      <bpmn:outgoing>Flow_wechat_join</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="Gateway_join">
+      <bpmn:incoming>Flow_alipay_join</bpmn:incoming>
+      <bpmn:incoming>Flow_wechat_join</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_query</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_alipay_join" sourceRef="Call_alipay" targetRef="Gateway_join" />
+    <bpmn:sequenceFlow id="Flow_wechat_join" sourceRef="Call_wechat" targetRef="Gateway_join" />
+    <bpmn:sequenceFlow id="Flow_join_query" sourceRef="Gateway_join" targetRef="Call_query" />
+    <bpmn:callActivity id="Call_query" name="查单" calledElement="p-pay-query-001">
+      <bpmn:incoming>Flow_join_query</bpmn:incoming>
+      <bpmn:outgoing>Flow_query_notify</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="Activity_notify" name="支付结果通知" camunda:delegateExpression="${slackNotify}" kiwi:componentId="plugin_slackNotify">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="componentId" value="plugin_slackNotify" />
+        </camunda:properties>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="webhook_url">${SLACK_WEBHOOK_URL}</camunda:inputParameter>
+          <camunda:inputParameter name="text">支付查单完成: outTradeNo=${outTradeNo}, status=${payStatus}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_query_notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_notify_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_query_notify" sourceRef="Call_query" targetRef="Activity_notify" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_notify_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_notify_end" sourceRef="Activity_notify" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="p-pay-main-001">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="120" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Call_create_di" bpmnElement="Call_create">
+        <dc:Bounds x="210" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_channel_di" bpmnElement="Gateway_channel" isMarkerVisible="true">
+        <dc:Bounds x="365" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Call_alipay_di" bpmnElement="Call_alipay">
+        <dc:Bounds x="470" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Call_wechat_di" bpmnElement="Call_wechat">
+        <dc:Bounds x="470" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_join_di" bpmnElement="Gateway_join" isMarkerVisible="true">
+        <dc:Bounds x="625" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Call_query_di" bpmnElement="Call_query">
+        <dc:Bounds x="720" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_notify_di" bpmnElement="Activity_notify">
+        <dc:Bounds x="870" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1022" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

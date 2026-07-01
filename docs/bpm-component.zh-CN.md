@@ -307,8 +307,11 @@ JavaDelegate.execute() 读取参数、写回输出变量
 | `kiwi-bpmn-component-kafka` | `kafkaPublish` | 消息 |
 | `kiwi-bpmn-component-rabbitmq` | `rabbitMqPublish` | 消息 |
 | `kiwi-bpmn-component-s3` | `s3Object` | 存储 |
+| `kiwi-bpmn-component-payment` | `paymentCreate`、`paymentQuery` | 支付 |
 
 各模块 README 见 `kiwi-bpmn/kiwi-bpmn-component-*/README.md`。
+
+演示项目 **通用支付集成套件**（`payment-integration-demo`）见 [`bpm/payment-integration-demo/README.md`](../kiwi-admin/backend/src/main/resources/bpm/payment-integration-demo/README.md)。
 
 ---
 
@@ -338,6 +341,7 @@ JavaDelegate.execute() 读取参数、写回输出变量
 | `kiwi-bpmn-component-rabbitmq` | `amqp-client` |
 | `kiwi-bpmn-component-s3` | AWS SDK `s3`、`url-connection-client` |
 | `kiwi-bpmn-component-slack` | 无（纯 JDK） |
+| `kiwi-bpmn-component-payment` | `jackson-databind`（渠道 JSON 解析） |
 
 ### 推荐产物与 ClassLoader
 
