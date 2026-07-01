@@ -239,5 +239,94 @@
                 </executions>
             </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.6.0</version>
+                    <configuration>
+                        <shadedArtifactAttached>true</shadedArtifactAttached>
+                        <shadedClassifierName>plugin</shadedClassifierName>
+                        <createDependencyReducedPom>false</createDependencyReducedPom>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>build-plugins</id>
+            <properties>
+                <kiwi.build.plugins>true</kiwi.build.plugins>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>package-bpmn-component-plugins</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>mvn</executable>
+                                    <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+                                    <arguments>
+                                        <argument>package</argument>
+                                        <argument>-Dkiwi.build.plugins=true</argument>
+                                        <argument>-DskipTests</argument>
+                                        <argument>-pl</argument>
+                                        <argument>kiwi-bpmn/kiwi-bpmn-component,kiwi-bpmn/kiwi-bpmn-component-kafka,kiwi-bpmn/kiwi-bpmn-component-rabbitmq,kiwi-bpmn/kiwi-bpmn-component-s3,kiwi-bpmn/kiwi-bpmn-component-slack</argument>
+                                        <argument>-am</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-bpm-plugin-jars</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <mkdir dir="${maven.multiModuleProjectDirectory}/kiwi-admin/backend/plugins"/>
+                                        <mkdir dir="${maven.multiModuleProjectDirectory}/docker/plugins"/>
+                                        <copy todir="${maven.multiModuleProjectDirectory}/kiwi-admin/backend/plugins" flatten="true" failonerror="false">
+                                            <fileset dir="${maven.multiModuleProjectDirectory}/kiwi-bpmn" includes="**/target/*-plugin.jar"/>
+                                        </copy>
+                                        <copy todir="${maven.multiModuleProjectDirectory}/docker/plugins" flatten="true" failonerror="false">
+                                            <fileset dir="${maven.multiModuleProjectDirectory}/kiwi-bpmn" includes="**/target/*-plugin.jar"/>
+                                        </copy>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

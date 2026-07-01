@@ -28,8 +28,7 @@ import java.util.stream.Collectors;
 
 /**
  * 从 OpenAPI 3.x 或 Swagger 2.0（经解析器转为 OpenAPI 3 模型）文档为每个 HTTP 操作生成
- * 继承 {@code httpRequest} 父组件的 {@link BpmComponent} 草稿：执行行为由
- * {@link com.kiwi.bpmn.component.activity.HttpRequestActivity} 提供。
+ * 继承 httpRequest 父组件的 {@link BpmComponent} 草稿：执行行为由插件组件 {@code httpRequest}（bean）提供。
  */
 public final class OpenApiComponentGenerator {
 
@@ -227,7 +226,7 @@ public final class OpenApiComponentGenerator {
 
     /**
      * 将 OpenAPI 中的 path / query / header / body(schema 属性) 展开为独立输入参数，再用 JUEL 片段组合为
-     * {@link com.kiwi.bpmn.component.activity.HttpRequestActivity} 所需的 {@code url}、{@code headers}、{@code body}。
+     * httpRequest 组件所需的 {@code url}、{@code headers}、{@code body}。
      */
     private static List<BpmComponentParameter> buildInputOverrides(
             String baseUrl, String path, String method, Operation operation) {

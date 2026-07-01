@@ -23,6 +23,8 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 import { ProcessDesignService } from '../design/service/process-design.service';
+import { TemplatePackExportModalComponent } from '../market/template-pack-export-modal.component';
+import { TemplatePackInstallModalComponent } from '../market/template-pack-install-modal.component';
 import type { BpmProcess } from '../types/bpm-process';
 
 interface BpmProjectOption {
@@ -268,6 +270,62 @@ export class BpmProjectProcess implements OnInit {
     this.message.warning(`成功 ${succeeded.length} 个，失败 ${failed.length} 个（${failed.map(f => f.name).join('、')}）`);
   }
 
+  openExportProjectTemplate(): void {
+    const pid = this.projectId();
+    if (!pid) {
+      this.message.warning('请先选择项目');
+      return;
+    }
+    const label = this.currentProjectLabel();
+    const ref = this.modalWrap.create({
+      nzTitle: '导出项目为模板包',
+      nzContent: TemplatePackExportModalComponent,
+      nzData: { projectId: pid, defaultName: label },
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as TemplatePackExportModalComponent;
+        const body = comp.tryGetPayload();
+        if (!body) {
+          return false;
+        }
+        return firstValueFrom(
+          this.http.post(`/bpm/project/${pid}/export-as-template`, body, { needSuccessInfo: true })
+        ).then(() => void this.router.navigate(['/bpm/market']));
+      }
+    });
+  }
+
+  openImportTemplateIntoProject(): void {
+    const pid = this.projectId();
+    if (!pid) {
+      this.message.warning('请先选择项目');
+      return;
+    }
+    const packId = prompt('请输入要导入的模板包 ID');
+    if (!packId?.trim()) {
+      return;
+    }
+    const ref = this.modalWrap.create({
+      nzTitle: '导入模板到当前项目',
+      nzContent: TemplatePackInstallModalComponent,
+      nzData: { packName: packId, mode: 'intoProject' as const, targetProjectId: pid },
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as TemplatePackInstallModalComponent;
+        const body = comp.tryGetPayload();
+        if (!body) {
+          return false;
+        }
+        return firstValueFrom(
+          this.http.post(`/bpm/project/${pid}/import-template-pack/${packId.trim()}`, body, { needSuccessInfo: true })
+        ).then(() => {
+          const page = this.crudPage();
+          if (page) {
+            page.load({ projectId: pid });
+          }
+        });
+      }
+    });
+  }
+
   openCloneModal(record: { id?: string; name?: string }): void {
     const id = record?.id;
     if (!id) {
@@ -318,6 +376,18 @@ export class BpmProjectProcess implements OnInit {
     },
     toolbarActions: [
       AddAction,
+      toolbarAction({
+        name: '导出为模板',
+        icon: 'export',
+        tooltip: '将当前项目发布为模板包',
+        handler: () => this.openExportProjectTemplate()
+      }),
+      toolbarAction({
+        name: '导入模板',
+        icon: 'import',
+        tooltip: '将模板包合并进当前项目',
+        handler: () => this.openImportTemplateIntoProject()
+      }),
       toolbarAction({
         name: '部署所选',
         icon: 'cloud-upload',

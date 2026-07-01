@@ -4,7 +4,15 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.kiwi.framework.ctl.BaseCtl;
 import com.kiwi.project.bpm.dao.BpmProjectDao;
 import com.kiwi.project.bpm.model.BpmProject;
+import com.kiwi.project.bpm.dto.InstallTemplatePackInput;
+import com.kiwi.project.bpm.dto.InstallTemplatePackResult;
+import com.kiwi.project.bpm.dto.PublishTemplatePackInput;
+import com.kiwi.project.bpm.dto.TemplatePackZipDownload;
+import com.kiwi.project.bpm.model.BpmTemplatePack;
 import com.kiwi.project.bpm.service.BpmOwnershipAccessService;
+import com.kiwi.project.bpm.service.BpmTemplatePackBundleService;
+import com.kiwi.project.bpm.service.BpmTemplatePackInstallService;
+import com.kiwi.project.bpm.service.BpmTemplatePackPublishService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +28,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +47,9 @@ public class BpmProjectCtl extends BaseCtl {
 
     private final BpmProjectDao bpmProjectDao;
     private final BpmOwnershipAccessService bpmOwnershipAccessService;
+    private final BpmTemplatePackPublishService templatePackPublishService;
+    private final BpmTemplatePackInstallService templatePackInstallService;
+    private final BpmTemplatePackBundleService templatePackBundleService;
 
     @Operation(operationId = "bpmProj_list", summary = "分页查询 BPM 项目/文件夹")
     @GetMapping("")
@@ -90,6 +104,47 @@ public class BpmProjectCtl extends BaseCtl {
     public void delete(@PathVariable String id) {
         requireOwnsProject(id);
         bpmProjectDao.deleteById(id);
+    }
+
+    @Operation(operationId = "bpmProj_exportAsTemplate", summary = "将项目导出为模板包（发布到市场）")
+    @PostMapping("{id}/export-as-template")
+    @ResponseBody
+    public BpmTemplatePack exportAsTemplate(@PathVariable String id, @RequestBody PublishTemplatePackInput body) {
+        requireOwnsProject(id);
+        return templatePackPublishService.publishProject(id, body, getCurrentUserId());
+    }
+
+    @Operation(operationId = "bpmProj_importTemplatePack", summary = "安装模板包到新建项目")
+    @PostMapping("import-template-pack/{packId}")
+    @ResponseBody
+    public InstallTemplatePackResult importTemplatePack(
+            @PathVariable String packId,
+            @RequestBody(required = false) InstallTemplatePackInput body) {
+        return templatePackInstallService.installPack(packId, body, getCurrentUserId());
+    }
+
+    @Operation(operationId = "bpmProj_importTemplatePackInto", summary = "安装模板包到已有项目")
+    @PostMapping("{id}/import-template-pack/{packId}")
+    @ResponseBody
+    public InstallTemplatePackResult importTemplatePackInto(
+            @PathVariable String id,
+            @PathVariable String packId,
+            @RequestBody(required = false) InstallTemplatePackInput body) {
+        requireOwnsProject(id);
+        InstallTemplatePackInput input = body != null ? body : new InstallTemplatePackInput();
+        input.setTargetProjectId(id);
+        return templatePackInstallService.installPackInto(packId, input, getCurrentUserId());
+    }
+
+    @Operation(operationId = "bpmProj_exportTemplateFile", summary = "将项目导出为模板包 zip 文件")
+    @GetMapping("{id}/export-template-file")
+    public ResponseEntity<byte[]> exportTemplateFile(@PathVariable String id) {
+        requireOwnsProject(id);
+        TemplatePackZipDownload file = templatePackBundleService.exportProjectDownload(id, getCurrentUserId());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.filename() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(file.body());
     }
 
     private BpmProject requireOwnsProject(String id) {

@@ -10,7 +10,6 @@ import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Query;
@@ -22,7 +21,6 @@ import java.util.Objects;
 /**
  * 使用 {@link MongoTemplate} 对默认库中的集合执行常见读写，filter / document 为 JSON 字符串。
  */
-@ConditionalOnBean(MongoTemplate.class)
 @Component("mongoActivity")
 @ComponentDescription(
         name = "MongoDB",

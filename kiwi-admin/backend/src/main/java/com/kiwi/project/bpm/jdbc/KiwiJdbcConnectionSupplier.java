@@ -1,6 +1,6 @@
 package com.kiwi.project.bpm.jdbc;
 
-import com.kiwi.bpmn.component.jdbc.JdbcConnectionSupplier;
+import com.kiwi.bpmn.core.spi.JdbcConnectionSupplier;
 import com.kiwi.project.tools.jdbc.connection.service.ConnectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

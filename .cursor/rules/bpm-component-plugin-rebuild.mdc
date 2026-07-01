@@ -1,0 +1,39 @@
+---
+description: 修改 kiwi-bpmn-component* 后提醒重新 build-plugins 并更新 plugins/ 目录
+globs: kiwi-bpmn/kiwi-bpmn-component*/**
+alwaysApply: false
+---
+
+# BPM 组件改动 → 重新打包 Plugin JAR
+
+官方 BPM 组件（HTTP、Shell、JDBC、Kafka 等）以 **插件 JAR** 分发，运行时从 `kiwi-admin/backend/plugins/` 加载（`bpm.component.plugins-dir=plugins`，工作目录为 `kiwi-admin/backend`）。**改 Java 源码不会自动生效**，必须重新 shade 打包并更新 `plugins/`。
+
+## 何时提醒
+
+在完成（或准备提交）对下列路径的**实质性修改**后，**必须**在回复中提醒用户重新打包 plugin：
+
+- `kiwi-bpmn/kiwi-bpmn-component/`
+- `kiwi-bpmn/kiwi-bpmn-component-kafka|rabbitmq|s3|slack|example/`
+- 各模块的 `pom.xml`（shade、`provided` 依赖、插件 profile）
+
+**Slurm**（`kiwi-bpmn-component-slurm`）仍走 classpath，**不需要** plugin 打包。
+
+## 提醒内容（复制给用户）
+
+在仓库根目录执行：
+
+```bash
+mvn -pl kiwi-admin/backend -am package -Pbuild-plugins -DskipTests
+```
+
+产物会复制到 `kiwi-admin/backend/plugins/*-plugin.jar`。若仓库策略为 **plugins 入 Git**，还需：
+
+```bash
+git add kiwi-admin/backend/plugins/*.jar
+```
+
+## Assistant 行为
+
+- 修改 component 模块后：**不要**假设用户已 rebuild；在任务总结中单独列出「请执行 build-plugins」。
+- 若用户仅改 `kiwi-admin/backend` 且未动 component 模块：**不必**提醒。
+- 验证建议：重启 backend 后检查 `GET /bpm/component/list` 是否仍含预期 `plugin_*` 组件，或相关流程节点可执行。

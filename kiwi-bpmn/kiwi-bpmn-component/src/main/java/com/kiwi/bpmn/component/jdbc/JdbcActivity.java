@@ -1,5 +1,6 @@
 package com.kiwi.bpmn.component.jdbc;
 
+import com.kiwi.bpmn.core.spi.JdbcConnectionSupplier;
 import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
@@ -7,7 +8,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.operaton.bpm.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -16,7 +16,6 @@ import java.util.List;
 /**
  * 使用 {@link JdbcConnectionSupplier} 对已保存 JDBC 连接执行 queryOne / query / update。
  */
-@ConditionalOnBean(JdbcConnectionSupplier.class)
 @Component("jdbcActivity")
 @ComponentDescription(
         name = "JDBC/SQL",

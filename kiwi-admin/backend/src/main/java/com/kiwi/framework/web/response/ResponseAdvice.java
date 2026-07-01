@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.dreamlu.mica.core.result.R;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -29,12 +31,16 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object>
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        return true;
+        // ResponseEntity 用于文件下载等场景，body 须原样写出，不能包进 R
+        return !ResponseEntity.class.isAssignableFrom(returnType.getParameterType());
     }
 
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
-        if( o instanceof byte[] ) {
+        if (o instanceof byte[]) {
+            return o;
+        }
+        if (o instanceof Resource) {
             return o;
         }
         if( o instanceof String ) {

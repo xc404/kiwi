@@ -1,5 +1,7 @@
 package com.kiwi.bpmn.component.jdbc;
 
+import com.kiwi.bpmn.core.spi.JdbcConnectionSupplier;
+
 import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.operaton.bpm.engine.variable.Variables;
 import org.junit.jupiter.api.BeforeEach;

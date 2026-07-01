@@ -52,14 +52,26 @@ flowchart LR
 
 ### 启动时自动注册
 
-后端启动时，`ClasspathBpmComponentProvider` 扫描 Spring 容器中所有带 `@ComponentDescription` 的 `JavaDelegate`、`ActivityBehavior`、`ExternalTaskHandler`，经 `BpmComponentDeploymentService` 同步到 MongoDB（默认 id 为 `{source}_{key}`，如 `classpath_shell`）。配置项 `bpm.component.auto-deploy` 默认为 `true`。
+官方业务组件（HTTP、Shell、JDBC 等）以 **插件 JAR** 形式由 `BpmComponentPluginLoader` 从 `plugins/` 加载，元数据 id 为 `plugin_{key}`（如 `plugin_shell`）。Slurm 仍通过 `ClasspathBpmComponentProvider` 扫描 classpath（`classpath_*`）。二者经 `BpmComponentDeploymentService` 同步到 MongoDB。配置项 `bpm.component.auto-deploy` 默认为 `true`。
+
+**本地开发**：官方 plugin JAR 已随仓库提交在 `kiwi-admin/backend/plugins/`，clone 后从 **`kiwi-admin/backend`** 工作目录启动后端即可加载（如 `plugin_httpRequest`），**日常无需** `build-plugins`。
+
+**仅修改 `kiwi-bpmn-component*` 模块时**，维护者需重新打包并 commit JAR：
+
+```bash
+mvn -pl kiwi-admin/backend -am package -Pbuild-plugins -DskipTests
+git add kiwi-admin/backend/plugins/*.jar && git commit -m "chore: refresh BPM component plugin JARs"
+```
+
+IDE 工作目录须为 `kiwi-admin/backend`，否则 `plugins` 路径解析错误。详见 [`kiwi-admin/backend/plugins/README.md`](../kiwi-admin/backend/plugins/README.md)。
 
 关键代码路径：
 
 | 路径 | 说明 |
 |------|------|
 | [kiwi-bpmn-core/.../ComponentDescription.java](../kiwi-bpmn/kiwi-bpmn-core/src/main/java/com/kiwi/bpmn/core/annotation/ComponentDescription.java) | 组件元数据注解 |
-| [ClasspathBpmComponentProvider.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/ClasspathBpmComponentProvider.java) | classpath 组件扫描 |
+| [BpmComponentPluginLoader.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/BpmComponentPluginLoader.java) | 官方/第三方插件 JAR 加载 |
+| [ClasspathBpmComponentProvider.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/ClasspathBpmComponentProvider.java) | Slurm 等 classpath 组件 |
 | [ComponentUtils.java](../kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/utils/ComponentUtils.java) | 注解 → `BpmComponent` 转换 |
 | [component-provider.ts](../kiwi-admin/frontend/src/app/pages/bpm/flow-elements/component-provider.ts) | 前端拉取 `GET /bpm/component/list` |
 
@@ -300,9 +312,9 @@ JavaDelegate.execute() 读取参数、写回输出变量
 
 ---
 
-## 九、插件 JAR 加载（阶段二）
+## 九、插件 JAR 加载
 
-配置项（`application.yml`）：
+官方组件与第三方扩展均通过 `plugins/` 目录分发（见上文「启动时自动注册」）。
 
 | 配置 | 默认 | 说明 |
 |------|------|------|

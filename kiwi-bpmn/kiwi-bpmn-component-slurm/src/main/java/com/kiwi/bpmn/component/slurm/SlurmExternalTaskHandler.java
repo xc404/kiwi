@@ -1,6 +1,5 @@
 package com.kiwi.bpmn.component.slurm;
 
-import com.kiwi.bpmn.component.activity.ShellActivityBehavior;
 import com.kiwi.bpmn.core.utils.ExecutionUtils;
 import com.kiwi.bpmn.core.annotation.ComponentDescription;
 import com.kiwi.bpmn.core.annotation.ComponentParameter;
@@ -10,7 +9,10 @@ import com.kiwi.bpmn.external.ExternalTaskExecution;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.operaton.bpm.client.spring.annotation.ExternalTaskSubscription;
 import org.operaton.bpm.engine.delegate.DelegateExecution;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityBehavior;
+import org.operaton.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Slurm 主题（{@code topicName = "slurm"}）的 External Task 处理器：根据流程变量生成 sbatch 配置并提交作业，
- * 或在没有启用 Slurm 集成时退化为本地 {@link ShellActivityBehavior} 执行。
+ * 或在没有启用 Slurm 集成时退化为本地 shell 组件（bean 名 {@code shell}）执行。
  * <p>
  * 仅当 Spring 容器中注册了 {@link SlurmTaskManager} 时走 Slurm 路径；否则 {@link SlurmService} 可为空，
  * 此时 {@link SlurmSbatchConfigBuilder} 仍会被构造，但 {@link #supportSlurm()} 为 false，不会提交 sbatch。
@@ -271,14 +273,14 @@ import lombok.extern.slf4j.Slf4j;
 )
 public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
 
-    private final ShellActivityBehavior shellActivityBehavior;
+    private final ActivityBehavior shellFallback;
     private final SlurmTaskManager slurmTaskManager;
     private final SlurmSbatchConfigBuilder sbatchConfigBuilder;
     private final SlurmService slurmService;
     private final SlurmProperties slurmProperties;
     private final SlurmJobRepository slurmJobRepository;
     /**
-     * @param shellActivityBehavior 无 Slurm 集成时的回退执行器
+     * @param shellFallback         无 Slurm 集成时的回退执行器（插件 bean {@code shell}）
      * @param slurmService          可选；用于路径解析等，与 {@link SlurmTaskManager} 独立注入
      * @param slurmTaskManager      可选；缺失时表示未装配 Slurm 提交能力，本处理器仅走 Shell 回退
      * @param slurmProperties       可选；提供应用层并发闸门阈值（{@link SlurmProperties#getMaxConcurrentJobs()}）；
@@ -286,12 +288,13 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
      * @param slurmJobRepository    可选；用于并发闸门按 {@code status=Running} 统计当前在跑作业数；
      *                              缺失或阈值 {@code <= 0} 时跳过闸门
      */
-    public SlurmExternalTaskHandler(ShellActivityBehavior shellActivityBehavior,
+    public SlurmExternalTaskHandler(
+            @Autowired(required = false) @Qualifier("shell") ActivityBehavior shellFallback,
                                     @Autowired(required = false) SlurmService slurmService,
                                     @Autowired(required = false) SlurmTaskManager slurmTaskManager,
                                     @Autowired(required = false) SlurmProperties slurmProperties,
                                     @Autowired(required = false) SlurmJobRepository slurmJobRepository) {
-        this.shellActivityBehavior = shellActivityBehavior;
+        this.shellFallback = shellFallback;
         this.slurmTaskManager = slurmTaskManager;
         this.sbatchConfigBuilder = new SlurmSbatchConfigBuilder(slurmService);
         this.slurmService = slurmService;
@@ -313,7 +316,14 @@ public class SlurmExternalTaskHandler extends AbstractExternalTaskHandler {
                     processInstanceId,
                     activityId,
                     execution.getBusinessKey());
-            shellActivityBehavior.execute(execution);
+            if (shellFallback == null) {
+                throw new IllegalStateException(
+                        "SlurmTaskManager 未装配且 shell 组件未加载，无法执行 Slurm 外部任务回退");
+            }
+            if (!(execution instanceof ActivityExecution activityExecution)) {
+                throw new IllegalStateException("Slurm Shell 回退需要 ActivityExecution 上下文");
+            }
+            shellFallback.execute(activityExecution);
             execution.setVariable("slurmJobId", "skipped");
             return CompletableFuture.completedFuture(ExternalTaskAsyncResult.updateVariablesOnly());
         }

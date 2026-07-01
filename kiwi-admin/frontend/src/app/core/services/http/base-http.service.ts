@@ -105,6 +105,29 @@ export class BaseHttpService {
     });
   }
 
+  downloadGet(path: string, filename: string, config?: HttpCustomConfig): void {
+    config = { needSuccessInfo: false, showLoading: true, ...config };
+    const reqPath = this.getUrl(path, config);
+    this.before(config)
+      .pipe(switchMap(() => this.http.get(reqPath, { responseType: 'blob' })))
+      .subscribe({
+        next: (blob: Blob) => {
+          this.spinService.$globalSpinStore.set(false);
+          const objectUrl = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = objectUrl;
+          anchor.download = filename;
+          anchor.click();
+          URL.revokeObjectURL(objectUrl);
+          this.message.success('下载已开始');
+        },
+        error: (err: { message?: string }) => {
+          this.spinService.$globalSpinStore.set(false);
+          this.message.error(err?.message ?? '下载失败');
+        }
+      });
+  }
+
   getUrl(path: string, config: HttpCustomConfig): string {
     let reqPath = Utils.joinUrl(this.uri, path);
     if (config.otherUrl) {
