@@ -71,7 +71,7 @@ public class ClasspathBpmComponentProvider implements BpmComponentProvider, Init
     }
 
     /**
-     * 仅收录主 ClassLoader（如 Slurm）上的 Bean；插件 JAR 经 {@link BpmComponentPluginLoader} 注册的实例由
+     * 仅收录主 ClassLoader（如 Slurm）上的 Bean；插件 JAR 经 {@link BpmComponentPluginLoader} 桥接的 delegate 由
      * {@link PluginBpmComponentProvider} 产出 {@code plugin_*} 元数据。
      */
     private boolean isClasspathBean(String beanName, Object bean) {

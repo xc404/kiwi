@@ -406,7 +406,7 @@ flowchart TB
 | `bpm.component.plugins-dir` | `plugins` | 插件 JAR 目录（相对工作目录） |
 | `bpm.component.plugins-enabled` | `true` | 是否扫描插件 |
 
-- 将含 `@ComponentDescription` + `JavaDelegate` 的 JAR 放入 `plugins/`，启动时由 `PluginBpmComponentProvider` 注册 Bean 并同步 Mongo（`source=plugin`）。
+- 将含 `@ComponentDescription` + `JavaDelegate` 的 JAR 放入 `plugins/`，启动时每个 JAR 创建**子 `ApplicationContext`** 完成 Spring DI，仅将 delegate **桥接**至宿主 Bean 供 Operaton 解析，并同步 Mongo（`source=plugin`）。
 - **列表**：`GET /bpm/component/plugins` → `BpmComponentPluginDescriptor[]`（包名、版本、组件列表、warnings、sha256）
 - **预览（不落盘）**：`POST /bpm/component/plugins/preview`（multipart `file`）
 - **上传安装**：`POST /bpm/component/plugins/upload`（先校验清单，通过再落盘并 reload）
@@ -427,6 +427,10 @@ flowchart TB
 | `summary` / `description` / `readme` | 否 | 市场/管理端展示 |
 | `author` / `publisher` / `license` / `kiwiMinVersion` / `homepage` / `repository` | 否 | 元数据 |
 | `components` | 是 | 组件条目数组（`key`、`name` 必填；`group`、`version`、`description`、`parentKey`、`requiredParentKeys` 可选） |
+| `contextClass` | 否 | 子上下文引导：`@Configuration` 全限定类名（**优先**于 `scanPackages`） |
+| `scanPackages` | 否 | 子上下文引导：ComponentScan 包名数组；二者均缺省时从 delegate 类包名推导 |
+
+**子上下文与 DI**：插件内部可使用标准 `@Component` / 构造器注入（如 Payment 的 Router → Adapter）。宿主 SPI（`JdbcConnectionSupplier` 等，定义于 `kiwi-bpmn-core`）经 parent 上下文注入。**禁止**依赖 Boot `@ConditionalOnBean`（子上下文非 Boot 应用）。`reload` 时依次销毁桥接 Bean、`ApplicationContext.close()`、`URLClassLoader.close()`。
 
 **合并规则**（json_primary + 注解回退）：
 

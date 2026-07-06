@@ -58,6 +58,12 @@ public class BpmComponentBundleManifest {
     @Schema(description = "模板包场景：JAR SHA-256")
     private String sha256;
 
+    @Schema(description = "子上下文引导：@Configuration 全限定类名（优先于 scanPackages）")
+    private String contextClass;
+
+    @Schema(description = "子上下文引导：ComponentScan 包名列表")
+    private List<String> scanPackages;
+
     @Schema(description = "组件条目列表", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<BpmComponentBundleComponentEntry> components;
 }

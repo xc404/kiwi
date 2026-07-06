@@ -2,6 +2,7 @@
   "schemaVersion": "1",
   "name": "Kiwi 支付组件包",
   "version": "1.0.0",
+  "contextClass": "com.kiwi.bpmn.component.payment.PaymentPluginConfiguration",
   "summary": "支付宝 / 微信沙箱统一下单与查单",
   "description": "封装渠道签名与 OpenAPI 调用，BPMN 仅配置 channel、outTradeNo、amount 等业务字段",
   "components": [
