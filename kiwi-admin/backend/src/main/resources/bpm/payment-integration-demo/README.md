@@ -24,3 +24,12 @@
 - `plugin_paymentQuery` — `kiwi-bpmn-component-payment`
 
 生产环境请使用异步回调 + 幂等查单；本演示以主动查单为主。
+
+## 模板包导出（任务 B 黄金用例）
+
+本项目为 **zip 捆绑 plugin JAR** 的 E2E 验收用例。导出时应从 BPMN 识别并打入：
+
+- `kiwi-bpmn-component-payment-*-plugin.jar`（`plugin_paymentCreate`、`plugin_paymentQuery`）
+- `kiwi-bpmn-component-slack-*-plugin.jar`（`plugin_slackNotify`）
+
+交接说明见 [`.cursor/plans/payment_taskb_e2e_handoff_c4d82f10.plan.md`](../../../../../../../.cursor/plans/payment_taskb_e2e_handoff_c4d82f10.plan.md)。

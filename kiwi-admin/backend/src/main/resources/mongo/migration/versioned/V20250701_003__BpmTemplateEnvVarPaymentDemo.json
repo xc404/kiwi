@@ -1,9 +1,9 @@
 {
-  "entity": "com.kiwi.project.bpm.model.BpmProjectEnvVar",
+  "entity": "com.kiwi.project.bpm.model.BpmTemplateEnvVar",
   "records": [
     {
-      "id": "pev-pay-channel",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-pay-channel",
+      "packId": "tpl-payment-integration-demo",
       "key": "PAY_CHANNEL",
       "value": "alipay",
       "encrypted": false,
@@ -12,8 +12,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-pay-amount",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-pay-amount",
+      "packId": "tpl-payment-integration-demo",
       "key": "PAY_AMOUNT",
       "value": "100",
       "encrypted": false,
@@ -22,8 +22,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-pay-subject",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-pay-subject",
+      "packId": "tpl-payment-integration-demo",
       "key": "PAY_SUBJECT",
       "value": "Kiwi 支付演示",
       "encrypted": false,
@@ -32,8 +32,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-alipay-app-id",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-alipay-app-id",
+      "packId": "tpl-payment-integration-demo",
       "key": "ALIPAY_APP_ID",
       "value": "",
       "encrypted": false,
@@ -42,8 +42,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-alipay-private-key",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-alipay-private-key",
+      "packId": "tpl-payment-integration-demo",
       "key": "ALIPAY_PRIVATE_KEY",
       "value": "",
       "encrypted": true,
@@ -52,8 +52,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-alipay-gateway",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-alipay-gateway",
+      "packId": "tpl-payment-integration-demo",
       "key": "ALIPAY_GATEWAY_URL",
       "value": "https://openapi-sandbox.dl.alipaydev.com/gateway.do",
       "encrypted": false,
@@ -62,8 +62,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-wechat-app-id",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-wechat-app-id",
+      "packId": "tpl-payment-integration-demo",
       "key": "WECHAT_APP_ID",
       "value": "",
       "encrypted": false,
@@ -72,8 +72,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-wechat-mch-id",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-wechat-mch-id",
+      "packId": "tpl-payment-integration-demo",
       "key": "WECHAT_MCH_ID",
       "value": "",
       "encrypted": false,
@@ -82,8 +82,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-wechat-api-v3",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-wechat-api-v3",
+      "packId": "tpl-payment-integration-demo",
       "key": "WECHAT_API_V3_KEY",
       "value": "",
       "encrypted": true,
@@ -92,8 +92,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-wechat-cert-serial",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-wechat-cert-serial",
+      "packId": "tpl-payment-integration-demo",
       "key": "WECHAT_CERT_SERIAL",
       "value": "",
       "encrypted": false,
@@ -102,8 +102,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-wechat-private-key",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-wechat-private-key",
+      "packId": "tpl-payment-integration-demo",
       "key": "WECHAT_PRIVATE_KEY",
       "value": "",
       "encrypted": true,
@@ -112,8 +112,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-notify-base",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-notify-base",
+      "packId": "tpl-payment-integration-demo",
       "key": "NOTIFY_BASE_URL",
       "value": "https://example.com/pay/notify",
       "encrypted": false,
@@ -122,8 +122,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-query-interval",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-query-interval",
+      "packId": "tpl-payment-integration-demo",
       "key": "PAY_QUERY_INTERVAL_SECONDS",
       "value": "3",
       "encrypted": false,
@@ -132,8 +132,8 @@
       "createdBy": "admin"
     },
     {
-      "id": "pev-slack-webhook",
-      "projectId": "payment-integration-demo",
+      "id": "tev-payment-slack-webhook",
+      "packId": "tpl-payment-integration-demo",
       "key": "SLACK_WEBHOOK_URL",
       "value": "",
       "encrypted": true,
