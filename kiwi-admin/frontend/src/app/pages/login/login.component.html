@@ -1,13 +1,58 @@
-<div class="container">
-  <div class="lang">
-    <i nz-icon nzTheme="outline" nzType="font-size"></i>
-  </div>
-  <div class="content-layout">
-    <div class="head">
-      <img class="logo" alt="" src="imgs/logo-color.svg" />
+<div class="login-page">
+  <!-- 左侧：品牌与功能介绍 -->
+  <aside class="brand-panel">
+    <div class="brand-inner">
+      <div class="brand-head">
+        <img class="logo" alt="Kiwi" src="imgs/logo.svg" />
+        <span class="brand-name">Kiwi</span>
+      </div>
+      <h1 class="brand-title">可视化流程编排 · 智能自动化平台</h1>
+      <p class="brand-subtitle">基于 BPMN 工作流引擎与 AI 能力，把复杂业务拆解为可拖拽、可复用、可观测的自动化流程。</p>
+
+      <ul class="feature-list">
+        <li>
+          <span class="feature-icon"><i nz-icon nzType="apartment" nzTheme="outline"></i></span>
+          <div class="feature-text">
+            <h3>可视化流程编排</h3>
+            <p>拖拽式 BPMN 编辑器，零代码搭建审批、调度与集成流程。</p>
+          </div>
+        </li>
+        <li>
+          <span class="feature-icon"><i nz-icon nzType="appstore" nzTheme="outline"></i></span>
+          <div class="feature-text">
+            <h3>丰富的组件生态</h3>
+            <p>内置 Shell、HTTP、数据库、消息等组件，支持插件化扩展。</p>
+          </div>
+        </li>
+        <li>
+          <span class="feature-icon"><i nz-icon nzType="robot" nzTheme="outline"></i></span>
+          <div class="feature-text">
+            <h3>AI 智能助手</h3>
+            <p>集成大模型与 MCP 工具，让流程具备理解与决策能力。</p>
+          </div>
+        </li>
+        <li>
+          <span class="feature-icon"><i nz-icon nzType="dashboard" nzTheme="outline"></i></span>
+          <div class="feature-text">
+            <h3>企业级管控</h3>
+            <p>统一的权限、监控与通知体系，保障流程稳定可追溯。</p>
+          </div>
+        </li>
+      </ul>
+
+      <div class="brand-footer">Operaton BPM · Spring Boot · Angular</div>
+    </div>
+  </aside>
+
+  <!-- 右侧：登录/注册表单 -->
+  <main class="form-panel">
+    <div class="form-head">
+      <img class="logo" alt="Kiwi" src="imgs/logo-color.svg" />
       <span class="title">Kiwi Admin</span>
     </div>
-    <div class="desc"></div>
-  </div>
-  <router-outlet></router-outlet>
+    <div class="form-body">
+      <router-outlet></router-outlet>
+    </div>
+    <div class="form-copyright">© {{ year }} Kiwi. All rights reserved.</div>
+  </main>
 </div>

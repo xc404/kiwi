@@ -11,4 +11,6 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NzIconModule, NzButtonModule, RouterOutlet]
 })
-export class LoginComponent {}
+export class LoginComponent {
+  readonly year = new Date().getFullYear();
+}
