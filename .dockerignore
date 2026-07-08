@@ -15,4 +15,4 @@ openspec
 data
 **/*.md
 !README.md
-!README.zh-CN.md
+!README.en.md

@@ -1,6 +1,6 @@
 # Kiwi BPM 组件说明
 
-本文介绍 Kiwi 流程组件的架构，以及如何**添加**、**配置**与**使用**组件。平台总览见 [README.zh-CN.md](../README.zh-CN.md)。
+本文介绍 Kiwi 流程组件的架构，以及如何**添加**、**配置**与**使用**组件。平台总览见 [README.md](../README.md)。
 
 ## 一、架构概览
 
@@ -501,7 +501,7 @@ BPMN 中须有 **Intermediate Message Catch Event**，message 名称与注册一
 
 | 文档 | 内容 |
 |------|------|
-| [README.zh-CN.md](../README.zh-CN.md) | 平台总览与快速开始 |
+| [README.md](../README.md) | 平台总览与快速开始 |
 | [slurm-workdir-cleanup.md](../kiwi-bpmn/kiwi-bpmn-component-slurm/docs/slurm-workdir-cleanup.md) | Slurm 组件运维 |
 | `.cursor/rules/component-parameter-key-no-dot.mdc` | `@ComponentParameter` key 命名 |
 | `.cursor/rules/component-parameter-htmltype.mdc` | `htmlType` 使用约定 |
