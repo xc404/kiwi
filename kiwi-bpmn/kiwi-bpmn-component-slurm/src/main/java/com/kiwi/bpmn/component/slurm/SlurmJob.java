@@ -91,7 +91,16 @@ public class SlurmJob extends BaseEntity<String> implements Cloneable{
     public SlurmJob clone() {
         try {
             SlurmJob clone = (SlurmJob) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            // Date 是可变对象，super.clone() 仅浅拷贝引用，这里深拷贝以隔离原对象与克隆体
+            if (expiration != null) {
+                clone.expiration = (Date) expiration.clone();
+            }
+            if (getCreatedTime() != null) {
+                clone.setCreatedTime((Date) getCreatedTime().clone());
+            }
+            if (getUpdatedTime() != null) {
+                clone.setUpdatedTime((Date) getUpdatedTime().clone());
+            }
             return clone;
         } catch( CloneNotSupportedException e ) {
             throw new AssertionError();

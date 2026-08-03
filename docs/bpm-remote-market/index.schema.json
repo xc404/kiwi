@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwi.local/schemas/bpm-remote-market-index/v1",
+  "title": "Kiwi Remote Market Index",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "items"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/marketItem" }
+    }
+  },
+  "$defs": {
+    "marketItem": {
+      "type": "object",
+      "required": ["type", "slug", "name", "version", "downloadUrl", "sha256"],
+      "properties": {
+        "type": { "enum": ["template", "plugin"] },
+        "slug": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "summary": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "kiwiMinVersion": { "type": "string" },
+        "downloadUrl": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "manifestUrl": { "type": "string" },
+        "signatureUrl": { "type": "string" },
+        "kind": { "type": "string" },
+        "processCount": { "type": "integer", "minimum": 0 },
+        "requiredComponentKeys": { "type": "array", "items": { "type": "string" } },
+        "componentKeys": { "type": "array", "items": { "type": "string" } },
+        "mavenCoordinate": {
+          "type": "object",
+          "properties": {
+            "groupId": { "type": "string" },
+            "artifactId": { "type": "string" },
+            "version": { "type": "string" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "template" } } },
+          "then": {}
+        },
+        {
+          "if": { "properties": { "type": { "const": "plugin" } } },
+          "then": {}
+        }
+      ]
+    }
+  }
+}

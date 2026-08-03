@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-08T00:00:00Z",
+  "items": [
+    {
+      "type": "template",
+      "slug": "demo-hello",
+      "name": "Hello 演示模板",
+      "version": "1.0.0",
+      "summary": "单流程入门模板",
+      "category": "demo",
+      "tags": ["demo", "hello"],
+      "kiwiMinVersion": "1.0.0",
+      "kind": "single",
+      "processCount": 1,
+      "requiredComponentKeys": [],
+      "downloadUrl": "templates/demo-hello/1.0.0/demo-hello-1.0.0.kiwi-template-pack",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "manifestUrl": "templates/demo-hello/1.0.0/manifest.json"
+    },
+    {
+      "type": "plugin",
+      "slug": "kiwi-bpmn-component-example",
+      "name": "Kiwi 组件示例包",
+      "version": "1.0.0-SNAPSHOT",
+      "summary": "demoGreeting 示例组件",
+      "category": "demo",
+      "kiwiMinVersion": "1.0.0",
+      "componentKeys": ["demoGreeting"],
+      "mavenCoordinate": {
+        "groupId": "com.kiwi",
+        "artifactId": "kiwi-bpmn-component-example",
+        "version": "1.0.0-SNAPSHOT"
+      },
+      "downloadUrl": "plugins/com/kiwi/kiwi-bpmn-component-example/1.0.0-SNAPSHOT/kiwi-bpmn-component-example-1.0.0-SNAPSHOT.jar",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "manifestUrl": "plugins/com/kiwi/kiwi-bpmn-component-example/1.0.0-SNAPSHOT/manifest.json"
+    }
+  ]
+}

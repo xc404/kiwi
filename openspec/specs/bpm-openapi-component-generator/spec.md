@@ -13,7 +13,7 @@ TBD - created by archiving change bpm-openapi-component-generator. Update Purpos
 
 接口 **SHALL** 返回 `List<BpmComponent>`，其中每一项对应文档中 **一个** HTTP 操作（path + method），且 **SHALL NOT** 在服务端自动持久化该列表（客户端按需调用既有保存接口）。
 
-每个返回项 **SHALL** 将 `type` 设为 `SpringBean`，**SHALL** 将 `parentId` 指向当前环境中「HTTP 请求」父组件在持久化层的 id：实现 **SHALL** 优先在已加载的组件缓存中查找 `key` 为 `httpRequest` 的组件并取其 `id`；若未找到 **SHALL** 回退为 `classpath_httpRequest`（与类路径自动部署的默认 id 规则一致）。
+每个返回项 **SHALL** 将 `type` 设为 `SpringBean`，**SHALL** 将 `parentId` 指向当前环境中「HTTP 请求」父组件在持久化层的 id：实现 **SHALL** 优先在已加载的组件缓存中查找 `key` 为 `httpRequest` 的组件并取其 `id`；若未找到 **SHALL** 回退为 `plugin_httpRequest`（与插件自动部署的默认 id 规则一致）。
 
 每个返回项 **SHALL** 将 `outputParameters` 置为 `null`，以便与父组件合并时继承 `HttpRequestActivity` 声明的输出定义。
 
@@ -29,7 +29,7 @@ TBD - created by archiving change bpm-openapi-component-generator. Update Purpos
 #### Scenario: 成功生成时包含 httpRequest 父引用
 
 - **WHEN** 请求合法且系统中存在已部署的 `httpRequest` 组件
-- **THEN** 每个返回项的 `parentId` **SHALL** 等于该组件的 `id`（通常为 `classpath_httpRequest`）
+- **THEN** 每个返回项的 `parentId` **SHALL** 等于该组件的 `id`（通常为 `plugin_httpRequest`）
 
 ---
 
@@ -76,6 +76,10 @@ TBD - created by archiving change bpm-openapi-component-generator. Update Purpos
 ---
 
 ### Requirement: 与 BpmComponentService 合并行为一致
+
+系统 SHALL 对生成草稿中的任一项应用与列表接口相同的「填充/合并父级属性」逻辑。
+
+#### Scenario: 子组件参数覆盖父级 HttpRequest 定义
 
 - **WHEN** 对生成草稿中的任一项调用与列表接口相同的「填充/合并父级属性」逻辑
 - **THEN** 合并后的输入参数中 **SHALL** 以子组件提供的同名参数为准（覆盖父级 `HttpRequestActivity` 的 `url`、`method`、`headers`、`body` 等），且 **SHALL** 继承父级未被子项声明的输出参数定义

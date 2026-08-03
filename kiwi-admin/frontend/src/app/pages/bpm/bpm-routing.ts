@@ -12,6 +12,18 @@ export default [
   { path: 'project', title: '项目管理', data: { key: 'bpm-project' }, loadComponent: () => import('./project/bpm-project').then(m => m.BpmProject) },
   { path: 'market', title: '模板市场', data: { key: 'bpm-market' }, loadComponent: () => import('./market/bpm-market').then(m => m.BpmMarket) },
   { path: 'market/:packId', title: '模板详情', data: { key: 'bpm-market-detail' }, loadComponent: () => import('./market/bpm-market-detail').then(m => m.BpmMarketDetail) },
+  {
+    path: 'remote-market',
+    title: '远程市场',
+    data: { key: 'bpm-remote-market' },
+    loadComponent: () => import('./remote-market/remote-market').then(m => m.RemoteMarket)
+  },
+  {
+    path: 'remote-market/:slug/:version',
+    title: '远程市场详情',
+    data: { key: 'bpm-remote-market-detail' },
+    loadComponent: () => import('./remote-market/remote-market-detail').then(m => m.RemoteMarketDetail)
+  },
   { path: 'process-definition', title: '项目流程', data: { key: 'bpm-project-process' }, loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess) },
   {
     path: 'process-instances',

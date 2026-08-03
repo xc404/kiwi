@@ -51,12 +51,22 @@
     "visible": true
   },
   {
+    "id": "bpm_remote_market",
+    "parentId": "bpm",
+    "name": "远程市场",
+    "menuType": "C",
+    "path": "/bpm/remote-market",
+    "sort": 5,
+    "status": "0",
+    "visible": true
+  },
+  {
     "id": "bpm_process_definition",
     "parentId": "bpm",
     "name": "流程管理",
     "menuType": "C",
     "path": "/bpm/process-definition",
-    "sort": 5,
+    "sort": 6,
     "status": "0",
     "visible": true
   },
@@ -66,7 +76,7 @@
     "name": "运行实例",
     "menuType": "C",
     "path": "/bpm/process-instances",
-    "sort": 6,
+    "sort": 7,
     "status": "0",
     "visible": true
   },

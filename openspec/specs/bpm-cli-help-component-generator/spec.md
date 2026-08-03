@@ -11,7 +11,7 @@ TBD - created by archiving change bpm-cli-help-component-generator. Update Purpo
 
 `name`、`key`、`group`、`description`、command 模板中的**可执行前缀**（字面量段）等 **SHALL** 由后端从 `helpCommand` 推导默认值（例如去掉末尾 `--help`/`-h` 等后作为前缀，`name` 为「前缀 + ` CLI`」，`group` 为 `common` 等），**SHALL NOT** 要求客户端传入这些字段。
 
-接口 **SHALL** 返回一个**未持久化**的 `BpmComponent` 实例，其 `parentId` **SHALL** 指向当前环境中 shell「命令行」父组件在持久化层的 id：实现 **SHALL** 优先在已加载的组件缓存中查找 `key` 为 `shell` 的组件并取其 `id`；若未找到 **SHALL** 回退为 `classpath_shell`（与类路径自动部署的默认 id 规则一致）。
+接口 **SHALL** 返回一个**未持久化**的 `BpmComponent` 实例，其 `parentId` **SHALL** 指向当前环境中 shell「命令行」父组件在持久化层的 id：实现 **SHALL** 优先在已加载的组件缓存中查找 `key` 为 `shell` 的组件并取其 `id`；若未找到 **SHALL** 回退为 `plugin_shell`（与插件自动部署的默认 id 规则一致）。
 
 生成结果 **SHALL** 将 `type` 设为与继承 shell 相适应的类型（如 `SpringBean`），**SHALL** 将 `outputParameters` 置为 `null` 以便与父组件合并时继承 shell 的输出定义。
 
@@ -25,9 +25,7 @@ TBD - created by archiving change bpm-cli-help-component-generator. Update Purpo
 #### Scenario: 成功生成时包含 shell 父引用
 
 - **WHEN** 请求合法且系统中存在已部署的 shell 组件
-- **THEN** 返回体的 `parentId` **SHALL** 等于该 shell 组件的 `id`（通常为 `classpath_shell`）
-
----
+- **THEN** 返回体的 `parentId` **SHALL** 等于该 shell 组件的 `id`（通常为 `plugin_shell`）
 
 ### Requirement: Help 选项解析与 cli_* 输入参数
 
