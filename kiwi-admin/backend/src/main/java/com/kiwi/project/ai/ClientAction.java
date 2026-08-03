@@ -27,6 +27,7 @@ public class ClientAction {
     public static final String PARAM_TOOLBAR_COMMAND = "toolbarCommand";
     public static final String PARAM_TOOLBAR_OPTIONS = "toolbarOptions";
     public static final String PARAM_XML = "xml";
+    public static final String PARAM_PREVIEW_ONLY = "previewOnly";
     public static final String PARAM_COMPONENT_ID = "componentId";
     public static final String PARAM_SOURCE_ELEMENT_ID = "sourceElementId";
 
@@ -65,6 +66,17 @@ public class ClientAction {
         }
         Map<String, Object> params = new LinkedHashMap<>();
         params.put(PARAM_XML, xml);
+        return of(TYPE_BPMN_XML, params);
+    }
+
+    /** 仅预览导入，不自动保存。 */
+    public static ClientAction bpmnXmlPreview(String xml) {
+        if (xml == null || xml.isBlank()) {
+            throw new IllegalArgumentException("xml 不能为空。");
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put(PARAM_XML, xml);
+        params.put(PARAM_PREVIEW_ONLY, true);
         return of(TYPE_BPMN_XML, params);
     }
 

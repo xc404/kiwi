@@ -29,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -149,6 +150,26 @@ public class BpmTemplatePackBundleService {
     @Transactional
     public InstallTemplatePackResult importAndInstall(MultipartFile file, InstallTemplatePackInput installInput, String userId) {
         BundleContent content = parseZip(file);
+        return importAndInstallFromContent(content, installInput, userId);
+    }
+
+    @Transactional
+    public InstallTemplatePackResult importAndInstallFromBytes(
+            byte[] zipBytes,
+            String filename,
+            InstallTemplatePackInput installInput,
+            String userId) {
+        if (zipBytes == null || zipBytes.length == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "模板包内容为空");
+        }
+        BundleContent content = parseZipBytes(zipBytes);
+        return importAndInstallFromContent(content, installInput, userId);
+    }
+
+    private InstallTemplatePackResult importAndInstallFromContent(
+            BundleContent content,
+            InstallTemplatePackInput installInput,
+            String userId) {
         PublishTemplatePackInput meta = new PublishTemplatePackInput();
         meta.setName(content.packMeta.getOrDefault("name", "Imported pack").toString());
         meta.setVisibility(BpmTemplatePack.Visibility.Private);
@@ -195,9 +216,21 @@ public class BpmTemplatePackBundleService {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请上传 .kiwi-template-pack 文件");
         }
+        try {
+            return parseZipStream(file.getInputStream());
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "无法读取模板包", e);
+        }
+    }
+
+    private BundleContent parseZipBytes(byte[] bytes) {
+        return parseZipStream(new ByteArrayInputStream(bytes));
+    }
+
+    private BundleContent parseZipStream(java.io.InputStream inputStream) {
         BundleContent content = new BundleContent();
         content.processes = new LinkedHashMap<>();
-        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
+        try (ZipInputStream zis = new ZipInputStream(inputStream)) {
             ZipEntry entry;
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             while ((entry = zis.getNextEntry()) != null) {

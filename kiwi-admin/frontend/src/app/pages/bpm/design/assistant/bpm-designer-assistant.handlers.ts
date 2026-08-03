@@ -6,6 +6,8 @@ import { BpmAppendAnchorRequiredError } from '../service/bpm-append-anchor-requi
 export interface BpmDesignerAssistantDeps {
   /** 导入 BPMN 并保存到当前流程（设计器 AI 改图主路径） */
   importBpmnXmlAndSave: (xml: string) => Promise<void>;
+  /** 仅导入预览，不保存 */
+  importBpmnXml: (xml: string) => Promise<void>;
   /** 服务端 matchComponent / 兼容 appendComponent：由前端解析锚点并追加 */
   applyMatchedComponent: (componentId: string, sourceElementId?: string | null) => void;
   runToolbarCommand: (command: string, options?: Record<string, unknown>) => void;
@@ -13,7 +15,7 @@ export interface BpmDesignerAssistantDeps {
 
 /** 处理 `type === 'bpmnXml'`：替换当前画布 BPMN。 */
 export class BpmnXmlAssistantActionHandler implements AssistantActionHandler {
-  constructor(private readonly deps: Pick<BpmDesignerAssistantDeps, 'importBpmnXmlAndSave'>) {}
+  constructor(private readonly deps: Pick<BpmDesignerAssistantDeps, 'importBpmnXmlAndSave' | 'importBpmnXml'>) {}
 
   supports(action: AiClientAction): boolean {
     const xml = action.params?.['xml'];
@@ -22,10 +24,11 @@ export class BpmnXmlAssistantActionHandler implements AssistantActionHandler {
 
   handle(action: AiClientAction, ctx: AssistantActionContext): boolean {
     const xml = String(action.params?.['xml'] ?? '');
-    void this.deps
-      .importBpmnXmlAndSave(xml)
+    const previewOnly = action.params?.['previewOnly'] === true;
+    const run = previewOnly ? this.deps.importBpmnXml(xml) : this.deps.importBpmnXmlAndSave(xml);
+    void run
       .then(() => {
-        ctx.nzMessage.success('已按 AI 更新流程并已保存');
+        ctx.nzMessage.success(previewOnly ? '已按 AI 预览流程（未保存）' : '已按 AI 更新流程并已保存');
       })
       .catch(e => {
         const msg = e instanceof Error ? e.message : '导入或保存失败';

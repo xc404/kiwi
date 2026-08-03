@@ -41,6 +41,29 @@ public class BpmComponentBundleService {
         String safeName = Path.of(file.getOriginalFilename()).getFileName().toString();
         Path temp = saveToTempJar(file);
         try {
+            return installJarFromPath(temp, safeName);
+        } finally {
+            deleteQuietly(temp);
+        }
+    }
+
+    public List<BpmComponentPluginDescriptor> installJarFromBytes(byte[] bytes, String fileName) {
+        validateJarFileName(fileName);
+        if (bytes == null || bytes.length == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "JAR 内容为空");
+        }
+        String safeName = Path.of(fileName).getFileName().toString();
+        try {
+            Path temp = Files.createTempFile("kiwi-plugin-install-", ".jar");
+            Files.write(temp, bytes);
+            return installJarFromPath(temp, safeName);
+        } catch (IOException e) {
+            throw new UncheckedIOException("读取 JAR 失败", e);
+        }
+    }
+
+    private List<BpmComponentPluginDescriptor> installJarFromPath(Path temp, String safeName) {
+        try {
             describeOrBadRequest(temp);
             Path target = pluginLoader.resolvePluginsDir().resolve(safeName);
             Files.createDirectories(target.getParent());
@@ -92,7 +115,10 @@ public class BpmComponentBundleService {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请上传 JAR 文件");
         }
-        String original = file.getOriginalFilename();
+        validateJarFileName(file.getOriginalFilename());
+    }
+
+    private void validateJarFileName(String original) {
         if (StringUtils.isBlank(original) || !original.toLowerCase().endsWith(".jar")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "仅支持 .jar 文件");
         }

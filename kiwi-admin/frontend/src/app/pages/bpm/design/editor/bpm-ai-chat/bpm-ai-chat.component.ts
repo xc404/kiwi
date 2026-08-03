@@ -33,6 +33,7 @@ export class BpmAiChatComponent {
 
   private readonly assistantDeps: BpmDesignerAssistantDeps = {
     importBpmnXmlAndSave: xml => this.editor.importBpmnXmlAndSave(xml),
+    importBpmnXml: xml => this.editor.importBpmnXml(xml),
     applyMatchedComponent: (componentId, sourceElementId) => this.append.appendComponentForAi(componentId, sourceElementId),
     runToolbarCommand: (command, options) => this.runToolbarCommand(command, options)
   };

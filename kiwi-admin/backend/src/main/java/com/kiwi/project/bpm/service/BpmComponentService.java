@@ -216,6 +216,11 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return fillComponentProperties(c);
     }
 
+    /** 当前缓存中的全部组件（只读快照）。 */
+    public List<BpmComponent> listCachedComponents() {
+        return List.copyOf(this.cachedComponents.values());
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
 

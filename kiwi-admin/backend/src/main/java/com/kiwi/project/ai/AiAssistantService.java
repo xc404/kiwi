@@ -1,5 +1,7 @@
 package com.kiwi.project.ai;
 
+import com.kiwi.project.ai.authoring.AiAuthoringProcessService;
+import com.kiwi.project.ai.authoring.AiAuthoringVariables;
 import com.kiwi.project.ai.mcp.KiwiAdminAiMcpConfiguration;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -8,8 +10,8 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
@@ -17,28 +19,33 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * 助手对话：基于统一 {@link ChatClient}（{@code kiwiChatClient}）与 MCP 工具；由模型自行选用工具。
  * 前端动作由 {@link AssistantClientActionContext} 收集（菜单跳转、BPM 设计器建议等）。
+ * 当 {@code kiwi.ai.workflow-authoring.enabled=true} 且检测到场景生图意图时，分流到内部编排流程。
  */
 @Service
 public class AiAssistantService {
 
     private static final String TOOL_ASSISTANT_DESIGNER_BPMN_XML = "assistant_designer_bpmn_xml";
 
-    /** BPM 设计器：模型声称已改图但 actions 为空时的常见措辞 */
     private static final Pattern BPM_DESIGNER_FALSE_SUCCESS = Pattern.compile(
             "已成功|成功完成|已更新|已复制|已成功移除|已移除|已删除|精准复制|画布.*已|节点.*已.*更新|仅剩");
 
-    /** 用户消息中的改图意图（非纯问答） */
     private static final Pattern BPM_DESIGNER_USER_EDIT_INTENT = Pattern.compile(
             "移除|删除|去掉|添加|追加|复制|修改|更新|改|连接|部署|导出|保存|插入|替换");
 
-    /** 需先拉取它流程 BPMN 再改图（补救轮不强制只调 bpmn_xml） */
     private static final Pattern BPM_DESIGNER_NEEDS_SOURCE_PROCESS = Pattern.compile(
             "复制|从.{0,30}流程|源流程|其它流程|其他流程|bpmPd|CryoEMS|cryoems", Pattern.CASE_INSENSITIVE);
+
+    /** 场景生图意图（与局部改图区分） */
+    private static final Pattern SCENARIO_AUTHORING_INTENT = Pattern.compile(
+            "场景|帮我(设计|生成|创建).*流程|根据.*(场景|需求).*流程|写(一个|个)?工作流|生成(一个|个)?流程");
+
+    private static final Pattern ProcessIdInContext = Pattern.compile("processId:\\s*(\\S+)");
 
     private static final String BPM_DESIGNER_RETRY_USER = """
             上轮未登记任何画布动作（actions 为空）。用户请求的是修改 BPMN 流程图。
@@ -49,14 +56,17 @@ public class AiAssistantService {
     private final ObjectProvider<ChatClient> kiwiAssistantChatClientProvider;
     private final AiChatProperties properties;
     private final AssistantClientActionContext assistantClientActionContext;
+    private final ObjectProvider<AiAuthoringProcessService> authoringProcessServiceProvider;
 
     public AiAssistantService(
             @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
             AiChatProperties properties,
-            AssistantClientActionContext assistantClientActionContext) {
+            AssistantClientActionContext assistantClientActionContext,
+            ObjectProvider<AiAuthoringProcessService> authoringProcessServiceProvider) {
         this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
         this.assistantClientActionContext = assistantClientActionContext;
+        this.authoringProcessServiceProvider = authoringProcessServiceProvider;
     }
 
     public AiAssistantResponse run(List<AiChatMessage> messages) {
@@ -79,6 +89,11 @@ public class AiAssistantService {
         }
 
         boolean bpmDesignerSession = isBpmDesignerSession(springMessages);
+        AiAssistantResponse authoring = tryScenarioAuthoring(springMessages, bpmDesignerSession);
+        if (authoring != null) {
+            return authoring;
+        }
+
         String systemPrompt = KiwiAdminAiMcpConfiguration.SYSTEM_PROMPT;
         if (bpmDesignerSession) {
             systemPrompt = systemPrompt + "\n\n" + KiwiAdminAiMcpConfiguration.BPM_DESIGNER_SUPPLEMENT;
@@ -117,6 +132,80 @@ public class AiAssistantService {
         out.setActions(actions);
         appendBpmDesignerActionWarningIfNeeded(out, bpmDesignerSession, actions);
         return out;
+    }
+
+    @Nullable
+    private AiAssistantResponse tryScenarioAuthoring(List<Message> springMessages, boolean bpmDesignerSession) {
+        if (!properties.getWorkflowAuthoring().isEnabled() || !bpmDesignerSession) {
+            return null;
+        }
+        AiAuthoringProcessService authoring = authoringProcessServiceProvider.getIfAvailable();
+        if (authoring == null || !authoring.isEnabled()) {
+            return null;
+        }
+        String lastUser = lastUserMessageText(springMessages);
+        if (lastUser == null || !SCENARIO_AUTHORING_INTENT.matcher(lastUser).find()) {
+            return null;
+        }
+        String processId = extractProcessId(springMessages);
+        if (processId == null || processId.isBlank()) {
+            return null;
+        }
+        String selected = extractSelectedElementId(springMessages);
+        AiAuthoringProcessService.StartResult started = authoring.start(lastUser, processId, selected);
+        AiAssistantResponse out = new AiAssistantResponse();
+        StringBuilder content = new StringBuilder();
+        content.append("已启动 AI 写工作流编排（Kiwi 内部流程）。\n");
+        content.append("阶段: ").append(started.getStage()).append("\n");
+        content.append("实例: ").append(started.getProcessInstanceId()).append("\n");
+        if (started.getAskMessage() != null) {
+            content.append("说明: ").append(started.getAskMessage()).append("\n");
+        }
+        List<ClientAction> actions = new ArrayList<>();
+        if (started.getCandidateXml() != null && !started.getCandidateXml().isBlank()
+                && AiAuthoringVariables.StageAwaitPreview.equals(started.getStage())) {
+            actions.add(ClientAction.bpmnXmlPreview(started.getCandidateXml()));
+            content.append("已生成候选 BPMN，已导入画布预览（尚未保存）。请在编排任务中确认保存或拒绝。\n");
+        }
+        if (started.getTasks() != null && !started.getTasks().isEmpty()) {
+            content.append("待办任务: ");
+            started.getTasks().forEach(t ->
+                    content.append(t.getName()).append("(").append(t.getId()).append(") "));
+            content.append("\n可通过 /ai/workflow-authoring/tasks/{taskId}/complete 完成。");
+        }
+        out.setContent(content.toString().trim());
+        out.setActions(actions);
+        return out;
+    }
+
+    @Nullable
+    private static String extractProcessId(List<Message> messages) {
+        for (Message m : messages) {
+            if (m instanceof SystemMessage sm && sm.getText() != null) {
+                Matcher matcher = ProcessIdInContext.matcher(sm.getText());
+                if (matcher.find()) {
+                    return matcher.group(1).trim();
+                }
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static String extractSelectedElementId(List<Message> messages) {
+        Pattern p = Pattern.compile("selectedElementId:\\s*(\\S+)");
+        for (Message m : messages) {
+            if (m instanceof SystemMessage sm && sm.getText() != null) {
+                Matcher matcher = p.matcher(sm.getText());
+                if (matcher.find()) {
+                    String v = matcher.group(1).trim();
+                    if (!v.startsWith("（")) {
+                        return v;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private String callAssistant(
@@ -195,4 +284,3 @@ public class AiAssistantService {
         };
     }
 }
-

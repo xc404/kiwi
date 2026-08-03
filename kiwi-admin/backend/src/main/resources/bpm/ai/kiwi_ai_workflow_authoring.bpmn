@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_kiwi_ai_workflow_authoring"
+                  targetNamespace="http://kiwi.io/ai-authoring"
+                  exporter="kiwi"
+                  exporterVersion="1.0">
+  <bpmn:process id="kiwi_ai_workflow_authoring" name="AI Workflow Authoring" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="开始"/>
+    <bpmn:sequenceFlow id="Flow_start" sourceRef="StartEvent_1" targetRef="Task_Extract"/>
+    <bpmn:serviceTask id="Task_Extract" name="抽词" camunda:delegateExpression="${aiAuthoringExtractDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_extract" sourceRef="Task_Extract" targetRef="Task_Catalog"/>
+    <bpmn:serviceTask id="Task_Catalog" name="Catalog" camunda:delegateExpression="${aiAuthoringCatalogDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_catalog" sourceRef="Task_Catalog" targetRef="Task_Generate"/>
+    <bpmn:serviceTask id="Task_Generate" name="生成" camunda:delegateExpression="${aiAuthoringGenerateDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_generate" sourceRef="Task_Generate" targetRef="Task_Validate"/>
+    <bpmn:serviceTask id="Task_Validate" name="校验" camunda:delegateExpression="${aiAuthoringValidateDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_validate" sourceRef="Task_Validate" targetRef="Gateway_Dispatch"/>
+    <bpmn:exclusiveGateway id="Gateway_Dispatch" name="分派" default="Flow_ask"/>
+    <bpmn:sequenceFlow id="Flow_pass" name="PASS" sourceRef="Gateway_Dispatch" targetRef="Task_MarkPreview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'PASS'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_repair" name="REPAIR" sourceRef="Gateway_Dispatch" targetRef="Task_Repair">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'REPAIR'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_install" name="INSTALL" sourceRef="Gateway_Dispatch" targetRef="UserTask_Install">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'INSTALL'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ask" name="ASK" sourceRef="Gateway_Dispatch" targetRef="UserTask_Ask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'ASK'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_Repair" name="修复" camunda:delegateExpression="${aiAuthoringRepairDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_repair_to_validate" sourceRef="Task_Repair" targetRef="Task_Validate"/>
+    <bpmn:serviceTask id="Task_MarkPreview" name="标记预览" camunda:delegateExpression="${aiAuthoringMarkPreviewDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_mark_preview" sourceRef="Task_MarkPreview" targetRef="UserTask_Preview"/>
+    <bpmn:userTask id="UserTask_Preview" name="预览确认" camunda:assignee="${initiatorUserId}"/>
+    <bpmn:sequenceFlow id="Flow_preview_done" sourceRef="UserTask_Preview" targetRef="Gateway_Preview"/>
+    <bpmn:exclusiveGateway id="Gateway_Preview" name="是否保存" default="Flow_preview_no"/>
+    <bpmn:sequenceFlow id="Flow_preview_yes" name="确认" sourceRef="Gateway_Preview" targetRef="Task_Save">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${previewConfirmed == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_preview_no" name="拒绝" sourceRef="Gateway_Preview" targetRef="Task_Generate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${previewConfirmed != true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_Save" name="保存" camunda:delegateExpression="${aiAuthoringSaveDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_save" sourceRef="Task_Save" targetRef="EndEvent_1"/>
+    <bpmn:userTask id="UserTask_Install" name="确认安装插件" camunda:assignee="${initiatorUserId}"/>
+    <bpmn:sequenceFlow id="Flow_install_done" sourceRef="UserTask_Install" targetRef="Gateway_Install"/>
+    <bpmn:exclusiveGateway id="Gateway_Install" name="是否安装" default="Flow_install_no"/>
+    <bpmn:sequenceFlow id="Flow_install_yes" name="接受" sourceRef="Gateway_Install" targetRef="Task_Validate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_install_no" name="拒绝" sourceRef="Gateway_Install" targetRef="Task_Generate">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted != true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="UserTask_Ask" name="追问用户" camunda:assignee="${initiatorUserId}"/>
+    <bpmn:sequenceFlow id="Flow_ask_done" sourceRef="UserTask_Ask" targetRef="Task_Generate"/>
+    <bpmn:endEvent id="EndEvent_1" name="结束"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="kiwi_ai_workflow_authoring">
+
+      <!-- 主路径 y≈180：开始 → 抽词 → Catalog → 生成 → 校验 → 分派 → 预览 → 保存 → 结束 -->
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="52" y="192" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="55" y="235" width="31" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Extract" bpmnElement="Task_Extract">
+        <dc:Bounds x="140" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Catalog" bpmnElement="Task_Catalog">
+        <dc:Bounds x="300" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Generate" bpmnElement="Task_Generate">
+        <dc:Bounds x="460" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Validate" bpmnElement="Task_Validate">
+        <dc:Bounds x="620" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Dispatch" bpmnElement="Gateway_Dispatch" isMarkerVisible="true">
+        <dc:Bounds x="795" y="185" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="803" y="155" width="34" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_MarkPreview" bpmnElement="Task_MarkPreview">
+        <dc:Bounds x="900" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_UserTask_Preview" bpmnElement="UserTask_Preview">
+        <dc:Bounds x="1060" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Preview" bpmnElement="Gateway_Preview" isMarkerVisible="true">
+        <dc:Bounds x="1225" y="185" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1222" y="155" width="56" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Save" bpmnElement="Task_Save">
+        <dc:Bounds x="1340" y="170" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1502" y="192" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1505" y="235" width="31" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- REPAIR 分支（上方） -->
+      <bpmndi:BPMNShape id="Shape_Task_Repair" bpmnElement="Task_Repair">
+        <dc:Bounds x="620" y="40" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- INSTALL 分支（下方） -->
+      <bpmndi:BPMNShape id="Shape_UserTask_Install" bpmnElement="UserTask_Install">
+        <dc:Bounds x="900" y="310" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_Install" bpmnElement="Gateway_Install" isMarkerVisible="true">
+        <dc:Bounds x="1065" y="325" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1062" y="382" width="56" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ASK 分支（更下方） -->
+      <bpmndi:BPMNShape id="Shape_UserTask_Ask" bpmnElement="UserTask_Ask">
+        <dc:Bounds x="900" y="450" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- 主路径连线 -->
+      <bpmndi:BPMNEdge id="Edge_Flow_start" bpmnElement="Flow_start">
+        <di:waypoint x="88" y="210"/>
+        <di:waypoint x="140" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_extract" bpmnElement="Flow_extract">
+        <di:waypoint x="240" y="210"/>
+        <di:waypoint x="300" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_catalog" bpmnElement="Flow_catalog">
+        <di:waypoint x="400" y="210"/>
+        <di:waypoint x="460" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_generate" bpmnElement="Flow_generate">
+        <di:waypoint x="560" y="210"/>
+        <di:waypoint x="620" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_validate" bpmnElement="Flow_validate">
+        <di:waypoint x="720" y="210"/>
+        <di:waypoint x="795" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_pass" bpmnElement="Flow_pass">
+        <di:waypoint x="845" y="210"/>
+        <di:waypoint x="900" y="210"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="853" y="192" width="33" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_mark_preview" bpmnElement="Flow_mark_preview">
+        <di:waypoint x="1000" y="210"/>
+        <di:waypoint x="1060" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_preview_done" bpmnElement="Flow_preview_done">
+        <di:waypoint x="1160" y="210"/>
+        <di:waypoint x="1225" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_preview_yes" bpmnElement="Flow_preview_yes">
+        <di:waypoint x="1275" y="210"/>
+        <di:waypoint x="1340" y="210"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1292" y="192" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_save" bpmnElement="Flow_save">
+        <di:waypoint x="1440" y="210"/>
+        <di:waypoint x="1502" y="210"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- REPAIR：分派向上 → 修复 → 回校验 -->
+      <bpmndi:BPMNEdge id="Edge_Flow_repair" bpmnElement="Flow_repair">
+        <di:waypoint x="820" y="185"/>
+        <di:waypoint x="820" y="80"/>
+        <di:waypoint x="720" y="80"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="820" y="120" width="42" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_repair_to_validate" bpmnElement="Flow_repair_to_validate">
+        <di:waypoint x="670" y="120"/>
+        <di:waypoint x="670" y="170"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- INSTALL：分派向下 → 安装确认 → 是否安装 -->
+      <bpmndi:BPMNEdge id="Edge_Flow_install" bpmnElement="Flow_install">
+        <di:waypoint x="820" y="235"/>
+        <di:waypoint x="820" y="350"/>
+        <di:waypoint x="900" y="350"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="825" y="286" width="44" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_install_done" bpmnElement="Flow_install_done">
+        <di:waypoint x="1000" y="350"/>
+        <di:waypoint x="1065" y="350"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_install_yes" bpmnElement="Flow_install_yes">
+        <di:waypoint x="1090" y="325"/>
+        <di:waypoint x="1090" y="260"/>
+        <di:waypoint x="670" y="260"/>
+        <di:waypoint x="670" y="250"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="860" y="242" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_install_no" bpmnElement="Flow_install_no">
+        <di:waypoint x="1090" y="375"/>
+        <di:waypoint x="1090" y="420"/>
+        <di:waypoint x="510" y="420"/>
+        <di:waypoint x="510" y="250"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="780" y="402" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ASK：分派更下 → 追问 → 回生成 -->
+      <bpmndi:BPMNEdge id="Edge_Flow_ask" bpmnElement="Flow_ask">
+        <di:waypoint x="820" y="235"/>
+        <di:waypoint x="820" y="490"/>
+        <di:waypoint x="900" y="490"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="825" y="360" width="24" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_ask_done" bpmnElement="Flow_ask_done">
+        <di:waypoint x="950" y="530"/>
+        <di:waypoint x="950" y="560"/>
+        <di:waypoint x="510" y="560"/>
+        <di:waypoint x="510" y="250"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- 预览拒绝：回生成 -->
+      <bpmndi:BPMNEdge id="Edge_Flow_preview_no" bpmnElement="Flow_preview_no">
+        <di:waypoint x="1250" y="235"/>
+        <di:waypoint x="1250" y="120"/>
+        <di:waypoint x="510" y="120"/>
+        <di:waypoint x="510" y="170"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="860" y="102" width="22" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
