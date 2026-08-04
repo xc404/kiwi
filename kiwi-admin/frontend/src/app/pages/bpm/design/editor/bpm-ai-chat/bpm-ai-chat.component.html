@@ -1,3 +1,76 @@
 <div class="bpm-ai-chat">
-  <app-chat conversationScope="bpm-designer" [actionHandlers]="assistantHandlers" [defaultOpen]="false" [messagesEnricher]="enrichDesignerMessages" [scopeRef]="bpmProcessId()" />
+  @if (showAuthoringPanel() && panelOpen()) {
+    <aside class="bpm-ai-authoring" aria-label="AI 写工作流编排">
+      <header class="bpm-ai-authoring__head">
+        <div class="bpm-ai-authoring__title">
+          <span>AI 写工作流</span>
+          <nz-tag [nzColor]="authoringStatus()?.active ? 'processing' : 'success'">{{ stageLabel() }}</nz-tag>
+        </div>
+        <button type="button" nz-button nzSize="small" nzType="text" (click)="panelOpen.set(false)" aria-label="收起">
+          <i nz-icon nzType="minus" nzTheme="outline"></i>
+        </button>
+      </header>
+
+      @if (authoringStatus()?.askMessage) {
+        <p class="bpm-ai-authoring__msg" nz-typography>{{ authoringStatus()!.askMessage }}</p>
+      }
+      @if (authoringStatus()?.dispatchCode) {
+        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">分派: {{ authoringStatus()!.dispatchCode }}</p>
+      }
+      @if (authoringStatus()?.pluginHintJson) {
+        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">插件提示: {{ authoringStatus()!.pluginHintJson }}</p>
+      }
+
+      @if (previewTask()) {
+        <div class="bpm-ai-authoring__actions">
+          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="confirmPreview()">确认保存</button>
+          <button nz-button nzSize="small" [disabled]="authoringBusy()" (click)="declinePreview()">拒绝并重生成</button>
+        </div>
+      }
+
+      @if (installTask()) {
+        <div class="bpm-ai-authoring__actions">
+          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="confirmInstall()">确认安装</button>
+          <button nz-button nzSize="small" [disabled]="authoringBusy()" (click)="declineInstall()">拒绝</button>
+        </div>
+      }
+
+      @if (askTask()) {
+        <div class="bpm-ai-authoring__ask">
+          <textarea
+            nz-input
+            rows="3"
+            placeholder="补充场景或约束后提交"
+            [ngModel]="askAnswer()"
+            (ngModelChange)="askAnswer.set($event)"
+          ></textarea>
+          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="submitAskAnswer()">提交说明</button>
+        </div>
+      }
+
+      @if (!authoringStatus()?.active && authoringStatus()?.stage === 'done') {
+        <div class="bpm-ai-authoring__actions">
+          <button nz-button nzSize="small" (click)="dismissDonePanel()">关闭</button>
+        </div>
+      }
+
+      <button class="bpm-ai-authoring__refresh" type="button" nz-button nzSize="small" nzType="link" [disabled]="authoringBusy()" (click)="refreshAuthoringStatus()">
+        刷新状态
+      </button>
+    </aside>
+  } @else if (showAuthoringPanel() && !panelOpen()) {
+    <button class="bpm-ai-authoring-fab" type="button" nz-button nzSize="small" nzType="default" (click)="panelOpen.set(true)">
+      <i nz-icon nzType="robot" nzTheme="outline"></i>
+      编排 · {{ stageLabel() }}
+    </button>
+  }
+
+  <app-chat
+    conversationScope="bpm-designer"
+    [actionHandlers]="assistantHandlers"
+    [defaultOpen]="false"
+    [messagesEnricher]="enrichDesignerMessages"
+    [scopeRef]="bpmProcessId()"
+    (turnCompleted)="onChatTurnCompleted()"
+  />
 </div>

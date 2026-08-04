@@ -57,6 +57,8 @@ const CHAT_PANEL_DEFAULT_HEIGHT = 560;
 export class ChatComponent implements OnInit, OnDestroy {
   readonly myScrollContainer = viewChild.required<ElementRef>('scrollMe');
   readonly changeShows = output<boolean>();
+  /** 助手一轮成功回复并派发 actions 之后触发（供宿主刷新编排状态等） */
+  readonly turnCompleted = output<{ userText: string; assistantText: string }>();
   readonly panelWidth = signal(CHAT_PANEL_DEFAULT_WIDTH);
   readonly panelHeight = signal(CHAT_PANEL_DEFAULT_HEIGHT);
   readonly embed = input(false);
@@ -282,6 +284,7 @@ export class ChatComponent implements OnInit, OnDestroy {
           this.messageArray.push({ msg: assistantText, dir: 'left', isReaded: false });
           this.actionOrchestrator.dispatch(res.actions, this.actionHandlers());
           this.persistTurn(userText, assistantText);
+          this.turnCompleted.emit({ userText, assistantText });
           this.scrollToBottom();
           this.cdr.markForCheck();
         },

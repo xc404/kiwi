@@ -2,12 +2,83 @@
   display: contents;
 }
 
-/* 使用 app-chat 默认右下角 fixed 布局（见 chat.component.less） */
 .bpm-ai-chat {
   display: contents;
   pointer-events: none;
 
-  app-chat {
+  app-chat,
+  .bpm-ai-authoring,
+  .bpm-ai-authoring-fab {
     pointer-events: auto;
   }
+}
+
+.bpm-ai-authoring {
+  position: fixed;
+  z-index: 997;
+  top: 72px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 48px));
+  max-height: min(42vh, calc(100vh - 120px));
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.08);
+}
+
+.bpm-ai-authoring__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bpm-ai-authoring__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bpm-ai-authoring__msg,
+.bpm-ai-authoring__meta {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.bpm-ai-authoring__actions,
+.bpm-ai-authoring__ask {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.bpm-ai-authoring__ask {
+  flex-direction: column;
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+}
+
+.bpm-ai-authoring__refresh {
+  align-self: flex-start;
+  padding-inline: 0;
+}
+
+.bpm-ai-authoring-fab {
+  position: fixed;
+  z-index: 997;
+  top: 72px;
+  right: 30px;
 }

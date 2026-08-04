@@ -161,20 +161,19 @@ public class AiAssistantService {
         if (started.getAskMessage() != null) {
             content.append("说明: ").append(started.getAskMessage()).append("\n");
         }
-        List<ClientAction> actions = new ArrayList<>();
         if (started.getCandidateXml() != null && !started.getCandidateXml().isBlank()
                 && AiAuthoringVariables.StageAwaitPreview.equals(started.getStage())) {
-            actions.add(ClientAction.bpmnXmlPreview(started.getCandidateXml()));
-            content.append("已生成候选 BPMN，已导入画布预览（尚未保存）。请在编排任务中确认保存或拒绝。\n");
+            // 预览导入由设计器编排面板负责（便于拒绝时恢复原图），此处不发 bpmnXml action
+            content.append("已生成候选 BPMN，设计器将导入画布预览（尚未保存）。请在右上角「AI 写工作流」面板确认或拒绝。\n");
         }
         if (started.getTasks() != null && !started.getTasks().isEmpty()) {
             content.append("待办任务: ");
             started.getTasks().forEach(t ->
                     content.append(t.getName()).append("(").append(t.getId()).append(") "));
-            content.append("\n可通过 /ai/workflow-authoring/tasks/{taskId}/complete 完成。");
+            content.append("\n请在设计器右上角「AI 写工作流」面板中确认预览 / 安装或提交补充说明。");
         }
         out.setContent(content.toString().trim());
-        out.setActions(actions);
+        out.setActions(List.of());
         return out;
     }
 

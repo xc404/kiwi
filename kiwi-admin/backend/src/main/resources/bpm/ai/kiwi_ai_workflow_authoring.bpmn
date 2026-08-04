@@ -30,9 +30,8 @@
     <bpmn:sequenceFlow id="Flow_install" name="INSTALL" sourceRef="Gateway_Dispatch" targetRef="UserTask_Install">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'INSTALL'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ask" name="ASK" sourceRef="Gateway_Dispatch" targetRef="UserTask_Ask">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dispatchCode == 'ASK'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <!-- default 流出边不能再带 conditionExpression -->
+    <bpmn:sequenceFlow id="Flow_ask" name="ASK" sourceRef="Gateway_Dispatch" targetRef="UserTask_Ask"/>
     <bpmn:serviceTask id="Task_Repair" name="修复" camunda:delegateExpression="${aiAuthoringRepairDelegate}"/>
     <bpmn:sequenceFlow id="Flow_repair_to_validate" sourceRef="Task_Repair" targetRef="Task_Validate"/>
     <bpmn:serviceTask id="Task_MarkPreview" name="标记预览" camunda:delegateExpression="${aiAuthoringMarkPreviewDelegate}"/>
@@ -43,9 +42,7 @@
     <bpmn:sequenceFlow id="Flow_preview_yes" name="确认" sourceRef="Gateway_Preview" targetRef="Task_Save">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${previewConfirmed == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_preview_no" name="拒绝" sourceRef="Gateway_Preview" targetRef="Task_Generate">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${previewConfirmed != true}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_preview_no" name="拒绝" sourceRef="Gateway_Preview" targetRef="Task_Generate"/>
     <bpmn:serviceTask id="Task_Save" name="保存" camunda:delegateExpression="${aiAuthoringSaveDelegate}"/>
     <bpmn:sequenceFlow id="Flow_save" sourceRef="Task_Save" targetRef="EndEvent_1"/>
     <bpmn:userTask id="UserTask_Install" name="确认安装插件" camunda:assignee="${initiatorUserId}"/>
@@ -54,9 +51,7 @@
     <bpmn:sequenceFlow id="Flow_install_yes" name="接受" sourceRef="Gateway_Install" targetRef="Task_Validate">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_install_no" name="拒绝" sourceRef="Gateway_Install" targetRef="Task_Generate">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted != true}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_install_no" name="拒绝" sourceRef="Gateway_Install" targetRef="Task_Generate"/>
     <bpmn:userTask id="UserTask_Ask" name="追问用户" camunda:assignee="${initiatorUserId}"/>
     <bpmn:sequenceFlow id="Flow_ask_done" sourceRef="UserTask_Ask" targetRef="Task_Generate"/>
     <bpmn:endEvent id="EndEvent_1" name="结束"/>
