@@ -8,6 +8,7 @@
     "prettier": "prettier --write \"src/**/*.ts\" \"src/**/*.html\" \"src/**/*.less\" \"public/**/*.json\"",
     "build": "ng build --base-href=/kiwi-admin/",
     "build:docker": "ng build --configuration docker --base-href=/kiwi-admin/",
+    "build:stage": "ng build --configuration stage --base-href=/kiwi-admin/",
     "analyze-package": "ng build --stats-json",
     "deploy": "ng deploy",
     "watch": "ng build --watch --configuration development",

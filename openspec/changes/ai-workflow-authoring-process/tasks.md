@@ -37,7 +37,15 @@
 
 ## 7. Hardening and docs
 
-- [ ] 7.1 Integration test or manual script: scenario → catalog → invalid XML repair → preview → save
-- [ ] 7.2 Integration path: missing plugin → user confirm install → re-validate → preview
+- [x] 7.1 Integration test or manual script: scenario → catalog → invalid XML repair → preview → save
+- [x] 7.2 Integration path: missing plugin → user confirm install → re-validate → preview
 - [x] 7.3 Update plan file status / brief NOTES in change if behavior differs from first model
-- [ ] 7.4 Ready for `/opsx:archive` after verification
+- [x] 7.4 Ready for `/opsx:archive` after verification
+
+## 8. Quality closed loop
+
+- [x] 8.1 Add create/modify soft rules and hard rule validation with `ruleId` repair feedback
+- [x] 8.2 Enrich Catalog with component parameter schema/examples and Top-1 template BPMN reference
+- [x] 8.3 Add narrow Plan IR and deterministic BPMN compiler for create mode
+- [x] 8.4 Add golden evaluation cases and focused authoring regression suite
+- [x] 8.5 Replace plugin-install placeholder with confirmed market install delegate before re-validation

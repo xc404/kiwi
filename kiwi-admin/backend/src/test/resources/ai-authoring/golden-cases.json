@@ -1,0 +1,148 @@
+[
+  {
+    "id": "http-request-linear",
+    "catalog": {
+      "installed": [
+        {
+          "id": "classpath_httpRequest",
+          "delegateExpression": "${httpRequest}",
+          "status": "installed"
+        }
+      ]
+    },
+    "plan": {
+      "processId": "http_request_flow",
+      "name": "HTTP 请求流程",
+      "nodes": [
+        {"id": "StartEvent_1", "type": "startEvent", "name": "开始"},
+        {
+          "id": "Activity_HTTP",
+          "type": "serviceTask",
+          "name": "调用接口",
+          "componentId": "classpath_httpRequest",
+          "parameters": {"url": "${requestUrl}", "method": "GET"}
+        },
+        {"id": "EndEvent_1", "type": "endEvent", "name": "结束"}
+      ],
+      "flows": [
+        {"id": "Flow_1", "sourceRef": "StartEvent_1", "targetRef": "Activity_HTTP"},
+        {"id": "Flow_2", "sourceRef": "Activity_HTTP", "targetRef": "EndEvent_1"}
+      ]
+    },
+    "expectedFragments": [
+      "kiwi:componentId=\"classpath_httpRequest\"",
+      "<camunda:inputParameter name=\"url\">${requestUrl}</camunda:inputParameter>",
+      "<bpmndi:BPMNDiagram"
+    ],
+    "forbiddenFragments": ["invented_component"]
+  },
+  {
+    "id": "approval-user-task",
+    "catalog": {"installed": []},
+    "plan": {
+      "processId": "approval_flow",
+      "name": "人工审批流程",
+      "nodes": [
+        {"id": "StartEvent_1", "type": "startEvent"},
+        {"id": "UserTask_Approve", "type": "userTask", "name": "人工审批"},
+        {"id": "EndEvent_1", "type": "endEvent"}
+      ],
+      "flows": [
+        {"id": "Flow_1", "sourceRef": "StartEvent_1", "targetRef": "UserTask_Approve"},
+        {"id": "Flow_2", "sourceRef": "UserTask_Approve", "targetRef": "EndEvent_1"}
+      ]
+    },
+    "expectedFragments": [
+      "<bpmn:userTask id=\"UserTask_Approve\" name=\"人工审批\"",
+      "bpmnElement=\"UserTask_Approve\""
+    ],
+    "forbiddenFragments": ["kiwi:componentId"]
+  },
+  {
+    "id": "exclusive-gateway-condition",
+    "catalog": {"installed": []},
+    "plan": {
+      "processId": "gateway_flow",
+      "name": "条件分支流程",
+      "nodes": [
+        {"id": "StartEvent_1", "type": "startEvent"},
+        {"id": "Gateway_1", "type": "exclusiveGateway", "name": "是否通过"},
+        {"id": "EndEvent_Yes", "type": "endEvent", "name": "通过"},
+        {"id": "EndEvent_No", "type": "endEvent", "name": "拒绝"}
+      ],
+      "flows": [
+        {"id": "Flow_Start", "sourceRef": "StartEvent_1", "targetRef": "Gateway_1"},
+        {"id": "Flow_Yes", "sourceRef": "Gateway_1", "targetRef": "EndEvent_Yes", "condition": "${approved}"},
+        {"id": "Flow_No", "sourceRef": "Gateway_1", "targetRef": "EndEvent_No", "condition": "${!approved}"}
+      ]
+    },
+    "expectedFragments": [
+      "<bpmn:exclusiveGateway id=\"Gateway_1\"",
+      "${approved}",
+      "${!approved}"
+    ],
+    "forbiddenFragments": ["sourceRef=\"missing\""]
+  },
+  {
+    "id": "create-order-uuid-assign",
+    "catalog": {
+      "installed": [
+        {
+          "id": "classpath_uuidGenerate",
+          "delegateExpression": "${uuidGenerate}",
+          "status": "installed"
+        },
+        {
+          "id": "classpath_assignmentActivity",
+          "delegateExpression": "${assignmentActivity}",
+          "status": "installed",
+          "inputs": [
+            {
+              "key": "assignments",
+              "required": false,
+              "example": "[{\"key\":\"outTradeNo\",\"value\":\"${uuid}\"}]"
+            }
+          ]
+        }
+      ]
+    },
+    "plan": {
+      "processId": "create_order_flow",
+      "name": "生成订单",
+      "nodes": [
+        {"id": "StartEvent_1", "type": "startEvent", "name": "开始"},
+        {
+          "id": "Activity_uuid",
+          "type": "serviceTask",
+          "name": "生成订单号",
+          "componentId": "classpath_uuidGenerate"
+        },
+        {
+          "id": "Activity_assign",
+          "type": "serviceTask",
+          "name": "组装订单变量",
+          "componentId": "classpath_assignmentActivity",
+          "parameters": {
+            "assignments": "[{\"key\":\"outTradeNo\",\"value\":\"${uuid}\"}]"
+          }
+        },
+        {"id": "EndEvent_1", "type": "endEvent", "name": "结束"}
+      ],
+      "flows": [
+        {"id": "Flow_1", "sourceRef": "StartEvent_1", "targetRef": "Activity_uuid"},
+        {"id": "Flow_2", "sourceRef": "Activity_uuid", "targetRef": "Activity_assign"},
+        {"id": "Flow_3", "sourceRef": "Activity_assign", "targetRef": "EndEvent_1"}
+      ]
+    },
+    "expectedFragments": [
+      "kiwi:componentId=\"classpath_uuidGenerate\"",
+      "kiwi:componentId=\"classpath_assignmentActivity\"",
+      "camunda:delegateExpression=\"${uuidGenerate}\"",
+      "camunda:delegateExpression=\"${assignmentActivity}\"",
+      "<camunda:inputParameter name=\"assignments\">",
+      "outTradeNo",
+      "<bpmndi:BPMNDiagram"
+    ],
+    "forbiddenFragments": ["invented_component"]
+  }
+]

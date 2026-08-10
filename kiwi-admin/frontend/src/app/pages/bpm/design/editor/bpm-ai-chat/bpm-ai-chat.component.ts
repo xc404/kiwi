@@ -73,7 +73,7 @@ export class BpmAiChatComponent {
   readonly panelOpen = signal(true);
 
   /** 前端开关：编排产出 XML 后是否自动保存到当前流程（写入 system 供后端读） */
-  readonly aiAuthoringAutoSave = true;
+  readonly aiAuthoringAutoSave = false;
 
   private lastImportedPreviewXml = '';
   /** 首次导入预览前的画布 XML，拒绝预览时恢复 */

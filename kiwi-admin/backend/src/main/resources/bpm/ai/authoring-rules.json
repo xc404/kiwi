@@ -1,0 +1,69 @@
+[
+  {
+    "id": "output_json_only",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "只输出 JSON，不要 Markdown：{\"summary\":\"给用户看的中文说明（2-6句）\",\"planIrJson\":{\"processId\":\"...\",\"nodes\":[],\"flows\":[]},\"candidateXml\":\"modify 模式必填；create 可省略\"}"
+  },
+  {
+    "id": "component_id_in_catalog",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "componentId 只能使用 Catalog.installed 中的 id；若必须用 installable，在 plan 中标记 requiresInstall=true。"
+  },
+  {
+    "id": "has_start_and_end",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "XML 必须含 startEvent、endEvent、sequenceFlow；至少保留或包含合理业务节点。"
+  },
+  {
+    "id": "summary_for_users",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "summary 面向业务用户，不要提内部变量名或实例 id。"
+  },
+  {
+    "id": "modify_preserve_unrelated",
+    "kind": "soft",
+    "mode": "modify",
+    "enabled": true,
+    "promptText": "在上一版 XML 上按用户要求修改，保留无关节点/连线/参数，不要无故整图重写；勿擅自更改 process id。"
+  },
+  {
+    "id": "has_start_and_end",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "流程必须包含 startEvent 与 endEvent"
+  },
+  {
+    "id": "sequence_flow_endpoints_valid",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "sequenceFlow 的 sourceRef/targetRef 必须指向图中存在的节点"
+  },
+  {
+    "id": "component_id_in_catalog",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "componentId 必须出现在本轮 Catalog（installed 或 installable）"
+  },
+  {
+    "id": "required_params_present",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "已解析组件的必填参数必须出现在该节点的 inputParameter 中"
+  }
+]

@@ -35,7 +35,7 @@ public class BpmComponentService implements InitializingBean, Refreshable
     @Autowired(required = false)
     private List<BpmComponentProvider> bpmComponentProviderList;
 
-    private final Map<String, BpmComponent> cachedComponents = new ConcurrentHashMap<>();
+    private volatile Map<String, BpmComponent> cachedComponents = Map.of();
 
     public void deployComponent(BpmComponent bpmComponent) {
         this.bpmComponentDeploymentService.deployComponent(bpmComponent);
@@ -221,6 +221,14 @@ public class BpmComponentService implements InitializingBean, Refreshable
         return List.copyOf(this.cachedComponents.values());
     }
 
+    /**
+     * 回源 Mongo 并刷新缓存后返回全量组件。Catalog / 编排等需要强一致视图时使用。
+     */
+    public List<BpmComponent> listAllComponents() {
+        refresh();
+        return listCachedComponents();
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
 
@@ -233,10 +241,13 @@ public class BpmComponentService implements InitializingBean, Refreshable
     @Override
     public void refresh() {
         List<BpmComponent> all = this.bpmComponentDao.findAll();
-        // 原子替换：先构建新 map 再 putAll，避免 clear() 与并发读之间的窗口期
-        Map<String, BpmComponent> snapshot = new ConcurrentHashMap<>(all.size() * 2);
-        all.forEach(component -> snapshot.put(component.getId(), component));
-        this.cachedComponents.clear();
-        this.cachedComponents.putAll(snapshot);
+        // 原子替换整个 map，避免 clear()+putAll 之间并发读到空缓存
+        Map<String, BpmComponent> snapshot = new ConcurrentHashMap<>(Math.max(16, all.size() * 2));
+        for (BpmComponent component : all) {
+            if (component != null && StringUtils.isNotBlank(component.getId())) {
+                snapshot.put(component.getId(), component);
+            }
+        }
+        this.cachedComponents = Map.copyOf(snapshot);
     }
 }

@@ -191,6 +191,11 @@
                 <artifactId>kiwi-bpmn-component-payment</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.kiwi</groupId>
+                <artifactId>cryoems-bpm</artifactId>
+                <version>${cryoems-bpm.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

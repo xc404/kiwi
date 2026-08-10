@@ -38,6 +38,7 @@ public final class AiAuthoringVariables {
     public static final String StageGenerate = "generate";
     public static final String StageValidate = "validate";
     public static final String StageRepair = "repair";
+    public static final String StageInstall = "install";
     public static final String StageAwaitPreview = "await_preview";
     public static final String StageAwaitInstall = "await_install";
     public static final String StageAwaitAsk = "await_ask";

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -22,18 +23,34 @@ public class AiAuthoringPlanGenerateService {
     private final ObjectMapper objectMapper;
     private final AiChatProperties aiChatProperties;
     private final ObjectProvider<ChatClient> chatClientProvider;
+    private final AiAuthoringRuleSet ruleSet;
+    private final AiWorkflowPlanCompiler planCompiler;
 
     public AiAuthoringPlanGenerateService(
             ObjectMapper objectMapper,
             AiChatProperties aiChatProperties,
-            @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> chatClientProvider) {
+            @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> chatClientProvider,
+            AiAuthoringRuleSet ruleSet,
+            AiWorkflowPlanCompiler planCompiler) {
         this.objectMapper = objectMapper;
         this.aiChatProperties = aiChatProperties;
         this.chatClientProvider = chatClientProvider;
+        this.ruleSet = ruleSet;
+        this.planCompiler = planCompiler;
     }
 
     public GenerateResult generate(String scenario, String catalogJson, String issuesJson, String previousXml) {
+        return generate(scenario, catalogJson, issuesJson, previousXml, null);
+    }
+
+    public GenerateResult generate(
+            String scenario,
+            String catalogJson,
+            String issuesJson,
+            String previousXml,
+            String userAnswer) {
         boolean hasBase = StringUtils.isNotBlank(previousXml);
+        String mode = ruleSet.resolveMode(previousXml);
         GenerateResult scratchFallback = fallbackFromCatalog(scenario, catalogJson);
         GenerateResult keepPrevious = hasBase ? keepPreviousXml(scenario, previousXml) : null;
         ChatClient client = chatClientProvider.getIfAvailable();
@@ -42,31 +59,33 @@ public class AiAuthoringPlanGenerateService {
         }
         try {
             String prompt = """
-                    你是 Kiwi BPMN 设计助手。根据用户意图与 Catalog，输出完整 BPMN 2.0 definitions XML。
-                    模式：
-                    - 若「当前/上一版 XML」非空：在该 XML 上按用户要求修改（增删改节点、连线、参数、命名等），保留无关部分，不要无故整图重写。
-                    - 若上一版为空：按场景从 Catalog 新建一条可执行流程。
-                    规则：
-                    1) componentId 只能使用 Catalog.installed 中的 id；若必须用 installable，在 plan 中标记 requiresInstall=true。
-                    2) 只输出 JSON，不要 Markdown：
-                       {"summary":"给用户看的中文说明（2-6句：理解了什么、改了/新建了什么；不要贴 XML）",
-                        "planIrJson":"...",
-                        "candidateXml":"<definitions>...</definitions>"}
-                    3) XML 必须含 startEvent、endEvent、sequenceFlow；至少保留或包含合理业务节点。
-                    4) summary 面向业务用户，不要提内部变量名或实例 id。
+                    你是 Kiwi BPMN 设计助手。根据用户意图与 Catalog 设计工作流。
+                    当前模式: %s
+                    %s
+                    Plan IR schema:
+                    {"processId":"合法 XML id","name":"流程名",
+                     "nodes":[{"id":"节点id","type":"startEvent|endEvent|serviceTask|userTask|exclusiveGateway",
+                               "name":"节点名","componentId":"serviceTask 使用 Catalog.installed.id","parameters":{"key":"value"}}],
+                     "flows":[{"id":"连线id","sourceRef":"源节点id","targetRef":"目标节点id","condition":"可空表达式"}]}
+                    create 模式必须提供完整 Plan IR，由服务端确定性编译 XML；modify 模式同时提供修改后的完整 candidateXml。
                     用户意图/场景:
                     %s
                     Catalog:
                     %s
                     当前/上一版 XML（可为空；非空则优先修改它）:
                     %s
-                    校验问题（可为空；修复时请针对性处理）:
+                    校验问题（可为空；修复时请针对 ruleId 与 message 逐项处理）:
+                    %s
+                    用户补充说明（可为空；非空时必须纳入本轮生成/修复）:
                     %s
                     """.formatted(
+                    mode,
+                    ruleSet.renderSoftPrompt(mode),
                     nullToEmpty(scenario),
                     nullToEmpty(catalogJson),
                     nullToEmpty(previousXml),
-                    nullToEmpty(issuesJson));
+                    nullToEmpty(issuesJson),
+                    nullToEmpty(userAnswer));
             String raw = client.prompt().user(prompt).call().content();
             if (StringUtils.isBlank(raw)) {
                 return keepPrevious != null ? keepPrevious : scratchFallback;
@@ -74,10 +93,15 @@ public class AiAuthoringPlanGenerateService {
             String json = stripFence(raw);
             JsonNode node = objectMapper.readTree(json);
             GenerateResult r = new GenerateResult();
-            r.setPlanIrJson(textOr(node, "planIrJson",
+            r.setPlanIrJson(jsonOr(node, "planIrJson",
                     keepPrevious != null ? keepPrevious.getPlanIrJson() : scratchFallback.getPlanIrJson()));
             String xml = textOr(node, "candidateXml", null);
-            if (StringUtils.isNotBlank(xml)) {
+            Optional<String> compiled = hasBase
+                    ? Optional.empty()
+                    : planCompiler.compile(r.getPlanIrJson(), catalogJson);
+            if (compiled.isPresent()) {
+                r.setCandidateXml(compiled.orElseThrow());
+            } else if (StringUtils.isNotBlank(xml)) {
                 r.setCandidateXml(xml);
             } else if (keepPrevious != null) {
                 r.setCandidateXml(keepPrevious.getCandidateXml());
@@ -231,6 +255,21 @@ public class AiAuthoringPlanGenerateService {
             return defaultValue;
         }
         return n.asText();
+    }
+
+    private String jsonOr(JsonNode node, String field, String defaultValue) {
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull()) {
+            return defaultValue;
+        }
+        if (value.isTextual()) {
+            return StringUtils.defaultIfBlank(value.asText(), defaultValue);
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
 
     private static String nullToEmpty(String s) {

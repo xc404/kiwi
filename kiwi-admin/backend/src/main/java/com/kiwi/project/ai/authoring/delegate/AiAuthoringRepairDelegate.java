@@ -28,7 +28,8 @@ public class AiAuthoringRepairDelegate implements JavaDelegate {
                 AiAuthoringExtractDelegate.str(execution, AiAuthoringVariables.Scenario),
                 AiAuthoringExtractDelegate.str(execution, AiAuthoringVariables.CatalogJson),
                 AiAuthoringExtractDelegate.str(execution, AiAuthoringVariables.IssuesJson),
-                previous);
+                previous,
+                AiAuthoringExtractDelegate.str(execution, AiAuthoringVariables.UserAnswer));
         execution.setVariable(AiAuthoringVariables.PlanIrJson, result.getPlanIrJson());
         execution.setVariable(AiAuthoringVariables.CandidateXml, result.getCandidateXml());
         if (result.getAssistantReply() != null) {

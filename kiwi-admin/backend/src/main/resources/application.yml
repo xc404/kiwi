@@ -87,11 +87,11 @@ spring:
         sse-endpoint: ${SPRING_AI_MCP_SERVER_SSE_ENDPOINT:/sse}
         sse-message-endpoint: ${SPRING_AI_MCP_SERVER_SSE_MESSAGE_ENDPOINT:/message}
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/kiwi?&nullCatalogMeansCurrent=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:change-me}
-    type: com.zaxxer.hikari.HikariDataSource
+    type: ${SPRING_DATASOURCE_TYPE:com.zaxxer.hikari.HikariDataSource}
   data:
     mongodb:
       # 单机 Mongo 非副本集：默认 retryWrites=false，避免事务/可重试写与部署能力不匹配

@@ -48,9 +48,11 @@
     <bpmn:userTask id="UserTask_Install" name="确认安装插件" camunda:assignee="${initiatorUserId}"/>
     <bpmn:sequenceFlow id="Flow_install_done" sourceRef="UserTask_Install" targetRef="Gateway_Install"/>
     <bpmn:exclusiveGateway id="Gateway_Install" name="是否安装" default="Flow_install_no"/>
-    <bpmn:sequenceFlow id="Flow_install_yes" name="接受" sourceRef="Gateway_Install" targetRef="Task_Validate">
+    <bpmn:sequenceFlow id="Flow_install_yes" name="接受" sourceRef="Gateway_Install" targetRef="Task_Install">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_Install" name="安装插件" camunda:delegateExpression="${aiAuthoringInstallDelegate}"/>
+    <bpmn:sequenceFlow id="Flow_install_execute" sourceRef="Task_Install" targetRef="Task_Validate"/>
     <bpmn:sequenceFlow id="Flow_install_no" name="拒绝" sourceRef="Gateway_Install" targetRef="Task_Generate"/>
     <bpmn:userTask id="UserTask_Ask" name="追问用户" camunda:assignee="${initiatorUserId}"/>
     <bpmn:sequenceFlow id="Flow_ask_done" sourceRef="UserTask_Ask" targetRef="Task_Generate"/>

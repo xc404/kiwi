@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class AiAuthoringValidationIssue {
     private String code;
+    /** 触发该问题的生成/校验规则，供 repair 精确回修与评测聚合。 */
+    private String ruleId;
     private String message;
     private String elementId;
     private String componentId;

@@ -28,5 +28,16 @@
 
 ## 与 design 差异
 
-- 安装确认后「真正调用 installPlugin」仍为占位：User Task 接受后回到 Validate（需用户先装好或后续接 install Delegate）
 - Catalog installable 主要来自远程市场 plugin 列表（启用时）
+
+## 2026-08-10 质量闭环迭代
+
+- 新增 `authoring-rules.json`：Soft Rule 注入 create/modify prompt；Hard Rule 进入 Validator，Issue 携带 `ruleId`
+- `userAnswer` 与结构化校验问题会进入 Generate/Repair；必填参数改为按组件节点检查
+- Catalog 注入组件说明、delegate、参数 schema/示例，并为 Top-1 模板携带有长度上限的参考 BPMN
+- create 模式优先用窄 Plan IR 经服务端确定性编译 BPMN（含组件绑定、参数、连线与 BPMNDI）；modify 保留原图 XML 路径
+- 默认关闭前端 auto-save，仍需预览确认
+- 插件候选按市场 `componentKeys` 展开，携带 slug/version/sourceId；用户确认后由 `AiAuthoringInstallDelegate` 真正安装，再回 Validate
+- 增加规则、Catalog、Plan 编译、LLM 反馈、插件安装、内部流程定义及黄金场景回归测试
+- 自测：AI authoring 专项 19 项通过（含两条跨组件闭环）；前端 development build 通过
+- 已知仓库门禁：全量 Maven 在 Windows 被既有 `SlurmServicePathPolicyTest` 路径断言阻塞；production 前端 build 被既有 `login.component.less` budget 阻塞

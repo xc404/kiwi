@@ -58,6 +58,7 @@
               }
             ],
             "styles": [
+              "src/styles/fonts/google-fonts.css",
               "node_modules/highlight.js/styles/github.min.css",
               "node_modules/driver.js/dist/driver.css",
               {
@@ -125,6 +126,11 @@
           },
           "configurations": {
             "production": {
+              "optimization": {
+                "fonts": {
+                  "inline": false
+                }
+              },
               "budgets": [
                 {
                   "type": "initial",
@@ -151,6 +157,11 @@
               "sourceMap": true
             },
             "docker": {
+              "optimization": {
+                "fonts": {
+                  "inline": false
+                }
+              },
               "budgets": [
                 {
                   "type": "initial",
@@ -167,6 +178,32 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.docker.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "stage": {
+              "optimization": {
+                "fonts": {
+                  "inline": false
+                }
+              },
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "2mb",
+                  "maximumError": "6mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "10kb",
+                  "maximumError": "20kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.stage.ts"
                 }
               ],
               "outputHashing": "all"
