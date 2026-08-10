@@ -59,7 +59,6 @@ kiwi-bpmn/**/target/
 kiwi-admin/frontend/deploy/__pycache__/
 /**/*local*.yml
 /kiwi-admin/frontend/src/environments/environment.stage.ts
-.cursor/*
 !.cursor/rules/
 !.cursor/rules/**
 kiwi-admin/frontend/dist-verify/
