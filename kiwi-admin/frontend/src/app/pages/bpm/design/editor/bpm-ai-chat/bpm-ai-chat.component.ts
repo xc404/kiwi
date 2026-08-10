@@ -72,6 +72,9 @@ export class BpmAiChatComponent {
   readonly askAnswer = signal('');
   readonly panelOpen = signal(true);
 
+  /** 前端开关：编排产出 XML 后是否自动保存到当前流程（写入 system 供后端读） */
+  readonly aiAuthoringAutoSave = true;
+
   private lastImportedPreviewXml = '';
   /** 首次导入预览前的画布 XML，拒绝预览时恢复 */
   private xmlBeforePreview = '';
@@ -147,11 +150,15 @@ export class BpmAiChatComponent {
     const xml = this.authoringStatus()?.candidateXml?.trim() ?? '';
     this.completeHumanTask(task, { previewConfirmed: true }, async () => {
       if (xml) {
-        await this.editor.importBpmnXml(xml);
+        if (this.aiAuthoringAutoSave) {
+          await this.editor.importBpmnXmlAndSave(xml);
+        } else {
+          await this.editor.importBpmnXml(xml);
+        }
       }
       this.xmlBeforePreview = '';
       this.lastImportedPreviewXml = '';
-      this.nzMessage.success('已确认并保存到当前流程');
+      this.nzMessage.success(this.aiAuthoringAutoSave ? '已确认并保存到当前流程' : '已确认预览');
     });
   }
 
@@ -239,16 +246,24 @@ export class BpmAiChatComponent {
       return;
     }
     const xml = status.candidateXml?.trim() ?? '';
-    if (status.stage === 'await_preview' && xml && xml !== this.lastImportedPreviewXml) {
-      try {
-        if (!this.xmlBeforePreview) {
-          this.xmlBeforePreview = this.editor.getBpmProcess()?.bpmnXml ?? '';
-        }
-        await this.editor.importBpmnXml(xml);
-        this.lastImportedPreviewXml = xml;
-      } catch {
-        this.nzMessage.warning('候选流程预览导入失败，可稍后重试');
+    const shouldApply = !!xml
+        && xml !== this.lastImportedPreviewXml
+        && (status.stage === 'await_preview' || status.stage === 'done');
+    if (!shouldApply) {
+      return;
+    }
+    try {
+      if (!this.xmlBeforePreview) {
+        this.xmlBeforePreview = this.editor.getBpmProcess()?.bpmnXml ?? '';
       }
+      if (this.aiAuthoringAutoSave) {
+        await this.editor.importBpmnXmlAndSave(xml);
+      } else {
+        await this.editor.importBpmnXml(xml);
+      }
+      this.lastImportedPreviewXml = xml;
+    } catch {
+      this.nzMessage.warning('候选流程导入画布失败，可稍后重试');
     }
   }
 
@@ -292,6 +307,7 @@ export class BpmAiChatComponent {
       '须走 bpmn_xml 的示例：改节点参数/复制它流程配置/增删改连线或节点/移除或删除组件/批量改名；删除：从当前 XML 去掉目标 serviceTask 与相关 sequenceFlow、BPMNDI 后 assistant_designer_bpmn_xml；复制：bpmPd_get → 合并 extensionElements → assistant_designer_bpmn_xml；仅有流程名时用 bpmPd_aiPage 查 id。',
       '禁止未调用 assistant_designer_bpmn_xml 却声称已修改或已保存。',
       '场景级「写工作流」由服务端编排流程处理；用户在设计器侧栏完成预览确认/插件安装/追问，无需再让用户调 REST。',
+      `aiAuthoringAutoSave: ${this.aiAuthoringAutoSave}`,
       `processId: ${processId}`,
       process?.name ? `processName: ${process.name}` : '',
       selectedId ? `selectedElementId: ${selectedId}` : 'selectedElementId: （无单选元素；追加组件建议 sourceElementId=StartEvent_1）',

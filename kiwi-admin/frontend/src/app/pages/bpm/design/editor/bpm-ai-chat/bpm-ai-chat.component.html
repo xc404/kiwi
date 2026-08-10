@@ -11,6 +11,9 @@
         </button>
       </header>
 
+      @if (authoringStatus()?.assistantReply) {
+        <p class="bpm-ai-authoring__msg" nz-typography>{{ authoringStatus()!.assistantReply }}</p>
+      }
       @if (authoringStatus()?.askMessage) {
         <p class="bpm-ai-authoring__msg" nz-typography>{{ authoringStatus()!.askMessage }}</p>
       }

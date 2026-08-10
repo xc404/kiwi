@@ -17,6 +17,7 @@ export interface AiAuthoringStatus {
   stage?: string;
   dispatchCode?: string;
   candidateXml?: string;
+  assistantReply?: string;
   askMessage?: string;
   pluginHintJson?: string;
   issuesJson?: string;
@@ -30,7 +31,12 @@ export interface AiAuthoringStatus {
 export class AiWorkflowAuthoringService {
   private readonly http = inject(BaseHttpService);
 
-  start(body: { scenario: string; targetProcessId: string; selectedElementId?: string | null }) {
+  start(body: {
+    scenario: string;
+    targetProcessId: string;
+    selectedElementId?: string | null;
+    baseBpmnXml?: string | null;
+  }) {
     return this.http.post<AiAuthoringStatus>('/ai/workflow-authoring/start', body, { showLoading: true });
   }
 

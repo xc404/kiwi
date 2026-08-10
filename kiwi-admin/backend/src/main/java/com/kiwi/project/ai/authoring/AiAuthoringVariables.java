@@ -13,6 +13,10 @@ public final class AiAuthoringVariables {
     public static final String CatalogJson = "catalogJson";
     public static final String PlanIrJson = "planIrJson";
     public static final String CandidateXml = "candidateXml";
+    /** 启动时画布上的原始 BPMN（生成步骤据此修改；可与 candidate 相同） */
+    public static final String BaseBpmnXml = "baseBpmnXml";
+    /** 面向用户的自然语言说明（来自生成/修复大模型） */
+    public static final String AssistantReply = "assistantReply";
     public static final String IssuesJson = "issuesJson";
     public static final String DispatchCode = "dispatchCode";
     public static final String RepairRound = "repairRound";

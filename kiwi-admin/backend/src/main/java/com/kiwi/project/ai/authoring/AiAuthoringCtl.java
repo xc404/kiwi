@@ -32,7 +32,8 @@ public class AiAuthoringCtl extends BaseCtl {
         return authoringProcessService.start(
                 request.getScenario(),
                 request.getTargetProcessId(),
-                request.getSelectedElementId());
+                request.getSelectedElementId(),
+                request.getBaseBpmnXml());
     }
 
     @Operation(operationId = "aiAuthoring_status", summary = "查询编排实例状态")
@@ -68,6 +69,8 @@ public class AiAuthoringCtl extends BaseCtl {
         private String targetProcessId;
         @Schema(description = "画布选中元素 id")
         private String selectedElementId;
+        @Schema(description = "当前画布 BPMN XML（有则在此基础上修改）")
+        private String baseBpmnXml;
     }
 
     @Data

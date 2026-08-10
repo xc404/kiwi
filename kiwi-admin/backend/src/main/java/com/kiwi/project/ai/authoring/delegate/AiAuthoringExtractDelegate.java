@@ -7,8 +7,6 @@ import org.operaton.bpm.engine.delegate.DelegateExecution;
 import org.operaton.bpm.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component("aiAuthoringExtractDelegate")
 @RequiredArgsConstructor
 public class AiAuthoringExtractDelegate implements JavaDelegate {
@@ -19,9 +17,8 @@ public class AiAuthoringExtractDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         execution.setVariable(AiAuthoringVariables.Stage, AiAuthoringVariables.StageExtract);
         String scenario = str(execution, AiAuthoringVariables.Scenario);
-        List<String> kws = keywordExtractor.extract(scenario);
-        execution.setVariable(AiAuthoringVariables.KeywordsJson, keywordExtractor.extractAsJson(scenario));
-        execution.setVariable("keywordsCount", kws.size());
+        String keywordsJson = keywordExtractor.extractAsJson(scenario);
+        execution.setVariable(AiAuthoringVariables.KeywordsJson, keywordsJson);
     }
 
     public static String str(DelegateExecution execution, String name) {
