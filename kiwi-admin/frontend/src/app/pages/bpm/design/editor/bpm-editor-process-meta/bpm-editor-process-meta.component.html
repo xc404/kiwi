@@ -2,24 +2,27 @@
   @if (loading()) {
     <nz-spin nzSimple></nz-spin>
   } @else if (meta(); as m) {
-    <div class="bpm-editor-process-meta__row">
+    <div class="bpm-editor-process-meta__main" nz-popover nzPopoverPlacement="bottomLeft" nzPopoverTrigger="hover" [nzPopoverContent]="detailTpl">
       <div class="bpm-editor-process-meta__title" [title]="m.name || '—'">{{ m.name || '—' }}</div>
-      <div class="bpm-editor-process-meta__fields">
-        <span class="bpm-editor-process-meta__field">
+      <span class="bpm-editor-process-meta__version">v{{ m.version ?? '—' }} / {{ m.deployedVersion ?? '—' }}</span>
+    </div>
+    <ng-template #detailTpl>
+      <div class="bpm-editor-process-meta__popover">
+        <div class="bpm-editor-process-meta__field">
           <span class="bpm-editor-process-meta__label">最后修改</span>
           <span class="bpm-editor-process-meta__value">{{ m.updatedTime ? (m.updatedTime | date: 'yyyy-MM-dd HH:mm:ss') : '—' }}</span>
-        </span>
-        <span class="bpm-editor-process-meta__field">
+        </div>
+        <div class="bpm-editor-process-meta__field">
           <span class="bpm-editor-process-meta__label">部署时间</span>
           <span class="bpm-editor-process-meta__value">{{ m.deployedAt ? (m.deployedAt | date: 'yyyy-MM-dd HH:mm:ss') : '未部署' }}</span>
-        </span>
-        <span class="bpm-editor-process-meta__field bpm-editor-process-meta__field--secondary">
+        </div>
+        <div class="bpm-editor-process-meta__field">
           <span class="bpm-editor-process-meta__label">版本</span>
           <span class="bpm-editor-process-meta__value">{{ m.version ?? '—' }} / 已部署 {{ m.deployedVersion ?? '—' }}</span>
-        </span>
+        </div>
         @if (m.id) {
-          <span class="bpm-editor-process-meta__label">ID</span>
-          <div class="bpm-editor-process-meta__id-body">
+          <div class="bpm-editor-process-meta__field bpm-editor-process-meta__field--id">
+            <span class="bpm-editor-process-meta__label">ID</span>
             <code class="bpm-editor-process-meta__id-text">{{ m.id }}</code>
             <button class="bpm-editor-process-meta__id-copy" type="button" nz-button nzSize="small" nzType="text" title="复制 ID" (click)="copyProcessId(m.id)">
               <nz-icon nzTheme="outline" nzType="copy" />
@@ -27,7 +30,7 @@
           </div>
         }
       </div>
-    </div>
+    </ng-template>
   } @else {
     <span class="bpm-editor-process-meta__empty">无法加载流程信息</span>
   }

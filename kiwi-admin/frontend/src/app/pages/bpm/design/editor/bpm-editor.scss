@@ -1,43 +1,3 @@
-.containers {
-  background-color: #ffffff;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.canvas {
-  height: 100%;
-  width: 100%;
-}
-
-.editor {
-  height: 100%;
-  flex: 1 1 auto;
-  position: relative;
-}
-
-.editor .toolbar {
-  position: absolute;
-  left: 200px;
-  top: 10px;
-  z-index: 1000;
-}
-
-.editor .statusbar {
-  position: absolute;
-  bottom: 0px;
-  z-index: 1000;
-  border: 1px solid #ddd;
-  // border-right: 1px solid #ddd;
-  // border-left: 1px solid #ddd;
-  width: 100%;
-}
-
-.bpmn-button {
-  padding: 2px !important;
-}
-
 :host {
   display: block;
   height: 100%;
@@ -49,116 +9,145 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  --bpm-properties-width: 420px;
+  --bpm-editor-header-height: 48px;
 }
 
-/* 流程信息条在整页最顶；下方 nz-layout 占满剩余高度 */
-.bpm-editor-page > .bpm-editor-layout {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.bpm-editor-main-content,
-.bpm-editor-workspace,
-.bpm-editor-canvas-content,
-.bpm-editor-palette-sider,
-.bpm-editor-properties-sider {
-  height: 100%;
-  min-height: 0;
-}
-
-/* 与全局 mix-sider-height（基于 100vh）解耦：在流程元信息条之下占满布局行，避免侧栏高于可视区域 */
-.bpm-editor-layout .bpm-editor-palette-sider.mix-sider-height,
-.bpm-editor-layout .bpm-editor-properties-sider.mix-sider-height {
-  height: 100% !important;
-  max-height: 100%;
-}
-
-.bpm-editor-workspace {
-  overflow: hidden;
-}
-
-.bpm-editor-canvas-content {
-  overflow: hidden;
-}
-
-.top-bar {
-  flex-shrink: 0;
-}
-
-.bpm-editor-canvas {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.bpm-editor-palette-sider {
-  overflow: hidden;
-  border-right: 1px solid #f0f0f0;
-}
-
-.bpm-editor-palette-scroll {
-  height: 100%;
-  min-height: 0;
+.bpm-editor-header {
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: var(--bpm-editor-header-height);
+  min-height: var(--bpm-editor-header-height);
+  padding: 0 8px 0 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-/* 滚动仅在 bpm-pallete 内 .bpm-pallete__collapse-scroll（nz-collapse），此处不再整体纵向滚动 */
-.bpm-editor-palette-scroll bpm-pallete {
-  flex: 1 1 auto;
-  min-height: 0;
+.bpm-editor-header__meta {
+  flex: 0 1 280px;
   min-width: 0;
 }
 
-.bpm-editor-properties-sider {
+.bpm-editor-header__toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
-  border-left: 1px solid #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
-/* nz-sider 实际把子节点包在 .ant-layout-sider-children 里；此处不做纵向 flex 时，
-   内部 bpm-editor-properties-scroll 上 flex:1 1 0 会得到 0 高度，属性侧栏空白 */
-:host ::ng-deep .bpm-editor-properties-sider > .ant-layout-sider-children {
+.bpm-editor-header__actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.bpm-editor-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bpm-editor-palette,
+.bpm-editor-properties {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex-shrink: 0;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
+  background: #fff;
 }
 
+.bpm-editor-palette.is-collapsed,
+.bpm-editor-properties.is-collapsed {
+  border: none;
+  pointer-events: none;
+}
+
+.bpm-editor-palette {
+  border-right: 1px solid #f0f0f0;
+}
+
+.bpm-editor-properties {
+  border-left: 1px solid #f0f0f0;
+}
+
+.bpm-editor-palette-scroll,
 .bpm-editor-properties-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
+.bpm-editor-palette-scroll bpm-pallete,
 .bpm-editor-properties-scroll bpm-properties-panel {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
+}
 
+.bpm-editor-properties-scroll bpm-properties-panel {
   /*
-   * 与 properties-panel 中 max-height 对齐：从视口顶到 collapse 滚动区顶的合计（见各组件样式）。
-   * 48px  layout @layout-header-height（styles/themes/base.less）
-   * 64px  .bpm-editor-process-meta：min-height 44px + padding 10px×2
-   * 55px  bpm-panel-header：padding 16px×2 + 单行标题 + border（property-panel/panel-header.scss）
-   * 46px  属性区内层 nz-tabs 默认导航（未设 nzSize）
+   * 单行顶栏后的 vh 预留：
+   * 48px  layout header
+   * 48px  .bpm-editor-header
+   * 55px  bpm-panel-header
+   * 46px  nz-tabs nav
    * 8px   间隙
    */
-  --bpm-collapse-vh-offset: calc(48px + 64px + 55px + 46px + 8px);
+  --bpm-collapse-vh-offset: calc(48px + 48px + 55px + 46px + 8px);
 }
 
-/* bpmn-js / diagram-js：去掉画布根容器上的外框（动态注入的 DOM 需 ::ng-deep） */
-:host ::ng-deep .canvas .bjs-container {
-  border: none !important;
-  outline: none;
-  box-shadow: none;
+.bpm-editor-resizer {
+  flex-shrink: 0;
+  width: 5px;
+  margin: 0 -2px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  background: transparent;
+  position: relative;
+  z-index: 2;
+
+  &:hover,
+  &:active {
+    background: rgba(24, 144, 255, 0.25);
+  }
 }
 
+.bpm-editor-canvas-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas,
+.bpm-editor-canvas {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 设计器内 chat 右偏移，避开属性面板（不改全局 chat 默认） */
+:host ::ng-deep .chat-dock {
+  right: calc(var(--bpm-properties-width, 0px) + 16px);
+}
+
+/* bpmn-js / diagram-js：去掉画布根容器上的外框 */
+:host ::ng-deep .canvas .bjs-container,
 :host ::ng-deep .canvas .djs-container {
   border: none !important;
   outline: none;

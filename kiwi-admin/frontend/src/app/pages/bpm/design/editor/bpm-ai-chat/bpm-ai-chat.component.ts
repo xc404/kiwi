@@ -17,7 +17,6 @@ import type { BpmDesignerToolbarContext } from '../../toolbar/bpm-designer-toolb
 import { BpmEditorToken } from '../bpm-editor-token';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -39,7 +38,7 @@ const StageLabels: Record<string, string> = {
 @Component({
   selector: 'bpm-ai-chat',
   standalone: true,
-  imports: [ChatComponent, FormsModule, NzButtonModule, NzIconModule, NzInputModule, NzTagModule, NzTypographyModule],
+  imports: [ChatComponent, FormsModule, NzButtonModule, NzInputModule, NzTagModule, NzTypographyModule],
   templateUrl: './bpm-ai-chat.component.html',
   styleUrl: './bpm-ai-chat.component.scss'
 })
@@ -62,7 +61,6 @@ export class BpmAiChatComponent {
   readonly writeWorkflowStatus = signal<WriteWorkflowStatus | null>(null);
   readonly writeWorkflowBusy = signal(false);
   readonly askAnswer = signal('');
-  readonly panelOpen = signal(true);
 
   /** 前端开关：产出 XML 后是否自动保存（写入 system 供后端读） */
   readonly aiWriteWorkflowAutoSave = false;
@@ -178,14 +176,18 @@ export class BpmAiChatComponent {
   confirmInstall(): void {
     this.runSessionAction(
       () => this.writeWorkflowApi.confirmInstall(this.writeWorkflowStatus()!.sessionId!, true),
-      () => this.nzMessage.success('已确认安装，继续校验')
+      () => {
+        this.nzMessage.success('已确认安装，继续校验');
+      }
     );
   }
 
   declineInstall(): void {
     this.runSessionAction(
       () => this.writeWorkflowApi.confirmInstall(this.writeWorkflowStatus()!.sessionId!, false),
-      () => this.nzMessage.info('已拒绝安装，将重新生成')
+      () => {
+        this.nzMessage.info('已拒绝安装，将重新生成');
+      }
     );
   }
 
@@ -304,7 +306,7 @@ export class BpmAiChatComponent {
       '改图分工：仅下列意图用 assistant_designer_toolbar（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export/saveAsComponent 等）；其余一律 assistant_designer_bpmn_xml(完整 definitions)，前端会自动 import 并保存到当前流程。',
       '须走 bpmn_xml 的示例：改节点参数/复制它流程配置/增删改连线或节点/移除或删除组件/批量改名；删除：从当前 XML 去掉目标 serviceTask 与相关 sequenceFlow、BPMNDI 后 assistant_designer_bpmn_xml；复制：bpmPd_get → 合并 extensionElements → assistant_designer_bpmn_xml；仅有流程名时用 bpmPd_aiPage 查 id。',
       '禁止未调用 assistant_designer_bpmn_xml 却声称已修改或已保存。',
-      '场景级「写工作流」由服务端 Java 管线处理；用户在设计器侧栏完成预览确认/插件安装/追问。',
+      '场景级「写工作流」由服务端 Java 管线处理；用户在 AI 对话内完成预览确认、插件安装和补充说明。',
       `aiAuthoringAutoSave: ${this.aiWriteWorkflowAutoSave}`,
       `processId: ${processId}`,
       process?.name ? `processName: ${process.name}` : '',

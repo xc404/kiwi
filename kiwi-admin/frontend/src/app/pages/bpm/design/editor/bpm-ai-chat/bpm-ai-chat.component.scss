@@ -6,42 +6,30 @@
   display: contents;
   pointer-events: none;
 
-  app-chat,
-  .bpm-ai-authoring,
-  .bpm-ai-authoring-fab {
+  app-chat {
     pointer-events: auto;
   }
 }
 
 .bpm-ai-authoring {
-  position: fixed;
-  z-index: 997;
-  top: 72px;
-  right: 30px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: min(360px, calc(100vw - 48px));
-  max-height: min(42vh, calc(100vh - 120px));
+  margin: 16px 0 4px 38px;
   padding: 12px 14px;
-  overflow: auto;
-  border: 1px solid rgb(0 0 0 / 0.08);
+  border: 1px solid rgba(24, 144, 255, 0.22);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.08);
+  background: rgba(24, 144, 255, 0.04);
 }
 
 .bpm-ai-authoring__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .bpm-ai-authoring__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -74,11 +62,4 @@
 .bpm-ai-authoring__refresh {
   align-self: flex-start;
   padding-inline: 0;
-}
-
-.bpm-ai-authoring-fab {
-  position: fixed;
-  z-index: 997;
-  top: 72px;
-  right: 30px;
 }

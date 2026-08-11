@@ -1,28 +1,91 @@
-<div class="bpm-editor-page">
-  <bpm-editor-process-meta [loading]="processLoading()" [meta]="processMeta()" />
+<div
+  class="bpm-editor-page"
+  [style.--bpm-properties-width.px]="propertiesCollapsed() ? 0 : propertiesWidth()"
+  [style.--bpm-editor-header-height.px]="48"
+>
+  <header class="bpm-editor-header">
+    <div class="bpm-editor-header__meta">
+      <bpm-editor-process-meta [loading]="processLoading()" [meta]="processMeta()" />
+    </div>
+    <div class="bpm-editor-header__toolbar">
+      <bpm-toolbar [bpmnModeler]="bpmnModeler"></bpm-toolbar>
+    </div>
+    <div class="bpm-editor-header__actions">
+      <button
+        type="button"
+        nz-button
+        nzSize="small"
+        nzType="text"
+        nz-tooltip
+        [nzTooltipTitle]="paletteCollapsed() ? '展开组件库' : '收起组件库'"
+        (click)="togglePalette()"
+      >
+        <nz-icon nzTheme="outline" [nzType]="paletteCollapsed() ? 'menu-unfold' : 'menu-fold'" />
+      </button>
+      <button
+        type="button"
+        nz-button
+        nzSize="small"
+        nzType="text"
+        nz-tooltip
+        [nzTooltipTitle]="propertiesCollapsed() ? '展开属性面板' : '收起属性面板'"
+        (click)="toggleProperties()"
+      >
+        <nz-icon nzTheme="outline" [nzType]="propertiesCollapsed() ? 'vertical-left' : 'vertical-right'" />
+      </button>
+    </div>
+  </header>
 
-  <nz-layout class="full-height bpm-editor-layout">
-    <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzNoAnimation nzTheme="light" nzWidth="300px">
+  <div class="bpm-editor-body">
+    <aside
+      class="bpm-editor-palette"
+      [class.is-collapsed]="paletteCollapsed()"
+      [style.width.px]="paletteCollapsed() ? 0 : paletteWidth()"
+    >
       <div class="bpm-editor-palette-scroll">
         <bpm-pallete></bpm-pallete>
       </div>
-    </nz-sider>
-    <nz-content class="flex flex-column bpm-editor-main-content">
-      <nz-layout class="bpm-editor-workspace">
-        <nz-content class="flex flex-column bpm-editor-canvas-content">
-          <div class="top-bar">
-            <bpm-toolbar [bpmnModeler]="bpmnModeler"></bpm-toolbar>
-          </div>
-          <div class="canvas bpm-editor-canvas" ref="canvas"></div>
-        </nz-content>
-        <nz-sider class="mix-sider-height side-explorer bpm-editor-properties-sider" nzNoAnimation nzTheme="light" nzWidth="500px">
-          <div class="bpm-editor-properties-scroll">
-            <bpm-properties-panel [bpmnModeler]="bpmnModeler" [currentProcessId]="bpmnId()" [projectId]="bpmProcess()?.projectId ?? null" [usedHeight]="50"></bpm-properties-panel>
-          </div>
-        </nz-sider>
-      </nz-layout>
-    </nz-content>
-  </nz-layout>
+    </aside>
+
+    @if (!paletteCollapsed()) {
+      <div
+        class="bpm-editor-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整组件库宽度"
+        (pointerdown)="onResizeStart($event, 'palette')"
+      ></div>
+    }
+
+    <main class="bpm-editor-canvas-pane">
+      <div class="canvas bpm-editor-canvas" ref="canvas"></div>
+    </main>
+
+    @if (!propertiesCollapsed()) {
+      <div
+        class="bpm-editor-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整属性面板宽度"
+        (pointerdown)="onResizeStart($event, 'properties')"
+      ></div>
+    }
+
+    <aside
+      class="bpm-editor-properties"
+      [class.is-collapsed]="propertiesCollapsed()"
+      [style.width.px]="propertiesCollapsed() ? 0 : propertiesWidth()"
+    >
+      <div class="bpm-editor-properties-scroll">
+        <bpm-properties-panel
+          [bpmnModeler]="bpmnModeler"
+          [currentProcessId]="bpmnId()"
+          [projectId]="bpmProcess()?.projectId ?? null"
+          [usedHeight]="102"
+        ></bpm-properties-panel>
+      </div>
+    </aside>
+  </div>
 
   <bpm-ai-chat [getToolbarContext]="getToolbarContextFn" />
 </div>
