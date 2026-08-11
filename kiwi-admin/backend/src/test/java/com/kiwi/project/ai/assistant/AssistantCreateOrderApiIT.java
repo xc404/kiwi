@@ -49,7 +49,7 @@ class AssistantCreateOrderApiIT {
     @Tag("api")
     @Tag("llm")
     @Timeout(value = 240, unit = TimeUnit.SECONDS)
-    void createOrder_viaWorkflowAuthoringApi_evaluatesEffect() throws Exception {
+    void createOrder_viaWriteWorkflowApi_evaluatesEffect() throws Exception {
         String baseUrl = StringUtils.removeEnd(
                 StringUtils.defaultIfBlank(System.getenv("KIWI_API_BASE_URL"), "http://127.0.0.1:8080"),
                 "/");
@@ -63,7 +63,7 @@ class AssistantCreateOrderApiIT {
         assertTrue(StringUtils.isNotBlank(token), "登录应返回 token");
 
         String targetProcessId = "api-eval-create-order-" + System.currentTimeMillis();
-        JsonNode startData = startAuthoring(baseUrl, token, Scenario, targetProcessId);
+        JsonNode startData = startWriteWorkflow(baseUrl, token, Scenario, targetProcessId);
         long elapsed = System.currentTimeMillis() - started;
 
         String stage = text(startData, "stage");
@@ -72,16 +72,15 @@ class AssistantCreateOrderApiIT {
         String xml = text(startData, "candidateXml");
         String issues = text(startData, "issuesJson");
         String catalog = text(startData, "catalogJson");
-        JsonNode tasks = startData.path("tasks");
 
-        assertNotNull(startData.path("processInstanceId").asText(null));
+        assertNotNull(startData.path("sessionId").asText(null));
         assertTrue(StringUtils.isNotBlank(xml), "接口应返回 candidateXml");
         assertTrue(
                 AssistantVariables.StageAwaitPreview.equals(stage)
                         || AssistantVariables.StageAwaitAsk.equals(stage)
                         || AssistantVariables.StageAwaitInstall.equals(stage)
-                        || (tasks.isArray() && !tasks.isEmpty()),
-                "应进入预览/追问/安装等人机阶段, stage=" + stage + ", tasks=" + tasks);
+                        || AssistantVariables.StageDone.equals(stage),
+                "应进入人机或完成阶段, stage=" + stage);
 
         List<String> usedIds = extractComponentIds(xml);
         boolean hasStart = xml.contains("startEvent") || xml.contains("StartEvent");
@@ -100,7 +99,7 @@ class AssistantCreateOrderApiIT {
             }
         }
 
-        Path dir = Path.of("target", "ai-authoring-eval");
+        Path dir = Path.of("target", "ai-write-workflow-eval");
         Files.createDirectories(dir);
         Path xmlFile = dir.resolve("create-order-api-candidate.bpmn.xml");
         Path report = dir.resolve("create-order-api.md");
@@ -135,12 +134,11 @@ class AssistantCreateOrderApiIT {
         md.append("- baseUrl: `").append(baseUrl).append("`\n");
         md.append("- 场景: `").append(Scenario).append("`\n");
         md.append("- targetProcessId: `").append(targetProcessId).append("`\n");
-        md.append("- processInstanceId: `").append(text(startData, "processInstanceId")).append("`\n");
+        md.append("- sessionId: `").append(text(startData, "sessionId")).append("`\n");
         md.append("- 耗时: ").append(elapsed).append(" ms\n");
         md.append("- stage: ").append(stage).append('\n');
         md.append("- dispatchCode: ").append(dispatch).append('\n');
         md.append("- active: ").append(startData.path("active").asBoolean()).append('\n');
-        md.append("- tasks: ").append(tasks).append('\n');
         md.append("- 助手摘要: ").append(StringUtils.defaultString(reply)).append('\n');
         md.append("- issuesJson: ").append(StringUtils.defaultString(issues)).append('\n');
         md.append("- catalog.installed 数量: ").append(catalogInstalled).append('\n');
@@ -159,8 +157,8 @@ class AssistantCreateOrderApiIT {
                 AssistantVariables.StageAwaitPreview.equals(stage)
                         || AssistantVariables.StageAwaitAsk.equals(stage)
                         || AssistantVariables.StageAwaitInstall.equals(stage)
-                        || (tasks.isArray() && !tasks.isEmpty()),
-                "应进入人机确认阶段");
+                        || AssistantVariables.StageDone.equals(stage),
+                "应进入人机确认或完成阶段");
         assertTrue(catalogInstalled > 0,
                 "Catalog.installed 不应为空（组件已在库中）；详见 " + report.toAbsolutePath());
         assertFalse(usedIds.isEmpty(), "应至少引用一个 Catalog 组件");
@@ -211,13 +209,13 @@ class AssistantCreateOrderApiIT {
         return token;
     }
 
-    private JsonNode startAuthoring(
+    private JsonNode startWriteWorkflow(
             String baseUrl, String token, String scenario, String targetProcessId) throws Exception {
         String body = objectMapper.createObjectNode()
                 .put("scenario", scenario)
                 .put("targetProcessId", targetProcessId)
                 .toString();
-        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/ai/workflow-authoring/start"))
+        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/ai/write-workflow/start"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + token)
                 .timeout(Duration.ofSeconds(200))
@@ -231,7 +229,6 @@ class AssistantCreateOrderApiIT {
             throw new AssertionError("start 业务失败: " + res.body());
         }
         if (root.has("code") && root.path("code").asInt(0) != 0 && !root.path("success").asBoolean(false)) {
-            // mica R: success=true / code=0 为成功；兼容仅有 data 的响应
             if (!root.has("data")) {
                 throw new AssertionError("start 业务失败: " + res.body());
             }

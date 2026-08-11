@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.assistant;
 
 /**
- * {@code kiwi_ai_workflow_authoring} 流程变量契约。
+ * AI 写工作流会话字段名（与 {@link WriteWorkflowSession} 对齐）。
  */
 public final class AssistantVariables {
 

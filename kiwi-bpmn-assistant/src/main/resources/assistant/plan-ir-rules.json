@@ -11,7 +11,7 @@
     "kind": "soft",
     "mode": "both",
     "enabled": true,
-    "promptText": "serviceTask.componentId 优先使用 Catalog.installed 中的 id；确需尚未安装的组件时可用 Catalog.installable 的 id（不要虚构 id；是否安装由校验阶段决定，Plan IR 无需额外标记）。"
+    "promptText": "serviceTask.componentId 必须使用 Catalog.components 中的 id，禁止虚构。"
   },
   {
     "id": "plan_ir_structure",
@@ -56,7 +56,7 @@
     "mode": "both",
     "severity": "REPAIR",
     "enabled": true,
-    "message": "componentId 必须出现在本轮 Catalog（installed 或 installable）"
+    "message": "componentId 必须出现在本轮 Catalog"
   },
   {
     "id": "required_params_present",

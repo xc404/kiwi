@@ -90,9 +90,10 @@ public class AssistantPlanGenerateService {
                     Plan IR schema:
                     {"processId":"合法 XML id","name":"流程名",
                      "nodes":[{"id":"节点id","type":"startEvent|endEvent|serviceTask|userTask|exclusiveGateway",
-                               "name":"节点名","componentId":"serviceTask 使用 Catalog.installed.id","parameters":{"key":"value"}}],
+                               "name":"节点名","componentId":"serviceTask 使用 Catalog.components.id","parameters":{"key":"value"}}],
                      "flows":[{"id":"连线id","sourceRef":"源节点id","targetRef":"目标节点id","condition":"可空表达式"}]}
                     create 与 modify 均只输出 planIrJson（完整 Plan IR）；禁止输出 candidateXml。服务端将确定性编译 XML。
+                    Catalog.components 为本轮全部可选组件；若其中有未安装项，服务端会提醒用户安装，你不要判断或提议安装。
                     用户意图/场景:
                     %s
                     Catalog:
@@ -101,7 +102,7 @@ public class AssistantPlanGenerateService {
                     %s
                     当前/上一版 XML（参考；勿直接作为输出）:
                     %s
-                    校验问题（可为空；修复时请针对 ruleId 与 message 逐项处理）:
+                    校验问题（可为空；修复时请针对 ruleId 与 message 逐项处理；不含 INSTALL）:
                     %s
                     用户补充说明（可为空；非空时必须纳入本轮生成/修复）:
                     %s
@@ -109,10 +110,10 @@ public class AssistantPlanGenerateService {
                     mode,
                     ruleSet.renderSoftPrompt(mode),
                     nullToEmpty(scenario),
-                    nullToEmpty(catalogJson),
+                    catalogJsonForLlm(catalogJson),
                     nullToEmpty(basePlanIrJson),
                     nullToEmpty(previousXml),
-                    nullToEmpty(issuesJson),
+                    issuesJsonForLlm(issuesJson),
                     nullToEmpty(userAnswer));
             String raw = client.prompt().user(prompt).call().content();
             if (StringUtils.isBlank(raw)) {
@@ -155,6 +156,88 @@ public class AssistantPlanGenerateService {
 
     private boolean looksLikePlan(JsonNode node) {
         return node != null && node.has("nodes") && node.has("flows");
+    }
+
+    /**
+     * LLM 可见全部组件（installed ∪ installable），但不暴露 requiresInstall / 安装状态字段，
+     * 避免模型自行判断是否安装；安装由校验阶段发现并提醒用户。
+     */
+    String catalogJsonForLlm(String catalogJson) {
+        try {
+            AssistantCatalog catalog = objectMapper.readValue(
+                    StringUtils.defaultIfBlank(catalogJson, "{}"), AssistantCatalog.class);
+            Map<String, Map<String, Object>> byId = new LinkedHashMap<>();
+            appendComponentsForLlm(byId, catalog.getInstallable());
+            appendComponentsForLlm(byId, catalog.getInstalled());
+            Map<String, Object> slim = new LinkedHashMap<>();
+            slim.put("components", new ArrayList<>(byId.values()));
+            if (catalog.getTemplates() != null && !catalog.getTemplates().isEmpty()) {
+                slim.put("templates", catalog.getTemplates());
+            }
+            return objectMapper.writeValueAsString(slim);
+        } catch (Exception e) {
+            return StringUtils.defaultIfBlank(catalogJson, "{\"components\":[]}");
+        }
+    }
+
+    private void appendComponentsForLlm(
+            Map<String, Map<String, Object>> byId,
+            List<AssistantCatalog.CatalogComponent> components) {
+        if (components == null) {
+            return;
+        }
+        for (AssistantCatalog.CatalogComponent c : components) {
+            if (c == null || StringUtils.isBlank(c.getId())) {
+                continue;
+            }
+            Map<String, Object> copy = new LinkedHashMap<>();
+            copy.put("id", c.getId());
+            if (StringUtils.isNotBlank(c.getName())) {
+                copy.put("name", c.getName());
+            }
+            if (StringUtils.isNotBlank(c.getDescription())) {
+                copy.put("description", c.getDescription());
+            }
+            if (StringUtils.isNotBlank(c.getDelegateExpression())) {
+                copy.put("delegateExpression", c.getDelegateExpression());
+            }
+            if (StringUtils.isNotBlank(c.getSource())) {
+                copy.put("source", c.getSource());
+            }
+            if (StringUtils.isNotBlank(c.getGroup())) {
+                copy.put("group", c.getGroup());
+            }
+            if (c.getInputs() != null && !c.getInputs().isEmpty()) {
+                copy.put("inputs", c.getInputs());
+            }
+            byId.put(c.getId(), copy);
+        }
+    }
+
+    /** INSTALL 类问题由流程网关处理，不交给 LLM。 */
+    String issuesJsonForLlm(String issuesJson) {
+        if (StringUtils.isBlank(issuesJson)) {
+            return "";
+        }
+        try {
+            List<AssistantValidationIssue> issues = objectMapper.readValue(
+                    issuesJson,
+                    objectMapper.getTypeFactory().constructCollectionType(
+                            List.class, AssistantValidationIssue.class));
+            List<AssistantValidationIssue> forLlm = new ArrayList<>();
+            for (AssistantValidationIssue issue : issues) {
+                if (issue == null) {
+                    continue;
+                }
+                if ("INSTALL".equalsIgnoreCase(issue.getSeverity())) {
+                    continue;
+                }
+                forLlm.add(issue);
+            }
+            return objectMapper.writeValueAsString(forLlm);
+        } catch (Exception e) {
+            return issuesJson;
+        }
     }
 
     private GenerateResult keepPreviousXml(String scenario, String previousXml, String catalogJson) {

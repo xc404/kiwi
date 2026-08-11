@@ -23,7 +23,7 @@ public class AssistantPlan {
         /** startEvent | endEvent | serviceTask | userTask | exclusiveGateway */
         private String type;
         private String name;
-        /** serviceTask 必填，且必须来自本轮 Catalog.installed。 */
+        /** serviceTask 必填，且必须来自本轮 Catalog。 */
         private String componentId;
         private Map<String, Object> parameters = new LinkedHashMap<>();
     }

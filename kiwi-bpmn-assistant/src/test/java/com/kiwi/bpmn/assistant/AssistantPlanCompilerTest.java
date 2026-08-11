@@ -53,7 +53,30 @@ class AssistantPlanCompilerTest {
     }
 
     @Test
-    void compileJson_rejectsComponentOutsideInstalledCatalog() {
+    void compile_allowsInstallableComponentForLaterInstallValidation() {
+        AssistantCatalog.CatalogComponent shell = new AssistantCatalog.CatalogComponent();
+        shell.setId("plugin_shell");
+        shell.setStatus("available_to_install");
+        shell.setRequiresInstall(true);
+        catalog.setInstallable(List.of(shell));
+
+        AssistantPlan plan = new AssistantPlan();
+        plan.setProcessId("shell_flow");
+        plan.setNodes(List.of(
+                node("StartEvent_1", "startEvent", null, Map.of()),
+                node("Activity_1", "serviceTask", "plugin_shell", Map.of("command", "echo hi")),
+                node("EndEvent_1", "endEvent", null, Map.of())));
+        plan.setFlows(List.of(
+                flow("Flow_1", "StartEvent_1", "Activity_1"),
+                flow("Flow_2", "Activity_1", "EndEvent_1")));
+
+        String xml = compiler.compile(plan, catalog);
+
+        assertTrue(xml.contains("kiwi:componentId=\"plugin_shell\""));
+    }
+
+    @Test
+    void compileJson_rejectsComponentOutsideCatalog() {
         String planJson = """
                 {
                   "processId":"bad_flow",

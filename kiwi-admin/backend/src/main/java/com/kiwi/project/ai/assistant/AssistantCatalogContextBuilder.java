@@ -173,7 +173,7 @@ public class AssistantCatalogContextBuilder {
             copy.setStatus(c.getStatus());
             copy.setSource(c.getSource());
             copy.setGroup(truncate(c.getGroup(), 20));
-            copy.setRequiresInstall(c.isRequiresInstall());
+            // requiresInstall 仅对 installable 有意义；installed 不写，避免被 LLM 误读
             if (c.getInputs() != null) {
                 c.getInputs().stream()
                         .filter(p -> p != null && p.isRequired())

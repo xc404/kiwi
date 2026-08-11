@@ -5,13 +5,12 @@ server:
 kiwi:
   ai:
     enabled: ${KIWI_AI_ENABLED:true}
-    workflow-authoring:
-      enabled: ${KIWI_AI_WORKFLOW_AUTHORING_ENABLED:false}
-      process-definition-key: ${KIWI_AI_WORKFLOW_AUTHORING_PROCESS_KEY:kiwi_ai_workflow_authoring}
-      max-repair-rounds: ${KIWI_AI_WORKFLOW_AUTHORING_MAX_REPAIR_ROUNDS:3}
-      catalog-installed-top-n: ${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_INSTALLED_TOP_N:40}
-      catalog-template-top-n: ${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_TEMPLATE_TOP_N:8}
-      catalog-installable-top-n: ${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_INSTALLABLE_TOP_N:15}
+    write-workflow:
+      enabled: ${KIWI_AI_WRITE_WORKFLOW_ENABLED:${KIWI_AI_WORKFLOW_AUTHORING_ENABLED:false}}
+      max-repair-rounds: ${KIWI_AI_WRITE_WORKFLOW_MAX_REPAIR_ROUNDS:${KIWI_AI_WORKFLOW_AUTHORING_MAX_REPAIR_ROUNDS:3}}
+      catalog-installed-top-n: ${KIWI_AI_WRITE_WORKFLOW_CATALOG_INSTALLED_TOP_N:${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_INSTALLED_TOP_N:40}}
+      catalog-template-top-n: ${KIWI_AI_WRITE_WORKFLOW_CATALOG_TEMPLATE_TOP_N:${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_TEMPLATE_TOP_N:8}}
+      catalog-installable-top-n: ${KIWI_AI_WRITE_WORKFLOW_CATALOG_INSTALLABLE_TOP_N:${KIWI_AI_WORKFLOW_AUTHORING_CATALOG_INSTALLABLE_TOP_N:15}}
     # 助手 ChatClient 回环 MCP 的 HTTP 基址（须含 context-path）；SSE 路径与 spring.ai.mcp.server.sse-endpoint 保持一致
     mcp:
       loopback-base-url: ${KIWI_AI_MCP_LOOPBACK_BASE_URL:http://127.0.0.1:${server.port:8080}${server.servlet.context-path:}}

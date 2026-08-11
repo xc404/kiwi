@@ -11,6 +11,7 @@
 | **BPMN→Plan** | `AssistantBpmnToPlan` 在 modify 模式下把上一版 XML 解析回 IR，供 prompt 与增量修改 |
 | **Rules** | `assistant/plan-ir-rules.json`：软规则进 LLM prompt；硬规则由校验器引用（面向 Plan IR，非手写 XML） |
 | **SPI** | `AssistantComponentLookup` / `AssistantBpmnLookup` / `AssistantXmlValidator` 由宿主（如 kiwi-admin）实现 |
+| **Session** | `WriteWorkflowSession` / `WriteWorkflowStatus`：写工作流会话状态（无 Operaton 元流程） |
 
 **约定：永远不直接采用 LLM 输出的 `candidateXml`；只编译 `planIrJson`。**
 
@@ -19,9 +20,8 @@
 ```yaml
 kiwi:
   ai:
-    workflow-authoring:
+    write-workflow:
       enabled: false
-      process-definition-key: kiwi_ai_workflow_authoring
       max-repair-rounds: 3
       catalog-installed-top-n: 40
       catalog-template-top-n: 8
@@ -30,14 +30,14 @@ kiwi:
 
 ## 包结构
 
-- `com.kiwi.bpmn.assistant` — 核心服务、IR、规则、校验、ProcessService
+- `com.kiwi.bpmn.assistant` — 核心服务、IR、规则、校验、会话模型
 - `com.kiwi.bpmn.assistant.spi` — 宿主扩展点
 
 ## 留在 kiwi-admin 的内容
 
-元流程编排属于应用层，**不在本模块**：
+写工作流编排属于应用层：
 
-- `bpm/ai/kiwi_ai_workflow_authoring.bpmn`
-- 全部 `JavaDelegate`（Extract / Catalog / Generate / Repair / Validate / MarkPreview / Install / Save）
-- `AssistantProcessDeployer`（从 admin classpath 部署上述 BPMN）
-- `BpmnAssistantCtl`、Catalog 组装与 SPI 适配器
+- `WriteWorkflowOrchestrator` / `WriteWorkflowSessionService` / `AssistantIntentService`
+- `WriteWorkflowCtl`（`/ai/write-workflow/**`）
+- Catalog 组装与 SPI 适配器
+- （遗留）可选 `JavaDelegate` 壳，已不再部署元流程 BPMN

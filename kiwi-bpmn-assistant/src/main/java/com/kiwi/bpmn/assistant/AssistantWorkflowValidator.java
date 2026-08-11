@@ -151,20 +151,13 @@ public class AssistantWorkflowValidator {
             if (StringUtils.isBlank(componentId)) {
                 continue;
             }
-            if (componentLookup.exists(componentId)) {
-                if (!installedIds.contains(componentId)) {
-                    AssistantValidationIssue issue = addRuleIssue(
-                            issues,
-                            AssistantRuleSet.RuleComponentIdInCatalog,
-                            CodeComponentNotInCatalog,
-                            "组件不在本轮 Catalog.installed: " + componentId,
-                            "ASK");
-                    setComponentContext(issue, element, componentId);
-                    continue;
+            if (installedIds.contains(componentId)) {
+                if (componentLookup.exists(componentId)) {
+                    checkRequiredParams(element, componentId, issues);
                 }
-                checkRequiredParams(element, componentId, issues);
                 continue;
             }
+            // 未安装：优先走 INSTALL 提醒用户，而不是让 LLM 自行决定
             AssistantCatalog.CatalogComponent avail = installable.get(componentId);
             if (avail != null) {
                 AssistantValidationIssue issue = AssistantValidationIssue.of(
@@ -185,6 +178,16 @@ public class AssistantWorkflowValidator {
                 setComponentContext(issue, element, componentId);
                 issue.setPluginHint(pluginHint.get());
                 issues.add(issue);
+                continue;
+            }
+            if (componentLookup.exists(componentId)) {
+                AssistantValidationIssue issue = addRuleIssue(
+                        issues,
+                        AssistantRuleSet.RuleComponentIdInCatalog,
+                        CodeComponentNotInCatalog,
+                        "组件不在本轮 Catalog: " + componentId,
+                        "ASK");
+                setComponentContext(issue, element, componentId);
                 continue;
             }
             AssistantValidationIssue issue = addRuleIssue(

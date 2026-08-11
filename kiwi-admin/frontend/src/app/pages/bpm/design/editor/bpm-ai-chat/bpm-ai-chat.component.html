@@ -1,44 +1,44 @@
 <div class="bpm-ai-chat">
-  @if (showAuthoringPanel() && panelOpen()) {
-    <aside class="bpm-ai-authoring" aria-label="AI 写工作流编排">
+  @if (showWriteWorkflowPanel() && panelOpen()) {
+    <aside class="bpm-ai-authoring" aria-label="AI 写工作流">
       <header class="bpm-ai-authoring__head">
         <div class="bpm-ai-authoring__title">
           <span>AI 写工作流</span>
-          <nz-tag [nzColor]="authoringStatus()?.active ? 'processing' : 'success'">{{ stageLabel() }}</nz-tag>
+          <nz-tag [nzColor]="writeWorkflowStatus()?.active ? 'processing' : 'success'">{{ stageLabel() }}</nz-tag>
         </div>
         <button type="button" nz-button nzSize="small" nzType="text" (click)="panelOpen.set(false)" aria-label="收起">
           <i nz-icon nzType="minus" nzTheme="outline"></i>
         </button>
       </header>
 
-      @if (authoringStatus()?.assistantReply) {
-        <p class="bpm-ai-authoring__msg" nz-typography>{{ authoringStatus()!.assistantReply }}</p>
+      @if (writeWorkflowStatus()?.assistantReply) {
+        <p class="bpm-ai-authoring__msg" nz-typography>{{ writeWorkflowStatus()!.assistantReply }}</p>
       }
-      @if (authoringStatus()?.askMessage) {
-        <p class="bpm-ai-authoring__msg" nz-typography>{{ authoringStatus()!.askMessage }}</p>
+      @if (writeWorkflowStatus()?.askMessage) {
+        <p class="bpm-ai-authoring__msg" nz-typography>{{ writeWorkflowStatus()!.askMessage }}</p>
       }
-      @if (authoringStatus()?.dispatchCode) {
-        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">分派: {{ authoringStatus()!.dispatchCode }}</p>
+      @if (writeWorkflowStatus()?.dispatchCode) {
+        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">分派: {{ writeWorkflowStatus()!.dispatchCode }}</p>
       }
-      @if (authoringStatus()?.pluginHintJson) {
-        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">插件提示: {{ authoringStatus()!.pluginHintJson }}</p>
+      @if (writeWorkflowStatus()?.pluginHintJson) {
+        <p class="bpm-ai-authoring__meta" nz-typography nzType="secondary">插件提示: {{ writeWorkflowStatus()!.pluginHintJson }}</p>
       }
 
-      @if (previewTask()) {
+      @if (awaitPreview()) {
         <div class="bpm-ai-authoring__actions">
-          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="confirmPreview()">确认保存</button>
-          <button nz-button nzSize="small" [disabled]="authoringBusy()" (click)="declinePreview()">拒绝并重生成</button>
+          <button nz-button nzSize="small" nzType="primary" [disabled]="writeWorkflowBusy()" (click)="confirmPreview()">确认保存</button>
+          <button nz-button nzSize="small" [disabled]="writeWorkflowBusy()" (click)="declinePreview()">拒绝并重生成</button>
         </div>
       }
 
-      @if (installTask()) {
+      @if (awaitInstall()) {
         <div class="bpm-ai-authoring__actions">
-          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="confirmInstall()">确认安装</button>
-          <button nz-button nzSize="small" [disabled]="authoringBusy()" (click)="declineInstall()">拒绝</button>
+          <button nz-button nzSize="small" nzType="primary" [disabled]="writeWorkflowBusy()" (click)="confirmInstall()">确认安装</button>
+          <button nz-button nzSize="small" [disabled]="writeWorkflowBusy()" (click)="declineInstall()">拒绝</button>
         </div>
       }
 
-      @if (askTask()) {
+      @if (awaitAsk()) {
         <div class="bpm-ai-authoring__ask">
           <textarea
             nz-input
@@ -47,24 +47,24 @@
             [ngModel]="askAnswer()"
             (ngModelChange)="askAnswer.set($event)"
           ></textarea>
-          <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="submitAskAnswer()">提交说明</button>
+          <button nz-button nzSize="small" nzType="primary" [disabled]="writeWorkflowBusy()" (click)="submitAskAnswer()">提交说明</button>
         </div>
       }
 
-      @if (!authoringStatus()?.active && authoringStatus()?.stage === 'done') {
+      @if (!writeWorkflowStatus()?.active && writeWorkflowStatus()?.stage === 'done') {
         <div class="bpm-ai-authoring__actions">
           <button nz-button nzSize="small" (click)="dismissDonePanel()">关闭</button>
         </div>
       }
 
-      <button class="bpm-ai-authoring__refresh" type="button" nz-button nzSize="small" nzType="link" [disabled]="authoringBusy()" (click)="refreshAuthoringStatus()">
+      <button class="bpm-ai-authoring__refresh" type="button" nz-button nzSize="small" nzType="link" [disabled]="writeWorkflowBusy()" (click)="refreshWriteWorkflowStatus()">
         刷新状态
       </button>
     </aside>
-  } @else if (showAuthoringPanel() && !panelOpen()) {
+  } @else if (showWriteWorkflowPanel() && !panelOpen()) {
     <button class="bpm-ai-authoring-fab" type="button" nz-button nzSize="small" nzType="default" (click)="panelOpen.set(true)">
       <i nz-icon nzType="robot" nzTheme="outline"></i>
-      编排 · {{ stageLabel() }}
+      写工作流 · {{ stageLabel() }}
     </button>
   }
 

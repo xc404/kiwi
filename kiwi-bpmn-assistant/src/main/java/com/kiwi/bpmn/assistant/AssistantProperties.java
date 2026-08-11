@@ -4,16 +4,14 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * AI 写工作流编排配置（与 admin {@code kiwi.ai.workflow-authoring.*} 对齐）。
+ * AI 写工作流配置（{@code kiwi.ai.write-workflow.*}）。
  */
 @Data
-@ConfigurationProperties(prefix = "kiwi.ai.workflow-authoring")
+@ConfigurationProperties(prefix = "kiwi.ai.write-workflow")
 public class AssistantProperties {
 
-    /** 是否启用元流程编排；关闭时助手保持原行为 */
+    /** 是否启用写工作流 Java 管线；关闭时助手保持原 Chat/MCP 行为 */
     private boolean enabled = false;
-    /** 内部流程定义 key */
-    private String processDefinitionKey = "kiwi_ai_workflow_authoring";
     /** 修复轮次上限 */
     private int maxRepairRounds = 3;
     /** Catalog 已装组件 Top-N */

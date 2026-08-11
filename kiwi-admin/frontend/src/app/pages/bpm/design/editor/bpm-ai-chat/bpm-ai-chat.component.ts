@@ -4,11 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
-import {
-  AiAuthoringStatus,
-  AiAuthoringTaskInfo,
-  AiWorkflowAuthoringService
-} from '@services/ai-chat/ai-workflow-authoring.service';
+import { AiWriteWorkflowService, WriteWorkflowStatus } from '@services/ai-chat/ai-write-workflow.service';
 import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
 import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
 import { ChatComponent } from '@shared/components/chat/chat.component';
@@ -26,10 +22,6 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
-
-const TaskPreview = 'UserTask_Preview';
-const TaskInstall = 'UserTask_Install';
-const TaskAsk = 'UserTask_Ask';
 
 const StageLabels: Record<string, string> = {
   extract: '抽词',
@@ -56,7 +48,7 @@ export class BpmAiChatComponent {
   private readonly append = inject(BpmEditorAppendService);
   private readonly componentProvider = inject(ComponentProvider);
   private readonly toolbarService = inject(BpmDesignerToolbarService);
-  private readonly authoringApi = inject(AiWorkflowAuthoringService);
+  private readonly writeWorkflowApi = inject(AiWriteWorkflowService);
   private readonly nzMessage = inject(NzMessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -67,16 +59,15 @@ export class BpmAiChatComponent {
     return this.editor.getBpmnId() || process?.id || '';
   });
 
-  readonly authoringStatus = signal<AiAuthoringStatus | null>(null);
-  readonly authoringBusy = signal(false);
+  readonly writeWorkflowStatus = signal<WriteWorkflowStatus | null>(null);
+  readonly writeWorkflowBusy = signal(false);
   readonly askAnswer = signal('');
   readonly panelOpen = signal(true);
 
-  /** 前端开关：编排产出 XML 后是否自动保存到当前流程（写入 system 供后端读） */
-  readonly aiAuthoringAutoSave = false;
+  /** 前端开关：产出 XML 后是否自动保存（写入 system 供后端读） */
+  readonly aiWriteWorkflowAutoSave = false;
 
   private lastImportedPreviewXml = '';
-  /** 首次导入预览前的画布 XML，拒绝预览时恢复 */
   private xmlBeforePreview = '';
 
   private readonly assistantDeps: BpmDesignerAssistantDeps = {
@@ -88,22 +79,22 @@ export class BpmAiChatComponent {
 
   readonly assistantHandlers: AssistantActionHandler[] = createBpmDesignerAssistantHandlers(this.assistantDeps);
 
-  readonly showAuthoringPanel = computed(() => {
-    const s = this.authoringStatus();
+  readonly showWriteWorkflowPanel = computed(() => {
+    const s = this.writeWorkflowStatus();
     return !!s?.active || s?.stage === 'done';
   });
 
   readonly stageLabel = computed(() => {
-    const stage = this.authoringStatus()?.stage;
+    const stage = this.writeWorkflowStatus()?.stage;
     if (!stage) {
       return '未知';
     }
     return StageLabels[stage] ?? stage;
   });
 
-  readonly previewTask = computed(() => this.findTask(TaskPreview));
-  readonly installTask = computed(() => this.findTask(TaskInstall));
-  readonly askTask = computed(() => this.findTask(TaskAsk));
+  readonly awaitPreview = computed(() => this.writeWorkflowStatus()?.stage === 'await_preview');
+  readonly awaitInstall = computed(() => this.writeWorkflowStatus()?.stage === 'await_install');
+  readonly awaitAsk = computed(() => this.writeWorkflowStatus()?.stage === 'await_ask');
 
   enrichDesignerMessages = (messages: AiChatMessage[]): Promise<AiChatMessage[]> => {
     return this.buildDesignerContextMessage().then(ctx => [ctx, ...messages]);
@@ -113,25 +104,25 @@ export class BpmAiChatComponent {
     effect(() => {
       const processId = this.bpmProcessId();
       if (!processId) {
-        this.authoringStatus.set(null);
+        this.writeWorkflowStatus.set(null);
         this.lastImportedPreviewXml = '';
         this.xmlBeforePreview = '';
         return;
       }
-      this.refreshAuthoringStatus();
+      this.refreshWriteWorkflowStatus();
     });
   }
 
   onChatTurnCompleted(): void {
-    this.refreshAuthoringStatus();
+    this.refreshWriteWorkflowStatus();
   }
 
-  refreshAuthoringStatus(): void {
+  refreshWriteWorkflowStatus(): void {
     const processId = this.bpmProcessId();
     if (!processId) {
       return;
     }
-    this.authoringApi
+    this.writeWorkflowApi
       .statusByTarget(processId)
       .pipe(
         catchError(() => of(null)),
@@ -141,53 +132,61 @@ export class BpmAiChatComponent {
         if (!status) {
           return;
         }
-        void this.applyAuthoringStatus(status);
+        void this.applyWriteWorkflowStatus(status);
       });
   }
 
   confirmPreview(): void {
-    const task = this.previewTask();
-    const xml = this.authoringStatus()?.candidateXml?.trim() ?? '';
-    this.completeHumanTask(task, { previewConfirmed: true }, async () => {
-      if (xml) {
-        if (this.aiAuthoringAutoSave) {
-          await this.editor.importBpmnXmlAndSave(xml);
-        } else {
-          await this.editor.importBpmnXml(xml);
+    const sessionId = this.writeWorkflowStatus()?.sessionId;
+    const xml = this.writeWorkflowStatus()?.candidateXml?.trim() ?? '';
+    this.runSessionAction(
+      () => this.writeWorkflowApi.confirmPreview(sessionId!, true),
+      async () => {
+        if (xml) {
+          if (this.aiWriteWorkflowAutoSave) {
+            await this.editor.importBpmnXmlAndSave(xml);
+          } else {
+            await this.editor.importBpmnXml(xml);
+          }
         }
+        this.xmlBeforePreview = '';
+        this.lastImportedPreviewXml = '';
+        this.nzMessage.success(this.aiWriteWorkflowAutoSave ? '已确认并保存到当前流程' : '已确认预览');
       }
-      this.xmlBeforePreview = '';
-      this.lastImportedPreviewXml = '';
-      this.nzMessage.success(this.aiAuthoringAutoSave ? '已确认并保存到当前流程' : '已确认预览');
-    });
+    );
   }
 
   declinePreview(): void {
     const restoreXml = this.xmlBeforePreview;
-    this.completeHumanTask(this.previewTask(), { previewConfirmed: false }, async () => {
-      if (restoreXml) {
-        try {
-          await this.editor.importBpmnXml(restoreXml);
-        } catch {
-          /* 忽略恢复失败 */
+    this.runSessionAction(
+      () => this.writeWorkflowApi.confirmPreview(this.writeWorkflowStatus()!.sessionId!, false),
+      async () => {
+        if (restoreXml) {
+          try {
+            await this.editor.importBpmnXml(restoreXml);
+          } catch {
+            /* ignore */
+          }
         }
+        this.xmlBeforePreview = '';
+        this.lastImportedPreviewXml = '';
+        this.nzMessage.info('已拒绝预览，将重新生成');
       }
-      this.xmlBeforePreview = '';
-      this.lastImportedPreviewXml = '';
-      this.nzMessage.info('已拒绝预览，将重新生成');
-    });
+    );
   }
 
   confirmInstall(): void {
-    this.completeHumanTask(this.installTask(), { installAccepted: true }, () => {
-      this.nzMessage.success('已确认安装，继续校验');
-    });
+    this.runSessionAction(
+      () => this.writeWorkflowApi.confirmInstall(this.writeWorkflowStatus()!.sessionId!, true),
+      () => this.nzMessage.success('已确认安装，继续校验')
+    );
   }
 
   declineInstall(): void {
-    this.completeHumanTask(this.installTask(), { installAccepted: false }, () => {
-      this.nzMessage.info('已拒绝安装，将重新生成');
-    });
+    this.runSessionAction(
+      () => this.writeWorkflowApi.confirmInstall(this.writeWorkflowStatus()!.sessionId!, false),
+      () => this.nzMessage.info('已拒绝安装，将重新生成')
+    );
   }
 
   submitAskAnswer(): void {
@@ -196,59 +195,62 @@ export class BpmAiChatComponent {
       this.nzMessage.warning('请先填写补充说明');
       return;
     }
-    this.completeHumanTask(this.askTask(), { userAnswer: answer }, () => {
-      this.askAnswer.set('');
-      this.nzMessage.success('已提交补充说明');
-    });
+    this.runSessionAction(
+      () => this.writeWorkflowApi.answer(this.writeWorkflowStatus()!.sessionId!, answer),
+      () => {
+        this.askAnswer.set('');
+        this.nzMessage.success('已提交补充说明');
+      }
+    );
   }
 
   dismissDonePanel(): void {
-    this.authoringStatus.set(null);
+    this.writeWorkflowStatus.set(null);
     this.lastImportedPreviewXml = '';
     this.xmlBeforePreview = '';
   }
 
-  private completeHumanTask(
-    task: AiAuthoringTaskInfo | undefined,
-    variables: Record<string, unknown>,
+  private runSessionAction(
+    call: () => ReturnType<AiWriteWorkflowService['confirmPreview']>,
     onOk?: () => void | Promise<void>
   ): void {
-    if (!task?.id) {
-      this.nzMessage.warning('当前没有待办任务');
+    const sessionId = this.writeWorkflowStatus()?.sessionId;
+    if (!sessionId) {
+      this.nzMessage.warning('当前没有活跃会话');
       return;
     }
-    if (this.authoringBusy()) {
+    if (this.writeWorkflowBusy()) {
       return;
     }
-    this.authoringBusy.set(true);
-    this.authoringApi
-      .completeTask(task.id, variables)
+    this.writeWorkflowBusy.set(true);
+    call()
       .pipe(
-        finalize(() => this.authoringBusy.set(false)),
+        finalize(() => this.writeWorkflowBusy.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: status => {
           void (async () => {
             await onOk?.();
-            await this.applyAuthoringStatus(status);
+            await this.applyWriteWorkflowStatus(status);
           })();
         },
         error: (err: { message?: string }) => {
-          this.nzMessage.error(err?.message ?? '完成任务失败');
+          this.nzMessage.error(err?.message ?? '操作失败');
         }
       });
   }
 
-  private async applyAuthoringStatus(status: AiAuthoringStatus): Promise<void> {
-    this.authoringStatus.set(status);
+  private async applyWriteWorkflowStatus(status: WriteWorkflowStatus): Promise<void> {
+    this.writeWorkflowStatus.set(status);
     if (!status.active && status.stage !== 'done') {
       return;
     }
     const xml = status.candidateXml?.trim() ?? '';
-    const shouldApply = !!xml
-        && xml !== this.lastImportedPreviewXml
-        && (status.stage === 'await_preview' || status.stage === 'done');
+    const shouldApply =
+      !!xml &&
+      xml !== this.lastImportedPreviewXml &&
+      (status.stage === 'await_preview' || status.stage === 'done');
     if (!shouldApply) {
       return;
     }
@@ -256,7 +258,7 @@ export class BpmAiChatComponent {
       if (!this.xmlBeforePreview) {
         this.xmlBeforePreview = this.editor.getBpmProcess()?.bpmnXml ?? '';
       }
-      if (this.aiAuthoringAutoSave) {
+      if (this.aiWriteWorkflowAutoSave) {
         await this.editor.importBpmnXmlAndSave(xml);
       } else {
         await this.editor.importBpmnXml(xml);
@@ -265,10 +267,6 @@ export class BpmAiChatComponent {
     } catch {
       this.nzMessage.warning('候选流程导入画布失败，可稍后重试');
     }
-  }
-
-  private findTask(definitionKey: string): AiAuthoringTaskInfo | undefined {
-    return this.authoringStatus()?.tasks?.find(t => t.taskDefinitionKey === definitionKey);
   }
 
   private runToolbarCommand(command: string, options?: Record<string, unknown>): void {
@@ -291,7 +289,7 @@ export class BpmAiChatComponent {
           xml = saved.xml;
         }
       } catch {
-        /* 保留流程定义上的 XML */
+        /* keep */
       }
     }
     const maxLen = 48_000;
@@ -306,8 +304,8 @@ export class BpmAiChatComponent {
       '改图分工：仅下列意图用 assistant_designer_toolbar（undo/redo/zoom/copy/paste/removeSelection/find/save/deploy/start/export/saveAsComponent 等）；其余一律 assistant_designer_bpmn_xml(完整 definitions)，前端会自动 import 并保存到当前流程。',
       '须走 bpmn_xml 的示例：改节点参数/复制它流程配置/增删改连线或节点/移除或删除组件/批量改名；删除：从当前 XML 去掉目标 serviceTask 与相关 sequenceFlow、BPMNDI 后 assistant_designer_bpmn_xml；复制：bpmPd_get → 合并 extensionElements → assistant_designer_bpmn_xml；仅有流程名时用 bpmPd_aiPage 查 id。',
       '禁止未调用 assistant_designer_bpmn_xml 却声称已修改或已保存。',
-      '场景级「写工作流」由服务端编排流程处理；用户在设计器侧栏完成预览确认/插件安装/追问，无需再让用户调 REST。',
-      `aiAuthoringAutoSave: ${this.aiAuthoringAutoSave}`,
+      '场景级「写工作流」由服务端 Java 管线处理；用户在设计器侧栏完成预览确认/插件安装/追问。',
+      `aiAuthoringAutoSave: ${this.aiWriteWorkflowAutoSave}`,
       `processId: ${processId}`,
       process?.name ? `processName: ${process.name}` : '',
       selectedId ? `selectedElementId: ${selectedId}` : 'selectedElementId: （无单选元素；追加组件建议 sourceElementId=StartEvent_1）',

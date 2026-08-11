@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -46,13 +47,14 @@ public class AssistantPlanCompiler {
 
     public String compile(AssistantPlan plan, AssistantCatalog catalog) {
         validatePlan(plan);
-        Map<String, AssistantCatalog.CatalogComponent> installed = installedIndex(catalog);
+        // LLM 可选用已装与可装组件；未安装由校验阶段提醒用户，编译阶段不拦截。
+        Map<String, AssistantCatalog.CatalogComponent> components = componentIndex(catalog);
         Map<String, Box> boxes = layout(plan);
         String processId = StringUtils.defaultIfBlank(plan.getProcessId(), "ai_generated_process");
 
         StringBuilder nodes = new StringBuilder();
         for (AssistantPlan.Node node : plan.getNodes()) {
-            appendNode(nodes, node, installed);
+            appendNode(nodes, node, components);
         }
         StringBuilder flows = new StringBuilder();
         for (AssistantPlan.Flow flow : plan.getFlows()) {
@@ -137,23 +139,34 @@ public class AssistantPlanCompiler {
         }
     }
 
-    private Map<String, AssistantCatalog.CatalogComponent> installedIndex(AssistantCatalog catalog) {
+    private Map<String, AssistantCatalog.CatalogComponent> componentIndex(AssistantCatalog catalog) {
         Map<String, AssistantCatalog.CatalogComponent> result = new LinkedHashMap<>();
-        if (catalog == null || catalog.getInstalled() == null) {
+        if (catalog == null) {
             return result;
         }
-        for (AssistantCatalog.CatalogComponent component : catalog.getInstalled()) {
+        putComponents(result, catalog.getInstallable());
+        // installed 覆盖同名 installable，优先使用已装元数据
+        putComponents(result, catalog.getInstalled());
+        return result;
+    }
+
+    private void putComponents(
+            Map<String, AssistantCatalog.CatalogComponent> target,
+            List<AssistantCatalog.CatalogComponent> components) {
+        if (components == null) {
+            return;
+        }
+        for (AssistantCatalog.CatalogComponent component : components) {
             if (component != null && StringUtils.isNotBlank(component.getId())) {
-                result.put(component.getId(), component);
+                target.put(component.getId(), component);
             }
         }
-        return result;
     }
 
     private void appendNode(
             StringBuilder xml,
             AssistantPlan.Node node,
-            Map<String, AssistantCatalog.CatalogComponent> installed) {
+            Map<String, AssistantCatalog.CatalogComponent> components) {
         String id = escape(node.getId());
         String name = StringUtils.isBlank(node.getName()) ? "" : " name=\"" + escape(node.getName()) + "\"";
         switch (node.getType()) {
@@ -165,7 +178,7 @@ public class AssistantPlanCompiler {
                     .append(name).append("/>\n");
             case "userTask" -> xml.append("    <bpmn:userTask id=\"").append(id).append("\"")
                     .append(name).append("/>\n");
-            case "serviceTask" -> appendServiceTask(xml, node, installed, id, name);
+            case "serviceTask" -> appendServiceTask(xml, node, components, id, name);
             default -> throw new IllegalArgumentException("不支持的节点类型: " + node.getType());
         }
     }
@@ -173,12 +186,12 @@ public class AssistantPlanCompiler {
     private void appendServiceTask(
             StringBuilder xml,
             AssistantPlan.Node node,
-            Map<String, AssistantCatalog.CatalogComponent> installed,
+            Map<String, AssistantCatalog.CatalogComponent> components,
             String id,
             String nameAttribute) {
-        AssistantCatalog.CatalogComponent component = installed.get(node.getComponentId());
+        AssistantCatalog.CatalogComponent component = components.get(node.getComponentId());
         if (component == null) {
-            throw new IllegalArgumentException("componentId 不在 Catalog.installed: " + node.getComponentId());
+            throw new IllegalArgumentException("componentId 不在 Catalog: " + node.getComponentId());
         }
         String delegate = StringUtils.defaultIfBlank(
                 component.getDelegateExpression(), "${" + beanName(component.getId()) + "}");

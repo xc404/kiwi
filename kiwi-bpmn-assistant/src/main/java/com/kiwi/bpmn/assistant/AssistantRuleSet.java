@@ -136,9 +136,7 @@ public class AssistantRuleSet {
                         + "\"planIrJson\":{\"processId\":\"...\",\"nodes\":[],\"flows\":[]}}。"
                         + "禁止输出 candidateXml 或任何 BPMN XML；服务端仅编译 planIrJson。"));
         list.add(soft(RuleComponentIdInCatalog, "both",
-                "serviceTask.componentId 优先使用 Catalog.installed 中的 id；"
-                        + "确需尚未安装的组件时可用 Catalog.installable 的 id"
-                        + "（不要虚构 id；是否安装由校验阶段决定，Plan IR 无需额外标记）。"));
+                "serviceTask.componentId 必须使用 Catalog.components 中的 id，禁止虚构。"));
         list.add(soft(RulePlanIrStructure, "both",
                 "Plan IR 必须含 startEvent、endEvent、完整 flows，以及合理业务节点；"
                         + "serviceTask 参数写在节点 parameters 对象（扁平 key，禁止点号），"
@@ -153,7 +151,7 @@ public class AssistantRuleSet {
         list.add(hard(RuleSequenceFlowEndpoints, "both", "REPAIR",
                 "flows 的 sourceRef/targetRef 必须指向 nodes 中存在的节点 id"));
         list.add(hard(RuleComponentIdInCatalog, "both", "REPAIR",
-                "componentId 必须出现在本轮 Catalog（installed 或 installable）"));
+                "componentId 必须出现在本轮 Catalog"));
         list.add(hard(RuleRequiredParamsPresent, "both", "REPAIR",
                 "已解析组件的必填参数必须出现在该节点的 parameters 中"));
         return list;

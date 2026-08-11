@@ -22,16 +22,14 @@ public class AiChatProperties {
     private int conversationMaxContentLength = 32_000;
 
     /**
-     * 场景驱动「AI 写工作流」内部流程编排（dogfood）。
+     * 场景驱动「AI 写工作流」Java 管线。
      */
-    private WorkflowAuthoring workflowAuthoring = new WorkflowAuthoring();
+    private WriteWorkflow writeWorkflow = new WriteWorkflow();
 
     @Data
-    public static class WorkflowAuthoring {
-        /** 是否启用元流程编排；关闭时助手保持原行为 */
+    public static class WriteWorkflow {
+        /** 是否启用写工作流管线；关闭时助手保持原行为 */
         private boolean enabled = false;
-        /** 内部流程定义 key */
-        private String processDefinitionKey = "kiwi_ai_workflow_authoring";
         /** 修复轮次上限 */
         private int maxRepairRounds = 3;
         /** Catalog 已装组件 Top-N */

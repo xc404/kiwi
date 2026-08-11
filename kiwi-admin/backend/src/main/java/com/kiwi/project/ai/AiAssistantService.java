@@ -1,8 +1,11 @@
 package com.kiwi.project.ai;
 
-import com.kiwi.bpmn.assistant.AssistantProcessService;
 import com.kiwi.bpmn.assistant.AssistantVariables;
+import com.kiwi.bpmn.assistant.WriteWorkflowIntent;
+import com.kiwi.bpmn.assistant.WriteWorkflowStatus;
 import com.kiwi.framework.session.SessionService;
+import com.kiwi.project.ai.assistant.AssistantIntentService;
+import com.kiwi.project.ai.assistant.WriteWorkflowSessionService;
 import com.kiwi.project.ai.mcp.KiwiAdminAiMcpConfiguration;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.client.ChatClient;
@@ -29,7 +32,8 @@ import java.util.regex.Pattern;
 /**
  * 助手对话：基于统一 {@link ChatClient}（{@code kiwiChatClient}）与 MCP 工具；由模型自行选用工具。
  * 前端动作由 {@link AssistantClientActionContext} 收集（菜单跳转、BPM 设计器建议等）。
- * 当 {@code kiwi.ai.workflow-authoring.enabled=true} 且为设计器会话时，分流到内部编排流程。
+ * 当 {@code kiwi.ai.write-workflow.enabled=true} 且为设计器会话时：意图 talk|modify，
+ * modify 走 {@link WriteWorkflowSessionService} Java 管线。
  */
 @Slf4j
 @Service
@@ -57,19 +61,22 @@ public class AiAssistantService {
     private final ObjectProvider<ChatClient> kiwiAssistantChatClientProvider;
     private final AiChatProperties properties;
     private final AssistantClientActionContext assistantClientActionContext;
-    private final ObjectProvider<AssistantProcessService> authoringProcessServiceProvider;
+    private final ObjectProvider<WriteWorkflowSessionService> writeWorkflowSessionServiceProvider;
+    private final ObjectProvider<AssistantIntentService> intentServiceProvider;
     private final SessionService sessionService;
 
     public AiAssistantService(
             @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
             AiChatProperties properties,
             AssistantClientActionContext assistantClientActionContext,
-            ObjectProvider<AssistantProcessService> authoringProcessServiceProvider,
+            ObjectProvider<WriteWorkflowSessionService> writeWorkflowSessionServiceProvider,
+            ObjectProvider<AssistantIntentService> intentServiceProvider,
             SessionService sessionService) {
         this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
         this.assistantClientActionContext = assistantClientActionContext;
-        this.authoringProcessServiceProvider = authoringProcessServiceProvider;
+        this.writeWorkflowSessionServiceProvider = writeWorkflowSessionServiceProvider;
+        this.intentServiceProvider = intentServiceProvider;
         this.sessionService = sessionService;
     }
 
@@ -93,9 +100,9 @@ public class AiAssistantService {
         }
 
         boolean bpmDesignerSession = isBpmDesignerSession(springMessages);
-        AiAssistantResponse authoring = tryScenarioAuthoring(springMessages, bpmDesignerSession);
-        if (authoring != null) {
-            return authoring;
+        AiAssistantResponse writeWorkflow = tryWriteWorkflow(springMessages, bpmDesignerSession);
+        if (writeWorkflow != null) {
+            return writeWorkflow;
         }
 
         String systemPrompt = KiwiAdminAiMcpConfiguration.SYSTEM_PROMPT;
@@ -139,61 +146,84 @@ public class AiAssistantService {
     }
 
     @Nullable
-    private AiAssistantResponse tryScenarioAuthoring(List<Message> springMessages, boolean bpmDesignerSession) {
-        boolean flag = properties.getWorkflowAuthoring().isEnabled();
+    private AiAssistantResponse tryWriteWorkflow(List<Message> springMessages, boolean bpmDesignerSession) {
+        boolean flag = properties.getWriteWorkflow().isEnabled();
         if (!flag || !bpmDesignerSession) {
-            log.debug("authoring skip: enabled={} bpmDesignerSession={}", flag, bpmDesignerSession);
+            log.debug("write-workflow skip: enabled={} bpmDesignerSession={}", flag, bpmDesignerSession);
             return null;
         }
-        AssistantProcessService authoring = authoringProcessServiceProvider.getIfAvailable();
-        if (authoring == null || !authoring.isEnabled()) {
-            log.warn("authoring skip: AssistantProcessService unavailable or disabled (beanNull={})",
-                    authoring == null);
+        WriteWorkflowSessionService sessions = writeWorkflowSessionServiceProvider.getIfAvailable();
+        if (sessions == null || !sessions.isEnabled()) {
+            log.warn("write-workflow skip: WriteWorkflowSessionService unavailable or disabled (beanNull={})",
+                    sessions == null);
             return null;
         }
         String lastUser = lastUserMessageText(springMessages);
         if (lastUser == null || lastUser.isBlank()) {
-            log.debug("authoring skip: empty last user message");
             return null;
         }
         String processId = extractProcessId(springMessages);
         if (processId == null || processId.isBlank()) {
-            log.warn("authoring skip: processId missing from designer system context");
+            log.warn("write-workflow skip: processId missing from designer system context");
             return null;
         }
-        String selected = extractSelectedElementId(springMessages);
-        String baseXml = extractCurrentBpmnXml(springMessages);
+
         boolean autoSave = resolveAutoSaveCanvas(springMessages);
-        log.info("authoring start: targetProcessId={} selected={} scenarioLen={} baseXmlLen={} autoSave={}",
-                processId, selected, lastUser.length(),
-                baseXml == null ? 0 : baseXml.length(), autoSave);
         try {
+            WriteWorkflowStatus correlated = sessions.correlateIfWaiting(processId, lastUser);
+            if (correlated != null) {
+                if (autoSave && AssistantVariables.StageAwaitPreview.equals(correlated.getStage())) {
+                    correlated = sessions.confirmPreview(correlated.getSessionId(), true);
+                }
+                String reply = buildWriteWorkflowUserReply(correlated, autoSave);
+                if ((AssistantVariables.StageAwaitPreview.equals(correlated.getStage())
+                        || AssistantVariables.StageAwaitInstall.equals(correlated.getStage()))
+                        && !autoSave) {
+                    reply = reply + "\n\n请在右上角「AI 写工作流」面板操作，或回复「确认」/「拒绝」。";
+                }
+                log.info("write-workflow correlated: sessionId={} stage={}",
+                        correlated.getSessionId(), correlated.getStage());
+                AiAssistantResponse out = new AiAssistantResponse();
+                out.setContent(reply);
+                out.setActions(buildWriteWorkflowCanvasActions(correlated, autoSave));
+                return out;
+            }
+
+            AssistantIntentService intentService = intentServiceProvider.getIfAvailable();
+            WriteWorkflowIntent intent = intentService != null
+                    ? intentService.determineIntent(springMessages)
+                    : WriteWorkflowIntent.Modify;
+            if (intent == WriteWorkflowIntent.Talk) {
+                log.debug("write-workflow intent=talk → ChatClient");
+                return null;
+            }
+
+            String selected = extractSelectedElementId(springMessages);
+            String baseXml = extractCurrentBpmnXml(springMessages);
             String initiatorUserId = sessionService.getCurrentUser() != null
                     ? sessionService.getCurrentUser().getId()
                     : null;
-            AssistantProcessService.StartResult started =
-                    authoring.start(lastUser, processId, selected, baseXml, initiatorUserId);
-            List<ClientAction> canvasActions = buildAuthoringCanvasActions(started, autoSave);
-            if (autoSave) {
-                started = autoCompletePreviewSave(authoring, started);
+            log.info("write-workflow start: targetProcessId={} scenarioLen={} autoSave={}",
+                    processId, lastUser.length(), autoSave);
+            WriteWorkflowStatus started = sessions.start(
+                    lastUser, processId, selected, baseXml, initiatorUserId);
+            if (autoSave && AssistantVariables.StageAwaitPreview.equals(started.getStage())) {
+                started = sessions.confirmPreview(started.getSessionId(), true);
             }
-            log.info("authoring started: instanceId={} stage={} hasReply={} taskCount={}",
-                    started.getProcessInstanceId(),
-                    started.getStage(),
-                    StringUtils.isNotBlank(started.getAssistantReply()),
-                    started.getTasks() == null ? 0 : started.getTasks().size());
+            log.info("write-workflow done turn: sessionId={} stage={}",
+                    started.getSessionId(), started.getStage());
             AiAssistantResponse out = new AiAssistantResponse();
-            out.setContent(buildAuthoringUserReply(started, autoSave));
-            out.setActions(canvasActions);
+            out.setContent(buildWriteWorkflowUserReply(started, autoSave));
+            out.setActions(buildWriteWorkflowCanvasActions(started, autoSave));
             return out;
         } catch (ResponseStatusException e) {
-            log.error("authoring start failed: {}", e.getReason(), e);
+            log.error("write-workflow failed: {}", e.getReason(), e);
             AiAssistantResponse out = new AiAssistantResponse();
             out.setContent("AI 写工作流未能完成：\n" + StringUtils.defaultIfBlank(e.getReason(), e.getMessage()));
             out.setActions(List.of());
             return out;
         } catch (Exception e) {
-            log.error("authoring start failed", e);
+            log.error("write-workflow failed", e);
             AiAssistantResponse out = new AiAssistantResponse();
             out.setContent("AI 写工作流未能完成：" + e.getMessage());
             out.setActions(List.of());
@@ -201,19 +231,18 @@ public class AiAssistantService {
         }
     }
 
-    private static String buildAuthoringUserReply(
-            AssistantProcessService.StartResult started, boolean autoSave) {
+    private static String buildWriteWorkflowUserReply(WriteWorkflowStatus status, boolean autoSave) {
         StringBuilder content = new StringBuilder();
-        if (StringUtils.isNotBlank(started.getAssistantReply())) {
-            content.append(started.getAssistantReply().trim());
+        if (StringUtils.isNotBlank(status.getAssistantReply())) {
+            content.append(status.getAssistantReply().trim());
         } else {
             content.append("已根据你的描述更新工作流。");
         }
-        String stage = started.getStage();
-        if (StringUtils.isNotBlank(started.getCandidateXml())) {
-            if (autoSave) {
+        String stage = status.getStage();
+        if (StringUtils.isNotBlank(status.getCandidateXml())) {
+            if (autoSave && AssistantVariables.StageDone.equals(stage)) {
                 content.append("\n\n已将修改应用到画布并保存。");
-            } else {
+            } else if (StringUtils.isNotBlank(status.getCandidateXml())) {
                 content.append("\n\n已将修改导入画布预览（尚未保存）。");
             }
         }
@@ -221,74 +250,27 @@ public class AiAssistantService {
             content.append("请在右上角「AI 写工作流」面板确认保存或拒绝。");
         } else if (AssistantVariables.StageAwaitAsk.equals(stage)) {
             content.append("\n\n");
-            content.append(StringUtils.defaultIfBlank(started.getAskMessage(), "还需要你补充一些信息。"));
-            content.append("\n请在右上角面板填写说明后提交。");
+            content.append(StringUtils.defaultIfBlank(status.getAskMessage(), "还需要你补充一些信息。"));
+            content.append("\n请在右上角面板填写说明后提交，或直接在对话中回复。");
         } else if (AssistantVariables.StageAwaitInstall.equals(stage)) {
             content.append("\n\n需要安装插件后才能继续。");
-            if (StringUtils.isNotBlank(started.getPluginHintJson())) {
-                content.append("\n提示：").append(started.getPluginHintJson());
+            if (StringUtils.isNotBlank(status.getPluginHintJson())) {
+                content.append("\n提示：").append(status.getPluginHintJson());
             }
             content.append("\n请在右上角面板确认或拒绝安装。");
-        } else if (StringUtils.isNotBlank(started.getAskMessage())) {
-            content.append("\n\n").append(started.getAskMessage());
+        } else if (StringUtils.isNotBlank(status.getAskMessage())) {
+            content.append("\n\n").append(status.getAskMessage());
         }
         return content.toString().trim();
     }
 
-    private static List<ClientAction> buildAuthoringCanvasActions(
-            AssistantProcessService.StartResult started, boolean autoSave) {
-        String xml = started.getCandidateXml();
+    private static List<ClientAction> buildWriteWorkflowCanvasActions(
+            WriteWorkflowStatus status, boolean autoSave) {
+        String xml = status.getCandidateXml();
         if (StringUtils.isBlank(xml)) {
             return List.of();
         }
         return List.of(autoSave ? ClientAction.bpmnXml(xml) : ClientAction.bpmnXmlPreview(xml));
-    }
-
-    /**
-     * 自动保存开启时：完成预览 User Task，触发 SaveDelegate 落库，避免面板一直等待确认。
-     */
-    private AssistantProcessService.StartResult autoCompletePreviewSave(
-            AssistantProcessService authoring, AssistantProcessService.StartResult started) {
-        if (!AssistantVariables.StageAwaitPreview.equals(started.getStage())
-                || started.getTasks() == null
-                || started.getTasks().isEmpty()) {
-            return started;
-        }
-        return started.getTasks().stream()
-                .filter(t -> "UserTask_Preview".equals(t.getTaskDefinitionKey()))
-                .findFirst()
-                .map(t -> {
-                    try {
-                        AssistantProcessService.StatusResult after = authoring.completeTask(
-                                t.getId(), Map.of(AssistantVariables.PreviewConfirmed, true));
-                        AssistantProcessService.StartResult merged = new AssistantProcessService.StartResult();
-                        merged.setProcessInstanceId(after.getProcessInstanceId());
-                        merged.setBusinessKey(after.getBusinessKey());
-                        merged.setTargetProcessId(after.getTargetProcessId());
-                        merged.setActive(after.isActive());
-                        merged.setStage(after.getStage());
-                        merged.setDispatchCode(after.getDispatchCode());
-                        merged.setCandidateXml(
-                                StringUtils.isNotBlank(after.getCandidateXml())
-                                        ? after.getCandidateXml()
-                                        : started.getCandidateXml());
-                        merged.setAssistantReply(
-                                StringUtils.isNotBlank(after.getAssistantReply())
-                                        ? after.getAssistantReply()
-                                        : started.getAssistantReply());
-                        merged.setAskMessage(after.getAskMessage());
-                        merged.setPluginHintJson(after.getPluginHintJson());
-                        merged.setIssuesJson(after.getIssuesJson());
-                        merged.setCatalogJson(after.getCatalogJson());
-                        merged.setTasks(after.getTasks());
-                        merged.setVariables(after.getVariables());
-                        return merged;
-                    } catch (Exception e) {
-                        log.warn("auto-complete preview save failed: {}", e.getMessage());
-                        return started;
-                    }
-                })
-                .orElse(started);
     }
 
     /** 是否自动保存：只认设计器 system 上下文里的 aiAuthoringAutoSave（前端开关） */

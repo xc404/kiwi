@@ -24,6 +24,8 @@ class AssistantRuleSetTest {
         assertTrue(prompt.contains(AssistantRuleSet.RuleComponentIdInCatalog));
         assertTrue(prompt.contains(AssistantRuleSet.RulePlanIrStructure));
         assertTrue(prompt.contains("parameters"));
+        assertTrue(prompt.contains("Catalog.components"));
+        assertFalse(prompt.contains("installed"));
         assertFalse(prompt.contains("requiresInstall"));
         assertFalse(prompt.contains(AssistantRuleSet.RuleModifyPreserveUnrelated));
     }
