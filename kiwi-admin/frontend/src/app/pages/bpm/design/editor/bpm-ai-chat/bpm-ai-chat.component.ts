@@ -77,10 +77,8 @@ export class BpmAiChatComponent {
 
   readonly assistantHandlers: AssistantActionHandler[] = createBpmDesignerAssistantHandlers(this.assistantDeps);
 
-  readonly showWriteWorkflowPanel = computed(() => {
-    const s = this.writeWorkflowStatus();
-    return !!s?.active || s?.stage === 'done';
-  });
+  /** 仅在需要用户确认/补充时展示内联卡片，避免 done/进行中状态一直挂着 */
+  readonly showWriteWorkflowPanel = computed(() => this.awaitPreview() || this.awaitInstall() || this.awaitAsk());
 
   readonly stageLabel = computed(() => {
     const stage = this.writeWorkflowStatus()?.stage;
@@ -127,7 +125,8 @@ export class BpmAiChatComponent {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(status => {
-        if (!status) {
+        if (!status?.sessionId) {
+          this.writeWorkflowStatus.set(null);
           return;
         }
         void this.applyWriteWorkflowStatus(status);
@@ -206,12 +205,6 @@ export class BpmAiChatComponent {
     );
   }
 
-  dismissDonePanel(): void {
-    this.writeWorkflowStatus.set(null);
-    this.lastImportedPreviewXml = '';
-    this.xmlBeforePreview = '';
-  }
-
   private runSessionAction(
     call: () => ReturnType<AiWriteWorkflowService['confirmPreview']>,
     onOk?: () => void | Promise<void>
@@ -244,10 +237,15 @@ export class BpmAiChatComponent {
   }
 
   private async applyWriteWorkflowStatus(status: WriteWorkflowStatus): Promise<void> {
-    this.writeWorkflowStatus.set(status);
-    if (!status.active && status.stage !== 'done') {
+    if (!status?.sessionId) {
+      this.writeWorkflowStatus.set(null);
       return;
     }
+    const needsAttention =
+      status.stage === 'await_preview' || status.stage === 'await_install' || status.stage === 'await_ask';
+    // 完成后或非确认态不挂住卡片；仍可短暂应用候选 XML
+    this.writeWorkflowStatus.set(needsAttention ? status : null);
+
     const xml = status.candidateXml?.trim() ?? '';
     const shouldApply =
       !!xml &&
@@ -266,6 +264,9 @@ export class BpmAiChatComponent {
         await this.editor.importBpmnXml(xml);
       }
       this.lastImportedPreviewXml = xml;
+      if (status.stage === 'done') {
+        this.xmlBeforePreview = '';
+      }
     } catch {
       this.nzMessage.warning('候选流程导入画布失败，可稍后重试');
     }

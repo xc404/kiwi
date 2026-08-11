@@ -21,11 +21,11 @@ class AssistantRuleSetTest {
     void renderSoftPrompt_createExcludesModifyOnlyRule() {
         String prompt = ruleSet.renderSoftPrompt(AssistantRuleSet.ModeCreate);
 
-        assertTrue(prompt.contains(AssistantRuleSet.RuleComponentIdInCatalog));
+        assertTrue(prompt.contains(AssistantRuleSet.RuleUseMcpDiscovery)
+                || prompt.contains(AssistantRuleSet.RuleComponentIdResolvable));
         assertTrue(prompt.contains(AssistantRuleSet.RulePlanIrStructure));
         assertTrue(prompt.contains("parameters"));
-        assertTrue(prompt.contains("Catalog.components"));
-        assertFalse(prompt.contains("installed"));
+        assertTrue(prompt.contains("bpmComp_aiPage") || prompt.contains("MCP"));
         assertFalse(prompt.contains("requiresInstall"));
         assertFalse(prompt.contains(AssistantRuleSet.RuleModifyPreserveUnrelated));
     }
@@ -35,11 +35,12 @@ class AssistantRuleSetTest {
         String prompt = ruleSet.renderSoftPrompt(AssistantRuleSet.ModeModify);
 
         assertTrue(prompt.contains(AssistantRuleSet.RuleModifyPreserveUnrelated));
+        assertTrue(prompt.contains(AssistantRuleSet.RuleModifyPreserveComponentIds));
     }
 
     @Test
-    void findHard_doesNotReturnSoftRuleWithSameId() {
-        var rule = ruleSet.findHard(AssistantRuleSet.RuleComponentIdInCatalog);
+    void findHard_componentIdResolvable() {
+        var rule = ruleSet.findHard(AssistantRuleSet.RuleComponentIdResolvable);
 
         assertTrue(rule.isPresent());
         assertTrue(rule.orElseThrow().isHard());

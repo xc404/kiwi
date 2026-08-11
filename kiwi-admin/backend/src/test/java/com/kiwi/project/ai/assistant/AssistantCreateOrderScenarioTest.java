@@ -140,6 +140,14 @@ class AssistantCreateOrderScenarioTest {
             return List.of();
         });
         when(componentLookup.pluginMissingHint(anyString())).thenReturn(Optional.empty());
+        when(componentLookup.resolveDelegateExpression(anyString())).thenAnswer(invocation -> {
+            String id = invocation.getArgument(0);
+            if (id != null && id.startsWith("classpath_")) {
+                String bean = id.substring("classpath_".length());
+                return Optional.of("${" + bean + "}");
+            }
+            return Optional.empty();
+        });
 
         validator = new AssistantWorkflowValidator(
                 new DefaultAssistantXmlValidator(),
@@ -180,21 +188,20 @@ class AssistantCreateOrderScenarioTest {
         assertTrue(installedIds.contains("classpath_assignmentActivity"));
 
         String catalogJson = objectMapper.writeValueAsString(orderCatalog());
-        var generated = planGenerateService.generate(Scenario, catalogJson, null, null, null);
+        var generated = planGenerateService.generate(Scenario, null, null, null);
         assertTrue(StringUtils.isNotBlank(generated.getCandidateXml()), "真实 LLM 应产出候选 BPMN");
 
-        var validation = validator.validate(generated.getCandidateXml(), orderCatalog());
+        var validation = validator.validate(generated.getCandidateXml());
         boolean repaired = false;
         if (!AssistantVariables.DispatchPass.equals(validation.getDispatchCode())) {
             repaired = true;
             String issuesJson = objectMapper.writeValueAsString(validation.getIssues());
             generated = planGenerateService.generate(
                     Scenario,
-                    catalogJson,
                     issuesJson,
                     generated.getCandidateXml(),
-                    "请按 Catalog 已装组件生成可执行创建订单流程：先 uuidGenerate 生成订单号，再 assignmentActivity 组装订单变量");
-            validation = validator.validate(generated.getCandidateXml(), orderCatalog());
+                    "请按已装组件生成可执行创建订单流程：先 uuidGenerate 生成订单号，再 assignmentActivity 组装订单变量");
+            validation = validator.validate(generated.getCandidateXml());
         }
 
         String xml = generated.getCandidateXml();
@@ -203,12 +210,12 @@ class AssistantCreateOrderScenarioTest {
         assertTrue(xml.contains("<bpmndi:BPMNDiagram") || xml.contains("BPMNDiagram"), "应含图面");
 
         List<String> usedIds = extractComponentIds(xml);
-        assertFalse(usedIds.isEmpty(), "创建订单流程应至少引用一个 Catalog 组件");
+        assertFalse(usedIds.isEmpty(), "创建订单流程应至少引用一个已装组件");
         for (String usedId : usedIds) {
             assertTrue(
                     List.of("classpath_uuidGenerate", "classpath_assignmentActivity", "classpath_httpRequest")
                             .contains(usedId),
-                    "组件必须来自 Catalog，禁止臆造: " + usedId);
+                    "组件必须来自已装集合，禁止臆造: " + usedId);
         }
         assertTrue(
                 usedIds.contains("classpath_uuidGenerate")

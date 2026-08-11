@@ -76,7 +76,7 @@ class AssistantPlanCompilerTest {
     }
 
     @Test
-    void compileJson_rejectsComponentOutsideCatalog() {
+    void compileJson_rejectsUnknownWhenCatalogPresent() {
         String planJson = """
                 {
                   "processId":"bad_flow",
@@ -93,6 +93,23 @@ class AssistantPlanCompilerTest {
                 """;
 
         assertFalse(compiler.compile(planJson, new ObjectMapper().valueToTree(catalog).toString()).isPresent());
+    }
+
+    @Test
+    void compile_withoutCatalog_allowsServiceTaskWithDefaultDelegate() {
+        AssistantPlan plan = new AssistantPlan();
+        plan.setProcessId("shell_flow");
+        plan.setNodes(List.of(
+                node("StartEvent_1", "startEvent", null, Map.of()),
+                node("Activity_1", "serviceTask", "classpath_shell", Map.of("command", "echo hi")),
+                node("EndEvent_1", "endEvent", null, Map.of())));
+        plan.setFlows(List.of(
+                flow("Flow_1", "StartEvent_1", "Activity_1"),
+                flow("Flow_2", "Activity_1", "EndEvent_1")));
+
+        String xml = compiler.compile(plan);
+        assertTrue(xml.contains("kiwi:componentId=\"classpath_shell\""));
+        assertTrue(xml.contains("${shell}"));
     }
 
     private AssistantPlan.Node node(

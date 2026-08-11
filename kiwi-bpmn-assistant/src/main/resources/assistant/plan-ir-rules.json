@@ -7,11 +7,18 @@
     "promptText": "只输出 JSON，不要 Markdown：{\"summary\":\"给用户看的中文说明（2-6句）\",\"planIrJson\":{\"processId\":\"...\",\"nodes\":[],\"flows\":[]}}。禁止输出 candidateXml 或任何 BPMN XML；服务端仅编译 planIrJson。"
   },
   {
-    "id": "component_id_in_catalog",
+    "id": "use_mcp_discovery",
     "kind": "soft",
     "mode": "both",
     "enabled": true,
-    "promptText": "serviceTask.componentId 必须使用 Catalog.components 中的 id，禁止虚构。"
+    "promptText": "不确定组件时必须先调用 MCP 工具查询：bpmComp_aiPage / bpmComp_listGrouped（已装）、bpmRemoteMarket_list/get（市场插件）、bpmMarket_aiPage/get/getProcess（模板）。serviceTask.componentId 必须来自工具结果或原图已有 id（plugin_/classpath_ 可互备），禁止虚构。"
+  },
+  {
+    "id": "component_id_resolvable",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "serviceTask.componentId 必须能被系统解析为已装或可装组件，禁止虚构。"
   },
   {
     "id": "plan_ir_structure",
@@ -32,7 +39,14 @@
     "kind": "soft",
     "mode": "modify",
     "enabled": true,
-    "promptText": "在 basePlanIr 上按用户要求修改，保留无关节点/连线/parameters，不要无故整图重写；勿擅自更改 processId。输出完整修改后的 planIrJson。"
+    "promptText": "在 basePlanIr 上按用户要求修改，保留无关节点/连线/parameters，不要无故整图重写；「整理/规范/清理」≠ 更换业务组件，仅允许改 name、连线整理、补齐参数；勿擅自更改 processId。输出完整修改后的 planIrJson。"
+  },
+  {
+    "id": "modify_preserve_component_ids",
+    "kind": "soft",
+    "mode": "modify",
+    "enabled": true,
+    "promptText": "同一节点 id 的 componentId 不得无故更换；仅当用户明确要求替换/改成/换成某组件时才可更换。"
   },
   {
     "id": "has_start_and_end",
@@ -51,12 +65,20 @@
     "message": "flows 的 sourceRef/targetRef 必须指向 nodes 中存在的节点 id"
   },
   {
-    "id": "component_id_in_catalog",
+    "id": "component_id_resolvable",
     "kind": "hard",
     "mode": "both",
-    "severity": "REPAIR",
+    "severity": "ASK",
     "enabled": true,
-    "message": "componentId 必须出现在本轮 Catalog"
+    "message": "componentId 必须能解析为已装或可装组件"
+  },
+  {
+    "id": "modify_preserve_component_ids",
+    "kind": "hard",
+    "mode": "modify",
+    "severity": "ASK",
+    "enabled": true,
+    "message": "modify 时不得无故更换已有节点的 componentId"
   },
   {
     "id": "required_params_present",

@@ -185,14 +185,14 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '撤销',
         icon: 'undo',
         group: 'edit',
-        run: ctx => triggerEditorAction(ctx, 'undo')
+        run: ctx => ctx.editor.undo()
       },
       {
         id: 'redo',
         tooltip: '重做',
         icon: 'redo',
         group: 'edit',
-        run: ctx => triggerEditorAction(ctx, 'redo')
+        run: ctx => ctx.editor.redo()
       },
       {
         id: 'copy',

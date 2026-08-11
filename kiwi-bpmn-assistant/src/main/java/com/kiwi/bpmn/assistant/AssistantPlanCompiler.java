@@ -1,7 +1,10 @@
 package com.kiwi.bpmn.assistant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiwi.bpmn.assistant.spi.AssistantComponentLookup;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -14,7 +17,7 @@ import java.util.regex.Pattern;
 
 /**
  * 将受限 Plan IR 确定性编译为 Kiwi 可导入的 BPMN XML。
- * LLM 负责业务计划，编译器负责命名空间、组件绑定、连线与基础 BPMNDI。
+ * 组件绑定优先经 {@link AssistantComponentLookup} 解析；Catalog 仅作可选回退（测试/兼容）。
  */
 @Component
 public class AssistantPlanCompiler {
@@ -26,9 +29,23 @@ public class AssistantPlanCompiler {
             "startEvent", "endEvent", "serviceTask", "userTask", "exclusiveGateway");
 
     private final ObjectMapper objectMapper;
+    private final ObjectProvider<AssistantComponentLookup> componentLookupProvider;
 
-    public AssistantPlanCompiler(ObjectMapper objectMapper) {
+    @Autowired
+    public AssistantPlanCompiler(
+            ObjectMapper objectMapper,
+            ObjectProvider<AssistantComponentLookup> componentLookupProvider) {
         this.objectMapper = objectMapper;
+        this.componentLookupProvider = componentLookupProvider;
+    }
+
+    /** 测试用：无 Lookup。 */
+    public AssistantPlanCompiler(ObjectMapper objectMapper) {
+        this(objectMapper, new EmptyLookupProvider());
+    }
+
+    public Optional<String> compile(String planIrJson) {
+        return compile(planIrJson, null);
     }
 
     public Optional<String> compile(String planIrJson, String catalogJson) {
@@ -37,24 +54,29 @@ public class AssistantPlanCompiler {
         }
         try {
             AssistantPlan plan = objectMapper.readValue(planIrJson, AssistantPlan.class);
-            AssistantCatalog catalog = objectMapper.readValue(
-                    StringUtils.defaultIfBlank(catalogJson, "{}"), AssistantCatalog.class);
+            AssistantCatalog catalog = null;
+            if (StringUtils.isNotBlank(catalogJson)) {
+                catalog = objectMapper.readValue(catalogJson, AssistantCatalog.class);
+            }
             return Optional.of(compile(plan, catalog));
         } catch (Exception ignored) {
             return Optional.empty();
         }
     }
 
+    public String compile(AssistantPlan plan) {
+        return compile(plan, null);
+    }
+
     public String compile(AssistantPlan plan, AssistantCatalog catalog) {
         validatePlan(plan);
-        // LLM 可选用已装与可装组件；未安装由校验阶段提醒用户，编译阶段不拦截。
-        Map<String, AssistantCatalog.CatalogComponent> components = componentIndex(catalog);
+        Map<String, AssistantCatalog.CatalogComponent> catalogIndex = componentIndex(catalog);
         Map<String, Box> boxes = layout(plan);
         String processId = StringUtils.defaultIfBlank(plan.getProcessId(), "ai_generated_process");
 
         StringBuilder nodes = new StringBuilder();
         for (AssistantPlan.Node node : plan.getNodes()) {
-            appendNode(nodes, node, components);
+            appendNode(nodes, node, catalogIndex);
         }
         StringBuilder flows = new StringBuilder();
         for (AssistantPlan.Flow flow : plan.getFlows()) {
@@ -145,7 +167,6 @@ public class AssistantPlanCompiler {
             return result;
         }
         putComponents(result, catalog.getInstallable());
-        // installed 覆盖同名 installable，优先使用已装元数据
         putComponents(result, catalog.getInstalled());
         return result;
     }
@@ -159,6 +180,10 @@ public class AssistantPlanCompiler {
         for (AssistantCatalog.CatalogComponent component : components) {
             if (component != null && StringUtils.isNotBlank(component.getId())) {
                 target.put(component.getId(), component);
+                String alt = AssistantComponentIdAliases.alternateId(component.getId());
+                if (alt != null) {
+                    target.putIfAbsent(alt, component);
+                }
             }
         }
     }
@@ -166,7 +191,7 @@ public class AssistantPlanCompiler {
     private void appendNode(
             StringBuilder xml,
             AssistantPlan.Node node,
-            Map<String, AssistantCatalog.CatalogComponent> components) {
+            Map<String, AssistantCatalog.CatalogComponent> catalogIndex) {
         String id = escape(node.getId());
         String name = StringUtils.isBlank(node.getName()) ? "" : " name=\"" + escape(node.getName()) + "\"";
         switch (node.getType()) {
@@ -178,7 +203,7 @@ public class AssistantPlanCompiler {
                     .append(name).append("/>\n");
             case "userTask" -> xml.append("    <bpmn:userTask id=\"").append(id).append("\"")
                     .append(name).append("/>\n");
-            case "serviceTask" -> appendServiceTask(xml, node, components, id, name);
+            case "serviceTask" -> appendServiceTask(xml, node, catalogIndex, id, name);
             default -> throw new IllegalArgumentException("不支持的节点类型: " + node.getType());
         }
     }
@@ -186,19 +211,19 @@ public class AssistantPlanCompiler {
     private void appendServiceTask(
             StringBuilder xml,
             AssistantPlan.Node node,
-            Map<String, AssistantCatalog.CatalogComponent> components,
+            Map<String, AssistantCatalog.CatalogComponent> catalogIndex,
             String id,
             String nameAttribute) {
-        AssistantCatalog.CatalogComponent component = components.get(node.getComponentId());
-        if (component == null) {
-            throw new IllegalArgumentException("componentId 不在 Catalog: " + node.getComponentId());
+        String componentId = node.getComponentId();
+        if (StringUtils.isBlank(componentId)) {
+            throw new IllegalArgumentException("serviceTask 缺少 componentId");
         }
-        String delegate = StringUtils.defaultIfBlank(
-                component.getDelegateExpression(), "${" + beanName(component.getId()) + "}");
+        String delegate = resolveDelegate(componentId, catalogIndex);
+        String emittedId = resolveEmittedComponentId(componentId, catalogIndex);
         xml.append("    <bpmn:serviceTask id=\"").append(id).append("\"")
                 .append(nameAttribute)
                 .append(" camunda:delegateExpression=\"").append(escape(delegate)).append("\"")
-                .append(" kiwi:componentId=\"").append(escape(component.getId())).append("\"");
+                .append(" kiwi:componentId=\"").append(escape(emittedId)).append("\"");
         if (node.getParameters() == null || node.getParameters().isEmpty()) {
             xml.append("/>\n");
             return;
@@ -218,6 +243,56 @@ public class AssistantPlanCompiler {
         xml.append("        </camunda:inputOutput>\n")
                 .append("      </bpmn:extensionElements>\n")
                 .append("    </bpmn:serviceTask>\n");
+    }
+
+    private String resolveDelegate(
+            String componentId, Map<String, AssistantCatalog.CatalogComponent> catalogIndex) {
+        AssistantComponentLookup lookup = componentLookupProvider.getIfAvailable();
+        if (lookup != null) {
+            Optional<String> fromLookup = lookup.resolveDelegateExpression(componentId);
+            if (fromLookup.isPresent()) {
+                return fromLookup.get();
+            }
+            if (lookup.pluginMissingHint(componentId).isPresent()) {
+                return "${" + AssistantComponentIdAliases.beanName(componentId) + "}";
+            }
+        }
+        AssistantCatalog.CatalogComponent fromCatalog = findInCatalog(componentId, catalogIndex);
+        if (fromCatalog != null) {
+            return StringUtils.defaultIfBlank(
+                    fromCatalog.getDelegateExpression(),
+                    "${" + AssistantComponentIdAliases.beanName(fromCatalog.getId()) + "}");
+        }
+        if (lookup == null && !catalogIndex.isEmpty()) {
+            throw new IllegalArgumentException("componentId 无法解析: " + componentId);
+        }
+        // 无 Lookup 且无 Catalog：测试/离线仍允许用默认 bean 名编译，由校验阶段裁决
+        if (lookup == null) {
+            return "${" + AssistantComponentIdAliases.beanName(componentId) + "}";
+        }
+        throw new IllegalArgumentException("componentId 无法解析: " + componentId);
+    }
+
+    private String resolveEmittedComponentId(
+            String componentId, Map<String, AssistantCatalog.CatalogComponent> catalogIndex) {
+        AssistantCatalog.CatalogComponent fromCatalog = findInCatalog(componentId, catalogIndex);
+        if (fromCatalog != null && StringUtils.isNotBlank(fromCatalog.getId())) {
+            return fromCatalog.getId();
+        }
+        return componentId;
+    }
+
+    private AssistantCatalog.CatalogComponent findInCatalog(
+            String componentId, Map<String, AssistantCatalog.CatalogComponent> catalogIndex) {
+        if (catalogIndex == null || catalogIndex.isEmpty()) {
+            return null;
+        }
+        AssistantCatalog.CatalogComponent direct = catalogIndex.get(componentId);
+        if (direct != null) {
+            return direct;
+        }
+        String alt = AssistantComponentIdAliases.alternateId(componentId);
+        return alt != null ? catalogIndex.get(alt) : null;
     }
 
     private void appendFlow(StringBuilder xml, AssistantPlan.Flow flow) {
@@ -286,11 +361,6 @@ public class AssistantPlanCompiler {
         return StringUtils.isNotBlank(value) && xmlIdPattern.matcher(value).matches();
     }
 
-    private String beanName(String componentId) {
-        int separator = componentId.indexOf('_');
-        return separator >= 0 ? componentId.substring(separator + 1) : componentId;
-    }
-
     private int nodeSize(String type) {
         return switch (type) {
             case "startEvent", "endEvent" -> 36;
@@ -325,6 +395,23 @@ public class AssistantPlanCompiler {
 
         int centerY() {
             return y + height / 2;
+        }
+    }
+
+    private static final class EmptyLookupProvider implements ObjectProvider<AssistantComponentLookup> {
+        @Override
+        public AssistantComponentLookup getObject() {
+            return null;
+        }
+
+        @Override
+        public AssistantComponentLookup getIfAvailable() {
+            return null;
+        }
+
+        @Override
+        public AssistantComponentLookup getIfUnique() {
+            return null;
         }
     }
 }

@@ -60,6 +60,8 @@ class AssistantClosedLoopTest {
         org.mockito.Mockito.lenient().when(componentLookup.exists(anyString())).thenReturn(false);
         org.mockito.Mockito.lenient().when(componentLookup.requiredInputKeys(anyString())).thenReturn(List.of());
         org.mockito.Mockito.lenient().when(componentLookup.pluginMissingHint(anyString())).thenReturn(Optional.empty());
+        org.mockito.Mockito.lenient().when(componentLookup.resolveDelegateExpression(anyString()))
+                .thenReturn(Optional.empty());
         validator = new AssistantWorkflowValidator(
                 new DefaultAssistantXmlValidator(),
                 componentLookup,

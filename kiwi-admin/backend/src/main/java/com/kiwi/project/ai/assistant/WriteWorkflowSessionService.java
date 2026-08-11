@@ -164,11 +164,15 @@ public class WriteWorkflowSessionService {
     }
 
     private void put(WriteWorkflowSession session) {
-        sessionsByTarget.put(session.getTargetProcessId(), session);
-        sessionsById.put(session.getSessionId(), session);
         if (AssistantVariables.StageDone.equals(session.getStage())) {
             session.setActive(false);
+            // 完成后不再按目标保留，避免前端轮询一直拉出确认/完成卡片
+            clearByTarget(session.getTargetProcessId());
+            sessionsById.remove(session.getSessionId());
+            return;
         }
+        sessionsByTarget.put(session.getTargetProcessId(), session);
+        sessionsById.put(session.getSessionId(), session);
     }
 
     private WriteWorkflowSession requireSession(String sessionId) {

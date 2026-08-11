@@ -13,6 +13,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,17 +64,12 @@ class AssistantPlanGenerateServiceTest {
                   "candidateXml":"<broken/>"
                 }
                 """;
-        when(chatClient.prompt().user(org.mockito.ArgumentMatchers.anyString()).call().content())
+        when(chatClient.prompt().user(any(String.class)).options(any()).call().content())
                 .thenReturn(response);
         clearInvocations(chatClient.prompt());
-        String catalog = """
-                {"installed":[{"id":"classpath_httpRequest","delegateExpression":"${httpRequest}",
-                               "status":"installed"}],"installable":[],"templates":[]}
-                """;
 
         var result = service.generate(
                 "调用接口",
-                catalog,
                 "[{\"ruleId\":\"required_params_present\",\"message\":\"缺少 url\"}]",
                 null,
                 "URL 使用流程变量 requestUrl");
@@ -88,11 +84,12 @@ class AssistantPlanGenerateServiceTest {
         assertTrue(prompt.contains("URL 使用流程变量 requestUrl"));
         assertTrue(prompt.contains("当前模式: create"));
         assertTrue(prompt.contains("禁止输出 candidateXml") || prompt.contains("planIrJson"));
-        assertTrue(prompt.contains("不要判断或提议安装") || prompt.contains("提醒用户安装"));
+        assertTrue(prompt.contains("bpmComp_aiPage") || prompt.contains("MCP"));
+        assertFalse(prompt.contains("Catalog:"));
     }
 
     @Test
-    void generate_promptIncludesAllComponentsButOmitsInstallFlagsAndInstallIssues() {
+    void generate_promptOmitsCatalogMenuAndInstallIssues() {
         String response = """
                 {
                   "summary":"ok",
@@ -111,30 +108,23 @@ class AssistantPlanGenerateServiceTest {
                   }
                 }
                 """;
-        when(chatClient.prompt().user(org.mockito.ArgumentMatchers.anyString()).call().content())
+        when(chatClient.prompt().user(any(String.class)).options(any()).call().content())
                 .thenReturn(response);
         clearInvocations(chatClient.prompt());
-        String catalog = """
-                {"installed":[{"id":"classpath_httpRequest","delegateExpression":"${httpRequest}",
-                               "status":"installed","requiresInstall":false}],
-                 "installable":[{"id":"plugin_shell","name":"Shell","status":"available_to_install","requiresInstall":true}],
-                 "templates":[]}
-                """;
         String issues = """
                 [{"code":"PLUGIN_NOT_INSTALLED","severity":"INSTALL","componentId":"plugin_shell","message":"需要安装"},
                  {"code":"MISSING_REQUIRED_PARAM","severity":"REPAIR","ruleId":"required_params_present","message":"缺少 url"}]
                 """;
 
-        service.generate("调用接口", catalog, issues, null, null);
+        service.generate("调用接口", issues, null, null);
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClient.prompt()).user(promptCaptor.capture());
         String prompt = promptCaptor.getValue();
-        assertTrue(prompt.contains("classpath_httpRequest"));
-        assertTrue(prompt.contains("plugin_shell"));
-        assertTrue(prompt.contains("\"components\""));
+        assertFalse(prompt.contains("\"components\""));
         assertFalse(prompt.contains("requiresInstall"));
         assertFalse(prompt.contains("PLUGIN_NOT_INSTALLED"));
         assertTrue(prompt.contains("required_params_present"));
+        assertTrue(prompt.contains("bpmRemoteMarket_list"));
     }
 }

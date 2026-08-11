@@ -84,16 +84,51 @@ public class BpmComponentCtl extends BaseCtl
 
     @Operation(
             operationId = "bpmComp_aiPage",
-            summary = "分页查询 BPM 组件",
-            description = "page 从 0 开始，size 默认 20、最大 100。")
+            summary = "分页查询 BPM 组件（AI/MCP）",
+            description = "page 从 0 开始，size 默认 20、最大 100；可选 keyword / group 过滤。")
     @GetMapping("/search/ai-page")
     @ResponseBody
     public Page<BpmComponent> aiPageComponents(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String group,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         int p = page != null && page >= 0 ? page : 0;
         int s = size != null && size > 0 ? Math.min(size, 100) : 20;
-        return getComponents(PageRequest.of(p, s));
+        Pageable pageable = PageRequest.of(p, s);
+        if (StringUtils.isAllBlank(keyword, group)) {
+            return getComponents(pageable);
+        }
+        String kw = StringUtils.trimToEmpty(keyword).toLowerCase();
+        String grp = StringUtils.trimToEmpty(group).toLowerCase();
+        List<BpmComponent> filtered = bpmComponentService.listAllComponents().stream()
+                .filter(c -> matchesAiComponentQuery(c, kw, grp))
+                .collect(Collectors.toList());
+        int from = Math.min(p * s, filtered.size());
+        int to = Math.min(from + s, filtered.size());
+        return new org.springframework.data.domain.PageImpl<>(
+                filtered.subList(from, to), pageable, filtered.size());
+    }
+
+    private boolean matchesAiComponentQuery(BpmComponent c, String kw, String grp) {
+        if (c == null) {
+            return false;
+        }
+        if (StringUtils.isNotBlank(grp)) {
+            String g = StringUtils.defaultString(c.getGroup()).toLowerCase();
+            if (!g.contains(grp)) {
+                return false;
+            }
+        }
+        if (StringUtils.isBlank(kw)) {
+            return true;
+        }
+        String hay = (StringUtils.defaultString(c.getId()) + " "
+                + StringUtils.defaultString(c.getName()) + " "
+                + StringUtils.defaultString(c.getKey()) + " "
+                + StringUtils.defaultString(c.getGroup()) + " "
+                + StringUtils.defaultString(c.getDescription())).toLowerCase();
+        return hay.contains(kw);
     }
 
     @Operation(operationId = "bpmComp_add", summary = "新增 BPM 组件")

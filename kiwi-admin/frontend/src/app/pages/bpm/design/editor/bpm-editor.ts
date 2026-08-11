@@ -58,6 +58,14 @@ const PropertiesWidthMax = 640;
 
 type ResizeSide = 'palette' | 'properties';
 
+/** 整图 import（AI / 文件）可撤销快照：undo 时若 savedToServer 则写回服务器 */
+interface XmlHistoryEntry {
+  xml: string;
+  savedToServer: boolean;
+}
+
+const XmlHistoryMax = 20;
+
 @Component({
   selector: 'bpm-editor',
   templateUrl: './bpm-editor.html',
@@ -119,6 +127,11 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   stackIdx: number | undefined = undefined;
   commandStack: any;
 
+  private xmlUndoStack: XmlHistoryEntry[] = [];
+  private xmlRedoStack: XmlHistoryEntry[] = [];
+  /** 由 undo/redo 触发的 import，不再次压栈 */
+  private restoringFromHistory = false;
+
   private resizeSide: ResizeSide | null = null;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
@@ -133,7 +146,12 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     super();
     this.restoreLayoutPrefs();
     this.route.params.pipe(takeUntilDestroyed()).subscribe(params => {
-      this.bpmnId.set(params['id']);
+      const id = String(params['id'] ?? '');
+      const prev = this.bpmnId();
+      this.bpmnId.set(id);
+      if (this.bpmnModeler && id && id !== prev) {
+        this.loadDefinition();
+      }
     });
     this.destroyRef.onDestroy(() => this.teardownNarrowMedia());
   }
@@ -165,6 +183,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     this.append.init(this.bpmnModeler);
     this.replace.init(this.bpmnModeler);
     this.commandStack = this.bpmnModeler.get('commandStack');
+    this.registerXmlAwareUndoRedo();
 
     this.loadDefinition();
     this.setupNarrowMedia();
@@ -236,9 +255,16 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   importBpmnXml(xml: string): Promise<void> {
     const trimmed = typeof xml === 'string' ? xml.trim() : '';
-    return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection()).then(() => {
-      this.syncLocalBpmnXml(trimmed);
-    });
+    return this.pushUndoSnapshot(false).then(() =>
+      importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection())
+        .then(() => {
+          this.syncLocalBpmnXml(trimmed);
+        })
+        .catch((err: unknown) => {
+          this.xmlUndoStack.pop();
+          return Promise.reject(err);
+        })
+    );
   }
 
   importBpmnXmlAndSave(xml: string): Promise<void> {
@@ -247,25 +273,170 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     if (!processId) {
       return Promise.reject(new Error('流程未加载，无法保存'));
     }
-    return importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection(), {
-      notifySuccess: false
-    })
-      .then(() => this.bpmnModeler.saveXML({ format: true }))
-      .then(
-        (bpmn: { xml?: string }) =>
-          new Promise<void>((resolve, reject) => {
-            this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
-              next: (data: BpmProcess) => {
-                void this.applySavedProcess(data, this.commandStack._stackIdx, bpmn.xml).then(() => {
-                  this.refreshRecentComponentUsages();
-                  this.notifyCanvasResized();
-                  resolve();
-                });
-              },
-              error: (err: unknown) => reject(err)
-            });
-          })
-      );
+    return this.pushUndoSnapshot(true).then(() =>
+      importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection(), {
+        notifySuccess: false
+      })
+        .catch((err: unknown) => {
+          this.xmlUndoStack.pop();
+          return Promise.reject(err);
+        })
+        .then(() => this.bpmnModeler.saveXML({ format: true }))
+        .then(
+          (bpmn: { xml?: string }) =>
+            new Promise<void>((resolve, reject) => {
+              this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
+                next: (data: BpmProcess) => {
+                  void this.applySavedProcess(data, this.commandStack._stackIdx, bpmn.xml).then(() => {
+                    this.refreshRecentComponentUsages();
+                    this.notifyCanvasResized();
+                    resolve();
+                  });
+                },
+                error: (err: unknown) => reject(err)
+              });
+            })
+        )
+    );
+  }
+
+  undo(): void {
+    void this.runUndo();
+  }
+
+  redo(): void {
+    void this.runRedo();
+  }
+
+  private registerXmlAwareUndoRedo(): void {
+    const editorActions = this.bpmnModeler.get('editorActions') as {
+      isRegistered: (action: string) => boolean;
+      unregister: (action: string) => void;
+      register: (action: string, listener: () => void) => void;
+    };
+    // diagram-js 禁止重复 register；先卸掉默认 undo/redo 再挂我们的实现（含 XML 整图历史）
+    for (const action of ['undo', 'redo'] as const) {
+      if (editorActions.isRegistered(action)) {
+        editorActions.unregister(action);
+      }
+    }
+    editorActions.register('undo', () => this.undo());
+    editorActions.register('redo', () => this.redo());
+    this.bpmnModeler.on('commandStack.executed', () => {
+      if (this.restoringFromHistory) {
+        return;
+      }
+      this.xmlRedoStack = [];
+    });
+  }
+
+  private clearXmlHistory(): void {
+    this.xmlUndoStack = [];
+    this.xmlRedoStack = [];
+  }
+
+  private async captureCurrentXml(): Promise<string> {
+    try {
+      const result = await this.bpmnModeler.saveXML({ format: false });
+      return (result.xml ?? '').trim();
+    } catch {
+      return (this.bpmProcess()?.bpmnXml ?? '').trim();
+    }
+  }
+
+  private async pushUndoSnapshot(savedToServer: boolean): Promise<void> {
+    if (this.restoringFromHistory) {
+      return;
+    }
+    const xml = await this.captureCurrentXml();
+    if (!xml) {
+      return;
+    }
+    this.xmlUndoStack.push({ xml, savedToServer });
+    if (this.xmlUndoStack.length > XmlHistoryMax) {
+      this.xmlUndoStack.splice(0, this.xmlUndoStack.length - XmlHistoryMax);
+    }
+    this.xmlRedoStack = [];
+  }
+
+  private async runUndo(): Promise<void> {
+    if (this.commandStack?.canUndo?.()) {
+      this.commandStack.undo();
+      return;
+    }
+    const entry = this.xmlUndoStack.pop();
+    if (!entry) {
+      return;
+    }
+    const currentXml = await this.captureCurrentXml();
+    if (currentXml) {
+      this.xmlRedoStack.push({ xml: currentXml, savedToServer: entry.savedToServer });
+      if (this.xmlRedoStack.length > XmlHistoryMax) {
+        this.xmlRedoStack.splice(0, this.xmlRedoStack.length - XmlHistoryMax);
+      }
+    }
+    await this.restoreXmlFromHistory(entry.xml, entry.savedToServer);
+  }
+
+  private async runRedo(): Promise<void> {
+    if (this.commandStack?.canRedo?.()) {
+      this.commandStack.redo();
+      return;
+    }
+    const entry = this.xmlRedoStack.pop();
+    if (!entry) {
+      return;
+    }
+    const currentXml = await this.captureCurrentXml();
+    if (currentXml) {
+      this.xmlUndoStack.push({ xml: currentXml, savedToServer: entry.savedToServer });
+      if (this.xmlUndoStack.length > XmlHistoryMax) {
+        this.xmlUndoStack.splice(0, this.xmlUndoStack.length - XmlHistoryMax);
+      }
+    }
+    await this.restoreXmlFromHistory(entry.xml, entry.savedToServer);
+  }
+
+  private async restoreXmlFromHistory(xml: string, saveToServer: boolean): Promise<void> {
+    this.restoringFromHistory = true;
+    try {
+      if (saveToServer) {
+        const processId = this.bpmProcess()?.id;
+        if (!processId) {
+          await importBpmnXmlToModeler(this.bpmnModeler, xml, this.message, () => this.clearSelection(), {
+            notifySuccess: false
+          });
+          this.syncLocalBpmnXml(xml);
+          return;
+        }
+        await importBpmnXmlToModeler(this.bpmnModeler, xml, this.message, () => this.clearSelection(), {
+          notifySuccess: false
+        });
+        const bpmn = await this.bpmnModeler.saveXML({ format: true });
+        await new Promise<void>((resolve, reject) => {
+          this.processDefinitionService.updateProcess(processId, { bpmnXml: bpmn.xml }).subscribe({
+            next: (data: BpmProcess) => {
+              void this.applySavedProcess(data, this.commandStack._stackIdx, bpmn.xml).then(() => {
+                this.refreshRecentComponentUsages();
+                this.notifyCanvasResized();
+                resolve();
+              });
+            },
+            error: (err: unknown) => reject(err)
+          });
+        });
+      } else {
+        await importBpmnXmlToModeler(this.bpmnModeler, xml, this.message, () => this.clearSelection(), {
+          notifySuccess: false
+        });
+        this.syncLocalBpmnXml(xml);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '恢复流程失败';
+      this.message.error(msg);
+    } finally {
+      this.restoringFromHistory = false;
+    }
   }
 
   private syncLocalBpmnXml(trimmed: string): void {
@@ -301,6 +472,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   }
 
   loadDefinition(): void {
+    this.clearXmlHistory();
     this.processLoading.set(true);
     this.processDefinitionService
       .getProcessById(this.bpmnId())

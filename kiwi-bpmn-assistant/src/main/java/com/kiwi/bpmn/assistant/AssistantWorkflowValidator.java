@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * BPMN 校验：已装 / 可装 / 未知三态，不依赖本轮 Catalog 菜单。
+ */
 @Component
 @RequiredArgsConstructor
 public class AssistantWorkflowValidator {
@@ -32,16 +35,23 @@ public class AssistantWorkflowValidator {
     public static final String CodeUnknownComponent = "UNKNOWN_COMPONENT";
     public static final String CodePluginNotInstalled = "PLUGIN_NOT_INSTALLED";
     public static final String CodeMissingRequiredParam = "MISSING_REQUIRED_PARAM";
+    /** @deprecated 保留码值兼容旧评测；新逻辑不再因「不在 Catalog」报错。 */
+    @Deprecated
     public static final String CodeComponentNotInCatalog = "COMPONENT_NOT_IN_CATALOG";
     public static final String CodeDanglingFlow = "DANGLING_FLOW";
     public static final String CodeNoStart = "NO_START_EVENT";
     public static final String CodeNoEnd = "NO_END_EVENT";
+    public static final String CodeComponentIdChanged = "COMPONENT_ID_CHANGED";
 
     private final AssistantXmlValidator xmlValidator;
     private final AssistantComponentLookup componentLookup;
     private final AssistantProperties assistantProperties;
     private final ObjectMapper objectMapper;
     private final AssistantRuleSet ruleSet;
+
+    public ValidationResult validate(String xml) {
+        return validate(xml, null);
+    }
 
     public ValidationResult validate(String xml, AssistantCatalog catalog) {
         List<AssistantValidationIssue> issues = new ArrayList<>();
@@ -70,6 +80,41 @@ public class AssistantWorkflowValidator {
         validateStructure(doc, issues);
         validateComponents(doc, catalog, issues);
         return result(issues, repairRoundIgnored());
+    }
+
+    /**
+     * modify 防误换：同一节点 id 的 componentId 被无故更换时记 ASK。
+     */
+    public void appendUnauthorizedComponentSwaps(
+            String baseXml,
+            String candidateXml,
+            boolean userAllowedReplace,
+            List<AssistantValidationIssue> issues) {
+        if (userAllowedReplace || StringUtils.isBlank(baseXml) || StringUtils.isBlank(candidateXml)) {
+            return;
+        }
+        Map<String, String> base = serviceTaskComponentIds(baseXml);
+        Map<String, String> candidate = serviceTaskComponentIds(candidateXml);
+        for (Map.Entry<String, String> entry : base.entrySet()) {
+            String nodeId = entry.getKey();
+            String baseCid = entry.getValue();
+            if (!candidate.containsKey(nodeId)) {
+                continue;
+            }
+            String nextCid = candidate.get(nodeId);
+            if (AssistantComponentIdAliases.sameComponent(baseCid, nextCid)) {
+                continue;
+            }
+            AssistantValidationIssue issue = AssistantValidationIssue.of(
+                    CodeComponentIdChanged,
+                    "节点 " + nodeId + " 的组件从 " + baseCid + " 被改为 " + nextCid
+                            + "。整理/规范流程时不得擅自更换业务组件；若确需替换请明确说明。",
+                    "ASK");
+            issue.setRuleId(AssistantRuleSet.RuleModifyPreserveComponentIds);
+            issue.setElementId(nodeId);
+            issue.setComponentId(nextCid);
+            issues.add(issue);
+        }
     }
 
     public String toDispatchCode(List<AssistantValidationIssue> issues, int repairRound) {
@@ -133,12 +178,15 @@ public class AssistantWorkflowValidator {
     }
 
     private void validateComponents(Document doc, AssistantCatalog catalog, List<AssistantValidationIssue> issues) {
-        Set<String> installedIds = catalogIds(catalog != null ? catalog.getInstalled() : null);
         Map<String, AssistantCatalog.CatalogComponent> installable = new LinkedHashMap<>();
         if (catalog != null && catalog.getInstallable() != null) {
             for (AssistantCatalog.CatalogComponent c : catalog.getInstallable()) {
                 if (c != null && StringUtils.isNotBlank(c.getId())) {
                     installable.put(c.getId(), c);
+                    String alt = AssistantComponentIdAliases.alternateId(c.getId());
+                    if (alt != null) {
+                        installable.putIfAbsent(alt, c);
+                    }
                 }
             }
         }
@@ -151,13 +199,21 @@ public class AssistantWorkflowValidator {
             if (StringUtils.isBlank(componentId)) {
                 continue;
             }
-            if (installedIds.contains(componentId)) {
-                if (componentLookup.exists(componentId)) {
-                    checkRequiredParams(element, componentId, issues);
-                }
+            if (componentLookup.exists(componentId)) {
+                checkRequiredParams(element, componentId, issues);
                 continue;
             }
-            // 未安装：优先走 INSTALL 提醒用户，而不是让 LLM 自行决定
+            var pluginHint = componentLookup.pluginMissingHint(componentId);
+            if (pluginHint.isPresent()) {
+                AssistantValidationIssue issue = AssistantValidationIssue.of(
+                        CodePluginNotInstalled,
+                        "组件未安装，可从市场/插件安装: " + componentId,
+                        "INSTALL");
+                setComponentContext(issue, element, componentId);
+                issue.setPluginHint(pluginHint.get());
+                issues.add(issue);
+                continue;
+            }
             AssistantCatalog.CatalogComponent avail = installable.get(componentId);
             if (avail != null) {
                 AssistantValidationIssue issue = AssistantValidationIssue.of(
@@ -165,34 +221,13 @@ public class AssistantWorkflowValidator {
                         "组件未安装，可从市场/插件安装: " + componentId,
                         "INSTALL");
                 setComponentContext(issue, element, componentId);
-                issue.setPluginHint(avail.getPluginHint());
+                issue.setPluginHint(StringUtils.defaultIfBlank(avail.getPluginHint(), componentId));
                 issues.add(issue);
-                continue;
-            }
-            var pluginHint = componentLookup.pluginMissingHint(componentId);
-            if (pluginHint.isPresent()) {
-                AssistantValidationIssue issue = AssistantValidationIssue.of(
-                        CodePluginNotInstalled,
-                        "插件组件未安装: " + componentId,
-                        "INSTALL");
-                setComponentContext(issue, element, componentId);
-                issue.setPluginHint(pluginHint.get());
-                issues.add(issue);
-                continue;
-            }
-            if (componentLookup.exists(componentId)) {
-                AssistantValidationIssue issue = addRuleIssue(
-                        issues,
-                        AssistantRuleSet.RuleComponentIdInCatalog,
-                        CodeComponentNotInCatalog,
-                        "组件不在本轮 Catalog: " + componentId,
-                        "ASK");
-                setComponentContext(issue, element, componentId);
                 continue;
             }
             AssistantValidationIssue issue = addRuleIssue(
                     issues,
-                    AssistantRuleSet.RuleComponentIdInCatalog,
+                    AssistantRuleSet.RuleComponentIdResolvable,
                     CodeUnknownComponent,
                     "未知 componentId: " + componentId,
                     "ASK");
@@ -223,17 +258,32 @@ public class AssistantWorkflowValidator {
         }
     }
 
-    private Set<String> catalogIds(List<AssistantCatalog.CatalogComponent> components) {
-        Set<String> ids = new HashSet<>();
-        if (components == null) {
-            return ids;
-        }
-        for (AssistantCatalog.CatalogComponent component : components) {
-            if (component != null && StringUtils.isNotBlank(component.getId())) {
-                ids.add(component.getId());
+    private Map<String, String> serviceTaskComponentIds(String xml) {
+        Map<String, String> map = new LinkedHashMap<>();
+        try {
+            DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
+            f.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            f.setNamespaceAware(true);
+            Document doc = f.newDocumentBuilder()
+                    .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            NodeList all = doc.getElementsByTagName("*");
+            for (int i = 0; i < all.getLength(); i++) {
+                if (!(all.item(i) instanceof Element el)) {
+                    continue;
+                }
+                if (!"serviceTask".equals(el.getLocalName())) {
+                    continue;
+                }
+                String id = el.getAttribute("id");
+                String cid = componentId(el);
+                if (StringUtils.isNotBlank(id) && StringUtils.isNotBlank(cid)) {
+                    map.put(id, cid);
+                }
             }
+        } catch (Exception ignored) {
+            // ignore parse errors here
         }
-        return ids;
+        return map;
     }
 
     private String componentId(Element element) {

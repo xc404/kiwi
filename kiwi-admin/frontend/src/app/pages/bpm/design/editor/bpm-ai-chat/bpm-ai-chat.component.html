@@ -12,7 +12,7 @@
       <section chat-context-card class="bpm-ai-authoring" aria-label="AI 写工作流">
         <header class="bpm-ai-authoring__head">
           <span class="bpm-ai-authoring__title">AI 写工作流</span>
-          <nz-tag [nzColor]="writeWorkflowStatus()?.active ? 'processing' : 'success'">{{ stageLabel() }}</nz-tag>
+          <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
         </header>
 
         @if (writeWorkflowStatus()?.assistantReply) {
@@ -54,24 +54,6 @@
             <button nz-button nzSize="small" nzType="primary" [disabled]="writeWorkflowBusy()" (click)="submitAskAnswer()">提交说明</button>
           </div>
         }
-
-        @if (!writeWorkflowStatus()?.active && writeWorkflowStatus()?.stage === 'done') {
-          <div class="bpm-ai-authoring__actions">
-            <button nz-button nzSize="small" (click)="dismissDonePanel()">关闭</button>
-          </div>
-        }
-
-        <button
-          class="bpm-ai-authoring__refresh"
-          type="button"
-          nz-button
-          nzSize="small"
-          nzType="link"
-          [disabled]="writeWorkflowBusy()"
-          (click)="refreshWriteWorkflowStatus()"
-        >
-          刷新状态
-        </button>
       </section>
     }
   </app-chat>

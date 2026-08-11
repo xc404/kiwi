@@ -2,7 +2,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     background-color: #f0f0f0;
     padding: 16px;
     border-bottom: 1px solid #f0f0f0;
+}
+
+.bpm-panel-header-titles {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.bpm-panel-header-titles h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.bpm-panel-header-icons {
+    flex-shrink: 0;
 }

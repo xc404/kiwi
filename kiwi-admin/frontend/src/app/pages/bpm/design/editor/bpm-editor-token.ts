@@ -20,6 +20,12 @@ export abstract class BpmEditorToken {
   /** AI：导入 BPMN 并保存到当前流程定义 */
   abstract importBpmnXmlAndSave(xml: string): Promise<void>;
 
+  /** 撤销：优先 commandStack，否则恢复最近一次整图 import 前快照 */
+  abstract undo(): void;
+
+  /** 重做：优先 commandStack，否则恢复整图 import redo 栈 */
+  abstract redo(): void;
+
   bpmnModeler!: BpmnModeler;
 
   getSelectedElementId(): string | null {
