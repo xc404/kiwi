@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 创建/修改 BPMN 时的规则集：软规则进 prompt，硬规则由校验器引用。
+ * Plan IR 生成/修复规则集：软规则进 prompt，硬规则由校验器引用。
  */
 @Component
 public class AssistantRuleSet {
@@ -24,10 +24,13 @@ public class AssistantRuleSet {
     public static final String RuleComponentIdInCatalog = "component_id_in_catalog";
     public static final String RuleRequiredParamsPresent = "required_params_present";
     public static final String RuleHasStartAndEnd = "has_start_and_end";
+    public static final String RulePlanIrStructure = "plan_ir_structure";
     public static final String RuleSequenceFlowEndpoints = "sequence_flow_endpoints_valid";
     public static final String RuleModifyPreserveUnrelated = "modify_preserve_unrelated";
     public static final String RuleOutputJsonOnly = "output_json_only";
     public static final String RuleSummaryForUsers = "summary_for_users";
+
+    private static final String RulesClasspath = "assistant/plan-ir-rules.json";
 
     private final ObjectMapper objectMapper;
     private List<AssistantRule> rules = List.of();
@@ -109,7 +112,7 @@ public class AssistantRuleSet {
 
     private List<AssistantRule> loadOrBuiltin() {
         try {
-            ClassPathResource res = new ClassPathResource("bpm/ai/authoring-rules.json");
+            ClassPathResource res = new ClassPathResource(RulesClasspath);
             if (res.exists()) {
                 try (InputStream in = res.getInputStream()) {
                     List<AssistantRule> loaded = objectMapper.readValue(in, new TypeReference<>() {
@@ -131,23 +134,28 @@ public class AssistantRuleSet {
                 "只输出 JSON，不要 Markdown："
                         + "{\"summary\":\"给用户看的中文说明（2-6句）\","
                         + "\"planIrJson\":{\"processId\":\"...\",\"nodes\":[],\"flows\":[]}}。"
-                        + "禁止输出 candidateXml；服务端仅编译 planIrJson。"));
+                        + "禁止输出 candidateXml 或任何 BPMN XML；服务端仅编译 planIrJson。"));
         list.add(soft(RuleComponentIdInCatalog, "both",
-                "componentId 只能使用 Catalog.installed 中的 id；若必须用 installable，在 plan 中标记 requiresInstall=true。"));
-        list.add(soft(RuleHasStartAndEnd, "both",
-                "Plan IR 必须含 startEvent、endEvent 与完整 flows；至少保留或包含合理业务节点。"));
+                "serviceTask.componentId 优先使用 Catalog.installed 中的 id；"
+                        + "确需尚未安装的组件时可用 Catalog.installable 的 id"
+                        + "（不要虚构 id；是否安装由校验阶段决定，Plan IR 无需额外标记）。"));
+        list.add(soft(RulePlanIrStructure, "both",
+                "Plan IR 必须含 startEvent、endEvent、完整 flows，以及合理业务节点；"
+                        + "serviceTask 参数写在节点 parameters 对象（扁平 key，禁止点号），"
+                        + "不要写 camunda:inputParameter / kiwi:input 等 XML 片段。"));
         list.add(soft(RuleSummaryForUsers, "both",
                 "summary 面向业务用户，不要提内部变量名或实例 id。"));
         list.add(soft(RuleModifyPreserveUnrelated, "modify",
-                "在 basePlanIr 上按用户要求修改，保留无关节点/连线/参数，不要无故整图重写；勿擅自更改 process id。输出完整修改后的 planIrJson。"));
+                "在 basePlanIr 上按用户要求修改，保留无关节点/连线/parameters，不要无故整图重写；"
+                        + "勿擅自更改 processId。输出完整修改后的 planIrJson。"));
         list.add(hard(RuleHasStartAndEnd, "both", "REPAIR",
-                "流程必须包含 startEvent 与 endEvent"));
+                "Plan IR / 编译结果必须包含 startEvent 与 endEvent"));
         list.add(hard(RuleSequenceFlowEndpoints, "both", "REPAIR",
-                "sequenceFlow 的 sourceRef/targetRef 必须指向图中存在的节点"));
+                "flows 的 sourceRef/targetRef 必须指向 nodes 中存在的节点 id"));
         list.add(hard(RuleComponentIdInCatalog, "both", "REPAIR",
                 "componentId 必须出现在本轮 Catalog（installed 或 installable）"));
         list.add(hard(RuleRequiredParamsPresent, "both", "REPAIR",
-                "已解析组件的必填参数必须出现在该节点的 inputParameter 中"));
+                "已解析组件的必填参数必须出现在该节点的 parameters 中"));
         return list;
     }
 

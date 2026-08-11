@@ -22,6 +22,9 @@ class AssistantRuleSetTest {
         String prompt = ruleSet.renderSoftPrompt(AssistantRuleSet.ModeCreate);
 
         assertTrue(prompt.contains(AssistantRuleSet.RuleComponentIdInCatalog));
+        assertTrue(prompt.contains(AssistantRuleSet.RulePlanIrStructure));
+        assertTrue(prompt.contains("parameters"));
+        assertFalse(prompt.contains("requiresInstall"));
         assertFalse(prompt.contains(AssistantRuleSet.RuleModifyPreserveUnrelated));
     }
 

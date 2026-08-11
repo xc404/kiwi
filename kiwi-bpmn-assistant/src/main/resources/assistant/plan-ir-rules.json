@@ -1,0 +1,69 @@
+[
+  {
+    "id": "output_json_only",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "只输出 JSON，不要 Markdown：{\"summary\":\"给用户看的中文说明（2-6句）\",\"planIrJson\":{\"processId\":\"...\",\"nodes\":[],\"flows\":[]}}。禁止输出 candidateXml 或任何 BPMN XML；服务端仅编译 planIrJson。"
+  },
+  {
+    "id": "component_id_in_catalog",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "serviceTask.componentId 优先使用 Catalog.installed 中的 id；确需尚未安装的组件时可用 Catalog.installable 的 id（不要虚构 id；是否安装由校验阶段决定，Plan IR 无需额外标记）。"
+  },
+  {
+    "id": "plan_ir_structure",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "Plan IR 必须含 startEvent、endEvent、完整 flows，以及合理业务节点；serviceTask 参数写在节点 parameters 对象（扁平 key，禁止点号），不要写 camunda:inputParameter / kiwi:input 等 XML 片段。"
+  },
+  {
+    "id": "summary_for_users",
+    "kind": "soft",
+    "mode": "both",
+    "enabled": true,
+    "promptText": "summary 面向业务用户，不要提内部变量名或实例 id。"
+  },
+  {
+    "id": "modify_preserve_unrelated",
+    "kind": "soft",
+    "mode": "modify",
+    "enabled": true,
+    "promptText": "在 basePlanIr 上按用户要求修改，保留无关节点/连线/parameters，不要无故整图重写；勿擅自更改 processId。输出完整修改后的 planIrJson。"
+  },
+  {
+    "id": "has_start_and_end",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "Plan IR / 编译结果必须包含 startEvent 与 endEvent"
+  },
+  {
+    "id": "sequence_flow_endpoints_valid",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "flows 的 sourceRef/targetRef 必须指向 nodes 中存在的节点 id"
+  },
+  {
+    "id": "component_id_in_catalog",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "componentId 必须出现在本轮 Catalog（installed 或 installable）"
+  },
+  {
+    "id": "required_params_present",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "已解析组件的必填参数必须出现在该节点的 parameters 中"
+  }
+]

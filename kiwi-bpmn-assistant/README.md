@@ -9,7 +9,7 @@
 | **Plan IR** | 窄 JSON 中间表示：`processId` / `nodes` / `flows`，不含原始 BPMN XML 字符串 |
 | **Compiler** | `AssistantPlanCompiler` 将 IR 编译为带 `xmlns:kiwi="http://kiwi.com/bpmn"` 的 BPMN 2.0 XML |
 | **BPMN→Plan** | `AssistantBpmnToPlan` 在 modify 模式下把上一版 XML 解析回 IR，供 prompt 与增量修改 |
-| **Rules** | 软规则进 LLM prompt；硬规则由 `AssistantWorkflowValidator` 强制执行 |
+| **Rules** | `assistant/plan-ir-rules.json`：软规则进 LLM prompt；硬规则由校验器引用（面向 Plan IR，非手写 XML） |
 | **SPI** | `AssistantComponentLookup` / `AssistantBpmnLookup` / `AssistantXmlValidator` 由宿主（如 kiwi-admin）实现 |
 
 **约定：永远不直接采用 LLM 输出的 `candidateXml`；只编译 `planIrJson`。**
