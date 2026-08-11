@@ -12,13 +12,13 @@
   <bpmn:process id="kiwi_ai_workflow_authoring" name="AI Workflow Authoring" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="开始"/>
     <bpmn:sequenceFlow id="Flow_start" sourceRef="StartEvent_1" targetRef="Task_Extract"/>
-    <bpmn:serviceTask id="Task_Extract" name="抽词" camunda:delegateExpression="${aiAuthoringExtractDelegate}"/>
+    <bpmn:serviceTask id="Task_Extract" name="抽词" camunda:delegateExpression="${bpmnAssistantExtractDelegate}"/>
     <bpmn:sequenceFlow id="Flow_extract" sourceRef="Task_Extract" targetRef="Task_Catalog"/>
-    <bpmn:serviceTask id="Task_Catalog" name="Catalog" camunda:delegateExpression="${aiAuthoringCatalogDelegate}"/>
+    <bpmn:serviceTask id="Task_Catalog" name="Catalog" camunda:delegateExpression="${bpmnAssistantCatalogDelegate}"/>
     <bpmn:sequenceFlow id="Flow_catalog" sourceRef="Task_Catalog" targetRef="Task_Generate"/>
-    <bpmn:serviceTask id="Task_Generate" name="生成" camunda:delegateExpression="${aiAuthoringGenerateDelegate}"/>
+    <bpmn:serviceTask id="Task_Generate" name="生成" camunda:delegateExpression="${bpmnAssistantGenerateDelegate}"/>
     <bpmn:sequenceFlow id="Flow_generate" sourceRef="Task_Generate" targetRef="Task_Validate"/>
-    <bpmn:serviceTask id="Task_Validate" name="校验" camunda:delegateExpression="${aiAuthoringValidateDelegate}"/>
+    <bpmn:serviceTask id="Task_Validate" name="校验" camunda:delegateExpression="${bpmnAssistantValidateDelegate}"/>
     <bpmn:sequenceFlow id="Flow_validate" sourceRef="Task_Validate" targetRef="Gateway_Dispatch"/>
     <bpmn:exclusiveGateway id="Gateway_Dispatch" name="分派" default="Flow_ask"/>
     <bpmn:sequenceFlow id="Flow_pass" name="PASS" sourceRef="Gateway_Dispatch" targetRef="Task_MarkPreview">
@@ -32,9 +32,9 @@
     </bpmn:sequenceFlow>
     <!-- default 流出边不能再带 conditionExpression -->
     <bpmn:sequenceFlow id="Flow_ask" name="ASK" sourceRef="Gateway_Dispatch" targetRef="UserTask_Ask"/>
-    <bpmn:serviceTask id="Task_Repair" name="修复" camunda:delegateExpression="${aiAuthoringRepairDelegate}"/>
+    <bpmn:serviceTask id="Task_Repair" name="修复" camunda:delegateExpression="${bpmnAssistantRepairDelegate}"/>
     <bpmn:sequenceFlow id="Flow_repair_to_validate" sourceRef="Task_Repair" targetRef="Task_Validate"/>
-    <bpmn:serviceTask id="Task_MarkPreview" name="标记预览" camunda:delegateExpression="${aiAuthoringMarkPreviewDelegate}"/>
+    <bpmn:serviceTask id="Task_MarkPreview" name="标记预览" camunda:delegateExpression="${bpmnAssistantMarkPreviewDelegate}"/>
     <bpmn:sequenceFlow id="Flow_mark_preview" sourceRef="Task_MarkPreview" targetRef="UserTask_Preview"/>
     <bpmn:userTask id="UserTask_Preview" name="预览确认" camunda:assignee="${initiatorUserId}"/>
     <bpmn:sequenceFlow id="Flow_preview_done" sourceRef="UserTask_Preview" targetRef="Gateway_Preview"/>
@@ -43,7 +43,7 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${previewConfirmed == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_preview_no" name="拒绝" sourceRef="Gateway_Preview" targetRef="Task_Generate"/>
-    <bpmn:serviceTask id="Task_Save" name="保存" camunda:delegateExpression="${aiAuthoringSaveDelegate}"/>
+    <bpmn:serviceTask id="Task_Save" name="保存" camunda:delegateExpression="${bpmnAssistantSaveDelegate}"/>
     <bpmn:sequenceFlow id="Flow_save" sourceRef="Task_Save" targetRef="EndEvent_1"/>
     <bpmn:userTask id="UserTask_Install" name="确认安装插件" camunda:assignee="${initiatorUserId}"/>
     <bpmn:sequenceFlow id="Flow_install_done" sourceRef="UserTask_Install" targetRef="Gateway_Install"/>
@@ -51,7 +51,7 @@
     <bpmn:sequenceFlow id="Flow_install_yes" name="接受" sourceRef="Gateway_Install" targetRef="Task_Install">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${installAccepted == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Task_Install" name="安装插件" camunda:delegateExpression="${aiAuthoringInstallDelegate}"/>
+    <bpmn:serviceTask id="Task_Install" name="安装插件" camunda:delegateExpression="${bpmnAssistantInstallDelegate}"/>
     <bpmn:sequenceFlow id="Flow_install_execute" sourceRef="Task_Install" targetRef="Task_Validate"/>
     <bpmn:sequenceFlow id="Flow_install_no" name="拒绝" sourceRef="Gateway_Install" targetRef="Task_Generate"/>
     <bpmn:userTask id="UserTask_Ask" name="追问用户" camunda:assignee="${initiatorUserId}"/>

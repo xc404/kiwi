@@ -10,6 +10,7 @@ kiwi-bpmn/
   kiwi-bpmn-core/         # @ComponentDescription / @ComponentParameter annotations, variable mapping, job retry
   kiwi-bpmn-component/    # Official delegates (Shell, HTTP, MongoDB, JDBC, …) as Maven dependency; optional integrations as plugin JARs
   kiwi-bpmn-external-task/ # External Task abstraction
+kiwi-bpmn-assistant/      # BPMN assistant (Plan IR → deterministic BPMN compile)
 kiwi-admin/
   backend/                # com.kiwi.framework.* (infra) + com.kiwi.project.{system,bpm,ai,tools,monitor,notification}
   frontend/               # src/app/{core,layout,pages,shared,config,utils}; BPMN editor at pages/bpm

@@ -1,7 +1,8 @@
 package com.kiwi.project.ai;
 
-import com.kiwi.project.ai.authoring.AiAuthoringProcessService;
-import com.kiwi.project.ai.authoring.AiAuthoringVariables;
+import com.kiwi.bpmn.assistant.AssistantProcessService;
+import com.kiwi.bpmn.assistant.AssistantVariables;
+import com.kiwi.framework.session.SessionService;
 import com.kiwi.project.ai.mcp.KiwiAdminAiMcpConfiguration;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.client.ChatClient;
@@ -56,17 +57,20 @@ public class AiAssistantService {
     private final ObjectProvider<ChatClient> kiwiAssistantChatClientProvider;
     private final AiChatProperties properties;
     private final AssistantClientActionContext assistantClientActionContext;
-    private final ObjectProvider<AiAuthoringProcessService> authoringProcessServiceProvider;
+    private final ObjectProvider<AssistantProcessService> authoringProcessServiceProvider;
+    private final SessionService sessionService;
 
     public AiAssistantService(
             @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
             AiChatProperties properties,
             AssistantClientActionContext assistantClientActionContext,
-            ObjectProvider<AiAuthoringProcessService> authoringProcessServiceProvider) {
+            ObjectProvider<AssistantProcessService> authoringProcessServiceProvider,
+            SessionService sessionService) {
         this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
         this.assistantClientActionContext = assistantClientActionContext;
         this.authoringProcessServiceProvider = authoringProcessServiceProvider;
+        this.sessionService = sessionService;
     }
 
     public AiAssistantResponse run(List<AiChatMessage> messages) {
@@ -141,9 +145,9 @@ public class AiAssistantService {
             log.debug("authoring skip: enabled={} bpmDesignerSession={}", flag, bpmDesignerSession);
             return null;
         }
-        AiAuthoringProcessService authoring = authoringProcessServiceProvider.getIfAvailable();
+        AssistantProcessService authoring = authoringProcessServiceProvider.getIfAvailable();
         if (authoring == null || !authoring.isEnabled()) {
-            log.warn("authoring skip: AiAuthoringProcessService unavailable or disabled (beanNull={})",
+            log.warn("authoring skip: AssistantProcessService unavailable or disabled (beanNull={})",
                     authoring == null);
             return null;
         }
@@ -164,8 +168,11 @@ public class AiAssistantService {
                 processId, selected, lastUser.length(),
                 baseXml == null ? 0 : baseXml.length(), autoSave);
         try {
-            AiAuthoringProcessService.StartResult started =
-                    authoring.start(lastUser, processId, selected, baseXml);
+            String initiatorUserId = sessionService.getCurrentUser() != null
+                    ? sessionService.getCurrentUser().getId()
+                    : null;
+            AssistantProcessService.StartResult started =
+                    authoring.start(lastUser, processId, selected, baseXml, initiatorUserId);
             List<ClientAction> canvasActions = buildAuthoringCanvasActions(started, autoSave);
             if (autoSave) {
                 started = autoCompletePreviewSave(authoring, started);
@@ -195,7 +202,7 @@ public class AiAssistantService {
     }
 
     private static String buildAuthoringUserReply(
-            AiAuthoringProcessService.StartResult started, boolean autoSave) {
+            AssistantProcessService.StartResult started, boolean autoSave) {
         StringBuilder content = new StringBuilder();
         if (StringUtils.isNotBlank(started.getAssistantReply())) {
             content.append(started.getAssistantReply().trim());
@@ -210,13 +217,13 @@ public class AiAssistantService {
                 content.append("\n\n已将修改导入画布预览（尚未保存）。");
             }
         }
-        if (AiAuthoringVariables.StageAwaitPreview.equals(stage) && !autoSave) {
+        if (AssistantVariables.StageAwaitPreview.equals(stage) && !autoSave) {
             content.append("请在右上角「AI 写工作流」面板确认保存或拒绝。");
-        } else if (AiAuthoringVariables.StageAwaitAsk.equals(stage)) {
+        } else if (AssistantVariables.StageAwaitAsk.equals(stage)) {
             content.append("\n\n");
             content.append(StringUtils.defaultIfBlank(started.getAskMessage(), "还需要你补充一些信息。"));
             content.append("\n请在右上角面板填写说明后提交。");
-        } else if (AiAuthoringVariables.StageAwaitInstall.equals(stage)) {
+        } else if (AssistantVariables.StageAwaitInstall.equals(stage)) {
             content.append("\n\n需要安装插件后才能继续。");
             if (StringUtils.isNotBlank(started.getPluginHintJson())) {
                 content.append("\n提示：").append(started.getPluginHintJson());
@@ -229,7 +236,7 @@ public class AiAssistantService {
     }
 
     private static List<ClientAction> buildAuthoringCanvasActions(
-            AiAuthoringProcessService.StartResult started, boolean autoSave) {
+            AssistantProcessService.StartResult started, boolean autoSave) {
         String xml = started.getCandidateXml();
         if (StringUtils.isBlank(xml)) {
             return List.of();
@@ -240,9 +247,9 @@ public class AiAssistantService {
     /**
      * 自动保存开启时：完成预览 User Task，触发 SaveDelegate 落库，避免面板一直等待确认。
      */
-    private AiAuthoringProcessService.StartResult autoCompletePreviewSave(
-            AiAuthoringProcessService authoring, AiAuthoringProcessService.StartResult started) {
-        if (!AiAuthoringVariables.StageAwaitPreview.equals(started.getStage())
+    private AssistantProcessService.StartResult autoCompletePreviewSave(
+            AssistantProcessService authoring, AssistantProcessService.StartResult started) {
+        if (!AssistantVariables.StageAwaitPreview.equals(started.getStage())
                 || started.getTasks() == null
                 || started.getTasks().isEmpty()) {
             return started;
@@ -252,9 +259,9 @@ public class AiAssistantService {
                 .findFirst()
                 .map(t -> {
                     try {
-                        AiAuthoringProcessService.StatusResult after = authoring.completeTask(
-                                t.getId(), Map.of(AiAuthoringVariables.PreviewConfirmed, true));
-                        AiAuthoringProcessService.StartResult merged = new AiAuthoringProcessService.StartResult();
+                        AssistantProcessService.StatusResult after = authoring.completeTask(
+                                t.getId(), Map.of(AssistantVariables.PreviewConfirmed, true));
+                        AssistantProcessService.StartResult merged = new AssistantProcessService.StartResult();
                         merged.setProcessInstanceId(after.getProcessInstanceId());
                         merged.setBusinessKey(after.getBusinessKey());
                         merged.setTargetProcessId(after.getTargetProcessId());

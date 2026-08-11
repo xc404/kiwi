@@ -1,0 +1,43 @@
+# kiwi-bpmn-assistant
+
+开源风格的 BPMN 助手库：LLM 产出 **JSON Plan IR**，由确定性编译器生成可导入的 BPMN XML（思路对齐 [jtlicardo/bpmn-assistant](https://github.com/jtlicardo/bpmn-assistant)）。
+
+## 架构要点
+
+| 层 | 职责 |
+|----|------|
+| **Plan IR** | 窄 JSON 中间表示：`processId` / `nodes` / `flows`，不含原始 BPMN XML 字符串 |
+| **Compiler** | `AssistantPlanCompiler` 将 IR 编译为带 `xmlns:kiwi="http://kiwi.com/bpmn"` 的 BPMN 2.0 XML |
+| **BPMN→Plan** | `AssistantBpmnToPlan` 在 modify 模式下把上一版 XML 解析回 IR，供 prompt 与增量修改 |
+| **Rules** | 软规则进 LLM prompt；硬规则由 `AssistantWorkflowValidator` 强制执行 |
+| **SPI** | `AssistantComponentLookup` / `AssistantBpmnLookup` / `AssistantXmlValidator` 由宿主（如 kiwi-admin）实现 |
+
+**约定：永远不直接采用 LLM 输出的 `candidateXml`；只编译 `planIrJson`。**
+
+## 配置
+
+```yaml
+kiwi:
+  ai:
+    workflow-authoring:
+      enabled: false
+      process-definition-key: kiwi_ai_workflow_authoring
+      max-repair-rounds: 3
+      catalog-installed-top-n: 40
+      catalog-template-top-n: 8
+      catalog-installable-top-n: 15
+```
+
+## 包结构
+
+- `com.kiwi.bpmn.assistant` — 核心服务、IR、规则、校验、ProcessService
+- `com.kiwi.bpmn.assistant.spi` — 宿主扩展点
+
+## 留在 kiwi-admin 的内容
+
+元流程编排属于应用层，**不在本模块**：
+
+- `bpm/ai/kiwi_ai_workflow_authoring.bpmn`
+- 全部 `JavaDelegate`（Extract / Catalog / Generate / Repair / Validate / MarkPreview / Install / Save）
+- `AssistantProcessDeployer`（从 admin classpath 部署上述 BPMN）
+- `BpmnAssistantCtl`、Catalog 组装与 SPI 适配器
