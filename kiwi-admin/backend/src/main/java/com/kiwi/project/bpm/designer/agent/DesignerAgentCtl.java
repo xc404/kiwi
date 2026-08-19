@@ -51,7 +51,7 @@ public class DesignerAgentCtl extends BaseCtl {
         try {
             emitter.send(SseEmitter.event()
                     .name("run_started")
-                    .data(objectMapper.writeValueAsString(sessionService.statusByRunId(run.getRunId()))));
+                    .data(objectMapper.writeValueAsString(sessionService.statusOf(run))));
         } catch (IOException e) {
             emitter.completeWithError(e);
         }
@@ -82,7 +82,7 @@ public class DesignerAgentCtl extends BaseCtl {
         try {
             emitter.send(SseEmitter.event()
                     .name("run_resumed")
-                    .data(objectMapper.writeValueAsString(sessionService.statusByRunId(run.getRunId()))));
+                    .data(objectMapper.writeValueAsString(sessionService.statusOf(run))));
         } catch (IOException e) {
             emitter.completeWithError(e);
         }

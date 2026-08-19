@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "minPassRate": 1.0,
+  "cases": {
+    "file-write-greenfield": {
+      "minScore": 6
+    }
+  }
+}

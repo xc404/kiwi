@@ -12,6 +12,7 @@ public class DesignerAgentRunStatus {
     private boolean active;
     private String stage;
     private String editPlanJson;
+    private String planDisplayJson;
     private String candidateXml;
     private String assistantReply;
     private String askMessage;

@@ -12,6 +12,7 @@ export interface DesignerAgentRunStatus {
   active: boolean;
   stage?: string;
   editPlanJson?: string;
+  planDisplayJson?: string;
   candidateXml?: string;
   assistantReply?: string;
   askMessage?: string;
@@ -29,6 +30,7 @@ export interface AgentStreamEvent {
   detail?: string;
   delta?: string;
   editPlanJson?: string;
+  planDisplayJson?: string;
   summary?: string;
   planSkipped?: boolean;
   candidateXml?: string;

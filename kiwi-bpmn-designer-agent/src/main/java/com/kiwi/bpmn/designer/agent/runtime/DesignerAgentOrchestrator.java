@@ -8,6 +8,8 @@ import com.kiwi.bpmn.designer.agent.apply.PlanSkipEvaluator;
 import com.kiwi.bpmn.designer.agent.model.AgentRunStage;
 import com.kiwi.bpmn.designer.agent.model.AgentStreamEvent;
 import com.kiwi.bpmn.designer.agent.model.EditPlan;
+import com.kiwi.bpmn.designer.agent.present.EditPlanPresenter;
+import com.kiwi.bpmn.designer.agent.present.PlanDisplayView;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentPlanGenerator.GenerateResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class DesignerAgentOrchestrator {
     private final AssistantWorkflowValidator workflowValidator;
     private final ObjectMapper objectMapper;
     private final DesignerAgentPlanGenerator planGenerator;
+    private final EditPlanPresenter editPlanPresenter;
 
     public void runTurn(DesignerAgentRun run) {
         try {
@@ -57,7 +60,7 @@ public class DesignerAgentOrchestrator {
             }
             EditPlan plan = gen.editPlan();
             if (plan == null) {
-                fail(run, "未能生成 EditPlan");
+                fail(run, StringUtils.defaultIfBlank(gen.summary(), "未能生成 EditPlan"));
                 return;
             }
             run.setEditPlanJson(objectMapper.writeValueAsString(plan));
@@ -65,10 +68,13 @@ public class DesignerAgentOrchestrator {
             boolean skip = planSkipEvaluator.shouldSkipPlan(plan, run.getUserScenario());
             run.setPlanSkipped(skip);
             if (!skip) {
+                PlanDisplayView display = editPlanPresenter.present(plan, run.getBaseBpmnXml(), gen.summary());
+                run.setPlanDisplayJson(objectMapper.writeValueAsString(display));
                 run.setStage(AgentRunStage.AwaitPlan);
                 AgentStreamEvent planEvent = AgentStreamEvent.of("plan_ready");
                 planEvent.setEditPlanJson(run.getEditPlanJson());
-                planEvent.setSummary(plan.getSummary());
+                planEvent.setPlanDisplayJson(run.getPlanDisplayJson());
+                planEvent.setSummary(display.getSummary());
                 planEvent.setPlanSkipped(false);
                 planEvent.setStage(AgentRunStage.AwaitPlan);
                 run.emit(planEvent);

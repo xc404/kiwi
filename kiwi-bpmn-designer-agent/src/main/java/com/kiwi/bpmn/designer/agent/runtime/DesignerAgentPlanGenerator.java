@@ -70,12 +70,39 @@ public class DesignerAgentPlanGenerator {
             if (StringUtils.isBlank(raw)) {
                 return GenerateResult.empty("模型未返回内容");
             }
-            return parseResponse(raw);
+            try {
+                return parseResponse(raw);
+            } catch (Exception first) {
+                log.warn("EditPlan parse failed (first pass): {}", first.getMessage());
+                return retryJsonOnly(client, prompt, first.getMessage());
+            }
         } catch (Exception e) {
             log.warn("EditPlan generate failed: {}", e.getMessage());
             return GenerateResult.empty(e.getMessage());
         } finally {
             DesignerAgentToolTraceContext.clear();
+        }
+    }
+
+    private GenerateResult retryJsonOnly(ChatClient client, String originalPrompt, String parseError) {
+        try {
+            String retryRaw = client.prompt()
+                    .user("""
+                            上一次回复无法解析为 JSON（%s）。
+                            请仅输出一个 JSON 对象（EditPlan schema），不要 markdown 代码块、不要任何解释文字。
+                            原任务:
+                            %s
+                            """.formatted(parseError, originalPrompt))
+                    .options(ToolCallingChatOptions.builder())
+                    .call()
+                    .content();
+            if (StringUtils.isBlank(retryRaw)) {
+                return GenerateResult.empty("模型未返回可解析的 EditPlan JSON");
+            }
+            return parseResponse(retryRaw);
+        } catch (Exception second) {
+            log.warn("EditPlan generate failed (retry): {}", second.getMessage());
+            return GenerateResult.empty("无法解析 EditPlan：" + second.getMessage());
         }
     }
 
@@ -103,7 +130,7 @@ public class DesignerAgentPlanGenerator {
     }
 
     private GenerateResult parseResponse(String raw) throws Exception {
-        String json = stripFence(raw);
+        String json = extractJsonPayload(raw);
         JsonNode node = objectMapper.readTree(json);
         String summary = textOr(node, "summary", null);
         String thinking = textOr(node, "thinking", null);
@@ -128,8 +155,8 @@ public class DesignerAgentPlanGenerator {
                 你是 Kiwi BPMN 设计器 Agent。根据用户意图产出 EditPlan（JSON），禁止直接输出 BPMN XML。
                 必须使用 MCP 工具发现 componentId（bpmComp_aiPage 等），禁止臆造。
                 EditPlan schema:
-                {"summary":"给用户看的计划摘要","thinking":"简短推理（可选）",
-                 "editPlan":{"processId":"可空","summary":"...",
+                {"summary":"给用户看的计划摘要（2-6句中文，面向业务用户，禁止 nodeId/componentId 等内部标识）","thinking":"简短推理（可选）",
+                 "editPlan":{"processId":"可空","summary":"与顶层 summary 一致的用户可读说明",
                   "operations":[
                     {"op":"addNode","node":{"id":"...","type":"serviceTask","name":"...","componentId":"...","parameters":{}}},
                     {"op":"updateNode","nodeId":"...","patch":{"parameters":{"key":"value"}}},
@@ -152,6 +179,46 @@ public class DesignerAgentPlanGenerator {
                 truncate(baseBpmnXml, 48000),
                 nullToEmpty(issuesJson),
                 nullToEmpty(userAnswer));
+    }
+
+    static String extractJsonPayload(String raw) {
+        String t = stripFence(raw);
+        if (t.startsWith("{") || t.startsWith("[")) {
+            return t;
+        }
+        int start = t.indexOf('{');
+        if (start < 0) {
+            return t;
+        }
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = start; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return t.substring(start, i + 1);
+                }
+            }
+        }
+        return t.substring(start);
     }
 
     private static String stripFence(String raw) {

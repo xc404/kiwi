@@ -74,6 +74,56 @@
   border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }
 
+.bpm-designer-agent__card-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.bpm-designer-agent__plan-summary {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bpm-designer-agent__plan-steps {
+  margin: 0 0 12px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.bpm-designer-agent__plan-step {
+  margin-bottom: 10px;
+  padding: 8px;
+  background: var(--ant-color-fill-quaternary, #fafafa);
+  border-radius: 6px;
+}
+
+.bpm-designer-agent__plan-step-head {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-weight: 500;
+}
+
+.bpm-designer-agent__plan-step-detail {
+  margin: 4px 0 0 24px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary, #666);
+}
+
+.bpm-designer-agent__plan-empty {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary, #666);
+}
+
+.bpm-designer-agent__plan-tech {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary, #666);
+}
+
 .bpm-designer-agent__plan {
   max-height: 160px;
   overflow: auto;

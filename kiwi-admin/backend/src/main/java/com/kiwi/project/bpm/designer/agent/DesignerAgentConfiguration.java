@@ -22,6 +22,8 @@ public class DesignerAgentConfiguration {
             你的输出必须是 EditPlan JSON（见用户 prompt），禁止直接输出 BPMN XML。
             禁止调用 assistant_designer_* 工具。
             componentId 必须来自 bpmComp_aiPage 等工具查询结果，禁止臆造。
+            summary 与 editPlan.summary 必须面向业务用户：2–6 句中文，说明要做什么、影响范围；
+            禁止出现内部 nodeId、componentId、流程变量名等技术标识。
             信息不足时，在 summary 中说明需要用户补充的内容，operations 可为空数组。
             """;
 

@@ -8,6 +8,9 @@ import {
   BpmDesignerAgentService,
   DesignerAgentRunStatus
 } from './bpm-designer-agent.service';
+import { PlanDisplayView, resolvePlanDisplay, stepKindIcon } from './edit-plan-presenter';
+
+import { ComponentProvider } from '../../flow-elements/component-provider';
 
 import { BpmEditorToken } from '../editor/bpm-editor-token';
 
@@ -48,6 +51,7 @@ interface ChatMsg {
 export class BpmDesignerAgentComponent {
   private readonly editor = inject(BpmEditorToken);
   private readonly agentApi = inject(BpmDesignerAgentService);
+  private readonly componentProvider = inject(ComponentProvider);
   private readonly nzMessage = inject(NzMessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -57,7 +61,9 @@ export class BpmDesignerAgentComponent {
   readonly askText = signal('');
   readonly status = signal<DesignerAgentRunStatus | null>(null);
   readonly messages = signal<ChatMsg[]>([]);
-  readonly planPreview = signal('');
+  readonly planDisplay = signal<PlanDisplayView | null>(null);
+  readonly planTechnicalJson = signal('');
+  readonly stepKindIcon = stepKindIcon;
 
   private streamAbort: AbortController | null = null;
   private assistantIdx = -1;
@@ -86,7 +92,10 @@ export class BpmDesignerAgentComponent {
       this.agentApi
         .statusByTarget(id)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(s => this.status.set(s));
+        .subscribe(s => {
+          this.status.set(s);
+          this.syncPlanDisplay(s);
+        });
     });
   }
 
@@ -221,13 +230,19 @@ export class BpmDesignerAgentComponent {
       return;
     }
     if (type === 'plan_ready') {
-      this.planPreview.set(event.editPlanJson ?? '');
+      this.syncPlanDisplayFromEvent(event);
       this.status.update(s => ({
         ...(s ?? { active: true }),
         stage: 'await_plan',
         editPlanJson: event.editPlanJson,
+        planDisplayJson: event.planDisplayJson,
+        assistantReply: event.summary ?? s?.assistantReply,
         active: true
       }));
+      if (event.summary) {
+        this.setAssistantText(event.summary);
+      }
+      this.releaseBusyForHumanInput();
       return;
     }
     if (type === 'preview_ready' && event.candidateXml) {
@@ -238,6 +253,7 @@ export class BpmDesignerAgentComponent {
         candidateXml: event.candidateXml,
         active: true
       }));
+      this.releaseBusyForHumanInput();
       return;
     }
     if (type === 'await_human') {
@@ -248,6 +264,7 @@ export class BpmDesignerAgentComponent {
         pluginHintJson: event.pluginHintJson,
         active: true
       }));
+      this.releaseBusyForHumanInput();
       return;
     }
     if (type === 'done') {
@@ -260,8 +277,19 @@ export class BpmDesignerAgentComponent {
     }
     if (type === 'error') {
       this.nzMessage.error(event.errorMessage ?? 'Agent 错误');
+      this.status.update(s => ({
+        ...(s ?? { active: false }),
+        stage: 'error',
+        active: false,
+        errorMessage: event.errorMessage
+      }));
       this.busy.set(false);
     }
+  }
+
+  /** SSE 在 await_plan / await_preview / await_ask 等人机闸门处不会结束，需主动释放 busy。 */
+  private releaseBusyForHumanInput(): void {
+    this.busy.set(false);
   }
 
   private attachContinuationStream(runId: string): void {
@@ -335,6 +363,28 @@ export class BpmDesignerAgentComponent {
       }
       return next;
     });
+  }
+
+  private syncPlanDisplay(status: DesignerAgentRunStatus): void {
+    const display = resolvePlanDisplay(
+      status.planDisplayJson,
+      status.editPlanJson,
+      status.assistantReply,
+      this.componentProvider
+    );
+    this.planDisplay.set(display);
+    this.planTechnicalJson.set(status.editPlanJson ?? '');
+  }
+
+  private syncPlanDisplayFromEvent(event: AgentStreamEvent): void {
+    const display = resolvePlanDisplay(
+      event.planDisplayJson,
+      event.editPlanJson,
+      event.summary,
+      this.componentProvider
+    );
+    this.planDisplay.set(display);
+    this.planTechnicalJson.set(event.editPlanJson ?? '');
   }
 
   private setAssistantText(text: string): void {

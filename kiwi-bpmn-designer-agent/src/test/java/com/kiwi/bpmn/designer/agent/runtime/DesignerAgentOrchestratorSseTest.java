@@ -15,7 +15,9 @@ import com.kiwi.bpmn.designer.agent.model.EditOperation;
 import com.kiwi.bpmn.designer.agent.model.EditPlan;
 import com.kiwi.bpmn.designer.agent.model.FlowSpec;
 import com.kiwi.bpmn.designer.agent.model.NodeSpec;
+import com.kiwi.bpmn.designer.agent.present.EditPlanPresenter;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentPlanGenerator.GenerateResult;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,7 +75,8 @@ class DesignerAgentOrchestratorSseTest {
                 new PlanSkipEvaluator(properties),
                 workflowValidator,
                 objectMapper,
-                planGenerator);
+                planGenerator,
+                new EditPlanPresenter(new AssistantBpmnToPlan()));
     }
 
     @Test
@@ -97,6 +100,12 @@ class DesignerAgentOrchestratorSseTest {
         assertTrue(events.stream().anyMatch(e -> "stage".equals(e.getType())));
         assertTrue(events.stream().anyMatch(e -> "thinking_delta".equals(e.getType())));
         assertTrue(events.stream().anyMatch(e -> "plan_ready".equals(e.getType())));
+        AgentStreamEvent planReady = events.stream()
+                .filter(e -> "plan_ready".equals(e.getType()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(StringUtils.isNotBlank(planReady.getPlanDisplayJson()));
+        assertTrue(StringUtils.isNotBlank(run.getPlanDisplayJson()));
         assertTrue(events.stream().anyMatch(e -> "await_human".equals(e.getType())));
     }
 

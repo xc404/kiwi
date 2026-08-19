@@ -50,7 +50,32 @@
       @if (awaitPlan()) {
         <div class="bpm-designer-agent__card">
           <p class="bpm-designer-agent__card-title">变更计划</p>
-          <pre class="bpm-designer-agent__plan">{{ planPreview() }}</pre>
+          @if (planDisplay(); as plan) {
+            <p class="bpm-designer-agent__plan-summary">{{ plan.summary }}</p>
+            @if (plan.steps.length) {
+              <ol class="bpm-designer-agent__plan-steps">
+                @for (step of plan.steps; track step.index) {
+                  <li class="bpm-designer-agent__plan-step">
+                    <div class="bpm-designer-agent__plan-step-head">
+                      <span nz-icon [nzType]="stepKindIcon(step.kind)" nzTheme="outline"></span>
+                      <span>{{ step.title }}</span>
+                    </div>
+                    @if (step.detail) {
+                      <p class="bpm-designer-agent__plan-step-detail">{{ step.detail }}</p>
+                    }
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="bpm-designer-agent__plan-empty">暂无具体步骤</p>
+            }
+          }
+          @if (planTechnicalJson()) {
+            <details class="bpm-designer-agent__plan-tech">
+              <summary>技术细节</summary>
+              <pre class="bpm-designer-agent__plan">{{ planTechnicalJson() }}</pre>
+            </details>
+          }
           <div class="bpm-designer-agent__actions">
             <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPlan(true)">批准执行</button>
             <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPlan(false)">拒绝</button>

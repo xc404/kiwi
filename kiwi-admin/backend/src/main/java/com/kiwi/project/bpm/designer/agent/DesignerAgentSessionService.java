@@ -119,6 +119,14 @@ public class DesignerAgentSessionService {
         return toStatus(run);
     }
 
+    /** 由内存中的 run 对象构建状态（避免异步 run 已从 map 移除时 404）。 */
+    public DesignerAgentRunStatus statusOf(DesignerAgentRun run) {
+        if (run == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "run 不存在");
+        }
+        return toStatus(run);
+    }
+
     public DesignerAgentRunStatus statusByTarget(String targetProcessId) {
         DesignerAgentRun run = runsByTarget.get(targetProcessId);
         if (run == null) {
@@ -220,6 +228,7 @@ public class DesignerAgentSessionService {
         s.setActive(run.isActive());
         s.setStage(run.getStage());
         s.setEditPlanJson(run.getEditPlanJson());
+        s.setPlanDisplayJson(run.getPlanDisplayJson());
         s.setCandidateXml(run.getCandidateXml());
         s.setAssistantReply(run.getAssistantReply());
         s.setAskMessage(run.getAskMessage());

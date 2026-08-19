@@ -1,0 +1,24 @@
+[
+  {
+    "id": "file-write-greenfield",
+    "scenario": "帮我做一个写文件的流程",
+    "baseBpmnXml": null,
+    "selectedElementId": null,
+    "readOnly": false,
+    "autoConfirmPlan": true,
+    "expectedStage": "await_preview",
+    "expectedComponentIds": ["classpath_fileWrite", "plugin_fileWrite"],
+    "matchAllComponents": false,
+    "expectedFragments": [
+      "startEvent",
+      "endEvent",
+      "BPMNDiagram",
+      "${fileWrite}"
+    ],
+    "forbiddenFragments": ["invented_component"],
+    "keywordHints": ["文件", "写"],
+    "minScore": 6,
+    "maxScore": 12,
+    "maxRepairRounds": 3
+  }
+]

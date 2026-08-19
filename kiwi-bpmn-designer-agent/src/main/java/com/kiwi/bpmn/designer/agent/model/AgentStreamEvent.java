@@ -21,6 +21,7 @@ public class AgentStreamEvent {
     private String summary;
     private String delta;
     private String editPlanJson;
+    private String planDisplayJson;
     private Boolean planSkipped;
     private String candidateXml;
     private String askMessage;

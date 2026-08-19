@@ -25,6 +25,7 @@ public class DesignerAgentRun {
     private String stage;
     private boolean active = true;
     private String editPlanJson;
+    private String planDisplayJson;
     private String candidateXml;
     private String assistantReply;
     private String issuesJson;
