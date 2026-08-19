@@ -4,6 +4,9 @@
   "cases": {
     "file-write-greenfield": {
       "minScore": 6
+    },
+    "file-delete-greenfield": {
+      "minScore": 6
     }
   }
 }

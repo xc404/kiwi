@@ -19,7 +19,7 @@
         nzType="text"
         nz-tooltip
         [class.is-active]="!paletteCollapsed()"
-        [nzTooltipTitle]="paletteCollapsed() ? '展开组件库' : '收起组件库'"
+        [nzTooltipTitle]="paletteCollapsed() ? '展开左侧面板' : '收起左侧面板'"
         (click)="togglePalette()"
       >
         <nz-icon nzTheme="outline" nzType="appstore" />
@@ -37,19 +37,6 @@
       >
         <nz-icon nzTheme="outline" nzType="control" />
       </button>
-      <button
-        type="button"
-        class="bpm-editor-header__action-btn"
-        nz-button
-        nzSize="small"
-        nzType="text"
-        nz-tooltip
-        [class.is-active]="!agentCollapsed()"
-        [nzTooltipTitle]="agentCollapsed() ? '展开 Agent' : '收起 Agent'"
-        (click)="toggleAgent()"
-      >
-        <nz-icon nzTheme="outline" nzType="robot" />
-      </button>
     </div>
   </header>
 
@@ -60,7 +47,36 @@
       [style.width.px]="paletteCollapsed() ? 0 : paletteWidth()"
     >
       <div class="bpm-editor-palette-scroll">
-        <bpm-pallete></bpm-pallete>
+        <div class="bpm-editor-left-tabs">
+          <div class="bpm-editor-left-tabs__nav" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              class="bpm-editor-left-tabs__tab"
+              [class.is-active]="leftPanelTab() === 'palette'"
+              [attr.aria-selected]="leftPanelTab() === 'palette'"
+              (click)="setLeftPanelTab('palette')"
+            >
+              组件库
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="bpm-editor-left-tabs__tab"
+              [class.is-active]="leftPanelTab() === 'agent'"
+              [attr.aria-selected]="leftPanelTab() === 'agent'"
+              (click)="setLeftPanelTab('agent')"
+            >
+              Agent
+            </button>
+          </div>
+          <div class="bpm-editor-left-tab-body" [hidden]="leftPanelTab() !== 'palette'">
+            <bpm-pallete></bpm-pallete>
+          </div>
+          <div class="bpm-editor-left-tab-body" [hidden]="leftPanelTab() !== 'agent'">
+            <bpm-designer-agent />
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -69,7 +85,7 @@
         class="bpm-editor-resizer"
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整组件库宽度"
+        aria-label="调整左侧面板宽度"
         (pointerdown)="onResizeStart($event, 'palette')"
       ></div>
     }
@@ -100,26 +116,6 @@
           [projectId]="bpmProcess()?.projectId ?? null"
           [usedHeight]="102"
         ></bpm-properties-panel>
-      </div>
-    </aside>
-
-    @if (!agentCollapsed()) {
-      <div
-        class="bpm-editor-resizer"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="调整 Agent 面板宽度"
-        (pointerdown)="onResizeStart($event, 'agent')"
-      ></div>
-    }
-
-    <aside
-      class="bpm-editor-agent"
-      [class.is-collapsed]="agentCollapsed()"
-      [style.width.px]="agentCollapsed() ? 0 : agentWidth()"
-    >
-      <div class="bpm-editor-agent-scroll">
-        <bpm-designer-agent />
       </div>
     </aside>
   </div>

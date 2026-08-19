@@ -46,22 +46,19 @@ export { BpmEditorToken };
 
 const StorageKeyPaletteCollapsed = 'bpm-editor.paletteCollapsed';
 const StorageKeyPropertiesCollapsed = 'bpm-editor.propertiesCollapsed';
-const StorageKeyAgentCollapsed = 'bpm-editor.agentCollapsed';
+const StorageKeyLeftPanelTab = 'bpm-editor.leftPanelTab';
 const StorageKeyPaletteWidth = 'bpm-editor.paletteWidth';
 const StorageKeyPropertiesWidth = 'bpm-editor.propertiesWidth';
-const StorageKeyAgentWidth = 'bpm-editor.agentWidth';
 
-const PaletteWidthDefault = 260;
-const PaletteWidthMin = 180;
-const PaletteWidthMax = 400;
+const PaletteWidthDefault = 320;
+const PaletteWidthMin = 220;
+const PaletteWidthMax = 520;
 const PropertiesWidthDefault = 420;
 const PropertiesWidthMin = 280;
 const PropertiesWidthMax = 640;
-const AgentWidthDefault = 400;
-const AgentWidthMin = 280;
-const AgentWidthMax = 520;
 
-type ResizeSide = 'palette' | 'properties' | 'agent';
+type LeftPanelTab = 'palette' | 'agent';
+type ResizeSide = 'palette' | 'properties';
 
 /** 整图 import（AI / 文件）可撤销快照：undo 时若 savedToServer 则写回服务器 */
 interface XmlHistoryEntry {
@@ -113,10 +110,9 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   paletteCollapsed = signal(false);
   propertiesCollapsed = signal(false);
-  agentCollapsed = signal(true);
+  leftPanelTab = signal<LeftPanelTab>('palette');
   paletteWidth = signal(PaletteWidthDefault);
   propertiesWidth = signal(PropertiesWidthDefault);
-  agentWidth = signal(AgentWidthDefault);
 
   depolyVersionBehind = computed(() => {
     const p = this.bpmProcess();
@@ -219,10 +215,9 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     this.notifyCanvasResized();
   }
 
-  toggleAgent(): void {
-    this.agentCollapsed.update(v => !v);
-    this.persistBool(StorageKeyAgentCollapsed, this.agentCollapsed());
-    this.notifyCanvasResized();
+  setLeftPanelTab(tab: LeftPanelTab): void {
+    this.leftPanelTab.set(tab);
+    this.persistLeftPanelTab(tab);
   }
 
   onResizeStart(event: PointerEvent, side: ResizeSide): void {
@@ -232,8 +227,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     event.preventDefault();
     this.resizeSide = side;
     this.resizeStartX = event.clientX;
-    this.resizeStartWidth =
-      side === 'palette' ? this.paletteWidth() : side === 'properties' ? this.propertiesWidth() : this.agentWidth();
+    this.resizeStartWidth = side === 'palette' ? this.paletteWidth() : this.propertiesWidth();
     (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -538,12 +532,11 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   private restoreLayoutPrefs(): void {
     this.paletteCollapsed.set(this.readBool(StorageKeyPaletteCollapsed, false));
     this.propertiesCollapsed.set(this.readBool(StorageKeyPropertiesCollapsed, false));
-    this.agentCollapsed.set(this.readBool(StorageKeyAgentCollapsed, true));
+    this.leftPanelTab.set(this.readLeftPanelTab());
     this.paletteWidth.set(this.readClampedWidth(StorageKeyPaletteWidth, PaletteWidthDefault, PaletteWidthMin, PaletteWidthMax));
     this.propertiesWidth.set(
       this.readClampedWidth(StorageKeyPropertiesWidth, PropertiesWidthDefault, PropertiesWidthMin, PropertiesWidthMax)
     );
-    this.agentWidth.set(this.readClampedWidth(StorageKeyAgentWidth, AgentWidthDefault, AgentWidthMin, AgentWidthMax));
   }
 
   private setupNarrowMedia(): void {
@@ -570,32 +563,15 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   private applyNarrowProps(matches: boolean): void {
     if (matches) {
-      let changed = false;
       if (!this.propertiesCollapsed()) {
         this.propertiesCollapsed.set(true);
-        changed = true;
-      }
-      if (!this.agentCollapsed()) {
-        this.agentCollapsed.set(true);
-        changed = true;
-      }
-      if (changed) {
         this.notifyCanvasResized();
       }
       return;
     }
-    const preferredProps = this.readBool(StorageKeyPropertiesCollapsed, false);
-    const preferredAgent = this.readBool(StorageKeyAgentCollapsed, true);
-    let changed = false;
-    if (this.propertiesCollapsed() !== preferredProps) {
-      this.propertiesCollapsed.set(preferredProps);
-      changed = true;
-    }
-    if (this.agentCollapsed() !== preferredAgent) {
-      this.agentCollapsed.set(preferredAgent);
-      changed = true;
-    }
-    if (changed) {
+    const preferred = this.readBool(StorageKeyPropertiesCollapsed, false);
+    if (this.propertiesCollapsed() !== preferred) {
+      this.propertiesCollapsed.set(preferred);
       this.notifyCanvasResized();
     }
   }
@@ -622,10 +598,8 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     const delta = event.clientX - this.resizeStartX;
     if (this.resizeSide === 'palette') {
       this.paletteWidth.set(this.clamp(this.resizeStartWidth + delta, PaletteWidthMin, PaletteWidthMax));
-    } else if (this.resizeSide === 'properties') {
-      this.propertiesWidth.set(this.clamp(this.resizeStartWidth - delta, PropertiesWidthMin, PropertiesWidthMax));
     } else {
-      this.agentWidth.set(this.clamp(this.resizeStartWidth - delta, AgentWidthMin, AgentWidthMax));
+      this.propertiesWidth.set(this.clamp(this.resizeStartWidth - delta, PropertiesWidthMin, PropertiesWidthMax));
     }
     this.notifyCanvasResized();
   }
@@ -646,12 +620,27 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     window.removeEventListener('pointercancel', this.onPointerUp);
     if (side === 'palette') {
       this.persistNumber(StorageKeyPaletteWidth, this.paletteWidth());
-    } else if (side === 'properties') {
-      this.persistNumber(StorageKeyPropertiesWidth, this.propertiesWidth());
     } else {
-      this.persistNumber(StorageKeyAgentWidth, this.agentWidth());
+      this.persistNumber(StorageKeyPropertiesWidth, this.propertiesWidth());
     }
     this.notifyCanvasResized();
+  }
+
+  private readLeftPanelTab(): LeftPanelTab {
+    try {
+      const raw = localStorage.getItem(StorageKeyLeftPanelTab);
+      return raw === 'agent' ? 'agent' : 'palette';
+    } catch {
+      return 'palette';
+    }
+  }
+
+  private persistLeftPanelTab(tab: LeftPanelTab): void {
+    try {
+      localStorage.setItem(StorageKeyLeftPanelTab, tab);
+    } catch {
+      /* ignore */
+    }
   }
 
   private notifyCanvasResized(): void {

@@ -32,7 +32,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * Designer Agent HTTP 集成评测：真实 LLM + SSE + 结构化打分与归因报告。
  * <p>
- * 默认场景「帮我做一个写文件的流程」，期望选用 {@code classpath_fileWrite} 组件。
+ * 默认场景包括「帮我做一个写文件的流程」（{@code classpath_fileWrite}）
+ * 与「帮我删除一个文件」（{@code classpath_shell}，无专用删文件组件时用命令行）。
  * <p>
  * 前置条件：
  * <ul>

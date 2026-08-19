@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -119,16 +120,40 @@ public class DesignerAgentEvalClient {
 
         String runId = session.runId;
         if (StringUtils.isBlank(runId)) {
-            throw new IllegalStateException("SSE 未返回 runId");
+            JsonNode byTarget = pollStatusByTarget(baseUrl, token, targetProcessId, Duration.ofSeconds(60));
+            runId = text(byTarget, "runId", null);
+            session.mergeStatus(byTarget);
+        }
+        if (StringUtils.isBlank(runId)) {
+            throw new IllegalStateException("SSE 未返回 runId，且 by-target 未找到 run: " + targetProcessId);
         }
 
-        JsonNode status = pollStatus(baseUrl, token, runId, Duration.ofSeconds(30));
+        JsonNode status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
+        session.mergeStatus(status);
         runId = firstNonBlank(text(status, "runId", null), session.runId);
 
-        long deadline = System.currentTimeMillis() + Duration.ofSeconds(120).toMillis();
+        if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && isRunPresentOnServer(status)) {
+            confirmPlan(baseUrl, token, runId, true, null);
+            consumeSse(
+                    baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
+                    token,
+                    null,
+                    session,
+                    s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
+                    Duration.ofSeconds(300));
+            status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
+            session.mergeStatus(status);
+        }
+
+        long deadline = System.currentTimeMillis() + Duration.ofSeconds(480).toMillis();
         while (System.currentTimeMillis() < deadline) {
+            if (isRunAbsentOnServer(status, session)) {
+                session.finalizeFromEvents();
+                break;
+            }
+
             String stage = resolveStage(status, session);
-            if (evalCase.isAutoConfirmPlan() && AgentRunStage.AwaitPlan.equals(stage)) {
+            if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && isRunPresentOnServer(status)) {
                 confirmPlan(baseUrl, token, runId, true, null);
                 consumeSse(
                         baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
@@ -137,21 +162,43 @@ public class DesignerAgentEvalClient {
                         session,
                         s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
                         Duration.ofSeconds(180));
-                status = pollStatus(baseUrl, token, runId, Duration.ofSeconds(30));
+                status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
+                session.mergeStatus(status);
                 continue;
             }
             if (isStableStage(stage) || AgentRunStage.Error.equals(stage)) {
                 break;
             }
             Thread.sleep(2000);
-            status = pollStatus(baseUrl, token, runId, Duration.ofSeconds(10));
+            status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
+            session.mergeStatus(status);
         }
 
         return mergeSnapshot(runId, targetProcessId, status, session, baseBpmnXml, started);
     }
 
     private static String resolveStage(JsonNode status, SseSession session) {
-        return firstNonBlank(text(status, "stage", null), session.stage);
+        String fromStatus = text(status, "stage", null);
+        if (StringUtils.isNotBlank(fromStatus)) {
+            return fromStatus;
+        }
+        return session.stage;
+    }
+
+    private static boolean isAwaitPlan(JsonNode status, SseSession session) {
+        return AgentRunStage.AwaitPlan.equals(resolveStage(status, session));
+    }
+
+    private static boolean isRunPresentOnServer(JsonNode status) {
+        return StringUtils.isNotBlank(text(status, "runId", null));
+    }
+
+    /** run 已从服务端内存清除（完成/失败/重启），不应再按 runId 轮询或 confirm。 */
+    private static boolean isRunAbsentOnServer(JsonNode status, SseSession session) {
+        if (isRunPresentOnServer(status)) {
+            return false;
+        }
+        return StringUtils.isNotBlank(session.runId);
     }
 
     private RunSnapshot mergeSnapshot(
@@ -209,18 +256,31 @@ public class DesignerAgentEvalClient {
         }
     }
 
-    private JsonNode pollStatus(String baseUrl, String token, String runId, Duration timeout) throws Exception {
-        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/bpm/designer-agent/runs/" + runId))
+    private JsonNode pollStatusByTarget(String baseUrl, String token, String targetProcessId, Duration timeout)
+            throws Exception {
+        long deadline = System.currentTimeMillis() + timeout.toMillis();
+        while (System.currentTimeMillis() < deadline) {
+            JsonNode data = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
+            if (StringUtils.isNotBlank(text(data, "runId", null))) {
+                return data;
+            }
+            Thread.sleep(500);
+        }
+        return objectMapper.createObjectNode();
+    }
+
+    /** 单次 by-target 查询，run 不存在时返回 active=false 的空状态（不触发 404）。 */
+    private JsonNode fetchStatusByTargetOnce(String baseUrl, String token, String targetProcessId) throws Exception {
+        String encoded = URLEncoder.encode(targetProcessId, StandardCharsets.UTF_8);
+        HttpRequest req = HttpRequest.newBuilder(URI.create(
+                        baseUrl + "/bpm/designer-agent/by-target?targetProcessId=" + encoded))
                 .header("Authorization", "Bearer " + token)
-                .timeout(timeout)
+                .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();
         HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (res.statusCode() == 404) {
-            return objectMapper.createObjectNode();
-        }
         if (res.statusCode() < 200 || res.statusCode() >= 300) {
-            throw new IllegalStateException("status 失败: " + res.statusCode() + " " + res.body());
+            throw new IllegalStateException("by-target 失败: " + res.statusCode() + " " + res.body());
         }
         JsonNode root = objectMapper.readTree(res.body());
         return root.has("data") ? root.get("data") : root;
@@ -394,6 +454,68 @@ public class DesignerAgentEvalClient {
             } catch (Exception ignored) {
                 // 非 JSON data 忽略
             }
+        }
+
+        private void mergeStatus(JsonNode status) {
+            if (status == null || status.isMissingNode()) {
+                return;
+            }
+            if (StringUtils.isNotBlank(status.path("runId").asText(null))) {
+                runId = status.path("runId").asText();
+            }
+            if (status.has("stage")) {
+                stage = status.path("stage").asText(null);
+            }
+            if (status.has("candidateXml")) {
+                candidateXml = status.path("candidateXml").asText(null);
+            }
+            if (status.has("editPlanJson")) {
+                editPlanJson = status.path("editPlanJson").asText(null);
+            }
+            if (status.has("assistantReply")) {
+                assistantReply = status.path("assistantReply").asText(null);
+            }
+            if (status.has("issuesJson")) {
+                issuesJson = status.path("issuesJson").asText(null);
+            }
+            if (status.has("errorMessage")) {
+                errorMessage = status.path("errorMessage").asText(null);
+            }
+            if (status.has("planSkipped")) {
+                planSkipped = status.path("planSkipped").asBoolean();
+            }
+        }
+
+        /** run 已从服务端移除时，用 SSE 终态事件补全 stage，避免 stale await_plan 触发重复 confirm。 */
+        private void finalizeFromEvents() {
+            if (eventTypes.contains("error")) {
+                stage = AgentRunStage.Error;
+                return;
+            }
+            if (eventTypes.contains("done")) {
+                stage = AgentRunStage.Done;
+                return;
+            }
+            if (eventTypes.contains("preview_ready") || AgentRunStage.AwaitPreview.equals(stage)) {
+                stage = AgentRunStage.AwaitPreview;
+                return;
+            }
+            if (eventTypes.contains("await_human") && StringUtils.isNotBlank(stage) && isStableStage(stage)) {
+                return;
+            }
+            if (StringUtils.isNotBlank(stage) && !AgentRunStage.AwaitPlan.equals(stage)) {
+                return;
+            }
+            if (eventTypes.contains("plan_ready")) {
+                stage = AgentRunStage.AwaitPlan;
+            }
+        }
+
+        private boolean receivedTerminalEvent() {
+            return eventTypes.contains("preview_ready")
+                    || eventTypes.contains("error")
+                    || eventTypes.contains("done")
+                    || eventTypes.contains("await_human");
         }
     }
 }

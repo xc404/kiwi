@@ -1,10 +1,9 @@
 <section class="bpm-designer-agent" aria-label="BPM 设计器 Agent">
-  <header class="bpm-designer-agent__head">
-    <span>设计器 Agent</span>
-    @if (stageLabel()) {
+  @if (stageLabel()) {
+    <header class="bpm-designer-agent__head">
       <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
-    }
-  </header>
+    </header>
+  }
 
   <div class="bpm-designer-agent__messages">
     @for (m of messages(); track $index) {

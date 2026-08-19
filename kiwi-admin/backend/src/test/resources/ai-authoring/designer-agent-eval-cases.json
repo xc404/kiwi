@@ -20,5 +20,27 @@
     "minScore": 6,
     "maxScore": 12,
     "maxRepairRounds": 3
+  },
+  {
+    "id": "file-delete-greenfield",
+    "scenario": "帮我删除一个文件",
+    "baseBpmnXml": null,
+    "selectedElementId": null,
+    "readOnly": false,
+    "autoConfirmPlan": true,
+    "expectedStage": "await_preview",
+    "expectedComponentIds": ["classpath_shell", "plugin_shell"],
+    "matchAllComponents": false,
+    "expectedFragments": [
+      "startEvent",
+      "endEvent",
+      "BPMNDiagram",
+      "${shell}"
+    ],
+    "forbiddenFragments": ["invented_component"],
+    "keywordHints": ["文件", "删除"],
+    "minScore": 6,
+    "maxScore": 12,
+    "maxRepairRounds": 3
   }
 ]

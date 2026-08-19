@@ -21,11 +21,6 @@
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
-
-  span:first-child {
-    flex: 1;
-    font-weight: 600;
-  }
 }
 
 .bpm-designer-agent__messages {

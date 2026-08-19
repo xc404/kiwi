@@ -59,8 +59,7 @@
 }
 
 .bpm-editor-palette,
-.bpm-editor-properties,
-.bpm-editor-agent {
+.bpm-editor-properties {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -71,8 +70,7 @@
 }
 
 .bpm-editor-palette.is-collapsed,
-.bpm-editor-properties.is-collapsed,
-.bpm-editor-agent.is-collapsed {
+.bpm-editor-properties.is-collapsed {
   border: none;
   pointer-events: none;
 }
@@ -85,13 +83,8 @@
   border-left: 1px solid #f0f0f0;
 }
 
-.bpm-editor-agent {
-  border-left: 1px solid #f0f0f0;
-}
-
 .bpm-editor-palette-scroll,
-.bpm-editor-properties-scroll,
-.bpm-editor-agent-scroll {
+.bpm-editor-properties-scroll {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -102,10 +95,69 @@
 
 .bpm-editor-palette-scroll bpm-pallete,
 .bpm-editor-properties-scroll bpm-properties-panel,
-.bpm-editor-agent-scroll bpm-designer-agent {
+.bpm-editor-left-tab-body bpm-designer-agent {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
+}
+
+.bpm-editor-left-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-editor-left-tabs__nav {
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  padding: 0 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.bpm-editor-left-tabs__tab {
+  position: relative;
+  padding: 10px 0 8px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  line-height: 22px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ant-color-primary, #1677ff);
+  }
+
+  &.is-active {
+    color: var(--ant-color-primary, #1677ff);
+    font-weight: 500;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: var(--ant-color-primary, #1677ff);
+    }
+  }
+}
+
+.bpm-editor-left-tab-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+
+  &[hidden] {
+    display: none !important;
+  }
 }
 
 .bpm-editor-properties-scroll bpm-properties-panel {
