@@ -44,6 +44,11 @@
   gap: 2px;
 }
 
+.bpm-editor-header__action-btn.is-active {
+  color: var(--ant-color-primary, #1677ff);
+  background: var(--ant-color-primary-bg, #e6f4ff);
+}
+
 .bpm-editor-body {
   display: flex;
   flex: 1 1 auto;
