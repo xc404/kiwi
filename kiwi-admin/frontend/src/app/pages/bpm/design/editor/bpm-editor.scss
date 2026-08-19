@@ -54,7 +54,8 @@
 }
 
 .bpm-editor-palette,
-.bpm-editor-properties {
+.bpm-editor-properties,
+.bpm-editor-agent {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -65,7 +66,8 @@
 }
 
 .bpm-editor-palette.is-collapsed,
-.bpm-editor-properties.is-collapsed {
+.bpm-editor-properties.is-collapsed,
+.bpm-editor-agent.is-collapsed {
   border: none;
   pointer-events: none;
 }
@@ -78,8 +80,13 @@
   border-left: 1px solid #f0f0f0;
 }
 
+.bpm-editor-agent {
+  border-left: 1px solid #f0f0f0;
+}
+
 .bpm-editor-palette-scroll,
-.bpm-editor-properties-scroll {
+.bpm-editor-properties-scroll,
+.bpm-editor-agent-scroll {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -89,7 +96,8 @@
 }
 
 .bpm-editor-palette-scroll bpm-pallete,
-.bpm-editor-properties-scroll bpm-properties-panel {
+.bpm-editor-properties-scroll bpm-properties-panel,
+.bpm-editor-agent-scroll bpm-designer-agent {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;

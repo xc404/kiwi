@@ -1,30 +1,22 @@
-.bpm-designer-agent {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 1000;
-}
-
-.bpm-designer-agent__fab {
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-}
-
-.bpm-designer-agent__panel {
-  position: absolute;
-  right: 0;
-  bottom: 56px;
+:host {
   display: flex;
   flex-direction: column;
-  width: 400px;
-  max-height: min(70vh, 640px);
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-designer-agent {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
-  background: var(--ant-color-bg-container, #fff);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
 .bpm-designer-agent__head {
   display: flex;
+  flex-shrink: 0;
   gap: 8px;
   align-items: center;
   padding: 8px 12px;
@@ -37,7 +29,8 @@
 }
 
 .bpm-designer-agent__messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 8px 12px;
   overflow-y: auto;
 }
@@ -70,6 +63,7 @@
 }
 
 .bpm-designer-agent__card {
+  flex-shrink: 0;
   padding: 8px 12px;
   border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }
@@ -138,6 +132,7 @@
 
 .bpm-designer-agent__input {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 8px;
   padding: 8px 12px;

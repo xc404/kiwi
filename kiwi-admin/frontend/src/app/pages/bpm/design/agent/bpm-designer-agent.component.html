@@ -1,117 +1,97 @@
-<div class="bpm-designer-agent">
-  <button
-    type="button"
-    class="bpm-designer-agent__fab"
-    nz-button
-    nzType="primary"
-    nzShape="circle"
-    nzSize="large"
-    [nzLoading]="busy()"
-    (click)="panelOpen.set(!panelOpen())"
-  >
-    <span nz-icon nzType="robot" nzTheme="outline"></span>
-  </button>
+<section class="bpm-designer-agent" aria-label="BPM 设计器 Agent">
+  <header class="bpm-designer-agent__head">
+    <span>设计器 Agent</span>
+    @if (stageLabel()) {
+      <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
+    }
+  </header>
 
-  @if (panelOpen()) {
-    <section class="bpm-designer-agent__panel" aria-label="BPM 设计器 Agent">
-      <header class="bpm-designer-agent__head">
-        <span>设计器 Agent</span>
-        @if (stageLabel()) {
-          <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
+  <div class="bpm-designer-agent__messages">
+    @for (m of messages(); track $index) {
+      <div class="bpm-designer-agent__msg" [class.is-user]="m.role === 'user'">
+        @if (m.thinking.length) {
+          <details class="bpm-designer-agent__thinking">
+            <summary>思考过程</summary>
+            <ul>
+              @for (t of m.thinking; track $index) {
+                <li>{{ t }}</li>
+              }
+            </ul>
+          </details>
         }
-        <button type="button" nz-button nzType="text" nzSize="small" (click)="panelOpen.set(false)">
-          <span nz-icon nzType="close"></span>
-        </button>
-      </header>
-
-      <div class="bpm-designer-agent__messages">
-        @for (m of messages(); track $index) {
-          <div class="bpm-designer-agent__msg" [class.is-user]="m.role === 'user'">
-            @if (m.thinking.length) {
-              <details class="bpm-designer-agent__thinking">
-                <summary>思考过程</summary>
-                <ul>
-                  @for (t of m.thinking; track $index) {
-                    <li>{{ t }}</li>
-                  }
-                </ul>
-              </details>
-            }
-            <div class="bpm-designer-agent__text">{{ m.text }}</div>
-          </div>
-        }
-        @if (busy()) {
-          <div class="bpm-designer-agent__msg">
-            <nz-spin nzSimple></nz-spin>
-          </div>
-        }
+        <div class="bpm-designer-agent__text">{{ m.text }}</div>
       </div>
+    }
+    @if (busy()) {
+      <div class="bpm-designer-agent__msg">
+        <nz-spin nzSimple></nz-spin>
+      </div>
+    }
+  </div>
 
-      @if (awaitPlan()) {
-        <div class="bpm-designer-agent__card">
-          <p class="bpm-designer-agent__card-title">变更计划</p>
-          @if (planDisplay(); as plan) {
-            <p class="bpm-designer-agent__plan-summary">{{ plan.summary }}</p>
-            @if (plan.steps.length) {
-              <ol class="bpm-designer-agent__plan-steps">
-                @for (step of plan.steps; track step.index) {
-                  <li class="bpm-designer-agent__plan-step">
-                    <div class="bpm-designer-agent__plan-step-head">
-                      <span nz-icon [nzType]="stepKindIcon(step.kind)" nzTheme="outline"></span>
-                      <span>{{ step.title }}</span>
-                    </div>
-                    @if (step.detail) {
-                      <p class="bpm-designer-agent__plan-step-detail">{{ step.detail }}</p>
-                    }
-                  </li>
+  @if (awaitPlan()) {
+    <div class="bpm-designer-agent__card">
+      <p class="bpm-designer-agent__card-title">变更计划</p>
+      @if (planDisplay(); as plan) {
+        <p class="bpm-designer-agent__plan-summary">{{ plan.summary }}</p>
+        @if (plan.steps.length) {
+          <ol class="bpm-designer-agent__plan-steps">
+            @for (step of plan.steps; track step.index) {
+              <li class="bpm-designer-agent__plan-step">
+                <div class="bpm-designer-agent__plan-step-head">
+                  <span nz-icon [nzType]="stepKindIcon(step.kind)" nzTheme="outline"></span>
+                  <span>{{ step.title }}</span>
+                </div>
+                @if (step.detail) {
+                  <p class="bpm-designer-agent__plan-step-detail">{{ step.detail }}</p>
                 }
-              </ol>
-            } @else {
-              <p class="bpm-designer-agent__plan-empty">暂无具体步骤</p>
+              </li>
             }
-          }
-          @if (planTechnicalJson()) {
-            <details class="bpm-designer-agent__plan-tech">
-              <summary>技术细节</summary>
-              <pre class="bpm-designer-agent__plan">{{ planTechnicalJson() }}</pre>
-            </details>
-          }
-          <div class="bpm-designer-agent__actions">
-            <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPlan(true)">批准执行</button>
-            <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPlan(false)">拒绝</button>
-          </div>
-        </div>
+          </ol>
+        } @else {
+          <p class="bpm-designer-agent__plan-empty">暂无具体步骤</p>
+        }
       }
-
-      @if (awaitPreview()) {
-        <div class="bpm-designer-agent__card">
-          <p>已生成预览，请确认保存到流程。</p>
-          <div class="bpm-designer-agent__actions">
-            <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPreview(true)">确认保存</button>
-            <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPreview(false)">拒绝</button>
-          </div>
-        </div>
+      @if (planTechnicalJson()) {
+        <details class="bpm-designer-agent__plan-tech">
+          <summary>技术细节</summary>
+          <pre class="bpm-designer-agent__plan">{{ planTechnicalJson() }}</pre>
+        </details>
       }
-
-      @if (awaitAsk()) {
-        <div class="bpm-designer-agent__card">
-          <p>{{ status()?.askMessage }}</p>
-          <textarea nz-input rows="2" [ngModel]="askText()" (ngModelChange)="askText.set($event)"></textarea>
-          <button nz-button nzSize="small" nzType="primary" class="m-t-8" [disabled]="busy()" (click)="submitAsk()">提交</button>
-        </div>
-      }
-
-      <footer class="bpm-designer-agent__input">
-        <textarea
-          nz-input
-          rows="3"
-          placeholder="描述要如何修改流程…"
-          [ngModel]="inputText()"
-          (ngModelChange)="inputText.set($event)"
-          (keydown)="onInputKeydown($event)"
-        ></textarea>
-        <button nz-button nzType="primary" nzSize="small" [disabled]="busy() || !inputText().trim()" (click)="send()">发送</button>
-      </footer>
-    </section>
+      <div class="bpm-designer-agent__actions">
+        <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPlan(true)">批准执行</button>
+        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPlan(false)">拒绝</button>
+      </div>
+    </div>
   }
-</div>
+
+  @if (awaitPreview()) {
+    <div class="bpm-designer-agent__card">
+      <p>已生成预览，请确认保存到流程。</p>
+      <div class="bpm-designer-agent__actions">
+        <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPreview(true)">确认保存</button>
+        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPreview(false)">拒绝</button>
+      </div>
+    </div>
+  }
+
+  @if (awaitAsk()) {
+    <div class="bpm-designer-agent__card">
+      <p>{{ status()?.askMessage }}</p>
+      <textarea nz-input rows="2" [ngModel]="askText()" (ngModelChange)="askText.set($event)"></textarea>
+      <button nz-button nzSize="small" nzType="primary" class="m-t-8" [disabled]="busy()" (click)="submitAsk()">提交</button>
+    </div>
+  }
+
+  <footer class="bpm-designer-agent__input">
+    <textarea
+      nz-input
+      rows="3"
+      placeholder="描述要如何修改流程…"
+      [ngModel]="inputText()"
+      (ngModelChange)="inputText.set($event)"
+      (keydown)="onInputKeydown($event)"
+    ></textarea>
+    <button nz-button nzType="primary" nzSize="small" [disabled]="busy() || !inputText().trim()" (click)="send()">发送</button>
+  </footer>
+</section>

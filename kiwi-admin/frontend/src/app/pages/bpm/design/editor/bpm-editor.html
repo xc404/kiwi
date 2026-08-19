@@ -33,6 +33,17 @@
       >
         <nz-icon nzTheme="outline" [nzType]="propertiesCollapsed() ? 'vertical-left' : 'vertical-right'" />
       </button>
+      <button
+        type="button"
+        nz-button
+        nzSize="small"
+        nzType="text"
+        nz-tooltip
+        [nzTooltipTitle]="agentCollapsed() ? '展开 Agent' : '收起 Agent'"
+        (click)="toggleAgent()"
+      >
+        <nz-icon nzTheme="outline" [nzType]="agentCollapsed() ? 'robot' : 'menu-fold'" />
+      </button>
     </div>
   </header>
 
@@ -85,7 +96,25 @@
         ></bpm-properties-panel>
       </div>
     </aside>
-  </div>
 
-  <bpm-designer-agent />
+    @if (!agentCollapsed()) {
+      <div
+        class="bpm-editor-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整 Agent 面板宽度"
+        (pointerdown)="onResizeStart($event, 'agent')"
+      ></div>
+    }
+
+    <aside
+      class="bpm-editor-agent"
+      [class.is-collapsed]="agentCollapsed()"
+      [style.width.px]="agentCollapsed() ? 0 : agentWidth()"
+    >
+      <div class="bpm-editor-agent-scroll">
+        <bpm-designer-agent />
+      </div>
+    </aside>
+  </div>
 </div>

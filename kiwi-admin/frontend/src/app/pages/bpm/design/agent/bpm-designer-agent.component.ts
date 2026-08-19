@@ -55,7 +55,6 @@ export class BpmDesignerAgentComponent {
   private readonly nzMessage = inject(NzMessageService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly panelOpen = signal(false);
   readonly busy = signal(false);
   readonly inputText = signal('');
   readonly askText = signal('');
