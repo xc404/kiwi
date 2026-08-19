@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Deprecated(since = "2026-08", forRemoval = true)
 public class WriteWorkflowOrchestrator {
 
     private static final Pattern AmbiguousTidy = Pattern.compile(

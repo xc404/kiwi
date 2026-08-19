@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 @RequiredArgsConstructor
+@Deprecated(since = "2026-08", forRemoval = true)
 public class WriteWorkflowSessionService {
 
     private final AssistantProperties assistantProperties;

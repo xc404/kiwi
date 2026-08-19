@@ -19,6 +19,7 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
+@Deprecated(since = "2026-08", forRemoval = true)
 public class AssistantDesignerTools {
 
     private static final Set<String> DEFAULT_TOOLBAR_COMMANDS = Set.of(

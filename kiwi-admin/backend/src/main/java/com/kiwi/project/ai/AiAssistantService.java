@@ -1,5 +1,6 @@
 package com.kiwi.project.ai;
 
+import com.kiwi.bpmn.designer.agent.DesignerAgentProperties;
 import com.kiwi.bpmn.assistant.AssistantVariables;
 import com.kiwi.bpmn.assistant.WriteWorkflowIntent;
 import com.kiwi.bpmn.assistant.WriteWorkflowStatus;
@@ -64,6 +65,7 @@ public class AiAssistantService {
     private final ObjectProvider<WriteWorkflowSessionService> writeWorkflowSessionServiceProvider;
     private final ObjectProvider<AssistantIntentService> intentServiceProvider;
     private final SessionService sessionService;
+    private final DesignerAgentProperties designerAgentProperties;
 
     public AiAssistantService(
             @Qualifier("kiwiChatClient") ObjectProvider<ChatClient> kiwiAssistantChatClientProvider,
@@ -71,13 +73,15 @@ public class AiAssistantService {
             AssistantClientActionContext assistantClientActionContext,
             ObjectProvider<WriteWorkflowSessionService> writeWorkflowSessionServiceProvider,
             ObjectProvider<AssistantIntentService> intentServiceProvider,
-            SessionService sessionService) {
+            SessionService sessionService,
+            DesignerAgentProperties designerAgentProperties) {
         this.kiwiAssistantChatClientProvider = kiwiAssistantChatClientProvider;
         this.properties = properties;
         this.assistantClientActionContext = assistantClientActionContext;
         this.writeWorkflowSessionServiceProvider = writeWorkflowSessionServiceProvider;
         this.intentServiceProvider = intentServiceProvider;
         this.sessionService = sessionService;
+        this.designerAgentProperties = designerAgentProperties;
     }
 
     public AiAssistantResponse run(List<AiChatMessage> messages) {
@@ -146,7 +150,12 @@ public class AiAssistantService {
     }
 
     @Nullable
+    @Deprecated(since = "2026-08", forRemoval = true)
     private AiAssistantResponse tryWriteWorkflow(List<Message> springMessages, boolean bpmDesignerSession) {
+        if (designerAgentProperties.isEnabled()) {
+            log.debug("write-workflow skip: designer-agent enabled");
+            return null;
+        }
         boolean flag = properties.getWriteWorkflow().isEnabled();
         if (!flag || !bpmDesignerSession) {
             log.debug("write-workflow skip: enabled={} bpmDesignerSession={}", flag, bpmDesignerSession);

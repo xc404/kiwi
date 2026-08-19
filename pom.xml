@@ -16,6 +16,7 @@
     <modules>
         <module>kiwi-common</module>
         <module>kiwi-bpmn-assistant</module>
+        <module>kiwi-bpmn-designer-agent</module>
         <module>kiwi-admin/backend</module>
         <module>kiwi-bpmn</module>
         <module>kiwi-bpmn/kiwi-bpmn-external-task</module>

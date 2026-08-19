@@ -18,6 +18,14 @@ kiwi:
       warmup-enabled: ${KIWI_AI_MCP_WARMUP_ENABLED:true}
       warmup-max-attempts: ${KIWI_AI_MCP_WARMUP_MAX_ATTEMPTS:20}
       warmup-backoff-ms: ${KIWI_AI_MCP_WARMUP_BACKOFF_MS:150}
+  bpm:
+    designer-agent:
+      enabled: ${KIWI_BPM_DESIGNER_AGENT_ENABLED:false}
+      plan-mode: true
+      plan-mode-skip-simple: true
+      max-tool-steps: 20
+      sse-timeout-ms: 300000
+      max-repair-rounds: 3
   # 用户在「个人设置」签发的长期访问令牌（PAT）；需经兑换接口换取短期 Sa-Token 后调用业务 API
   # Sa-Token 会话存储：mongodb（默认）| redis（需同时配置 spring.data.redis）
   sa-token:

@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Deprecated(since = "2026-08", forRemoval = true)
 public class AssistantIntentService {
 
     private static final String SystemPrompt = """

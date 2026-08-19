@@ -34,7 +34,7 @@ import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
 import { ProcessDesignService } from '../service/process-design.service';
 import { importBpmnXmlToModeler } from '../toolbar/bpm-canvas-import.utils';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
-import { BpmAiChatComponent } from './bpm-ai-chat/bpm-ai-chat.component';
+import { BpmDesignerAgentComponent } from '../agent/bpm-designer-agent.component';
 import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
 import type { BpmDesignerToolbarContext } from '../toolbar/bpm-designer-toolbar.types';
 
@@ -76,7 +76,7 @@ const XmlHistoryMax = 20;
     BpmPallete,
     BpmToolbar,
     BpmEditorProcessMetaComponent,
-    BpmAiChatComponent,
+    BpmDesignerAgentComponent,
     NzButtonModule,
     NzIconModule,
     NzTooltipModule

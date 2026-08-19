@@ -32,4 +32,7 @@ KIWI_BPM_EXTERNAL_TASK_WORKER_ID: kiwi-admin
 
 DEEPSEEK_API_KEY:
 
+# BPM 设计器 Agent（替代 write-workflow 改图；需 kiwi.ai.enabled + API Key）
+KIWI_BPM_DESIGNER_AGENT_ENABLED: true
+
 MONGOCK_TRANSACTIONAL: false

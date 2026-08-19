@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/ai/write-workflow")
 @RequiredArgsConstructor
 @Tag(name = "AI 写工作流", description = "意图分派 + Java 管线 + 会话状态")
+@Deprecated(since = "2026-08", forRemoval = true)
 public class WriteWorkflowCtl extends BaseCtl {
 
     private final WriteWorkflowSessionService sessionService;
