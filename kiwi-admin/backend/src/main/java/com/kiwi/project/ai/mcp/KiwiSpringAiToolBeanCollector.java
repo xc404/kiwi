@@ -13,7 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 发现容器内带 Spring AI {@link Tool} 的 bean（如 {@code AssistantDesignerTools}），供进程内
+ * 发现容器内带 Spring AI {@link Tool} 的 bean（如 {@code AssistantNavigationTools}），供进程内
  * {@link org.springframework.ai.tool.method.MethodToolCallbackProvider} 与 MCP 配置复用。
  */
 public final class KiwiSpringAiToolBeanCollector {

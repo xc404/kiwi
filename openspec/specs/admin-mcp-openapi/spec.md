@@ -32,17 +32,17 @@ Kiwi 管理后台 SHALL 通过 `spring-ai-starter-mcp-server-webmvc` 对外提�
 
 ### Requirement: 助手客户端动作进程内 @Tool
 
-`assistant_navigate` 与 `assistant_designer_*` 等**仅登记 `AiAssistantResponse.actions`、无独立业务 REST 语义**的助手动作，SHALL 由 `AssistantNavigationTools` 与 `AssistantDesignerTools`（及经架构评审的同类 Bean）以 `@Tool` 实现，并 SHALL 仅通过 `KiwiAssistantInProcessToolsFactory` 注册到 `kiwiChatClient`，SHALL NOT 出现在对外 MCP `tools/list` 中（避免与 `AssistantClientActionContext` 线程语义冲突及重复注册）。
+`assistant_navigate` 等**仅登记 `AiAssistantResponse.actions`、无独立业务 REST 语义**的助手动作，SHALL 由 `AssistantNavigationTools`（及经架构评审的同类 Bean）以 `@Tool` 实现，并 SHALL 仅通过 `KiwiAssistantInProcessToolsFactory` 注册到 `kiwiChatClient`，SHALL NOT 出现在对外 MCP `tools/list` 中（避免与 `AssistantClientActionContext` 线程语义冲突及重复注册）。BPM 设计器改图 SHALL 走 `/bpm/designer-agent/**`，SHALL NOT 再提供 `assistant_designer_*`。
 
 #### Scenario: MCP 列表不含 assistant_*
 
 - **WHEN** 外部 MCP 客户端调用 `tools/list`
-- **THEN** 返回列表 SHALL 仅含 OpenAPI 扫描的业务工具，SHALL NOT 含 `assistant_navigate` 或 `assistant_designer_*`
+- **THEN** 返回列表 SHALL 仅含 OpenAPI 扫描的业务工具，SHALL NOT 含 `assistant_navigate`
 
-#### Scenario: 助手仍可使用 assistant_*
+#### Scenario: 助手仍可使用 assistant_navigate
 
-- **WHEN** 用户通过内置助手发起需登记前端 actions 的对话
-- **THEN** `kiwiChatClient` SHALL 可调用 `assistant_*` 工具，且 `SYSTEM_PROMPT` 中的命名与 `@Tool.name` 一致
+- **WHEN** 用户通过内置助手发起需跳转后台页面的对话
+- **THEN** `kiwiChatClient` SHALL 可调用 `assistant_navigate` 工具，且 `SYSTEM_PROMPT` 中的命名与 `@Tool.name` 一致
 
 ### Requirement: OpenAPI 注解完整性
 

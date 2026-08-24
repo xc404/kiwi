@@ -17,7 +17,7 @@ export interface AiChatResponse {
 
 /**
  * 与后端 ClientAction 对齐：type 为动作语义，params 键名由前后端约定。
- * 例如 navigate → { path, queryParams? }；toolbar → { toolbarCommand, toolbarOptions? }。
+ * 例如 navigate → { path, queryParams? }。
  */
 export interface AiClientAction {
   type: string;

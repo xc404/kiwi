@@ -35,9 +35,6 @@ public class AssistantWorkflowValidator {
     public static final String CodeUnknownComponent = "UNKNOWN_COMPONENT";
     public static final String CodePluginNotInstalled = "PLUGIN_NOT_INSTALLED";
     public static final String CodeMissingRequiredParam = "MISSING_REQUIRED_PARAM";
-    /** @deprecated 保留码值兼容旧评测；新逻辑不再因「不在 Catalog」报错。 */
-    @Deprecated
-    public static final String CodeComponentNotInCatalog = "COMPONENT_NOT_IN_CATALOG";
     public static final String CodeDanglingFlow = "DANGLING_FLOW";
     public static final String CodeNoStart = "NO_START_EVENT";
     public static final String CodeNoEnd = "NO_END_EVENT";

@@ -26,9 +26,10 @@
 ## 5. Deprecation — done
 
 - [x] 设计器 UI 入口切换
-- [x] `@Deprecated` write-workflow 设计器桥接（Ctl/Orchestrator/Session/Intent/DesignerTools/tryWriteWorkflow）
+- [x] 删除 write-workflow HTTP/会话管线（Ctl/Orchestrator/Session/Intent/tryWriteWorkflow）
 - [x] 删除 bpm-ai-chat、`AiWriteWorkflowService`、`bpm-designer-assistant.handlers.ts`
-- [x] designer-agent.enabled 时禁用 `tryWriteWorkflow`
+- [x] 删除遗留 Delegate / CatalogBuilder / `AssistantDesignerTools` / `assistant_designer_*`
+- [x] 迁移说明 `MIGRATION.md`
 
 ## 6. Follow-up — partial
 

@@ -91,7 +91,7 @@ ingest → generate EditPlan → plan 闸门 → apply → validate → repair /
 | **LangGraph4j** | LangGraph 语义移植 | 可行，生态弱于 Spring AI Alibaba |
 | **Temporal.io** | 长事务、跨进程可靠编排 | 过重，人机卡点毫秒级交互不匹配 |
 | **Spring State Machine** | 纯状态机 | 与现实现等价，仅换写法 |
-| **Dify / 可视化 Agent 平台** | 低代码编排 | Kiwi 已明确不引入（见 `ai_workflow_verify_loop` plan） |
+| **Dify / 可视化 Agent 平台** | 低代码编排 | Kiwi 已明确不引入（见归档 `openspec/changes/archive/2026-08-24-cursor-plans/superseded/ai_workflow_verify_loop_1b9d0b04.plan.md`） |
 
 ### 3.4 行业产品（闭源 Harness）
 
@@ -107,7 +107,7 @@ Cursor、GitHub Copilot、Windsurf Cascade 的 orchestration 均为**自研 Harn
 
 | 决策 | 出处 | 内容 |
 |------|------|------|
-| 确定性 Java 管线 | `ai_workflow_verify_loop` plan | 不用 Dify/LangGraph 可视化 Agent 工作流，不用开放 ReAct 自由选路 |
+| 确定性 Java 管线 | 已归档 `ai_workflow_verify_loop` plan | 不用 Dify/LangGraph 可视化 Agent 工作流，不用开放 ReAct 自由选路 |
 | 抛开旧 Orchestrator | Greenfield plan | `WriteWorkflowOrchestrator` 废弃，新建 `DesignerAgentOrchestrator` |
 | 混合架构 | 行业参考 §4.3 | 外层 Plan-and-Execute（EditPlan + await_plan）+ 内层 ReAct（MCP）+ Reflexion（repair） |
 | 同模式演进 | 代码 | 新旧 Orchestrator 均为 Java 状态机，领域模型从 Plan IR 换为 EditPlan |

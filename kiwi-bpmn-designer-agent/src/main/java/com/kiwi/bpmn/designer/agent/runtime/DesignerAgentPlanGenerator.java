@@ -1,7 +1,9 @@
 package com.kiwi.bpmn.designer.agent.runtime;
 
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.kiwi.bpmn.designer.agent.model.EditPlan;
 import com.kiwi.bpmn.designer.agent.mcp.DesignerAgentToolScope;
 import com.kiwi.bpmn.designer.agent.mcp.DesignerAgentToolTraceContext;
@@ -20,6 +22,13 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class DesignerAgentPlanGenerator {
+
+    /** LLM 偶发输出 JS 风格 JSON（无引号键、单引号等）时的容错解析。 */
+    private static final ObjectMapper LenientJsonMapper = JsonMapper.builder()
+            .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
+            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+            .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
+            .build();
 
     private final ObjectMapper objectMapper;
     private final ObjectProvider<ChatClient> chatClientProvider;
@@ -71,10 +80,15 @@ public class DesignerAgentPlanGenerator {
                 return GenerateResult.empty("模型未返回内容");
             }
             try {
-                return parseResponse(raw);
+                return parseResponse(raw, objectMapper);
             } catch (Exception first) {
                 log.warn("EditPlan parse failed (first pass): {}", first.getMessage());
-                return retryJsonOnly(client, prompt, first.getMessage());
+                try {
+                    return parseResponse(raw, LenientJsonMapper);
+                } catch (Exception lenient) {
+                    log.warn("EditPlan parse failed (lenient pass): {}", lenient.getMessage());
+                    return retryJsonOnly(client, prompt, first.getMessage());
+                }
             }
         } catch (Exception e) {
             log.warn("EditPlan generate failed: {}", e.getMessage());
@@ -99,7 +113,11 @@ public class DesignerAgentPlanGenerator {
             if (StringUtils.isBlank(retryRaw)) {
                 return GenerateResult.empty("模型未返回可解析的 EditPlan JSON");
             }
-            return parseResponse(retryRaw);
+            try {
+                return parseResponse(retryRaw, objectMapper);
+            } catch (Exception strict) {
+                return parseResponse(retryRaw, LenientJsonMapper);
+            }
         } catch (Exception second) {
             log.warn("EditPlan generate failed (retry): {}", second.getMessage());
             return GenerateResult.empty("无法解析 EditPlan：" + second.getMessage());
@@ -129,9 +147,9 @@ public class DesignerAgentPlanGenerator {
         }
     }
 
-    private GenerateResult parseResponse(String raw) throws Exception {
+    private GenerateResult parseResponse(String raw, ObjectMapper mapper) throws Exception {
         String json = extractJsonPayload(raw);
-        JsonNode node = objectMapper.readTree(json);
+        JsonNode node = mapper.readTree(json);
         String summary = textOr(node, "summary", null);
         String thinking = textOr(node, "thinking", null);
         JsonNode planNode = node.get("editPlan");
@@ -140,7 +158,7 @@ public class DesignerAgentPlanGenerator {
         }
         EditPlan plan = null;
         if (planNode.has("operations") || planNode.has("processId")) {
-            plan = objectMapper.treeToValue(planNode, EditPlan.class);
+            plan = mapper.treeToValue(planNode, EditPlan.class);
         }
         return new GenerateResult(plan, summary, thinking);
     }

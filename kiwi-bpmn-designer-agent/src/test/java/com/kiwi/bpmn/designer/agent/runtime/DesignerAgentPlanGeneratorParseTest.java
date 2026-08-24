@@ -24,4 +24,15 @@ class DesignerAgentPlanGeneratorParseTest {
                 """;
         assertEquals("{\"summary\":\"x\"}", DesignerAgentPlanGenerator.extractJsonPayload(raw));
     }
+
+    @Test
+    void extractJsonPayload_unquotedKeys_canBeParsedLeniently() throws Exception {
+        String raw = "{summary:\"写文件\",editPlan:{operations:[]}}";
+        String json = DesignerAgentPlanGenerator.extractJsonPayload(raw);
+        var mapper = com.fasterxml.jackson.databind.json.JsonMapper.builder()
+                .enable(com.fasterxml.jackson.core.json.JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
+                .enable(com.fasterxml.jackson.core.json.JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                .build();
+        assertEquals("写文件", mapper.readTree(json).path("summary").asText());
+    }
 }

@@ -44,8 +44,4 @@ export class BpmDesignerToolbarService {
     const list = [...this.commands.values()].filter(c => c.showInToolbar !== false);
     return list.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
   }
-
-  listAiCommandIds(): string[] {
-    return [...this.commands.values()].filter(c => c.aiExposed !== false).map(c => c.id);
-  }
 }

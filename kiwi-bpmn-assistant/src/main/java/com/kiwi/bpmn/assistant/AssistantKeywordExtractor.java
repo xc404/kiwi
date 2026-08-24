@@ -38,15 +38,12 @@ public class AssistantKeywordExtractor {
             - 不要输出“流程”“工作流”“场景”“实现”等泛词。
             """;
 
-    private final AssistantProperties assistantProperties;
     private final ObjectMapper objectMapper;
     private final ObjectProvider<ChatModel> chatModelProvider;
 
     public AssistantKeywordExtractor(
-            AssistantProperties assistantProperties,
             ObjectMapper objectMapper,
             ObjectProvider<ChatModel> chatModelProvider) {
-        this.assistantProperties = assistantProperties;
         this.objectMapper = objectMapper;
         this.chatModelProvider = chatModelProvider;
     }
@@ -63,9 +60,6 @@ public class AssistantKeywordExtractor {
     }
 
     private List<String> extractWithLlm(String scenario) {
-        if (!assistantProperties.isEnabled()) {
-            return List.of();
-        }
         ChatModel chatModel = chatModelProvider.getIfAvailable();
         if (chatModel == null) {
             return List.of();

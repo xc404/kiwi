@@ -21,9 +21,6 @@ public class AssistantRuleSet {
     public static final String ModeCreate = "create";
     public static final String ModeModify = "modify";
 
-    /** @deprecated 使用 {@link #RuleComponentIdResolvable} */
-    @Deprecated
-    public static final String RuleComponentIdInCatalog = "component_id_in_catalog";
     public static final String RuleComponentIdResolvable = "component_id_resolvable";
     public static final String RuleRequiredParamsPresent = "required_params_present";
     public static final String RuleHasStartAndEnd = "has_start_and_end";

@@ -63,8 +63,12 @@ public class DesignerAgentSessionService {
             sinksByRunId.put(run.getRunId(), eventSink);
         }
         put(run);
-        executeAsync(run.getRunId());
         return run;
+    }
+
+    /** 在 SSE {@code run_started} 已发出后调用，避免异步 run 先 error/done 导致 emitter 提前 complete。 */
+    public void startRunExecution(String runId) {
+        executeAsync(runId);
     }
 
     @Async

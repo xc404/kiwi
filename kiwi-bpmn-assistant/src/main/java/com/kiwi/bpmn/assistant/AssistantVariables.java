@@ -1,7 +1,7 @@
 package com.kiwi.bpmn.assistant;
 
 /**
- * AI 写工作流会话字段名（与 {@link WriteWorkflowSession} 对齐）。
+ * Plan IR / 校验 / 遗留 Delegate 使用的流程变量名。
  */
 public final class AssistantVariables {
 

@@ -153,7 +153,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '套索选择',
         icon: 'border',
         group: 'tools',
-        aiExposed: false,
         run: ctx => triggerEditorAction(ctx, 'lassoTool')
       },
       {
@@ -161,7 +160,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '平移画布（手型）',
         icon: 'drag',
         group: 'tools',
-        aiExposed: false,
         run: ctx => triggerEditorAction(ctx, 'handTool')
       },
       {
@@ -169,7 +167,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '全局连线',
         icon: 'link',
         group: 'tools',
-        aiExposed: false,
         run: ctx => triggerEditorAction(ctx, 'globalConnectTool')
       },
       {
@@ -177,7 +174,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '空间工具',
         icon: 'column-width',
         group: 'tools',
-        aiExposed: false,
         run: ctx => triggerEditorAction(ctx, 'spaceTool')
       },
       {
@@ -248,7 +244,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '切换网格吸附',
         icon: 'appstore',
         group: 'view',
-        aiExposed: false,
         run: ctx => toggleGridSnapping(ctx)
       },
       {
@@ -272,7 +267,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '从文件导入 BPMN XML（覆盖当前图，需再保存）',
         icon: 'upload',
         group: 'file',
-        aiExposed: false,
         run: ctx => ctx.openImportFile?.()
       },
       {
@@ -294,7 +288,6 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '控制台输出 XML',
         icon: 'code',
         group: 'file',
-        aiExposed: false,
         run: ctx => logBpmnXml(ctx)
       },
       {

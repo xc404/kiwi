@@ -2,7 +2,6 @@ package com.kiwi.project.ai.assistant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.bpmn.assistant.AssistantBpmnToPlan;
-import com.kiwi.bpmn.assistant.AssistantCatalog;
 import com.kiwi.bpmn.assistant.AssistantKeywordExtractor;
 import com.kiwi.bpmn.assistant.AssistantPlanCompiler;
 import com.kiwi.bpmn.assistant.AssistantPlanGenerateService;
@@ -11,13 +10,7 @@ import com.kiwi.bpmn.assistant.AssistantRuleSet;
 import com.kiwi.bpmn.assistant.AssistantVariables;
 import com.kiwi.bpmn.assistant.AssistantWorkflowValidator;
 import com.kiwi.bpmn.assistant.DefaultAssistantXmlValidator;
-import com.kiwi.bpmn.assistant.spi.AssistantBpmnLookup;
 import com.kiwi.bpmn.assistant.spi.AssistantComponentLookup;
-import com.kiwi.project.bpm.model.BpmComponent;
-import com.kiwi.project.bpm.model.BpmComponentParameter;
-import com.kiwi.project.bpm.service.BpmComponentPluginLoader;
-import com.kiwi.project.bpm.service.BpmComponentService;
-import com.kiwi.project.bpm.service.BpmRemoteMarketService;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -35,7 +28,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -45,8 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -63,22 +53,11 @@ class AssistantCreateOrderScenarioTest {
             Pattern.compile("kiwi:componentId=\"([^\"]+)\"");
 
     @Mock
-    BpmComponentService componentService;
-    @Mock
-    com.kiwi.project.bpm.dao.BpmComponentDao componentDao;
-    @Mock
-    AssistantBpmnLookup bpmnLookup;
-    @Mock
-    BpmComponentPluginLoader pluginLoader;
-    @Mock
     AssistantComponentLookup componentLookup;
-    @Mock
-    ObjectProvider<BpmRemoteMarketService> remoteProvider;
 
     private ObjectMapper objectMapper;
     private AssistantRuleSet ruleSet;
     private AssistantKeywordExtractor keywordExtractor;
-    private AssistantCatalogContextBuilder catalogBuilder;
     private AssistantPlanGenerateService planGenerateService;
     private AssistantWorkflowValidator validator;
     private ChatModel chatModel;
@@ -97,25 +76,10 @@ class AssistantCreateOrderScenarioTest {
         chatModel = DeepSeekChatModel.builder().deepSeekApi(deepSeekApi).build();
         ChatClient chatClient = ChatClient.builder(chatModel).build();
 
-        AssistantProperties properties = new AssistantProperties();
-        properties.setEnabled(true);
-
         @SuppressWarnings("unchecked")
         ObjectProvider<ChatModel> chatModelProvider = mock(ObjectProvider.class);
         when(chatModelProvider.getIfAvailable()).thenReturn(chatModel);
-        keywordExtractor = new AssistantKeywordExtractor(properties, objectMapper, chatModelProvider);
-
-        when(pluginLoader.buildPluginJarIndex()).thenReturn(Map.of());
-        when(remoteProvider.getIfAvailable()).thenReturn(null);
-        when(bpmnLookup.findMatureTemplates(anyString(), any(), anyInt())).thenReturn(List.of());
-        catalogBuilder = new AssistantCatalogContextBuilder(
-                properties,
-                componentService,
-                componentDao,
-                bpmnLookup,
-                pluginLoader,
-                objectMapper,
-                remoteProvider);
+        keywordExtractor = new AssistantKeywordExtractor(objectMapper, chatModelProvider);
 
         @SuppressWarnings("unchecked")
         ObjectProvider<ChatClient> chatClientProvider = mock(ObjectProvider.class);
@@ -152,7 +116,7 @@ class AssistantCreateOrderScenarioTest {
         validator = new AssistantWorkflowValidator(
                 new DefaultAssistantXmlValidator(),
                 componentLookup,
-                properties,
+                new AssistantProperties(),
                 objectMapper,
                 ruleSet);
     }
@@ -160,34 +124,15 @@ class AssistantCreateOrderScenarioTest {
     @Test
     @Tag("llm")
     @Timeout(value = 120, unit = TimeUnit.SECONDS)
-    void createOrderScenario_realLlm_extractsKeywordsRanksCatalogAndValidates() throws Exception {
-        when(componentService.listCachedComponents()).thenReturn(List.of(
-                component("classpath_httpRequest", "httpRequest", "HTTP 请求", "classpath", "通用"),
-                component("classpath_uuidGenerate", "uuidGenerate", "生成 UUID / 订单号", "classpath", "通用"),
-                component("classpath_assignmentActivity", "assignmentActivity", "组装订单变量", "classpath", "通用"),
-                component("classpath_shell", "shell", "命令行", "classpath", "通用")));
-        when(componentDao.findAll()).thenReturn(List.of(
-                component("classpath_httpRequest", "httpRequest", "HTTP 请求", "classpath", "通用"),
-                component("classpath_uuidGenerate", "uuidGenerate", "生成 UUID / 订单号", "classpath", "通用"),
-                component("classpath_assignmentActivity", "assignmentActivity", "组装订单变量", "classpath", "通用"),
-                component("classpath_shell", "shell", "命令行", "classpath", "通用")));
-        when(componentService.fillComponentProperties(any(BpmComponent.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
+    void createOrderScenario_realLlm_extractsKeywordsAndValidates() throws Exception {
         long startedAt = System.currentTimeMillis();
         List<String> keywords = keywordExtractor.extract(Scenario);
         assertTrue(keywords.contains("订单"), "应抽到业务词「订单」: " + keywords);
         assertFalse(keywords.contains("生成"), "泛词「生成」应被过滤");
         assertFalse(keywords.contains("流程"), "泛词「流程」应被过滤");
 
-        AssistantCatalog catalog = catalogBuilder.build(Scenario, keywords);
-        List<String> installedIds = catalog.getInstalled().stream()
-                .map(AssistantCatalog.CatalogComponent::getId)
-                .toList();
-        assertTrue(installedIds.contains("classpath_uuidGenerate"));
-        assertTrue(installedIds.contains("classpath_assignmentActivity"));
-
-        String catalogJson = objectMapper.writeValueAsString(orderCatalog());
+        List<String> expectedIds = List.of(
+                "classpath_uuidGenerate", "classpath_assignmentActivity", "classpath_httpRequest");
         var generated = planGenerateService.generate(Scenario, null, null, null);
         assertTrue(StringUtils.isNotBlank(generated.getCandidateXml()), "真实 LLM 应产出候选 BPMN");
 
@@ -213,8 +158,7 @@ class AssistantCreateOrderScenarioTest {
         assertFalse(usedIds.isEmpty(), "创建订单流程应至少引用一个已装组件");
         for (String usedId : usedIds) {
             assertTrue(
-                    List.of("classpath_uuidGenerate", "classpath_assignmentActivity", "classpath_httpRequest")
-                            .contains(usedId),
+                    expectedIds.contains(usedId),
                     "组件必须来自已装集合，禁止臆造: " + usedId);
         }
         assertTrue(
@@ -230,7 +174,7 @@ class AssistantCreateOrderScenarioTest {
                 "真实 LLM 生成/一轮修复后应 PASS: " + validation.getIssues());
         assertTrue(validation.getIssues().isEmpty(), "PASS 时不应残留 issues: " + validation.getIssues());
 
-        writeEvalReport(keywords, installedIds, generated, usedIds, repaired, validation,
+        writeEvalReport(keywords, expectedIds, generated, usedIds, repaired, validation,
                 System.currentTimeMillis() - startedAt);
     }
 
@@ -276,41 +220,6 @@ class AssistantCreateOrderScenarioTest {
         System.out.println(md);
     }
 
-    private AssistantCatalog orderCatalog() {
-        AssistantCatalog catalog = new AssistantCatalog();
-        AssistantCatalog.CatalogComponent uuid = new AssistantCatalog.CatalogComponent();
-        uuid.setId("classpath_uuidGenerate");
-        uuid.setName("生成 UUID");
-        uuid.setDescription("生成订单号/UUID");
-        uuid.setDelegateExpression("${uuidGenerate}");
-        uuid.setStatus("installed");
-
-        AssistantCatalog.CatalogComponent assign = new AssistantCatalog.CatalogComponent();
-        assign.setId("classpath_assignmentActivity");
-        assign.setName("变量组件");
-        assign.setDescription("组装订单变量 outTradeNo / payAmount");
-        assign.setDelegateExpression("${assignmentActivity}");
-        assign.setStatus("installed");
-        AssistantCatalog.CatalogParameter assignments = new AssistantCatalog.CatalogParameter();
-        assignments.setKey("assignments");
-        assignments.setRequired(false);
-        assignments.setExample("[{\"key\":\"outTradeNo\",\"value\":\"${uuid}\"}]");
-        assign.setInputs(List.of(assignments));
-
-        AssistantCatalog.CatalogComponent http = new AssistantCatalog.CatalogComponent();
-        http.setId("classpath_httpRequest");
-        http.setName("HTTP 请求");
-        http.setDelegateExpression("${httpRequest}");
-        http.setStatus("installed");
-        AssistantCatalog.CatalogParameter url = new AssistantCatalog.CatalogParameter();
-        url.setKey("url");
-        url.setRequired(true);
-        http.setInputs(List.of(url));
-
-        catalog.setInstalled(List.of(uuid, assign, http));
-        return catalog;
-    }
-
     private List<String> extractComponentIds(String xml) {
         Matcher matcher = ComponentIdPattern.matcher(xml);
         java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
@@ -318,17 +227,6 @@ class AssistantCreateOrderScenarioTest {
             ids.add(matcher.group(1));
         }
         return List.copyOf(ids);
-    }
-
-    private BpmComponent component(String id, String key, String name, String source, String group) {
-        BpmComponent component = new BpmComponent();
-        component.setId(id);
-        component.setKey(key);
-        component.setName(name);
-        component.setSource(source);
-        component.setGroup(group);
-        component.setDescription(name);
-        return component;
     }
 
     /**

@@ -66,6 +66,9 @@ public class DesignerAgentOrchestrator {
             run.setEditPlanJson(objectMapper.writeValueAsString(plan));
             run.setAssistantReply(StringUtils.defaultIfBlank(plan.getSummary(), gen.summary()));
             boolean skip = planSkipEvaluator.shouldSkipPlan(plan, run.getUserScenario());
+            if (StringUtils.isBlank(run.getBaseBpmnXml())) {
+                skip = false;
+            }
             run.setPlanSkipped(skip);
             if (!skip) {
                 PlanDisplayView display = editPlanPresenter.present(plan, run.getBaseBpmnXml(), gen.summary());
@@ -110,14 +113,6 @@ public class DesignerAgentOrchestrator {
         }
     }
 
-    /**
-     * @deprecated 由 {@link #processPlanConfirmation} + 异步 execute 替代，保留供兼容调用。
-     */
-    @Deprecated
-    public void confirmPlan(DesignerAgentRun run, boolean confirmed, String editedPlanJson) {
-        processPlanConfirmation(run, confirmed, editedPlanJson);
-    }
-
     public void confirmPreview(DesignerAgentRun run, boolean confirmed) {
         run.setPreviewConfirmed(confirmed);
         if (!confirmed) {
@@ -132,15 +127,6 @@ public class DesignerAgentOrchestrator {
     public void prepareAfterAsk(DesignerAgentRun run, String answer) {
         run.setAskMessage(null);
         run.setUserScenario(answer);
-    }
-
-    /**
-     * @deprecated 由 {@link #prepareAfterAsk} + {@link #runTurn} 异步组合替代。
-     */
-    @Deprecated
-    public void continueAfterAsk(DesignerAgentRun run, String answer) {
-        prepareAfterAsk(run, answer);
-        runTurn(run);
     }
 
     private void applyAndValidate(DesignerAgentRun run, EditPlan plan) throws Exception {

@@ -24,7 +24,7 @@ todos:
     content: 新建 bpm-designer-agent 前端（专用面板）：思考块 + Plan 卡片 + SSE 流式
     status: completed
   - id: deprecate-old
-    content: 设计器入口切到 bpm-designer-agent；旧 write-workflow/bpm-ai-chat 代码删除与 @Deprecated 标记
+    content: 设计器入口切到 bpm-designer-agent；旧 write-workflow 管线已删除，遗留 Delegate/@Deprecated
     status: completed
   - id: tests
     content: EditPlanApplicator 单测（已完成）+ Agent SSE 集成测试 + 手工验收 A1–A9
@@ -82,21 +82,19 @@ isProject: false
 |----|------|------|
 | Patch 层命名 | `BpmnPatchApplier` + 独立 `BpmnChangeValidator` | `EditPlanApplicator`；校验复用 `AssistantWorkflowValidator` |
 | ReAct 循环 | 多步 think→tool→observe | 单轮 LLM+MCP 生成 EditPlan（工具调用在 LLM 内，无 `tool_start/end` 事件） |
-| 废弃旧路径 | 删除/标记 deprecated | 仅切换设计器入口；`bpm-ai-chat`、write-workflow 代码仍在 |
+| 废弃旧路径 | 删除 write-workflow HTTP 管线；Delegate 标记 @Deprecated | 已删除 Ctl/Orchestrator/Session/Intent/tryWriteWorkflow |
 | Plan 确认续推 | SSE 全程 | `confirm-plan` 走 REST，SSE 在 `await_plan` 处可能已 idle |
 | 能力矩阵 OpenSpec | spec 文件逐条 A1–A10 | 仅在 plan 正文，未写 `specs/` |
 
 ### 待办（下一迭代）
 
-1. MCP **tool_start / tool_end** 事件 + 前端工具轨迹
-2. **confirm-plan** 后 SSE 续推或统一长连接
-3. **await_install** 前端卡点 + install 流程
-4. EditPlan **黄金用例**扩展（updateNode、removeNode、网关）
-5. Agent SSE **集成测试**（mock ChatClient）
-6. 删除或 `@Deprecated` 旧 write-workflow / `bpm-ai-chat`
-7. OpenSpec **capability spec**（A1–A10 acceptance scenarios）
-8. Run **Mongo 持久化**
-9. 编排演进：Stage Handler 拆分 + ReAct 内环增强（详见 [designer_agent_orchestrator_arch_a7f3c2e1.plan.md](./designer_agent_orchestrator_arch_a7f3c2e1.plan.md)）
+1. **await_install** 前端卡点 + install 流程
+2. EditPlan **黄金用例**扩展（updateNode、removeNode、网关）
+3. OpenSpec **capability spec**（A1–A10 acceptance scenarios）
+4. Run **Mongo 持久化**
+5. 编排演进：Stage Handler 拆分 + ReAct 内环增强（详见 [designer_agent_orchestrator_arch_a7f3c2e1.plan.md](./designer_agent_orchestrator_arch_a7f3c2e1.plan.md)）
+
+HTTP 评测套件已落地，计划归档于 `openspec/changes/archive/2026-08-24-cursor-plans/completed/designer_agent_eval_it_43e4e1fc.plan.md`。
 
 ### 启用方式
 
@@ -539,12 +537,12 @@ pages/bpm/design/agent/
 - [ ] install 卡点 UI
 - [ ] 独立 thinking 子组件（可选）
 
-### Phase 4 — 切换与废弃 🔄
+### Phase 4 — 切换与废弃 ✅
 - [x] 设计器入口切到 `bpm-designer-agent`
 - [x] 配置 `kiwi.bpm.designer-agent.enabled`（默认 false）
-- [ ] enabled 时禁用 `AiAssistantService.tryWriteWorkflow` 设计器桥接
-- [ ] 标记 deprecated / 删除旧代码
-- [ ] 迁移文档
+- [x] 删除 `AiAssistantService.tryWriteWorkflow` 与 `/ai/write-workflow/**`
+- [x] 遗留 Delegate / `AssistantDesignerTools` / `assistant_designer_*` 已删除
+- [x] 迁移文档 `openspec/changes/bpm-designer-agent/MIGRATION.md`
 
 ### Phase 5 — 测试与验收 🔄
 - [x] EditPlanApplicator 单测
@@ -557,7 +555,7 @@ pages/bpm/design/agent/
 
 | # | 标准 | 状态 |
 |---|------|------|
-| 1 | 设计器改图不经过 `/ai/assistant` 与 write-workflow | ✅ 入口已切；旧代码未删 |
+| 1 | 设计器改图不经过 `/ai/assistant` 与 write-workflow | ✅ 入口已切；`/ai/write-workflow` 已删除 |
 | 2 | 面板内可见思考流、EditPlan、阶段进度 | ✅ stage + thinking；❌ MCP tool 轨迹 |
 | 3 | 复杂改图 Plan 审阅；简单操作可跳过 | ✅ PlanSkipEvaluator |
 | 4 | patch → 预览；preview/install/ask 卡点 | ✅ preview/ask；⚠️ install UI 待补 |
@@ -577,10 +575,10 @@ pages/bpm/design/agent/
 
 ---
 
-## 不再作为本方案基础的文件（仅参考/废弃）
+## 已删除（不再作为本方案基础）
 
-- [WriteWorkflowOrchestrator.java](kiwi-admin/backend/src/main/java/com/kiwi/project/ai/assistant/WriteWorkflowOrchestrator.java)
-- [WriteWorkflowSessionService.java](kiwi-admin/backend/src/main/java/com/kiwi/project/ai/assistant/WriteWorkflowSessionService.java)
-- [AssistantPlanGenerateService.java](kiwi-bpmn-assistant/src/main/java/com/kiwi/bpmn/assistant/AssistantPlanGenerateService.java)
-- [AiAssistantService.tryWriteWorkflow](kiwi-admin/backend/src/main/java/com/kiwi/project/ai/AiAssistantService.java)
-- [bpm-ai-chat 写工作流面板](kiwi-admin/frontend/src/app/pages/bpm/design/editor/bpm-ai-chat/bpm-ai-chat.component.ts)
+- ~~WriteWorkflowOrchestrator / SessionService / Ctl~~（已从仓库移除）
+- ~~AiAssistantService.tryWriteWorkflow~~（已删除）
+- ~~bpm-ai-chat 写工作流面板~~（已删除）
+
+`kiwi-bpmn-assistant` 的 Compiler / Validator 仍由 Designer Agent 复用。

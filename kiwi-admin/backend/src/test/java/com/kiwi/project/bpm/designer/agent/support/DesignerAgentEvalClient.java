@@ -15,7 +15,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -115,7 +114,7 @@ public class DesignerAgentEvalClient {
                 token,
                 startBody.toString(),
                 session,
-                s -> shouldPauseInitialStream(s),
+                DesignerAgentEvalClient::shouldPauseInitialStream,
                 Duration.ofSeconds(180));
 
         String runId = session.runId;
@@ -132,15 +131,8 @@ public class DesignerAgentEvalClient {
         session.mergeStatus(status);
         runId = firstNonBlank(text(status, "runId", null), session.runId);
 
-        if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && isRunPresentOnServer(status)) {
-            confirmPlan(baseUrl, token, runId, true, null);
-            consumeSse(
-                    baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
-                    token,
-                    null,
-                    session,
-                    s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
-                    Duration.ofSeconds(300));
+        if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && canInteractWithRun(status, session)) {
+            autoConfirmPlanAndWait(baseUrl, token, runId, session);
             status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
             session.mergeStatus(status);
         }
@@ -153,15 +145,8 @@ public class DesignerAgentEvalClient {
             }
 
             String stage = resolveStage(status, session);
-            if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && isRunPresentOnServer(status)) {
-                confirmPlan(baseUrl, token, runId, true, null);
-                consumeSse(
-                        baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
-                        token,
-                        null,
-                        session,
-                        s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
-                        Duration.ofSeconds(180));
+            if (evalCase.isAutoConfirmPlan() && isAwaitPlan(status, session) && canInteractWithRun(status, session)) {
+                autoConfirmPlanAndWait(baseUrl, token, runId, session);
                 status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
                 session.mergeStatus(status);
                 continue;
@@ -175,6 +160,32 @@ public class DesignerAgentEvalClient {
         }
 
         return mergeSnapshot(runId, targetProcessId, status, session, baseBpmnXml, started);
+    }
+
+    /**
+     * 与前端一致：先续订 SSE 再 confirm-plan，避免 apply 事件推到已关闭的初始流。
+     */
+    private void autoConfirmPlanAndWait(String baseUrl, String token, String runId, SseSession session)
+            throws Exception {
+        Thread resumeThread = Thread.startVirtualThread(() -> {
+            try {
+                consumeSse(
+                        baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
+                        token,
+                        null,
+                        session,
+                        s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
+                        Duration.ofSeconds(300));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        Thread.sleep(1000);
+        confirmPlan(baseUrl, token, runId, true, null);
+        resumeThread.join(Duration.ofMinutes(6));
+        if (resumeThread.isAlive()) {
+            throw new IllegalStateException("confirm-plan 后续 SSE 在超时内未到达稳定阶段");
+        }
     }
 
     private static String resolveStage(JsonNode status, SseSession session) {
@@ -193,12 +204,18 @@ public class DesignerAgentEvalClient {
         return StringUtils.isNotBlank(text(status, "runId", null));
     }
 
-    /** run 已从服务端内存清除（完成/失败/重启），不应再按 runId 轮询或 confirm。 */
+    private static boolean canInteractWithRun(JsonNode status, SseSession session) {
+        return isRunPresentOnServer(status) || StringUtils.isNotBlank(session.runId);
+    }
+
     private static boolean isRunAbsentOnServer(JsonNode status, SseSession session) {
         if (isRunPresentOnServer(status)) {
             return false;
         }
-        return StringUtils.isNotBlank(session.runId);
+        if (StringUtils.isBlank(session.runId)) {
+            return false;
+        }
+        return session.isRunFinishedOnServer();
     }
 
     private RunSnapshot mergeSnapshot(
@@ -269,7 +286,6 @@ public class DesignerAgentEvalClient {
         return objectMapper.createObjectNode();
     }
 
-    /** 单次 by-target 查询，run 不存在时返回 active=false 的空状态（不触发 404）。 */
     private JsonNode fetchStatusByTargetOnce(String baseUrl, String token, String targetProcessId) throws Exception {
         String encoded = URLEncoder.encode(targetProcessId, StandardCharsets.UTF_8);
         HttpRequest req = HttpRequest.newBuilder(URI.create(
@@ -486,7 +502,6 @@ public class DesignerAgentEvalClient {
             }
         }
 
-        /** run 已从服务端移除时，用 SSE 终态事件补全 stage，避免 stale await_plan 触发重复 confirm。 */
         private void finalizeFromEvents() {
             if (eventTypes.contains("error")) {
                 stage = AgentRunStage.Error;
@@ -500,10 +515,7 @@ public class DesignerAgentEvalClient {
                 stage = AgentRunStage.AwaitPreview;
                 return;
             }
-            if (eventTypes.contains("await_human") && StringUtils.isNotBlank(stage) && isStableStage(stage)) {
-                return;
-            }
-            if (StringUtils.isNotBlank(stage) && !AgentRunStage.AwaitPlan.equals(stage)) {
+            if (StringUtils.isNotBlank(stage) && isStableStage(stage)) {
                 return;
             }
             if (eventTypes.contains("plan_ready")) {
@@ -511,11 +523,10 @@ public class DesignerAgentEvalClient {
             }
         }
 
-        private boolean receivedTerminalEvent() {
-            return eventTypes.contains("preview_ready")
+        private boolean isRunFinishedOnServer() {
+            return eventTypes.contains("done")
                     || eventTypes.contains("error")
-                    || eventTypes.contains("done")
-                    || eventTypes.contains("await_human");
+                    || isStableStage(stage);
         }
     }
 }

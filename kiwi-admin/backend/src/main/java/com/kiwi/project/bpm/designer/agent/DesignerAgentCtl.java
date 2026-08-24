@@ -54,7 +54,9 @@ public class DesignerAgentCtl extends BaseCtl {
                     .data(objectMapper.writeValueAsString(sessionService.statusOf(run))));
         } catch (IOException e) {
             emitter.completeWithError(e);
+            return emitter;
         }
+        sessionService.startRunExecution(run.getRunId());
         emitter.onCompletion(() -> log.debug("SSE completed runId={}", run.getRunId()));
         emitter.onTimeout(emitter::complete);
         return emitter;

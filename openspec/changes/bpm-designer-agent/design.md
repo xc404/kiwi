@@ -13,3 +13,5 @@ ReAct Agent + EditPlan patch + MCP 白名单 + SSE 事件流。
 ## Config
 
 `kiwi.bpm.designer-agent.enabled=false` 默认；启用：`KIWI_BPM_DESIGNER_AGENT_ENABLED=true`
+
+旧 `/ai/write-workflow/**` 已删除，见 `MIGRATION.md`。

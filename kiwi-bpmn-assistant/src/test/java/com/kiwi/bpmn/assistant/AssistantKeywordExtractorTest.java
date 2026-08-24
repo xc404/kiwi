@@ -1,7 +1,6 @@
 package com.kiwi.bpmn.assistant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kiwi.bpmn.assistant.AssistantProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -24,7 +23,7 @@ class AssistantKeywordExtractorTest {
         @SuppressWarnings("unchecked")
         ObjectProvider<ChatModel> provider = mock(ObjectProvider.class);
         AssistantKeywordExtractor extractor =
-                new AssistantKeywordExtractor(new AssistantProperties(), new ObjectMapper(), provider);
+                new AssistantKeywordExtractor(new ObjectMapper(), provider);
         List<String> kws = extractor.extract("帮我做一个调用 HTTP 接口通知的场景流程");
         assertTrue(kws.stream().anyMatch(k -> k.contains("http")));
         assertFalse(kws.isEmpty());
@@ -32,8 +31,6 @@ class AssistantKeywordExtractorTest {
 
     @Test
     void extract_mergesShortLlmKeywordsAndRules() {
-        AssistantProperties properties = new AssistantProperties();
-        properties.setEnabled(true);
         ChatModel chatModel = mock(ChatModel.class);
         ChatResponse response = mock(ChatResponse.class);
         Generation generation = mock(Generation.class);
@@ -52,7 +49,7 @@ class AssistantKeywordExtractorTest {
                 """);
 
         AssistantKeywordExtractor extractor =
-                new AssistantKeywordExtractor(properties, new ObjectMapper(), provider);
+                new AssistantKeywordExtractor(new ObjectMapper(), provider);
 
         List<String> keywords = extractor.extract("订单完成后调用 webhook 发送通知");
 

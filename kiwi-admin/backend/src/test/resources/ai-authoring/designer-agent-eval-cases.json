@@ -1,7 +1,7 @@
 [
   {
     "id": "file-write-greenfield",
-    "scenario": "帮我做一个写文件的流程",
+    "scenario": "帮我做一个写文件的流程，使用 fileWrite 组件写入指定路径和内容",
     "baseBpmnXml": null,
     "selectedElementId": null,
     "readOnly": false,
@@ -23,7 +23,7 @@
   },
   {
     "id": "file-delete-greenfield",
-    "scenario": "帮我删除一个文件",
+    "scenario": "帮我做一个删除文件的流程，使用 shell 组件执行 rm 命令",
     "baseBpmnXml": null,
     "selectedElementId": null,
     "readOnly": false,

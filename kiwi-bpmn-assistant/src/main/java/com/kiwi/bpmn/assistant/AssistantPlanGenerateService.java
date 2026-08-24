@@ -69,17 +69,6 @@ public class AssistantPlanGenerateService {
         this.bpmnToPlan = bpmnToPlan;
     }
 
-    /** @deprecated catalogJson 已忽略，请用无 catalog 的四参数重载 */
-    @Deprecated
-    public GenerateResult generate(
-            String scenario,
-            String catalogJson,
-            String issuesJson,
-            String previousXml,
-            String userAnswer) {
-        return generate(scenario, issuesJson, previousXml, userAnswer);
-    }
-
     public GenerateResult generate(
             String scenario,
             String issuesJson,
@@ -109,7 +98,7 @@ public class AssistantPlanGenerateService {
                     - 已装组件：bpmComp_aiPage(keyword,page,size)、bpmComp_listGrouped
                     - 市场插件：bpmRemoteMarket_list(type=plugin)、bpmRemoteMarket_get
                     - 市场/本地模板：bpmRemoteMarket_list(type=template)、bpmMarket_aiPage、bpmMarket_get、bpmMarket_getProcess
-                    不要调用 assistant_designer_* 或写库类工具；只输出 JSON。
+                    不要调用写库类工具；只输出 JSON。
                     Plan IR schema:
                     {"processId":"合法 XML id","name":"流程名",
                      "nodes":[{"id":"节点id","type":"startEvent|endEvent|serviceTask|userTask|exclusiveGateway",

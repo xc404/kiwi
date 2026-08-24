@@ -7,7 +7,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
- * 助手前端动作工具（{@code assistant_navigate}、{@code assistant_designer_*}）的进程内回调工厂。
+ * 助手前端动作工具（{@code assistant_navigate}）的进程内回调工厂。
  * <p>
  * 须与 {@link com.kiwi.project.ai.AssistantClientActionContext} 同线程登记 actions，故仅挂在
  * {@link KiwiAdminAiMcpConfiguration} 的 {@code kiwiChatClient} 上，不走 MCP HTTP 回环。

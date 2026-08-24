@@ -34,7 +34,7 @@ isProject: false
 
 # BPM 流程模板 Market — 独立实施计划
 
-> 与 AI 场景生图的关系见 [ai_场景生图优化_73adc83b.plan.md](ai_场景生图优化_73adc83b.plan.md)：Market 提供高质量流程起点，AI Planner 负责搜模板、安装与微调。
+> 与 AI 写流程的关系：Market 提供高质量流程起点；现行设计器 Agent 见 [bpm_designer_agent_greenfield_13dbd3a0.plan.md](bpm_designer_agent_greenfield_13dbd3a0.plan.md)。早期场景生图草案已归档至 `openspec/changes/archive/2026-08-24-cursor-plans/superseded/`。
 
 ## 目标
 
@@ -498,7 +498,7 @@ sequenceDiagram
 
 - 空白项目 / 流程
 - **从 Market 安装包**（新建项目，推荐）
-- 用 AI 描述（见 [AI plan](ai_场景生图优化_73adc83b.plan.md)）
+- 用 AI 描述（见 [Designer Agent](bpm_designer_agent_greenfield_13dbd3a0.plan.md)）
 
 ---
 
