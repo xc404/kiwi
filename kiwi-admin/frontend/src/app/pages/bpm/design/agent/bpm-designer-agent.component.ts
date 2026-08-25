@@ -59,7 +59,6 @@ export class BpmDesignerAgentComponent {
 
   readonly busy = signal(false);
   readonly inputText = signal('');
-  readonly askText = signal('');
   readonly status = signal<DesignerAgentRunStatus | null>(null);
   readonly messages = signal<ChatMsg[]>([]);
   readonly planDisplay = signal<PlanDisplayView | null>(null);
@@ -87,8 +86,9 @@ export class BpmDesignerAgentComponent {
   readonly awaitPreview = computed(() => this.status()?.stage === 'await_preview');
   readonly awaitAsk = computed(() => this.status()?.stage === 'await_ask');
   readonly previewEdited = computed(() => this.previewCanvasDirty());
-  readonly inputLocked = computed(
-    () => this.busy() || this.awaitPlan() || this.awaitPreview() || this.awaitAsk()
+  readonly inputLocked = computed(() => this.busy() || this.awaitPlan() || this.awaitPreview());
+  readonly inputPlaceholder = computed(() =>
+    this.awaitAsk() ? '补充说明您的需求…' : '描述要如何修改流程…'
   );
 
   constructor() {
@@ -114,8 +114,15 @@ export class BpmDesignerAgentComponent {
 
   send(): void {
     const text = this.inputText().trim();
+    if (!text || this.inputLocked()) {
+      return;
+    }
+    if (this.awaitAsk()) {
+      this.submitAnswer(text);
+      return;
+    }
     const processId = this.bpmProcessId();
-    if (!text || !processId || this.inputLocked()) {
+    if (!processId) {
       return;
     }
     this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
@@ -209,19 +216,20 @@ export class BpmDesignerAgentComponent {
     });
   }
 
-  submitAsk(): void {
+  private submitAnswer(answer: string): void {
     const runId = this.status()?.runId;
-    const answer = this.askText().trim();
-    if (!runId || !answer || this.busy()) {
+    if (!runId || this.busy()) {
       return;
     }
+    this.messages.update(list => [...list, { role: 'user', text: answer, thinking: [] }]);
+    this.inputText.set('');
+    this.startAssistantBubble();
     void this.runHumanAction(runId, async () => {
       await this.assertStage(runId, 'await_ask', '追问');
       const canvasBpmnXml = await this.captureCanvasForAction();
       await firstValueFrom(
         this.agentApi.submitAction(runId, { type: 'answer', userAnswer: answer, canvasBpmnXml })
       );
-      this.askText.set('');
       this.runBaselineXml = canvasBpmnXml?.trim() ?? this.runBaselineXml;
     });
   }
@@ -417,6 +425,9 @@ export class BpmDesignerAgentComponent {
     }
     this.status.set(incoming);
     this.syncPlanDisplay(incoming);
+    if (incoming.stage === 'await_ask' && incoming.askMessage) {
+      this.ensureAskMessageInChat(incoming.askMessage);
+    }
     if (incoming.stage === 'await_preview' && incoming.candidateXml) {
       void this.applyPreviewXml(incoming.candidateXml).then(applied => {
         if (applied && HumanGateStages.has(incoming.stage ?? '')) {
@@ -580,5 +591,19 @@ export class BpmDesignerAgentComponent {
       }
       return next;
     });
+  }
+
+  /** 刷新页面后恢复 await_ask 会话时，将追问补进聊天气泡 */
+  private ensureAskMessageInChat(askMessage: string): void {
+    const trimmed = askMessage.trim();
+    if (!trimmed) {
+      return;
+    }
+    const msgs = this.messages();
+    if (msgs.some(m => m.role === 'assistant' && m.text.includes(trimmed))) {
+      return;
+    }
+    this.messages.update(list => [...list, { role: 'assistant', text: trimmed, thinking: [] }]);
+    this.assistantIdx = this.messages().length - 1;
   }
 }
