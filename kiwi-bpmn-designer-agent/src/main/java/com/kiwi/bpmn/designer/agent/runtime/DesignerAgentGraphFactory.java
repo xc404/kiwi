@@ -56,6 +56,7 @@ public class DesignerAgentGraphFactory {
         graph.addNode(DesignerAgentGraphNodes.HumanPreview, node_async(nodes::humanPreview));
         graph.addNode(DesignerAgentGraphNodes.HumanAsk, node_async(nodes::humanAsk));
         graph.addNode(DesignerAgentGraphNodes.HumanInstall, node_async(nodes::humanInstall));
+        graph.addNode(DesignerAgentGraphNodes.HumanFollowUp, node_async(nodes::humanFollowUp));
         graph.addNode(DesignerAgentGraphNodes.Fail, node_async(nodes::fail));
         graph.addNode(DesignerAgentGraphNodes.Finish, node_async(nodes::finish));
 
@@ -80,12 +81,16 @@ public class DesignerAgentGraphFactory {
                 DesignerAgentStateKeys.RouteHumanPreview, DesignerAgentGraphNodes.HumanPreview));
         graph.addConditionalEdges(DesignerAgentGraphNodes.HumanPreview, routeEdge(), Map.of(
                 DesignerAgentStateKeys.RoutePersistPreview, DesignerAgentGraphNodes.Finish,
+                DesignerAgentStateKeys.RouteGenerate, DesignerAgentGraphNodes.Generate,
                 DesignerAgentStateKeys.RouteHumanAsk, DesignerAgentGraphNodes.HumanAsk,
                 DesignerAgentStateKeys.RouteHumanPreview, DesignerAgentGraphNodes.HumanPreview));
         graph.addEdge(DesignerAgentGraphNodes.HumanAsk, DesignerAgentGraphNodes.Generate);
         graph.addEdge(DesignerAgentGraphNodes.HumanInstall, END);
         graph.addEdge(DesignerAgentGraphNodes.Fail, DesignerAgentGraphNodes.Finish);
-        graph.addEdge(DesignerAgentGraphNodes.Finish, END);
+        graph.addEdge(DesignerAgentGraphNodes.Finish, DesignerAgentGraphNodes.HumanFollowUp);
+        graph.addConditionalEdges(DesignerAgentGraphNodes.HumanFollowUp, routeEdge(), Map.of(
+                DesignerAgentStateKeys.RouteIngest, DesignerAgentGraphNodes.Ingest,
+                DesignerAgentStateKeys.RouteHumanFollowUp, DesignerAgentGraphNodes.HumanFollowUp));
 
         CompileConfig compileConfig = CompileConfig.builder()
                 .saverConfig(SaverConfig.builder().register(checkpointSaver).build())
@@ -93,7 +98,8 @@ public class DesignerAgentGraphFactory {
                         DesignerAgentGraphNodes.HumanPlan,
                         DesignerAgentGraphNodes.HumanPreview,
                         DesignerAgentGraphNodes.HumanAsk,
-                        DesignerAgentGraphNodes.HumanInstall)
+                        DesignerAgentGraphNodes.HumanInstall,
+                        DesignerAgentGraphNodes.HumanFollowUp)
                 .build();
         return graph.compile(compileConfig);
     }

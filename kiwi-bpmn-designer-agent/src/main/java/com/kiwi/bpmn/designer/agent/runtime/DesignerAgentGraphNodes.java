@@ -39,6 +39,7 @@ public class DesignerAgentGraphNodes {
     public static final String HumanPreview = "human_preview";
     public static final String HumanAsk = "human_ask";
     public static final String HumanInstall = "human_install";
+    public static final String HumanFollowUp = "human_follow_up";
     public static final String Fail = "fail";
     public static final String Finish = "finish";
 
@@ -71,7 +72,6 @@ public class DesignerAgentGraphNodes {
         String explanation = planGenerator.explainOnly(
                 run.getUserScenario(), run.getBaseBpmnXml(), run.getSelectedElementId());
         run.setAssistantReply(explanation);
-        graphSupport.finish(run);
         Map<String, Object> out = new HashMap<>();
         out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteEnd);
         mergeRun(out, run);
@@ -91,7 +91,9 @@ public class DesignerAgentGraphNodes {
                 run.getSelectedElementId(),
                 run.getIssuesJson(),
                 null,
-                run);
+                run,
+                run.getRejectedEditPlanJson());
+        run.setRejectedEditPlanJson(null);
         Map<String, Object> out = new HashMap<>();
         if (gen == null) {
             graphSupport.fail(run, "Plan 生成失败");
@@ -127,6 +129,7 @@ public class DesignerAgentGraphNodes {
             PlanDisplayView display = editPlanPresenter.present(plan, run.getBaseBpmnXml(), gen.summary());
             run.setPlanDisplayJson(objectMapper.writeValueAsString(display));
             run.setStage(AgentRunStage.AwaitPlan);
+            graphSupport.appendConversation(run, "assistant", display.getSummary());
             AgentStreamEvent planEvent = AgentStreamEvent.of("plan_ready");
             planEvent.setEditPlanJson(run.getEditPlanJson());
             planEvent.setPlanDisplayJson(run.getPlanDisplayJson());
@@ -229,10 +232,15 @@ public class DesignerAgentGraphNodes {
             run.setPersistRequested(true);
             out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RoutePersistPreview);
         } else if (Boolean.FALSE.equals(run.getPreviewConfirmed())) {
-            run.setStage(AgentRunStage.AwaitAsk);
-            run.setAskMessage("已拒绝预览，请说明要如何调整");
-            graphSupport.emitAwait(run, AgentRunStage.AwaitAsk);
-            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanAsk);
+            if (Boolean.TRUE.equals(run.getPreviewFeedbackReady())) {
+                run.setPreviewFeedbackReady(false);
+                out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteGenerate);
+            } else {
+                run.setStage(AgentRunStage.AwaitAsk);
+                run.setAskMessage("已拒绝预览，请说明要如何调整");
+                graphSupport.emitAwait(run, AgentRunStage.AwaitAsk);
+                out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanAsk);
+            }
         } else {
             out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanPreview);
         }
@@ -256,6 +264,23 @@ public class DesignerAgentGraphNodes {
         return out;
     }
 
+    public Map<String, Object> humanFollowUp(OverAllState state, RunnableConfig config) {
+        DesignerAgentRun run = requireRun(state, config);
+        Map<String, Object> out = new HashMap<>();
+        Object route = state.data().get(DesignerAgentStateKeys.Route);
+        if (DesignerAgentStateKeys.RouteIngest.equals(route)) {
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteIngest);
+        } else {
+            if (!AgentRunStage.AwaitFollowUp.equals(run.getStage())) {
+                graphSupport.enterFollowUp(run);
+            }
+            graphSupport.emitAwait(run, AgentRunStage.AwaitFollowUp);
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanFollowUp);
+        }
+        mergeRun(out, run);
+        return out;
+    }
+
     public Map<String, Object> fail(OverAllState state, RunnableConfig config) {
         DesignerAgentRun run = requireRun(state, config);
         if (!AgentRunStage.Error.equals(run.getStage()) && StringUtils.isNotBlank(run.getErrorMessage())) {
@@ -271,11 +296,11 @@ public class DesignerAgentGraphNodes {
 
     public Map<String, Object> finish(OverAllState state, RunnableConfig config) {
         DesignerAgentRun run = requireRun(state, config);
-        if (!AgentRunStage.Done.equals(run.getStage()) && !AgentRunStage.Error.equals(run.getStage())) {
-            graphSupport.finish(run);
+        if (!AgentRunStage.AwaitFollowUp.equals(run.getStage())) {
+            graphSupport.enterFollowUp(run);
         }
         Map<String, Object> out = new HashMap<>();
-        out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteEnd);
+        out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanFollowUp);
         mergeRun(out, run);
         return out;
     }
@@ -308,6 +333,7 @@ public class DesignerAgentGraphNodes {
         run.setAssistantReply(ask);
         run.setStage(AgentRunStage.AwaitAsk);
         run.setAskMessage(ask);
+        graphSupport.appendConversation(run, "assistant", ask);
         graphSupport.emitAwait(run, AgentRunStage.AwaitAsk);
         graphSupport.streamReply(run);
         out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanAsk);

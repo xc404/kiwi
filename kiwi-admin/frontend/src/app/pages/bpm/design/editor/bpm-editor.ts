@@ -323,6 +323,22 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
     this.agentPreviewActive.set(false);
   }
 
+  async commitAgentPreviewSave(canvasBpmnXml: string): Promise<void> {
+    const trimmed = typeof canvasBpmnXml === 'string' ? canvasBpmnXml.trim() : '';
+    if (this.xmlUndoStack.length > 0) {
+      this.xmlUndoStack.pop();
+    }
+    this.xmlRedoStack = [];
+    if (trimmed) {
+      this.syncLocalBpmnXml(trimmed);
+    }
+    if (this.commandStack) {
+      this.stackIdx = this.commandStack._stackIdx;
+    }
+    this.agentPreviewActive.set(false);
+    this.notifyCanvasResized();
+  }
+
   importBpmnXmlAndSave(xml: string): Promise<void> {
     const trimmed = typeof xml === 'string' ? xml.trim() : '';
     const processId = this.bpmProcess()?.id;
@@ -509,6 +525,10 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   getBpmProcess(): BpmProcess | null {
     return this.bpmProcess();
+  }
+
+  getLeftPanelTab(): 'palette' | 'agent' {
+    return this.leftPanelTab();
   }
 
   deploy(): Promise<any> {

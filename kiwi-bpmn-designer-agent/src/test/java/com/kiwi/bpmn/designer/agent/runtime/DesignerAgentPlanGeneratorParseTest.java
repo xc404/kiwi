@@ -35,4 +35,29 @@ class DesignerAgentPlanGeneratorParseTest {
                 .build();
         assertEquals("写文件", mapper.readTree(json).path("summary").asText());
     }
+
+    @Test
+    void extractJsonPayload_skipsPlaceholderBeforeRealObject() {
+        String raw = """
+                若无需变更可返回 {null}。
+                {"summary":"添加审批","editPlan":{"operations":[{"op":"addNode"}]}}
+                """;
+        String json = DesignerAgentPlanGenerator.extractJsonPayload(raw);
+        assertTrue(json.contains("editPlan"));
+        assertTrue(json.contains("addNode"));
+    }
+
+    @Test
+    void extractJsonPayload_balancedWhenLeadingBraceWithTrailingProse() {
+        String raw = "{\"summary\":\"ok\",\"editPlan\":{\"operations\":[]}} 以上是计划。";
+        assertEquals("{\"summary\":\"ok\",\"editPlan\":{\"operations\":[]}}",
+                DesignerAgentPlanGenerator.extractJsonPayload(raw));
+    }
+
+    @Test
+    void extractJsonCandidates_prefersEditPlanOverNestedSnippet() {
+        String raw = "参考 {componentId: shell} 后输出：{\"summary\":\"x\",\"editPlan\":{\"operations\":[]}}";
+        var candidates = DesignerAgentPlanGenerator.extractJsonCandidates(raw);
+        assertEquals("{\"summary\":\"x\",\"editPlan\":{\"operations\":[]}}", candidates.getFirst());
+    }
 }

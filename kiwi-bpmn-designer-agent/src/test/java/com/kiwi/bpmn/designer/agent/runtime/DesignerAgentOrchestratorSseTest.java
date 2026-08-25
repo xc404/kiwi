@@ -99,7 +99,8 @@ class DesignerAgentOrchestratorSseTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                any(DesignerAgentRun.class)))
+                any(DesignerAgentRun.class),
+                isNull()))
                 .thenReturn(new GenerateResult(plan, "将添加网关", "检索组件中"));
 
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
@@ -129,7 +130,8 @@ class DesignerAgentOrchestratorSseTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                any(DesignerAgentRun.class)))
+                any(DesignerAgentRun.class),
+                isNull()))
                 .thenReturn(new GenerateResult(plan, "更新流程名", null));
         when(workflowValidator.validate(any())).thenReturn(passValidation());
 
@@ -152,7 +154,8 @@ class DesignerAgentOrchestratorSseTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                any(DesignerAgentRun.class)))
+                any(DesignerAgentRun.class),
+                isNull()))
                 .thenReturn(new GenerateResult(plan, "添加 HTTP 节点", null));
         when(workflowValidator.validate(any())).thenReturn(passValidation());
 
@@ -172,9 +175,39 @@ class DesignerAgentOrchestratorSseTest {
     }
 
     @Test
+    void acceptPreview_clearsCandidateFromCheckpoint() throws Exception {
+        EditPlan plan = simpleAddNodePlan();
+        when(planGenerator.generate(
+                eq("加一个 HTTP 请求节点"),
+                eq(MinimalBpmn),
+                isNull(),
+                isNull(),
+                isNull(),
+                any(DesignerAgentRun.class),
+                isNull()))
+                .thenReturn(new GenerateResult(plan, "添加 HTTP 节点", null));
+        when(workflowValidator.validate(any())).thenReturn(passValidation());
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("加一个 HTTP 请求节点", events);
+        graphRuntime.start(run);
+        graphRuntime.resumeAfterPlan(run, true, null);
+        assertEquals(AgentRunStage.AwaitPreview, run.getStage());
+        assertNotNull(run.getCandidateXml());
+
+        graphRuntime.finishPreviewAccepted(run);
+
+        assertEquals(AgentRunStage.AwaitFollowUp, run.getStage());
+        assertTrue(StringUtils.isBlank(run.getCandidateXml()));
+        DesignerAgentRun fromCheckpoint = graphRuntime.runFromCheckpoint(run.getRunId()).orElseThrow();
+        assertEquals(AgentRunStage.AwaitFollowUp, fromCheckpoint.getStage());
+        assertTrue(StringUtils.isBlank(fromCheckpoint.getCandidateXml()));
+    }
+
+    @Test
     void rejectPlan_regeneratesAfterResume() throws Exception {
         EditPlan plan = complexPlan();
-        when(planGenerator.generate(any(), eq(MinimalBpmn), isNull(), isNull(), isNull(), any(DesignerAgentRun.class)))
+        when(planGenerator.generate(any(), eq(MinimalBpmn), isNull(), isNull(), isNull(), any(DesignerAgentRun.class), any()))
                 .thenReturn(new GenerateResult(plan, "将添加网关", null));
 
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
@@ -184,8 +217,31 @@ class DesignerAgentOrchestratorSseTest {
 
         graphRuntime.resumeAfterPlan(run, false, null);
 
-        assertTrue(run.getUserScenario().contains("用户拒绝了计划"));
+        assertTrue(run.getUserScenario().contains("用户修改意见"));
         assertTrue(events.stream().filter(e -> "plan_ready".equals(e.getType())).count() >= 1);
+    }
+
+    @Test
+    void rejectPlan_withFeedbackText_passesPreviousPlanToGenerate() throws Exception {
+        EditPlan plan = complexPlan();
+        when(planGenerator.generate(any(), eq(MinimalBpmn), isNull(), isNull(), isNull(), any(DesignerAgentRun.class), any()))
+                .thenReturn(new GenerateResult(plan, "将添加网关", null));
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("重构整流程加网关分支", events);
+        graphRuntime.start(run);
+        assertEquals(AgentRunStage.AwaitPlan, run.getStage());
+        String previousPlanJson = run.getEditPlanJson();
+        assertTrue(StringUtils.isNotBlank(previousPlanJson));
+
+        graphRuntime.resumeAfterPlan(run, false, null, "不要加审批节点，改成自动通过");
+
+        assertTrue(run.getUserScenario().contains("不要加审批节点"));
+        assertTrue(run.getUserScenario().contains("用户修改意见"));
+        org.mockito.ArgumentCaptor<String> previousPlanCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(planGenerator, org.mockito.Mockito.atLeastOnce())
+                .generate(any(), eq(MinimalBpmn), isNull(), isNull(), isNull(), any(DesignerAgentRun.class), previousPlanCaptor.capture());
+        assertTrue(previousPlanCaptor.getAllValues().stream().anyMatch(v -> previousPlanJson.equals(v)));
     }
 
     @Test
@@ -197,14 +253,32 @@ class DesignerAgentOrchestratorSseTest {
 
         graphRuntime.start(run);
 
-        assertEquals(AgentRunStage.Done, run.getStage());
+        assertEquals(AgentRunStage.AwaitFollowUp, run.getStage());
         assertTrue(events.stream().anyMatch(e -> "done".equals(e.getType())));
+    }
+
+    @Test
+    void followUp_afterReadOnly_resumesGenerate() throws Exception {
+        when(planGenerator.explainOnly(any(), any(), any())).thenReturn("这是一个测试流程。");
+        EditPlan plan = simpleAddNodePlan();
+        when(planGenerator.generate(any(), any(), any(), any(), any(), any(DesignerAgentRun.class), any()))
+                .thenReturn(new GenerateResult(plan, "添加 HTTP 节点", null));
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("解释一下这个流程干什么", events);
+        graphRuntime.start(run);
+        assertEquals(AgentRunStage.AwaitFollowUp, run.getStage());
+
+        graphRuntime.resumeAfterFollowUp(run, "add-http-node", MinimalBpmn);
+
+        assertEquals(AgentRunStage.AwaitPlan, run.getStage());
+        assertTrue(events.stream().filter(e -> "plan_ready".equals(e.getType())).count() >= 1);
     }
 
     @Test
     void answerAsk_resumesToGenerate() throws Exception {
         EditPlan plan = twoOperationMetaPlan();
-        when(planGenerator.generate(any(), any(), any(), any(), any(), any(DesignerAgentRun.class)))
+        when(planGenerator.generate(any(), any(), any(), any(), any(), any(DesignerAgentRun.class), any()))
                 .thenAnswer(inv -> new GenerateResult(plan, "mock", null));
         when(workflowValidator.validate(any()))
                 .thenReturn(askValidation())
@@ -256,7 +330,8 @@ class DesignerAgentOrchestratorSseTest {
                 isNull(),
                 isNull(),
                 isNull(),
-                any(DesignerAgentRun.class)))
+                any(DesignerAgentRun.class),
+                isNull()))
                 .thenReturn(new GenerateResult(plan, plan.getSummary(), "需澄清删除范围"));
 
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();

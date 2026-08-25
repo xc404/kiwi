@@ -9,6 +9,7 @@ import {
   DesignerAgentRunStatus
 } from './bpm-designer-agent.service';
 import { PlanDisplayView, resolvePlanDisplay, stepKindIcon } from './edit-plan-presenter';
+import { planFeedbackFromText, previewFeedbackFromText } from './designer-agent-intent';
 
 import { ComponentProvider } from '../../flow-elements/component-provider';
 
@@ -31,6 +32,7 @@ const StageLabels: Record<string, string> = {
   await_preview: '等待预览确认',
   await_install: '等待安装插件',
   await_ask: '等待补充说明',
+  await_follow_up: '可继续提问',
   done: '已完成',
   error: '失败'
 };
@@ -71,6 +73,7 @@ export class BpmDesignerAgentComponent {
   private previewXmlApplied: string | null = null;
   private runBaselineXml: string | null = null;
   private previewCanvasDirty = signal(false);
+  private loadedProcessId: string | null = null;
 
   readonly bpmProcessId = computed(() => {
     const process = this.editor.getBpmProcess();
@@ -85,40 +88,91 @@ export class BpmDesignerAgentComponent {
   readonly awaitPlan = computed(() => this.status()?.stage === 'await_plan');
   readonly awaitPreview = computed(() => this.status()?.stage === 'await_preview');
   readonly awaitAsk = computed(() => this.status()?.stage === 'await_ask');
+  readonly awaitFollowUp = computed(() => this.status()?.stage === 'await_follow_up');
+  readonly canFollowUp = computed(() => {
+    const stage = this.status()?.stage;
+    return stage === 'await_follow_up' || stage === 'error' || stage === 'done';
+  });
+  readonly hasOpenSession = computed(() => !!this.status()?.runId);
   readonly previewEdited = computed(() => this.previewCanvasDirty());
-  readonly inputLocked = computed(() => this.busy() || this.awaitPlan() || this.awaitPreview());
-  readonly inputPlaceholder = computed(() =>
-    this.awaitAsk() ? '补充说明您的需求…' : '描述要如何修改流程…'
-  );
+  readonly inputLocked = computed(() => this.busy());
+  readonly inputPlaceholder = computed(() => {
+    if (this.awaitAsk()) {
+      return '补充说明您的需求…';
+    }
+    if (this.awaitPlan()) {
+      return '输入修改意见，或短句「批准执行」…';
+    }
+    if (this.awaitPreview()) {
+      return '输入调整意见，或短句「确认保存」…';
+    }
+    if (this.canFollowUp()) {
+      return '继续描述要如何修改流程…';
+    }
+    return '描述要如何修改流程…';
+  });
 
   constructor() {
     effect(() => {
       const id = this.bpmProcessId();
+      const tab = this.editor.getLeftPanelTab();
       if (!id) {
         this.status.set(null);
+        this.messages.set([]);
+        this.loadedProcessId = null;
         return;
       }
-      if (this.streamConnected) {
+      if (id !== this.loadedProcessId) {
+        this.messages.set([]);
+        this.loadedProcessId = id;
+        this.closeStream();
+      }
+      if (tab !== 'agent' || this.streamConnected) {
         return;
       }
-      this.agentApi
-        .statusByTarget(id)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe(s => {
-          if (!this.streamConnected) {
-            this.applyServerStatus(s);
+      void this.loadPersistedSession(id);
+    });
+  }
+
+  private async loadPersistedSession(processId: string): Promise<void> {
+    try {
+      const s = await firstValueFrom(this.agentApi.statusByTarget(processId));
+      if (processId !== this.bpmProcessId() || this.streamConnected) {
+        return;
+      }
+      this.applyServerStatus(s, true);
+      if (s.stage === 'await_preview' && s.candidateXml?.trim()) {
+        void this.applyPreviewXml(s.candidateXml).then(applied => {
+          if (applied) {
+            this.nzMessage.info('已在画布加载预览，请查看流程图并确认是否保存');
           }
         });
-    });
+      }
+    } catch {
+      /* 忽略加载失败，用户仍可新发消息 */
+    }
   }
 
   send(): void {
     const text = this.inputText().trim();
-    if (!text || this.inputLocked()) {
+    if (!text || this.busy()) {
+      return;
+    }
+    if (this.awaitPlan()) {
+      this.submitPlanFeedback(text);
+      return;
+    }
+    if (this.awaitPreview()) {
+      this.submitPreviewFeedback(text);
       return;
     }
     if (this.awaitAsk()) {
       this.submitAnswer(text);
+      return;
+    }
+    const runId = this.status()?.runId;
+    if (runId && this.canFollowUp()) {
+      this.submitFollowUp(text);
       return;
     }
     const processId = this.bpmProcessId();
@@ -166,7 +220,75 @@ export class BpmDesignerAgentComponent {
     });
   }
 
-  confirmPlan(confirmed: boolean): void {
+  clearSession(): void {
+    const processId = this.bpmProcessId();
+    if (!processId || this.busy()) {
+      return;
+    }
+    void firstValueFrom(this.agentApi.clearSession(processId))
+      .then(() => {
+        this.closeStream();
+        this.status.set(null);
+        this.messages.set([]);
+        this.planDisplay.set(null);
+        this.planTechnicalJson.set('');
+        this.editor.setAgentPreviewActive(false);
+        this.previewXmlApplied = null;
+        this.previewCanvasDirty.set(false);
+        this.runBaselineXml = null;
+        this.nzMessage.success('已清空 Agent 会话');
+      })
+      .catch(err => {
+        this.nzMessage.error(err instanceof Error ? err.message : '清空会话失败');
+      });
+  }
+
+  private submitFollowUp(text: string): void {
+    const runId = this.status()?.runId;
+    if (!runId) {
+      return;
+    }
+    this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
+    this.inputText.set('');
+    this.busy.set(true);
+    this.closeStream();
+    void this.buildContext().then(async ctx => {
+      try {
+        const updated = await firstValueFrom(
+          this.agentApi.followUp(runId, {
+            message: text,
+            selectedElementId: ctx.selectedElementId,
+            canvasBpmnXml: ctx.bpmnXml
+          })
+        );
+        this.previewXmlApplied = null;
+        this.previewCanvasDirty.set(false);
+        this.runBaselineXml = ctx.bpmnXml.trim() || null;
+        this.editor.setAgentPreviewActive(false);
+        this.startAssistantBubble();
+        this.applyServerStatus(updated);
+        this.streamConnected = true;
+        this.streamAbort = this.agentApi.openEventStream(
+          runId,
+          (event, name) => void this.onStreamEvent(event, name),
+          err => {
+            this.streamConnected = false;
+            this.busy.set(false);
+            this.nzMessage.error(err instanceof Error ? err.message : '事件流失败');
+          },
+          () => {
+            this.streamConnected = false;
+            void this.refreshStatus(runId);
+          }
+        );
+      } catch (err) {
+        this.busy.set(false);
+        this.nzMessage.error(err instanceof Error ? err.message : '续聊失败');
+      }
+    });
+  }
+
+  confirmPlan(confirmed: boolean, feedbackText?: string): void {
     const runId = this.status()?.runId;
     if (!runId || this.busy()) {
       return;
@@ -175,12 +297,17 @@ export class BpmDesignerAgentComponent {
       await this.assertStage(runId, 'await_plan', '计划确认');
       const canvasBpmnXml = confirmed ? await this.captureCanvasForAction() : undefined;
       await firstValueFrom(
-        this.agentApi.submitAction(runId, { type: 'confirm_plan', confirmed, canvasBpmnXml })
+        this.agentApi.submitAction(runId, {
+          type: 'confirm_plan',
+          confirmed,
+          canvasBpmnXml,
+          feedbackText: confirmed ? undefined : feedbackText
+        })
       );
     });
   }
 
-  confirmPreview(confirmed: boolean): void {
+  confirmPreview(confirmed: boolean, feedbackText?: string): void {
     const runId = this.status()?.runId;
     if (!runId || this.busy()) {
       return;
@@ -193,14 +320,19 @@ export class BpmDesignerAgentComponent {
         this.agentApi.submitAction(runId, {
           type: 'confirm_preview',
           confirmed,
-          canvasBpmnXml: confirmed ? canvasBpmnXml : undefined
+          canvasBpmnXml: confirmed ? canvasBpmnXml : undefined,
+          feedbackText: confirmed ? undefined : feedbackText
         })
       );
       this.applyServerStatus(result);
-      this.editor.setAgentPreviewActive(false);
-      this.previewCanvasDirty.set(false);
       if (confirmed) {
+        if (canvasBpmnXml?.trim()) {
+          await this.editor.commitAgentPreviewSave(canvasBpmnXml);
+        } else {
+          this.editor.setAgentPreviewActive(false);
+        }
         this.previewXmlApplied = null;
+        this.previewCanvasDirty.set(false);
         this.runBaselineXml = canvasBpmnXml?.trim() ?? null;
         if (hadManualEdits) {
           this.nzMessage.success('已保存流程（含您在预览期间的手动修改）');
@@ -214,6 +346,22 @@ export class BpmDesignerAgentComponent {
         this.nzMessage.info('已回退预览');
       }
     });
+  }
+
+  private submitPlanFeedback(text: string): void {
+    const { confirmed, feedbackText } = planFeedbackFromText(text);
+    this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
+    this.inputText.set('');
+    this.startAssistantBubble();
+    this.confirmPlan(confirmed, feedbackText);
+  }
+
+  private submitPreviewFeedback(text: string): void {
+    const { confirmed, feedbackText } = previewFeedbackFromText(text);
+    this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
+    this.inputText.set('');
+    this.startAssistantBubble();
+    this.confirmPreview(confirmed, feedbackText);
   }
 
   private submitAnswer(answer: string): void {
@@ -278,6 +426,13 @@ export class BpmDesignerAgentComponent {
     }
     if (type === 'preview_ready') {
       await this.refreshStatus(event.runId);
+      const st = this.status();
+      if (st?.stage === 'await_preview' && st.candidateXml?.trim()) {
+        const applied = await this.applyPreviewXml(st.candidateXml);
+        if (applied) {
+          this.nzMessage.info('已在画布加载预览，请查看流程图并确认是否保存');
+        }
+      }
       this.busy.set(false);
       return;
     }
@@ -418,27 +573,69 @@ export class BpmDesignerAgentComponent {
     }
   }
 
-  private applyServerStatus(incoming: DesignerAgentRunStatus): void {
-    if (!incoming.runId && !incoming.stage && !incoming.active) {
+  private applyServerStatus(incoming: DesignerAgentRunStatus, restoreMessages = false): void {
+    if (!incoming.runId && !incoming.stage && !incoming.active && !incoming.messages?.length) {
       this.status.set(null);
       return;
     }
     this.status.set(incoming);
+    if (restoreMessages) {
+      this.hydrateChatFromServer(incoming);
+    }
     this.syncPlanDisplay(incoming);
     if (incoming.stage === 'await_ask' && incoming.askMessage) {
       this.ensureAskMessageInChat(incoming.askMessage);
     }
-    if (incoming.stage === 'await_preview' && incoming.candidateXml) {
-      void this.applyPreviewXml(incoming.candidateXml).then(applied => {
-        if (applied && HumanGateStages.has(incoming.stage ?? '')) {
-          this.nzMessage.info('已在画布加载预览，请查看流程图并确认是否保存');
-        }
-      });
-    } else if (incoming.stage !== 'await_preview') {
+    if (incoming.stage !== 'await_preview') {
       this.editor.setAgentPreviewActive(false);
     }
     if (HumanGateStages.has(incoming.stage ?? '')) {
       this.busy.set(false);
+    } else if (incoming.stage === 'await_follow_up') {
+      this.busy.set(false);
+    }
+  }
+
+  private hydrateChatFromServer(incoming: DesignerAgentRunStatus): void {
+    if (this.messages().length > 0) {
+      return;
+    }
+    if (incoming.messages?.length) {
+      this.restoreMessagesFromServer(incoming.messages);
+      return;
+    }
+    this.rebuildMessagesFromStatus(incoming);
+  }
+
+  private rebuildMessagesFromStatus(status: DesignerAgentRunStatus): void {
+    const built: ChatMsg[] = [];
+    const assistantText = (status.askMessage ?? status.assistantReply ?? '').trim();
+    if (assistantText) {
+      built.push({ role: 'assistant', text: assistantText, thinking: [] });
+    }
+    if (built.length === 0) {
+      return;
+    }
+    this.messages.set(built);
+    this.assistantIdx = built.length - 1;
+  }
+
+  private restoreMessagesFromServer(
+    rows: { role: string; text: string }[]
+  ): void {
+    this.messages.set(
+      rows.map(row => ({
+        role: row.role === 'user' ? ('user' as const) : ('assistant' as const),
+        text: row.text ?? '',
+        thinking: []
+      }))
+    );
+    const msgs = this.messages();
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'assistant') {
+        this.assistantIdx = i;
+        break;
+      }
     }
   }
 

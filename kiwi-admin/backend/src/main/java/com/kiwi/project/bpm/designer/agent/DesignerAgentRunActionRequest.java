@@ -21,6 +21,9 @@ public class DesignerAgentRunActionRequest {
     @Schema(description = "answer：用户补充说明")
     private String userAnswer;
 
+    @Schema(description = "confirm_plan / confirm_preview 拒绝或修改时的用户意见（自然语言）")
+    private String feedbackText;
+
     @Schema(description = "当前画布 BPMN XML（用户可能在预览/等待期间手动改图，以此为准）")
     private String canvasBpmnXml;
 }

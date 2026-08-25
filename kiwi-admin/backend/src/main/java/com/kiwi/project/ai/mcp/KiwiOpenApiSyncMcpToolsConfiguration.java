@@ -129,11 +129,11 @@ public class KiwiOpenApiSyncMcpToolsConfiguration {
                             .build();
                     Method interfaceMethod = ClassUtils.getInterfaceMethodIfPossible(method);
                     Method m = interfaceMethod != null ? interfaceMethod : method;
-                    out.add(MethodToolCallback.builder()
+                    out.add(KiwiMcpLoopbackAuthSupport.wrapToolCallback(MethodToolCallback.builder()
                             .toolDefinition(def)
                             .toolMethod(m)
                             .toolObject(bean)
-                            .build());
+                            .build()));
                 }
             }
             return out.toArray(ToolCallback[]::new);

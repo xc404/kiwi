@@ -1,9 +1,5 @@
 package com.kiwi.project.ai.mcp;
 
-
-
-import cn.dev33.satoken.stp.StpUtil;
-
 import io.modelcontextprotocol.client.McpClient;
 
 import io.modelcontextprotocol.client.McpSyncClient;
@@ -60,21 +56,8 @@ public class KiwiLocalMcpClientConfiguration {
                 .sseEndpoint(ssePath)
 
                 .httpRequestCustomizer((requestBuilder, method, uri, body, context) -> {
-
-                    try {
-
-                        if (StpUtil.isLogin()) {
-
-                            requestBuilder.header("Authorization", "Bearer " + StpUtil.getTokenValue());
-
-                        }
-
-                    } catch (Throwable ignored) {
-
-                        // 无登录态时回环仍可能匿名失败，由调用方处理
-
-                    }
-
+                    KiwiMcpLoopbackAuthSupport.resolveBearerToken()
+                            .ifPresent(token -> requestBuilder.header("Authorization", "Bearer " + token));
                 })
 
                 .build();

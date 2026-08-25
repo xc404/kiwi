@@ -55,7 +55,7 @@ flowchart TD
   ingest -->|"route=explain<br/>（解释/说明类且非编辑）"| explain["explain<br/><i>LLM 只读解读</i>"]
   ingest -->|"route=generate<br/>（编辑类意图）"| generate["generate<br/><i>LLM + MCP → EditPlan</i>"]
 
-  explain --> finish["finish<br/><i>done</i>"]
+  explain --> finish["finish<br/><i>进入 follow-up</i>"]
 
   generate -->|"route=human_plan<br/>Plan 需人工审阅"| human_plan{"⏸ human_plan<br/><i>await_plan</i>"}
   generate -->|"route=apply<br/>PlanSkip 跳过闸门"| apply["apply<br/><i>EditPlan → BPMN</i>"]
@@ -80,8 +80,11 @@ flowchart TD
   human_install --> END([END])
 
   fail --> finish
-  finish --> END
+  finish --> human_follow{"⏸ human_follow_up<br/><i>await_follow_up</i>"}
+  human_follow -->|"POST follow-up"| ingest
 ```
+
+**会话生命周期**：每个 `targetProcessId` 对应一个长期 open 的 run（`designer_agent_session` 索引 + Graph checkpoint）。`finish` 后进入 `await_follow_up`，**不会**释放 checkpoint；仅 `POST /sessions/clear` 或用户在前端点「清空会话」时 hard end。
 
 ### Plan 跳过闸门（generate → apply）
 
@@ -118,8 +121,12 @@ sequenceDiagram
   G-->>FE: validation / preview_ready …
 
   FE->>CTL: POST /runs/{id}/confirm-preview
-  CTL->>SS: confirmPreview → 写库 + finish
-  SS-->>FE: done
+  CTL->>SS: confirmPreview → 写库 + await_follow_up
+  SS-->>FE: done（stage=await_follow_up）
+
+  FE->>CTL: POST /runs/{id}/follow-up
+  CTL->>SS: followUp(message, canvas)
+  SS->>GR: resumeAfterFollowUp → ingest …
 
   FE->>CTL: POST /runs/{id}/answer
   CTL->>SS: answerAsk
@@ -132,6 +139,7 @@ sequenceDiagram
 | 计划审阅 | `human_plan` | `POST …/confirm-plan` | `plan_ready`, `await_human` |
 | 预览确认 | `human_preview` | `POST …/confirm-preview` | `preview_ready`, `await_human` |
 | 补充信息 | `human_ask` | `POST …/answer` | `await_human` |
+| 会话续聊 | `human_follow_up` | `POST …/follow-up` | `done`（stage=`await_follow_up`） |
 | 插件安装 | `human_install` | （暂无前端 REST） | `await_human` + `pluginHintJson` |
 
 预览**接受**后：Graph 进入 `finish`；**写 BPMN 到库**由 `DesignerAgentSessionService` 在 admin 侧完成（Graph 只设置 `persistRequested` 意图）。

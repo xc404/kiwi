@@ -27,6 +27,12 @@ public final class DesignerAgentStateKeys {
     public static final String PlanConfirmed = "planConfirmed";
     public static final String PreviewConfirmed = "previewConfirmed";
     public static final String PersistRequested = "persistRequested";
+    /** 用户拒绝 plan 后保留的上一版 EditPlan JSON，供重规划 prompt 参考 */
+    public static final String RejectedEditPlanJson = "rejectedEditPlanJson";
+    /** 预览拒绝且对话框已带反馈，跳过 human_ask 直接 generate */
+    public static final String PreviewFeedbackReady = "previewFeedbackReady";
+    /** JSON 数组：[{role,text},…]，供多轮上下文与 UI 恢复 */
+    public static final String ConversationHistory = "conversationHistory";
     public static final String Route = "route";
 
     public static final String RouteExplain = "explain";
@@ -38,6 +44,8 @@ public final class DesignerAgentStateKeys {
     public static final String RouteHumanAsk = "human_ask";
     public static final String RouteHumanInstall = "human_install";
     public static final String RoutePersistPreview = "persist_preview";
+    public static final String RouteHumanFollowUp = "human_follow_up";
+    public static final String RouteIngest = "ingest";
     public static final String RouteFail = "fail";
     public static final String RouteEnd = "end";
 
@@ -45,7 +53,8 @@ public final class DesignerAgentStateKeys {
             RunId, TargetProcessId, InitiatorUserId, UserScenario, SelectedElementId, BaseBpmnXml,
             Stage, Active, EditPlanJson, PlanDisplayJson, CandidateXml, AssistantReply, IssuesJson,
             AskMessage, PluginHintJson, ErrorMessage, RepairRound, ToolStepCount, PlanSkipped,
-            PlanConfirmed, PreviewConfirmed, PersistRequested, Route
+            PlanConfirmed, PreviewConfirmed, PersistRequested, RejectedEditPlanJson,
+            PreviewFeedbackReady, ConversationHistory, Route
     };
 
     private DesignerAgentStateKeys() {

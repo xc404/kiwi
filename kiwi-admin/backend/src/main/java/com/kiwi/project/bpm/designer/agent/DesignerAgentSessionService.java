@@ -3,18 +3,23 @@ package com.kiwi.project.bpm.designer.agent;
 import com.kiwi.bpmn.designer.agent.DesignerAgentProperties;
 import com.kiwi.bpmn.designer.agent.model.AgentRunStage;
 import com.kiwi.bpmn.designer.agent.model.AgentStreamEvent;
+import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentChatMessage;
+import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentConversationHistoryUtils;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentGraphRuntime;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentRun;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
-import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
+import com.kiwi.project.ai.mcp.KiwiMcpLoopbackAuthSupport;
 import com.kiwi.project.bpm.model.BpmProcess;
+import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -29,6 +34,7 @@ public class DesignerAgentSessionService {
     private final DesignerAgentProperties properties;
     private final DesignerAgentGraphRuntime graphRuntime;
     private final DesignerAgentAsyncExecutor asyncExecutor;
+    private final DesignerAgentSessionStore sessionStore;
     private final BpmProcessDefinitionDao processDao;
     private final BpmProcessDefinitionService processDefinitionService;
 
@@ -36,9 +42,7 @@ public class DesignerAgentSessionService {
     private final Map<String, DesignerAgentRun> runsById = new ConcurrentHashMap<>();
     private final Map<String, String> runIdByTarget = new ConcurrentHashMap<>();
     private final Map<String, Consumer<AgentStreamEvent>> sinksByRunId = new ConcurrentHashMap<>();
-    /** 已结束 run 的状态快照（checkpoint 不可用时的兜底）。 */
-    private final Map<String, DesignerAgentRunStatus> terminalStatusByRunId = new ConcurrentHashMap<>();
-    /** 同一流程被新指令取代的旧 runId。 */
+    /** 已清空会话的 runId。 */
     private final Set<String> supersededRunIds = ConcurrentHashMap.newKeySet();
 
     public boolean isEnabled() {
@@ -56,11 +60,16 @@ public class DesignerAgentSessionService {
         if (StringUtils.isBlank(scenario) || StringUtils.isBlank(targetProcessId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "scenario 与 targetProcessId 不能为空");
         }
-        ensureNoActiveRun(targetProcessId);
-        clearByTarget(targetProcessId);
+        if (sessionStore.findByTarget(targetProcessId).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "流程已有 Agent 会话，请继续对话或清空会话");
+        }
+        ensureNotBusy(targetProcessId);
         DesignerAgentRun run = newRun(scenario, targetProcessId, selectedElementId, baseBpmnXml, initiatorUserId);
         bindSink(run, eventSink);
         indexRun(run);
+        sessionStore.saveSession(run);
         return run;
     }
 
@@ -76,6 +85,53 @@ public class DesignerAgentSessionService {
         return statusByRunId(run.getRunId());
     }
 
+    public DesignerAgentRunStatus followUp(
+            String runId,
+            String message,
+            String selectedElementId,
+            String canvasBpmnXml) {
+        if (StringUtils.isBlank(message)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message 不能为空");
+        }
+        DesignerAgentRun run = requireRun(runId);
+        if (!graphRuntime.canFollowUp(run)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "当前阶段不支持续聊: " + run.getStage());
+        }
+        ensureNotBusy(run.getTargetProcessId());
+        if (StringUtils.isNotBlank(selectedElementId)) {
+            run.setSelectedElementId(selectedElementId);
+        }
+        appendUserMessage(run, message.trim());
+        sessionStore.saveSession(run);
+        runGraphAsync(runId, () -> graphRuntime.resumeAfterFollowUp(requireRun(runId), message.trim(), canvasBpmnXml));
+        return statusByRunId(runId);
+    }
+
+    public DesignerAgentRunStatus clearSession(String targetProcessId) {
+        ensureEnabled();
+        if (StringUtils.isBlank(targetProcessId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "targetProcessId 不能为空");
+        }
+        String runId = runIdByTarget.get(targetProcessId);
+        if (runId == null) {
+            runId = sessionStore.findByTarget(targetProcessId).map(DesignerAgentSessionDoc::getRunId).orElse(null);
+        }
+        if (runId != null) {
+            supersededRunIds.add(runId);
+            runsById.remove(runId);
+            sinksByRunId.remove(runId);
+            graphRuntime.releaseThread(runId);
+        }
+        runIdByTarget.remove(targetProcessId);
+        sessionStore.deleteByTarget(targetProcessId);
+        DesignerAgentRunStatus empty = new DesignerAgentRunStatus();
+        empty.setTargetProcessId(targetProcessId);
+        empty.setActive(false);
+        return empty;
+    }
+
     public DesignerAgentRunStatus submitAction(String runId, DesignerAgentRunActionRequest action) {
         if (action == null || StringUtils.isBlank(action.getType())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "action.type 不能为空");
@@ -85,9 +141,13 @@ public class DesignerAgentSessionService {
                     runId,
                     Boolean.TRUE.equals(action.getConfirmed()),
                     action.getEditedPlanJson(),
-                    action.getCanvasBpmnXml());
+                    action.getCanvasBpmnXml(),
+                    action.getFeedbackText());
             case "confirm_preview" -> confirmPreview(
-                    runId, Boolean.TRUE.equals(action.getConfirmed()), action.getCanvasBpmnXml());
+                    runId,
+                    Boolean.TRUE.equals(action.getConfirmed()),
+                    action.getCanvasBpmnXml(),
+                    action.getFeedbackText());
             case "answer" -> answerAsk(runId, action.getUserAnswer(), action.getCanvasBpmnXml());
             default -> throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "不支持的 action.type: " + action.getType());
@@ -107,6 +167,8 @@ public class DesignerAgentSessionService {
         run.setSelectedElementId(selectedElementId);
         run.setBaseBpmnXml(baseBpmnXml);
         run.setInitiatorUserId(initiatorUserId);
+        run.setConversationHistory(
+                DesignerAgentConversationHistoryUtils.append(null, "user", scenario.trim()));
         return run;
     }
 
@@ -115,7 +177,8 @@ public class DesignerAgentSessionService {
     }
 
     private void runGraphAsync(String runId, Runnable task) {
-        asyncExecutor.execute(() -> {
+        String authToken = KiwiMcpLoopbackAuthSupport.captureCurrentToken();
+        asyncExecutor.execute(() -> KiwiMcpLoopbackAuthSupport.runWithToken(authToken, () -> {
             DesignerAgentRun run;
             try {
                 run = requireRun(runId);
@@ -126,15 +189,17 @@ public class DesignerAgentSessionService {
                 task.run();
             } catch (Exception e) {
                 run.setStage(AgentRunStage.Error);
-                run.setActive(false);
+                run.setActive(true);
                 run.setErrorMessage(e.getMessage());
                 AgentStreamEvent err = AgentStreamEvent.of("error");
                 err.setErrorMessage(e.getMessage());
                 run.emit(err);
             } finally {
-                finalizeIfTerminal(run);
+                graphRuntime.syncRunFromCheckpoint(run);
+                indexRun(run);
+                sessionStore.saveSession(run);
             }
-        });
+        }));
     }
 
     public DesignerAgentRun attachStream(String runId, Consumer<AgentStreamEvent> eventSink) {
@@ -163,11 +228,7 @@ public class DesignerAgentSessionService {
         if (supersededRunIds.contains(runId)) {
             throw new ResponseStatusException(
                     HttpStatus.GONE,
-                    "run 会话已失效（可能已被新指令取代）: " + runId);
-        }
-        DesignerAgentRunStatus terminal = terminalStatusByRunId.get(runId);
-        if (terminal != null) {
-            return terminal;
+                    "run 会话已失效（可能已被清空）: " + runId);
         }
         DesignerAgentRun cached = runsById.get(runId);
         if (cached != null) {
@@ -176,11 +237,6 @@ public class DesignerAgentSessionService {
         }
         return graphRuntime.runFromCheckpoint(runId)
                 .map(cp -> {
-                    if (graphRuntime.isTerminal(cp)) {
-                        DesignerAgentRunStatus status = toStatus(cp);
-                        terminalStatusByRunId.putIfAbsent(runId, status);
-                        return status;
-                    }
                     indexRun(cp);
                     return toStatus(cp);
                 })
@@ -196,32 +252,47 @@ public class DesignerAgentSessionService {
 
     public DesignerAgentRunStatus statusByTarget(String targetProcessId) {
         String runId = runIdByTarget.get(targetProcessId);
-        if (runId != null) {
-            return statusByRunId(runId);
+        if (runId == null) {
+            runId = sessionStore.findByTarget(targetProcessId).map(DesignerAgentSessionDoc::getRunId).orElse(null);
         }
-        return findByTargetFromMemory(targetProcessId)
-                .map(run -> {
-                    graphRuntime.syncRunFromCheckpoint(run);
-                    return toStatus(run);
-                })
-                .orElseGet(() -> {
-                    DesignerAgentRunStatus empty = new DesignerAgentRunStatus();
-                    empty.setTargetProcessId(targetProcessId);
-                    empty.setActive(false);
-                    return empty;
-                });
+        if (runId != null && !supersededRunIds.contains(runId)) {
+            try {
+                return statusByRunId(runId);
+            } catch (ResponseStatusException ex) {
+                if (ex.getStatusCode() != HttpStatus.NOT_FOUND && ex.getStatusCode() != HttpStatus.GONE) {
+                    throw ex;
+                }
+            }
+        }
+        List<DesignerAgentChatMessage> messages = sessionStore.messagesForTarget(targetProcessId);
+        if (messages.isEmpty()) {
+            DesignerAgentRunStatus empty = new DesignerAgentRunStatus();
+            empty.setTargetProcessId(targetProcessId);
+            empty.setActive(false);
+            return empty;
+        }
+        DesignerAgentRunStatus orphan = new DesignerAgentRunStatus();
+        orphan.setTargetProcessId(targetProcessId);
+        orphan.setActive(false);
+        orphan.setMessages(new ArrayList<>(messages));
+        return orphan;
     }
 
-    public DesignerAgentRunStatus confirmPlan(String runId, boolean confirmed, String editedPlanJson, String canvasBpmnXml) {
+    public DesignerAgentRunStatus confirmPlan(
+            String runId, boolean confirmed, String editedPlanJson, String canvasBpmnXml, String feedbackText) {
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitPlan);
         if (confirmed) {
             applyCanvasBaseline(run, canvasBpmnXml);
+        } else if (StringUtils.isNotBlank(feedbackText)) {
+            appendUserMessage(run, feedbackText.trim());
         }
-        runGraphAsync(runId, () -> graphRuntime.resumeAfterPlan(requireRun(runId), confirmed, editedPlanJson));
+        sessionStore.saveSession(run);
+        runGraphAsync(runId, () -> graphRuntime.resumeAfterPlan(requireRun(runId), confirmed, editedPlanJson, feedbackText));
         return statusByRunId(runId);
     }
 
-    public DesignerAgentRunStatus confirmPreview(String runId, boolean confirmed, String canvasBpmnXml) {
+    public DesignerAgentRunStatus confirmPreview(
+            String runId, boolean confirmed, String canvasBpmnXml, String feedbackText) {
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitPreview);
         if (Boolean.TRUE.equals(confirmed)) {
             String toSave = resolveCanvasOrCandidate(run, canvasBpmnXml);
@@ -232,15 +303,20 @@ public class DesignerAgentSessionService {
             if (StringUtils.isNotBlank(toSave)) {
                 saveToProcess(run, toSave);
             }
-        } else {
-            graphRuntime.resumeAfterPreviewReject(run);
-            graphRuntime.syncRunFromCheckpoint(run);
-        }
-        finalizeIfTerminal(run);
-        indexRun(run);
-        if (graphRuntime.isTerminal(run) || !runId.equals(runIdByTarget.get(run.getTargetProcessId()))) {
+            indexRun(run);
+            sessionStore.saveSession(run);
             return toStatus(run);
         }
+        if (StringUtils.isNotBlank(feedbackText)) {
+            appendUserMessage(run, feedbackText.trim());
+            sessionStore.saveSession(run);
+            runGraphAsync(runId, () -> graphRuntime.resumeAfterPreviewReject(requireRun(runId), feedbackText));
+            return statusByRunId(runId);
+        }
+        graphRuntime.resumeAfterPreviewReject(run, null);
+        graphRuntime.syncRunFromCheckpoint(run);
+        indexRun(run);
+        sessionStore.saveSession(run);
         return statusByRunId(runId);
     }
 
@@ -250,8 +326,14 @@ public class DesignerAgentSessionService {
         }
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitAsk);
         applyCanvasBaseline(run, canvasBpmnXml);
+        appendUserMessage(run, userAnswer.trim());
+        sessionStore.saveSession(run);
         runGraphAsync(runId, () -> graphRuntime.resumeAfterAsk(requireRun(runId), userAnswer.trim()));
         return statusByRunId(runId);
+    }
+
+    private void appendUserMessage(DesignerAgentRun run, String text) {
+        run.setConversationHistory(DesignerAgentConversationHistoryUtils.append(run.getConversationHistory(), "user", text));
     }
 
     private void applyCanvasBaseline(DesignerAgentRun run, String canvasBpmnXml) {
@@ -291,7 +373,7 @@ public class DesignerAgentSessionService {
         if (supersededRunIds.contains(runId)) {
             throw new ResponseStatusException(
                     HttpStatus.GONE,
-                    "run 会话已失效（可能已被新指令取代）: " + runId);
+                    "run 会话已失效（可能已被清空）: " + runId);
         }
         DesignerAgentRun run = runsById.get(runId);
         if (run != null) {
@@ -301,71 +383,46 @@ public class DesignerAgentSessionService {
         Optional<DesignerAgentRun> fromCheckpoint = graphRuntime.runFromCheckpoint(runId);
         if (fromCheckpoint.isPresent()) {
             DesignerAgentRun restored = fromCheckpoint.get();
-            if (graphRuntime.isTerminal(restored)) {
-                terminalStatusByRunId.putIfAbsent(runId, toStatus(restored));
-            } else {
-                indexRun(restored);
-            }
+            indexRun(restored);
             return restored;
-        }
-        if (terminalStatusByRunId.containsKey(runId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.GONE,
-                    "run 已结束: " + runId);
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "run 不存在: " + runId);
     }
 
-    private void ensureNoActiveRun(String targetProcessId) {
-        String existingRunId = runIdByTarget.get(targetProcessId);
-        if (existingRunId == null) {
-            return;
+    private void ensureNotBusy(String targetProcessId) {
+        DesignerAgentRun existing = resolveRunForTarget(targetProcessId);
+        if (existing != null && graphRuntime.isBusyStage(existing.getStage())) {
+            String stage = StringUtils.defaultIfBlank(existing.getStage(), "进行中");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Agent 正在处理（" + stage + "），请稍候");
         }
-        DesignerAgentRun existing = runsById.get(existingRunId);
-        if (existing == null) {
-            existing = graphRuntime.runFromCheckpoint(existingRunId).orElse(null);
+    }
+
+    private DesignerAgentRun resolveRunForTarget(String targetProcessId) {
+        String runId = runIdByTarget.get(targetProcessId);
+        if (runId == null) {
+            runId = sessionStore.findByTarget(targetProcessId).map(DesignerAgentSessionDoc::getRunId).orElse(null);
         }
-        if (existing == null || !existing.isActive() || graphRuntime.isTerminal(existing)) {
-            return;
+        if (runId == null || supersededRunIds.contains(runId)) {
+            return null;
         }
-        String stage = StringUtils.defaultIfBlank(existing.getStage(), "进行中");
-        throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "当前流程已有进行中的 Agent 会话（" + stage + "），请先完成确认后再发送新指令");
+        try {
+            return requireRun(runId);
+        } catch (ResponseStatusException ex) {
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND || ex.getStatusCode() == HttpStatus.GONE) {
+                return null;
+            }
+            throw ex;
+        }
     }
 
     private void indexRun(DesignerAgentRun run) {
-        if (graphRuntime.isTerminal(run)) {
+        if (run == null || StringUtils.isBlank(run.getRunId()) || StringUtils.isBlank(run.getTargetProcessId())) {
             return;
         }
         runsById.put(run.getRunId(), run);
         runIdByTarget.put(run.getTargetProcessId(), run.getRunId());
-    }
-
-    private void finalizeIfTerminal(DesignerAgentRun run) {
-        if (!graphRuntime.isTerminal(run)) {
-            return;
-        }
-        run.setActive(false);
-        terminalStatusByRunId.put(run.getRunId(), toStatus(run));
-        runsById.remove(run.getRunId());
-        runIdByTarget.remove(run.getTargetProcessId());
-        sinksByRunId.remove(run.getRunId());
-    }
-
-    private void clearByTarget(String targetProcessId) {
-        String oldRunId = runIdByTarget.remove(targetProcessId);
-        if (oldRunId == null) {
-            return;
-        }
-        DesignerAgentRun old = runsById.remove(oldRunId);
-        sinksByRunId.remove(oldRunId);
-        supersededRunIds.add(oldRunId);
-        graphRuntime.releaseThread(oldRunId);
-        terminalStatusByRunId.remove(oldRunId);
-        if (old != null) {
-            old.setActive(false);
-        }
     }
 
     private void bindSink(DesignerAgentRun run, Consumer<AgentStreamEvent> eventSink) {
@@ -375,19 +432,13 @@ public class DesignerAgentSessionService {
         }
     }
 
-    private Optional<DesignerAgentRun> findByTargetFromMemory(String targetProcessId) {
-        return runsById.values().stream()
-                .filter(r -> targetProcessId.equals(r.getTargetProcessId()))
-                .findFirst();
-    }
-
     private void ensureEnabled() {
         if (!isEnabled()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "BPM 设计器 Agent 未启用");
         }
     }
 
-    private static DesignerAgentRunStatus toStatus(DesignerAgentRun run) {
+    private DesignerAgentRunStatus toStatus(DesignerAgentRun run) {
         DesignerAgentRunStatus s = new DesignerAgentRunStatus();
         s.setRunId(run.getRunId());
         s.setTargetProcessId(run.getTargetProcessId());
@@ -395,13 +446,46 @@ public class DesignerAgentSessionService {
         s.setStage(run.getStage());
         s.setEditPlanJson(run.getEditPlanJson());
         s.setPlanDisplayJson(run.getPlanDisplayJson());
-        s.setCandidateXml(run.getCandidateXml());
+        if (AgentRunStage.AwaitPreview.equals(run.getStage())) {
+            s.setCandidateXml(run.getCandidateXml());
+        }
         s.setAssistantReply(run.getAssistantReply());
         s.setAskMessage(run.getAskMessage());
         s.setPluginHintJson(run.getPluginHintJson());
         s.setIssuesJson(run.getIssuesJson());
         s.setErrorMessage(run.getErrorMessage());
         s.setPlanSkipped(run.isPlanSkipped());
+        s.setMessages(resolveMessages(run));
         return s;
+    }
+
+    private List<DesignerAgentChatMessage> resolveMessages(DesignerAgentRun run) {
+        List<DesignerAgentChatMessage> messages =
+                new ArrayList<>(DesignerAgentConversationHistoryUtils.toChatMessages(run.getConversationHistory()));
+        if (messages.isEmpty() && StringUtils.isNotBlank(run.getTargetProcessId())) {
+            messages = new ArrayList<>(sessionStore.messagesForTarget(run.getTargetProcessId()));
+        }
+        if (!messages.isEmpty()) {
+            return messages;
+        }
+        return rebuildMessagesFromRunFields(run);
+    }
+
+    private List<DesignerAgentChatMessage> rebuildMessagesFromRunFields(DesignerAgentRun run) {
+        List<DesignerAgentChatMessage> out = new ArrayList<>();
+        if (StringUtils.isNotBlank(run.getUserScenario())) {
+            DesignerAgentChatMessage user = new DesignerAgentChatMessage();
+            user.setRole("user");
+            user.setText(run.getUserScenario().trim());
+            out.add(user);
+        }
+        String assistant = StringUtils.firstNonBlank(run.getAskMessage(), run.getAssistantReply());
+        if (StringUtils.isNotBlank(assistant)) {
+            DesignerAgentChatMessage assistantMsg = new DesignerAgentChatMessage();
+            assistantMsg.setRole("assistant");
+            assistantMsg.setText(assistant.trim());
+            out.add(assistantMsg);
+        }
+        return out;
     }
 }

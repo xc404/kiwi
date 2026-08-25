@@ -6,6 +6,11 @@ import { TokenKey } from '@config/constant';
 import { environment } from '@env/environment';
 import { BaseHttpService } from '@services/base-http.service';
 
+export interface DesignerAgentChatMessage {
+  role: 'user' | 'assistant' | string;
+  text: string;
+}
+
 export interface DesignerAgentRunStatus {
   runId?: string;
   targetProcessId?: string;
@@ -20,6 +25,7 @@ export interface DesignerAgentRunStatus {
   issuesJson?: string;
   errorMessage?: string;
   planSkipped?: boolean;
+  messages?: DesignerAgentChatMessage[];
 }
 
 export interface AgentStreamEvent {
@@ -50,6 +56,12 @@ export interface StartRunRequest {
   baseBpmnXml?: string;
 }
 
+export interface FollowUpRequest {
+  message: string;
+  selectedElementId?: string;
+  canvasBpmnXml?: string;
+}
+
 export type DesignerAgentActionType = 'confirm_plan' | 'confirm_preview' | 'answer';
 
 export interface DesignerAgentActionRequest {
@@ -57,6 +69,7 @@ export interface DesignerAgentActionRequest {
   confirmed?: boolean;
   editedPlanJson?: string;
   userAnswer?: string;
+  feedbackText?: string;
   /** 当前画布 XML；用户可能在等待/预览期间手动改图 */
   canvasBpmnXml?: string;
 }
@@ -79,6 +92,19 @@ export class BpmDesignerAgentService {
   /** 契约 ①：创建 run，JSON 返回状态 */
   createRun(body: StartRunRequest): Observable<DesignerAgentRunStatus> {
     return this.http.post<DesignerAgentRunStatus>('/bpm/designer-agent/runs', body, { showLoading: false });
+  }
+
+  followUp(runId: string, body: FollowUpRequest): Observable<DesignerAgentRunStatus> {
+    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}/follow-up`, body, {
+      showLoading: false
+    });
+  }
+
+  clearSession(targetProcessId: string): Observable<DesignerAgentRunStatus> {
+    const q = encodeURIComponent(targetProcessId);
+    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/sessions/clear?targetProcessId=${q}`, {}, {
+      showLoading: false
+    });
   }
 
   /** 契约 ③：统一人机操作 */

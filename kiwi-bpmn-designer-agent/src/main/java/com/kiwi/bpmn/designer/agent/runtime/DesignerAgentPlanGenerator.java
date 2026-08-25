@@ -10,6 +10,10 @@ import com.kiwi.bpmn.designer.agent.mcp.DesignerAgentToolTraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.client.ChatClient;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,13 +67,25 @@ public class DesignerAgentPlanGenerator {
             String issuesJson,
             String userAnswer,
             DesignerAgentRun traceRun) {
+        return generate(scenario, baseBpmnXml, selectedElementId, issuesJson, userAnswer, traceRun, null);
+    }
+
+    public GenerateResult generate(
+            String scenario,
+            String baseBpmnXml,
+            String selectedElementId,
+            String issuesJson,
+            String userAnswer,
+            DesignerAgentRun traceRun,
+            String previousEditPlanJson) {
         ChatClient client = chatClientProvider.getIfAvailable();
         if (client == null) {
             return GenerateResult.empty("AI ChatClient 未配置");
         }
         DesignerAgentToolTraceContext.bind(traceRun);
         try {
-            String prompt = buildPrompt(scenario, baseBpmnXml, selectedElementId, issuesJson, userAnswer);
+            String prompt = buildPrompt(
+                    scenario, baseBpmnXml, selectedElementId, issuesJson, userAnswer, previousEditPlanJson);
             String raw = client.prompt()
                     .user(prompt)
                     .options(ToolCallingChatOptions.builder()
@@ -82,11 +98,11 @@ public class DesignerAgentPlanGenerator {
             try {
                 return parseResponse(raw, objectMapper);
             } catch (Exception first) {
-                log.warn("EditPlan parse failed (first pass): {}", first.getMessage());
+                log.warn("EditPlan parse failed (first pass): {} | raw={}", first.getMessage(), truncate(raw, 500));
                 try {
                     return parseResponse(raw, LenientJsonMapper);
                 } catch (Exception lenient) {
-                    log.warn("EditPlan parse failed (lenient pass): {}", lenient.getMessage());
+                    log.warn("EditPlan parse failed (lenient pass): {} | raw={}", lenient.getMessage(), truncate(raw, 500));
                     return retryJsonOnly(client, prompt, first.getMessage());
                 }
             }
@@ -148,7 +164,21 @@ public class DesignerAgentPlanGenerator {
     }
 
     private GenerateResult parseResponse(String raw, ObjectMapper mapper) throws Exception {
-        String json = extractJsonPayload(raw);
+        Exception last = null;
+        for (String json : extractJsonCandidates(raw)) {
+            try {
+                return parseJsonPayload(json, mapper);
+            } catch (Exception e) {
+                last = e;
+            }
+        }
+        if (last != null) {
+            throw last;
+        }
+        throw new IllegalArgumentException("未找到可解析的 JSON 对象");
+    }
+
+    private GenerateResult parseJsonPayload(String json, ObjectMapper mapper) throws Exception {
         JsonNode node = mapper.readTree(json);
         String summary = textOr(node, "summary", null);
         String thinking = textOr(node, "thinking", null);
@@ -168,7 +198,8 @@ public class DesignerAgentPlanGenerator {
             String baseBpmnXml,
             String selectedElementId,
             String issuesJson,
-            String userAnswer) {
+            String userAnswer,
+            String previousEditPlanJson) {
         return """
                 你是 Kiwi BPMN 设计器 Agent。根据用户意图产出 EditPlan（JSON），禁止直接输出 BPMN XML。
                 必须使用 MCP 工具发现 componentId（bpmComp_aiPage 等），禁止臆造。
@@ -191,28 +222,62 @@ public class DesignerAgentPlanGenerator {
                 %s
                 校验问题（修复时参考）: %s
                 用户补充: %s
+                上一版 EditPlan（用户未批准，仅供参考）: %s
                 """.formatted(
                 nullToEmpty(scenario),
                 nullToEmpty(selectedElementId),
                 truncate(baseBpmnXml, 48000),
                 nullToEmpty(issuesJson),
-                nullToEmpty(userAnswer));
+                nullToEmpty(userAnswer),
+                nullToEmpty(previousEditPlanJson));
     }
 
     static String extractJsonPayload(String raw) {
+        List<String> candidates = extractJsonCandidates(raw);
+        return candidates.isEmpty() ? stripFence(raw).trim() : candidates.getFirst();
+    }
+
+    /**
+     * 从 LLM 回复中提取候选 JSON 对象。跳过 prose 中的占位符（如 {@code {null}}），优先含 editPlan/operations 的对象。
+     */
+    static List<String> extractJsonCandidates(String raw) {
         String t = stripFence(raw);
-        if (t.startsWith("{") || t.startsWith("[")) {
-            return t;
+        List<String> objects = findBalancedJsonObjects(t);
+        if (objects.isEmpty()) {
+            return List.of(t);
         }
-        int start = t.indexOf('{');
-        if (start < 0) {
-            return t;
+        List<String> viable = objects.stream()
+                .filter(DesignerAgentPlanGenerator::looksLikeJsonObject)
+                .sorted(Comparator.comparingInt(DesignerAgentPlanGenerator::scoreJsonCandidate).reversed())
+                .toList();
+        if (!viable.isEmpty()) {
+            return viable;
         }
+        return objects.stream()
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .toList();
+    }
+
+    static List<String> findBalancedJsonObjects(String text) {
+        List<String> results = new ArrayList<>();
+        for (int start = 0; start < text.length(); start++) {
+            if (text.charAt(start) != '{') {
+                continue;
+            }
+            String extracted = extractBalancedObject(text, start);
+            if (extracted != null && !extracted.isEmpty()) {
+                results.add(extracted);
+            }
+        }
+        return results;
+    }
+
+    static String extractBalancedObject(String text, int start) {
         int depth = 0;
         boolean inString = false;
         boolean escape = false;
-        for (int i = start; i < t.length(); i++) {
-            char c = t.charAt(i);
+        for (int i = start; i < text.length(); i++) {
+            char c = text.charAt(i);
             if (inString) {
                 if (escape) {
                     escape = false;
@@ -232,11 +297,29 @@ public class DesignerAgentPlanGenerator {
             } else if (c == '}') {
                 depth--;
                 if (depth == 0) {
-                    return t.substring(start, i + 1);
+                    return text.substring(start, i + 1);
                 }
             }
         }
-        return t.substring(start);
+        return text.substring(start);
+    }
+
+    private static boolean looksLikeJsonObject(String json) {
+        return json.indexOf(':') >= 0;
+    }
+
+    private static int scoreJsonCandidate(String json) {
+        int score = json.length();
+        if (json.contains("editPlan")) {
+            score += 10_000;
+        }
+        if (json.contains("operations")) {
+            score += 5_000;
+        }
+        if (json.contains("summary")) {
+            score += 1_000;
+        }
+        return score;
     }
 
     private static String stripFence(String raw) {

@@ -1,11 +1,13 @@
 package com.kiwi.bpmn.designer.agent.runtime;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.kiwi.bpmn.designer.agent.model.AgentRunStage;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 @Component
 public class DesignerAgentStateMapper {
@@ -21,6 +23,7 @@ public class DesignerAgentStateMapper {
         put(data, DesignerAgentStateKeys.Stage, run.getStage());
         data.put(DesignerAgentStateKeys.Active, run.isActive());
         put(data, DesignerAgentStateKeys.EditPlanJson, run.getEditPlanJson());
+        put(data, DesignerAgentStateKeys.RejectedEditPlanJson, run.getRejectedEditPlanJson());
         put(data, DesignerAgentStateKeys.PlanDisplayJson, run.getPlanDisplayJson());
         put(data, DesignerAgentStateKeys.CandidateXml, run.getCandidateXml());
         put(data, DesignerAgentStateKeys.AssistantReply, run.getAssistantReply());
@@ -33,7 +36,25 @@ public class DesignerAgentStateMapper {
         data.put(DesignerAgentStateKeys.PlanSkipped, run.isPlanSkipped());
         data.put(DesignerAgentStateKeys.PlanConfirmed, run.isPlanConfirmed());
         data.put(DesignerAgentStateKeys.PreviewConfirmed, run.getPreviewConfirmed());
+        data.put(DesignerAgentStateKeys.PreviewFeedbackReady, run.getPreviewFeedbackReady());
         data.put(DesignerAgentStateKeys.PersistRequested, run.getPersistRequested());
+        put(data, DesignerAgentStateKeys.ConversationHistory, run.getConversationHistory());
+        return data;
+    }
+
+    /** follow-up 时须显式清空 preview 相关字段，否则 checkpoint ReplaceStrategy 会保留旧 candidateXml。 */
+    public Map<String, Object> followUpCheckpointUpdates(DesignerAgentRun run) {
+        Map<String, Object> data = new HashMap<>(toInputs(run));
+        data.put(DesignerAgentStateKeys.Stage, AgentRunStage.AwaitFollowUp);
+        data.put(DesignerAgentStateKeys.CandidateXml, null);
+        data.put(DesignerAgentStateKeys.EditPlanJson, null);
+        data.put(DesignerAgentStateKeys.RejectedEditPlanJson, null);
+        data.put(DesignerAgentStateKeys.PlanDisplayJson, null);
+        data.put(DesignerAgentStateKeys.AskMessage, null);
+        data.put(DesignerAgentStateKeys.IssuesJson, null);
+        data.put(DesignerAgentStateKeys.PlanConfirmed, false);
+        data.put(DesignerAgentStateKeys.PreviewFeedbackReady, false);
+        data.put(DesignerAgentStateKeys.PersistRequested, false);
         return data;
     }
 
@@ -50,11 +71,13 @@ public class DesignerAgentStateMapper {
         run.setStage(str(data, DesignerAgentStateKeys.Stage, run.getStage()));
         run.setActive(bool(data, DesignerAgentStateKeys.Active, run.isActive()));
         run.setEditPlanJson(str(data, DesignerAgentStateKeys.EditPlanJson, run.getEditPlanJson()));
+        run.setRejectedEditPlanJson(
+                str(data, DesignerAgentStateKeys.RejectedEditPlanJson, run.getRejectedEditPlanJson()));
         run.setPlanDisplayJson(str(data, DesignerAgentStateKeys.PlanDisplayJson, run.getPlanDisplayJson()));
-        run.setCandidateXml(str(data, DesignerAgentStateKeys.CandidateXml, run.getCandidateXml()));
+        applyNullableString(data, DesignerAgentStateKeys.CandidateXml, run::setCandidateXml);
         run.setAssistantReply(str(data, DesignerAgentStateKeys.AssistantReply, run.getAssistantReply()));
-        run.setIssuesJson(str(data, DesignerAgentStateKeys.IssuesJson, run.getIssuesJson()));
-        run.setAskMessage(str(data, DesignerAgentStateKeys.AskMessage, run.getAskMessage()));
+        applyNullableString(data, DesignerAgentStateKeys.IssuesJson, run::setIssuesJson);
+        applyNullableString(data, DesignerAgentStateKeys.AskMessage, run::setAskMessage);
         run.setPluginHintJson(str(data, DesignerAgentStateKeys.PluginHintJson, run.getPluginHintJson()));
         run.setErrorMessage(str(data, DesignerAgentStateKeys.ErrorMessage, run.getErrorMessage()));
         run.setRepairRound(intVal(data, DesignerAgentStateKeys.RepairRound, run.getRepairRound()));
@@ -62,7 +85,11 @@ public class DesignerAgentStateMapper {
         run.setPlanSkipped(bool(data, DesignerAgentStateKeys.PlanSkipped, run.isPlanSkipped()));
         run.setPlanConfirmed(bool(data, DesignerAgentStateKeys.PlanConfirmed, run.isPlanConfirmed()));
         run.setPreviewConfirmed((Boolean) data.getOrDefault(DesignerAgentStateKeys.PreviewConfirmed, run.getPreviewConfirmed()));
+        run.setPreviewFeedbackReady(
+                (Boolean) data.getOrDefault(DesignerAgentStateKeys.PreviewFeedbackReady, run.getPreviewFeedbackReady()));
         run.setPersistRequested((Boolean) data.getOrDefault(DesignerAgentStateKeys.PersistRequested, run.getPersistRequested()));
+        run.setConversationHistory(
+                str(data, DesignerAgentStateKeys.ConversationHistory, run.getConversationHistory()));
     }
 
     public void applyState(OverAllState state, DesignerAgentRun run) {
@@ -81,6 +108,19 @@ public class DesignerAgentStateMapper {
         if (value != null) {
             data.put(key, value);
         }
+    }
+
+    private void applyNullableString(Map<String, Object> data, String key, Consumer<String> setter) {
+        if (!data.containsKey(key)) {
+            return;
+        }
+        Object v = data.get(key);
+        if (v == null) {
+            setter.accept(null);
+            return;
+        }
+        String s = String.valueOf(v);
+        setter.accept(StringUtils.isBlank(s) || "null".equals(s) ? null : s);
     }
 
     private String str(Map<String, Object> data, String key, String fallback) {

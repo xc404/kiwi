@@ -2,6 +2,18 @@
   @if (stageLabel()) {
     <header class="bpm-designer-agent__head">
       <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
+      @if (hasOpenSession()) {
+        <button
+          nz-button
+          nzSize="small"
+          nzType="link"
+          class="bpm-designer-agent__clear"
+          [disabled]="busy()"
+          (click)="clearSession()"
+        >
+          清空会话
+        </button>
+      }
     </header>
   }
 
@@ -79,8 +91,8 @@
   }
 
   <footer class="bpm-designer-agent__input">
-    @if (inputLocked()) {
-      <p class="bpm-designer-agent__input-hint">请先完成上方确认，再发送下一条指令。</p>
+    @if (busy()) {
+      <p class="bpm-designer-agent__input-hint">Agent 正在处理，请稍候…</p>
     }
     <textarea
       nz-input

@@ -29,6 +29,9 @@ export abstract class BpmEditorToken {
   /** 重做：优先 commandStack，否则恢复整图 import redo 栈 */
   abstract redo(): void;
 
+  /** 确认保存 Agent 预览：提交当前画布为正式基线，丢弃预览 undo 快照 */
+  abstract commitAgentPreviewSave(canvasBpmnXml: string): Promise<void>;
+
   /** Agent 候选 BPMN 已导入画布，等待用户确认保存或拒绝 */
   abstract setAgentPreviewActive(active: boolean): void;
 
@@ -40,6 +43,9 @@ export abstract class BpmEditorToken {
 
   /** 拒绝 Agent 预览：整图回退到导入预览前的快照（非单步 undo） */
   abstract rejectAgentPreview(): Promise<void>;
+
+  /** 左侧面板 Tab，供 Agent 面板在可见时刷新持久化会话 */
+  abstract getLeftPanelTab(): 'palette' | 'agent';
 
   bpmnModeler!: BpmnModeler;
 

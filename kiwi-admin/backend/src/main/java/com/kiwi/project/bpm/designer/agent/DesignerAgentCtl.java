@@ -48,6 +48,24 @@ public class DesignerAgentCtl extends BaseCtl {
                 userId);
     }
 
+    @Operation(operationId = "designerAgent_followUp", summary = "在同一会话中续聊（follow-up）")
+    @PostMapping("/runs/{runId}/follow-up")
+    public DesignerAgentRunStatus followUp(
+            @PathVariable String runId,
+            @RequestBody FollowUpRequest request) {
+        return sessionService.followUp(
+                runId,
+                request.getMessage(),
+                request.getSelectedElementId(),
+                request.getCanvasBpmnXml());
+    }
+
+    @Operation(operationId = "designerAgent_clearSession", summary = "清空目标流程的 Agent 会话")
+    @PostMapping("/sessions/clear")
+    public DesignerAgentRunStatus clearSession(@RequestParam String targetProcessId) {
+        return sessionService.clearSession(targetProcessId);
+    }
+
     @Operation(operationId = "designerAgent_eventStream", summary = "订阅 run 事件流（仅日志/思考，不含状态变更语义）")
     @GetMapping(value = "/runs/{runId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter eventStream(@PathVariable String runId) {
@@ -216,5 +234,16 @@ public class DesignerAgentCtl extends BaseCtl {
     @Schema(description = "追问回答")
     public static class AnswerRequest {
         private String userAnswer;
+    }
+
+    @Data
+    @Schema(description = "会话续聊")
+    public static class FollowUpRequest {
+        @Schema(description = "用户消息", requiredMode = Schema.RequiredMode.REQUIRED)
+        private String message;
+        @Schema(description = "画布选中元素 id")
+        private String selectedElementId;
+        @Schema(description = "当前 BPMN XML")
+        private String canvasBpmnXml;
     }
 }

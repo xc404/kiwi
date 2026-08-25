@@ -25,6 +25,8 @@ public class DesignerAgentRun {
     private String stage;
     private boolean active = true;
     private String editPlanJson;
+    /** 用户拒绝 plan 后供重规划 prompt 使用的上一版 EditPlan */
+    private String rejectedEditPlanJson;
     private String planDisplayJson;
     private String candidateXml;
     private String assistantReply;
@@ -37,8 +39,11 @@ public class DesignerAgentRun {
     private boolean planSkipped;
     private boolean planConfirmed;
     private Boolean previewConfirmed;
+    private Boolean previewFeedbackReady;
     private Boolean persistRequested;
     private Boolean installAccepted;
+    /** JSON：[{role,text},…] */
+    private String conversationHistory;
     private final List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
     private transient Consumer<AgentStreamEvent> eventSink;
 
@@ -56,6 +61,7 @@ public class DesignerAgentRun {
         return com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitPlan.equals(stage)
                 || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitPreview.equals(stage)
                 || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitInstall.equals(stage)
-                || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitAsk.equals(stage);
+                || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitAsk.equals(stage)
+                || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitFollowUp.equals(stage);
     }
 }

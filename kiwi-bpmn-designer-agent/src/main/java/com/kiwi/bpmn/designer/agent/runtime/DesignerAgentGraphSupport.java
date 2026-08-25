@@ -40,24 +40,54 @@ public class DesignerAgentGraphSupport {
         if (StringUtils.isBlank(run.getAssistantReply())) {
             return;
         }
+        appendConversation(run, "assistant", run.getAssistantReply());
         AgentStreamEvent text = AgentStreamEvent.of("text_delta");
         text.setDelta(run.getAssistantReply());
         run.emit(text);
     }
 
+    public void appendConversation(DesignerAgentRun run, String role, String text) {
+        if (run == null || StringUtils.isBlank(text)) {
+            return;
+        }
+        run.setConversationHistory(
+                DesignerAgentConversationHistoryUtils.append(run.getConversationHistory(), role, text));
+    }
+
     public void finish(DesignerAgentRun run) {
-        run.setStage(AgentRunStage.Done);
-        run.setActive(false);
+        enterFollowUp(run);
+    }
+
+    /** 本轮任务完成，会话保持 open，等待 follow-up。 */
+    public void enterFollowUp(DesignerAgentRun run) {
+        String reply = run.getAssistantReply();
+        String previewXml = run.getCandidateXml();
+        run.setStage(AgentRunStage.AwaitFollowUp);
+        run.setActive(true);
+        run.setPlanConfirmed(false);
+        run.setPreviewConfirmed(null);
+        run.setPreviewFeedbackReady(false);
+        run.setEditPlanJson(null);
+        run.setRejectedEditPlanJson(null);
+        run.setPlanDisplayJson(null);
+        run.setCandidateXml(null);
+        run.setAskMessage(null);
+        run.setIssuesJson(null);
+        run.setPlanSkipped(false);
+        run.setPersistRequested(false);
+        if (StringUtils.isNotBlank(reply)) {
+            appendConversation(run, "assistant", reply);
+        }
         AgentStreamEvent done = AgentStreamEvent.of("done");
-        done.setContent(run.getAssistantReply());
-        done.setCandidateXml(run.getCandidateXml());
-        done.setStage(AgentRunStage.Done);
+        done.setContent(reply);
+        done.setCandidateXml(previewXml);
+        done.setStage(AgentRunStage.AwaitFollowUp);
         run.emit(done);
     }
 
     public void fail(DesignerAgentRun run, String message) {
         run.setStage(AgentRunStage.Error);
-        run.setActive(false);
+        run.setActive(true);
         run.setErrorMessage(message);
         AgentStreamEvent err = AgentStreamEvent.of("error");
         err.setErrorMessage(message);

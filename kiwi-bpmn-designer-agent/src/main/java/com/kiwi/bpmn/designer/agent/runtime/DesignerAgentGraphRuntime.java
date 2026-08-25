@@ -54,6 +54,10 @@ public class DesignerAgentGraphRuntime {
     }
 
     public void resumeAfterPlan(DesignerAgentRun run, boolean confirmed, String editedPlanJson) {
+        resumeAfterPlan(run, confirmed, editedPlanJson, null);
+    }
+
+    public void resumeAfterPlan(DesignerAgentRun run, boolean confirmed, String editedPlanJson, String feedbackText) {
         Map<String, Object> updates = new HashMap<>();
         if (confirmed) {
             updates.put(DesignerAgentStateKeys.PlanConfirmed, true);
@@ -63,8 +67,15 @@ public class DesignerAgentGraphRuntime {
             }
         } else {
             updates.put(DesignerAgentStateKeys.PlanConfirmed, false);
-            String scenario = StringUtils.defaultIfBlank(run.getUserScenario(), "")
-                    + " [用户拒绝了计划，请重新规划]";
+            if (StringUtils.isNotBlank(run.getEditPlanJson())) {
+                run.setRejectedEditPlanJson(run.getEditPlanJson());
+                updates.put(DesignerAgentStateKeys.RejectedEditPlanJson, run.getEditPlanJson());
+            }
+            String scenario = DesignerAgentPlanFeedbackHelper.buildReplanScenario(
+                    run.getUserScenario(),
+                    run.getPlanDisplayJson(),
+                    run.getAssistantReply(),
+                    feedbackText);
             updates.put(DesignerAgentStateKeys.UserScenario, scenario);
             run.setUserScenario(scenario);
         }
@@ -82,16 +93,87 @@ public class DesignerAgentGraphRuntime {
     }
 
     public void resumeAfterPreviewReject(DesignerAgentRun run) {
+        resumeAfterPreviewReject(run, null);
+    }
+
+    public void resumeAfterPreviewReject(DesignerAgentRun run, String feedbackText) {
         run.setPreviewConfirmed(false);
         Map<String, Object> updates = new HashMap<>();
         updates.put(DesignerAgentStateKeys.PreviewConfirmed, false);
+        if (StringUtils.isNotBlank(feedbackText)) {
+            String trimmed = feedbackText.trim();
+            run.setUserScenario(trimmed);
+            run.setAskMessage(null);
+            run.setPreviewFeedbackReady(true);
+            updates.put(DesignerAgentStateKeys.UserScenario, trimmed);
+            updates.put(DesignerAgentStateKeys.AskMessage, null);
+            updates.put(DesignerAgentStateKeys.PreviewFeedbackReady, true);
+        } else {
+            run.setPreviewFeedbackReady(false);
+            updates.put(DesignerAgentStateKeys.PreviewFeedbackReady, false);
+        }
         resume(run, updates, DesignerAgentGraphNodes.HumanPreview);
     }
 
     public void finishPreviewAccepted(DesignerAgentRun run) {
         run.setPreviewConfirmed(true);
         run.setPersistRequested(true);
-        graphSupport.finish(run);
+        if (StringUtils.isNotBlank(run.getCandidateXml())) {
+            run.setBaseBpmnXml(run.getCandidateXml());
+        }
+        enterFollowUpState(run);
+    }
+
+    public void resumeAfterFollowUp(DesignerAgentRun run, String message, String canvasBpmnXml) {
+        String trimmed = message.trim();
+        String history = DesignerAgentConversationHistoryUtils.append(run.getConversationHistory(), "user", trimmed);
+        run.setConversationHistory(history);
+        run.setUserScenario(trimmed);
+        run.setErrorMessage(null);
+        run.setRepairRound(0);
+        run.setRejectedEditPlanJson(null);
+        run.setPreviewFeedbackReady(false);
+        run.setPlanConfirmed(false);
+        run.setPreviewConfirmed(null);
+        if (StringUtils.isNotBlank(canvasBpmnXml)) {
+            run.setBaseBpmnXml(canvasBpmnXml.trim());
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(DesignerAgentStateKeys.ConversationHistory, history);
+        updates.put(DesignerAgentStateKeys.UserScenario, trimmed);
+        updates.put(DesignerAgentStateKeys.ErrorMessage, null);
+        updates.put(DesignerAgentStateKeys.RepairRound, 0);
+        updates.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteIngest);
+        if (StringUtils.isNotBlank(run.getBaseBpmnXml())) {
+            updates.put(DesignerAgentStateKeys.BaseBpmnXml, run.getBaseBpmnXml());
+        }
+        resume(run, updates, DesignerAgentGraphNodes.HumanFollowUp);
+    }
+
+    public void enterFollowUpState(DesignerAgentRun run) {
+        graphSupport.enterFollowUp(run);
+        syncCheckpointAtFollowUp(run);
+    }
+
+    private void syncCheckpointAtFollowUp(DesignerAgentRun run) {
+        if (run == null || StringUtils.isBlank(run.getRunId())) {
+            return;
+        }
+        RunnableConfig config = RunnableConfig.builder().threadId(run.getRunId()).build();
+        Optional<StateSnapshot> snapshot = compiledGraph.stateOf(config);
+        if (snapshot.isEmpty()) {
+            return;
+        }
+        try {
+            RunnableConfig bound = runBinding.resume(run.getRunId(), run);
+            String node = snapshot.get().node();
+            compiledGraph.updateState(
+                    bound,
+                    stateMapper.followUpCheckpointUpdates(run),
+                    node);
+        } catch (Exception e) {
+            log.warn("sync follow-up checkpoint failed runId={}", run.getRunId(), e);
+        }
     }
 
     public Optional<DesignerAgentRun> runFromCheckpoint(String runId) {
@@ -147,7 +229,34 @@ public class DesignerAgentGraphRuntime {
     }
 
     public boolean isTerminal(DesignerAgentRun run) {
-        return run != null && (AgentRunStage.Done.equals(run.getStage()) || AgentRunStage.Error.equals(run.getStage()));
+        return false;
+    }
+
+    public boolean isBusyStage(String stage) {
+        return AgentRunStage.Ingest.equals(stage)
+                || AgentRunStage.Think.equals(stage)
+                || AgentRunStage.Apply.equals(stage)
+                || AgentRunStage.Validate.equals(stage)
+                || AgentRunStage.Repair.equals(stage);
+    }
+
+    public boolean canFollowUp(DesignerAgentRun run) {
+        if (run == null || StringUtils.isBlank(run.getStage())) {
+            return false;
+        }
+        String stage = run.getStage();
+        if (isBusyStage(stage)) {
+            return false;
+        }
+        if (AgentRunStage.AwaitPlan.equals(stage)
+                || AgentRunStage.AwaitPreview.equals(stage)
+                || AgentRunStage.AwaitAsk.equals(stage)
+                || AgentRunStage.AwaitInstall.equals(stage)) {
+            return false;
+        }
+        return AgentRunStage.AwaitFollowUp.equals(stage)
+                || AgentRunStage.Error.equals(stage)
+                || AgentRunStage.Done.equals(stage);
     }
 
     private void resume(DesignerAgentRun run, Map<String, Object> updates, String asNode) {

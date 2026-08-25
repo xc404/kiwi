@@ -16,6 +16,8 @@ public final class AgentRunStage {
     public static final String AwaitPreview = "await_preview";
     public static final String AwaitInstall = "await_install";
     public static final String AwaitAsk = "await_ask";
+    /** 本轮完成，会话保持 open，等待用户继续输入 */
+    public static final String AwaitFollowUp = "await_follow_up";
     public static final String Save = "save";
     public static final String Done = "done";
     public static final String Error = "error";
