@@ -255,6 +255,12 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         </dependency>
+        <!-- Spring AI 2.x 自动配置直接引用 jackson3.JacksonMcpJsonMapper；显式声明以免被其他模块的旧版 mcp 覆盖 -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-json-jackson3</artifactId>
+            <version>2.0.0-M2</version>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>

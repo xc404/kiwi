@@ -22,4 +22,9 @@ public class DesignerAgentProperties {
     private long sseTimeoutMs = 300_000L;
     /** 修复轮次上限 */
     private int maxRepairRounds = 3;
+    /**
+     * Graph checkpoint 存储：{@code memory} 或 {@code mongodb}。
+     * 单测与无 Mongo 场景用 memory；admin 默认 mongodb。
+     */
+    private String checkpoint = "memory";
 }

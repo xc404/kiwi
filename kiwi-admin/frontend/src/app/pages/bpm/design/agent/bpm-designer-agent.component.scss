@@ -68,6 +68,15 @@
   font-weight: 600;
 }
 
+.bpm-designer-agent__preview-dirty {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  color: var(--ant-color-warning, #d48806);
+  font-size: 12px;
+  background: var(--ant-color-warning-bg, #fffbe6);
+  border-radius: 4px;
+}
+
 .bpm-designer-agent__plan-summary {
   margin: 0 0 12px;
   line-height: 1.5;
@@ -132,6 +141,13 @@
   gap: 8px;
   padding: 8px 12px;
   border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.bpm-designer-agent__input-hint {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .m-t-8 {

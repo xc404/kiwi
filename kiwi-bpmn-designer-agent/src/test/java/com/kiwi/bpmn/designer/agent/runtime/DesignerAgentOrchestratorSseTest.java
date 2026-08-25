@@ -1,8 +1,11 @@
 package com.kiwi.bpmn.designer.agent.runtime;
 
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.bpmn.assistant.AssistantBpmnToPlan;
 import com.kiwi.bpmn.assistant.AssistantPlanCompiler;
+import com.kiwi.bpmn.assistant.AssistantValidationIssue;
 import com.kiwi.bpmn.assistant.AssistantVariables;
 import com.kiwi.bpmn.assistant.AssistantWorkflowValidator;
 import com.kiwi.bpmn.designer.agent.DesignerAgentProperties;
@@ -33,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
@@ -58,25 +62,32 @@ class DesignerAgentOrchestratorSseTest {
     @Mock
     private AssistantWorkflowValidator workflowValidator;
 
-    private DesignerAgentOrchestrator orchestrator;
+    private DesignerAgentGraphRuntime graphRuntime;
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         objectMapper = new ObjectMapper();
         DesignerAgentProperties properties = new DesignerAgentProperties();
         properties.setPlanMode(true);
         properties.setPlanModeSkipSimple(true);
         EditPlanApplicator applicator = new EditPlanApplicator(
                 new AssistantBpmnToPlan(), new AssistantPlanCompiler(objectMapper));
-        orchestrator = new DesignerAgentOrchestrator(
+        DesignerAgentStateMapper stateMapper = new DesignerAgentStateMapper();
+        DesignerAgentGraphNodes nodes = new DesignerAgentGraphNodes(
                 properties,
                 applicator,
                 new PlanSkipEvaluator(properties),
                 workflowValidator,
                 objectMapper,
                 planGenerator,
-                new EditPlanPresenter(new AssistantBpmnToPlan()));
+                new EditPlanPresenter(new AssistantBpmnToPlan()),
+                stateMapper);
+        BaseCheckpointSaver saver = MemorySaver.builder().build();
+        DesignerAgentGraphFactory factory = new DesignerAgentGraphFactory(nodes, java.util.Optional.of(saver));
+        graphRuntime = new DesignerAgentGraphRuntime(
+                factory, stateMapper, saver, new DesignerAgentRunBinding());
+        graphRuntime.initGraph();
     }
 
     @Test
@@ -94,7 +105,7 @@ class DesignerAgentOrchestratorSseTest {
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
         DesignerAgentRun run = baseRun("重构整流程加网关分支", events);
 
-        orchestrator.runTurn(run);
+        graphRuntime.start(run);
 
         assertEquals(AgentRunStage.AwaitPlan, run.getStage());
         assertTrue(events.stream().anyMatch(e -> "stage".equals(e.getType())));
@@ -125,7 +136,7 @@ class DesignerAgentOrchestratorSseTest {
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
         DesignerAgentRun run = baseRun("更新节点名称", events);
 
-        orchestrator.runTurn(run);
+        graphRuntime.start(run);
 
         assertEquals(AgentRunStage.AwaitPreview, run.getStage());
         assertTrue(events.stream().anyMatch(e -> "preview_ready".equals(e.getType())));
@@ -134,14 +145,24 @@ class DesignerAgentOrchestratorSseTest {
 
     @Test
     void processPlanConfirmation_emitsPreviewReadyAfterApply() throws Exception {
+        EditPlan plan = simpleAddNodePlan();
+        when(planGenerator.generate(
+                eq("加一个 HTTP 请求节点"),
+                eq(MinimalBpmn),
+                isNull(),
+                isNull(),
+                isNull(),
+                any(DesignerAgentRun.class)))
+                .thenReturn(new GenerateResult(plan, "添加 HTTP 节点", null));
         when(workflowValidator.validate(any())).thenReturn(passValidation());
 
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
         DesignerAgentRun run = baseRun("加一个 HTTP 请求节点", events);
-        run.setStage(AgentRunStage.AwaitPlan);
-        run.setEditPlanJson(objectMapper.writeValueAsString(simpleAddNodePlan()));
 
-        orchestrator.processPlanConfirmation(run, true, null);
+        graphRuntime.start(run);
+        assertEquals(AgentRunStage.AwaitPlan, run.getStage());
+
+        graphRuntime.resumeAfterPlan(run, true, null);
 
         assertEquals(AgentRunStage.AwaitPreview, run.getStage());
         assertTrue(events.stream().anyMatch(e -> "validation".equals(e.getType())));
@@ -151,16 +172,57 @@ class DesignerAgentOrchestratorSseTest {
     }
 
     @Test
+    void rejectPlan_regeneratesAfterResume() throws Exception {
+        EditPlan plan = complexPlan();
+        when(planGenerator.generate(any(), eq(MinimalBpmn), isNull(), isNull(), isNull(), any(DesignerAgentRun.class)))
+                .thenReturn(new GenerateResult(plan, "将添加网关", null));
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("重构整流程加网关分支", events);
+        graphRuntime.start(run);
+        assertEquals(AgentRunStage.AwaitPlan, run.getStage());
+
+        graphRuntime.resumeAfterPlan(run, false, null);
+
+        assertTrue(run.getUserScenario().contains("用户拒绝了计划"));
+        assertTrue(events.stream().filter(e -> "plan_ready".equals(e.getType())).count() >= 1);
+    }
+
+    @Test
     void readOnlyScenario_emitsDoneWithoutEditPlan() {
         when(planGenerator.explainOnly(any(), any(), any())).thenReturn("这是一个测试流程。");
 
         List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
         DesignerAgentRun run = baseRun("解释一下这个流程干什么", events);
 
-        orchestrator.runTurn(run);
+        graphRuntime.start(run);
 
         assertEquals(AgentRunStage.Done, run.getStage());
         assertTrue(events.stream().anyMatch(e -> "done".equals(e.getType())));
+    }
+
+    @Test
+    void answerAsk_resumesToGenerate() throws Exception {
+        EditPlan plan = twoOperationMetaPlan();
+        when(planGenerator.generate(any(), any(), any(), any(), any(), any(DesignerAgentRun.class)))
+                .thenAnswer(inv -> new GenerateResult(plan, "mock", null));
+        when(workflowValidator.validate(any()))
+                .thenReturn(askValidation())
+                .thenReturn(passValidation());
+        when(workflowValidator.toDispatchCode(any(), anyInt()))
+                .thenReturn(AssistantVariables.DispatchAsk)
+                .thenReturn(AssistantVariables.DispatchPass);
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("初始", events);
+
+        graphRuntime.start(run);
+        assertEquals(AgentRunStage.AwaitAsk, run.getStage());
+
+        graphRuntime.resumeAfterAsk(run, "加一个审批节点");
+
+        assertEquals(AgentRunStage.AwaitPreview, run.getStage());
+        assertTrue(events.stream().anyMatch(e -> "preview_ready".equals(e.getType())));
     }
 
     @Test
@@ -182,6 +244,32 @@ class DesignerAgentOrchestratorSseTest {
         assertEquals(1, run.getToolStepCount());
     }
 
+    @Test
+    void runTurn_emptyOperationsRoutesToAsk() throws Exception {
+        EditPlan plan = new EditPlan();
+        plan.setProcessId("P1");
+        plan.setSummary("删除范围存在歧义，请说明要删除哪些节点。");
+        plan.setOperations(List.of());
+        when(planGenerator.generate(
+                eq("删除 kafka 节点"),
+                eq(MinimalBpmn),
+                isNull(),
+                isNull(),
+                isNull(),
+                any(DesignerAgentRun.class)))
+                .thenReturn(new GenerateResult(plan, plan.getSummary(), "需澄清删除范围"));
+
+        List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
+        DesignerAgentRun run = baseRun("删除 kafka 节点", events);
+
+        graphRuntime.start(run);
+
+        assertEquals(AgentRunStage.AwaitAsk, run.getStage());
+        assertTrue(events.stream().anyMatch(e -> "await_human".equals(e.getType())));
+        assertTrue(events.stream().anyMatch(e -> "text_delta".equals(e.getType())));
+        assertTrue(events.stream().noneMatch(e -> "preview_ready".equals(e.getType())));
+    }
+
     private static DesignerAgentRun baseRun(String scenario, List<AgentStreamEvent> events) {
         DesignerAgentRun run = new DesignerAgentRun();
         run.setRunId("test-run");
@@ -195,6 +283,16 @@ class DesignerAgentOrchestratorSseTest {
         AssistantWorkflowValidator.ValidationResult result = new AssistantWorkflowValidator.ValidationResult();
         result.setIssues(List.of());
         result.setDispatchCode(AssistantVariables.DispatchPass);
+        return result;
+    }
+
+    private static AssistantWorkflowValidator.ValidationResult askValidation() {
+        AssistantWorkflowValidator.ValidationResult result = new AssistantWorkflowValidator.ValidationResult();
+        AssistantValidationIssue issue = new AssistantValidationIssue();
+        issue.setSeverity("ASK");
+        issue.setMessage("需要更多信息");
+        result.setIssues(List.of(issue));
+        result.setDispatchCode(AssistantVariables.DispatchAsk);
         return result;
     }
 

@@ -91,6 +91,11 @@
     }
 
     <main class="bpm-editor-canvas-pane">
+      @if (agentPreviewActive()) {
+        <div class="bpm-editor-preview-banner" role="status">
+          Agent 预览已加载。可在画布上手动微调，左侧 Agent 面板「确认保存」将写入当前画布。
+        </div>
+      }
       <div class="canvas bpm-editor-canvas" ref="canvas"></div>
     </main>
 

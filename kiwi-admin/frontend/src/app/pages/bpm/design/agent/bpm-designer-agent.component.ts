@@ -1,7 +1,7 @@
-import { Component, computed, DestroyRef, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 
 import {
   AgentStreamEvent,
@@ -35,6 +35,8 @@ const StageLabels: Record<string, string> = {
   error: '失败'
 };
 
+const HumanGateStages = new Set(['await_plan', 'await_preview', 'await_ask', 'await_install']);
+
 interface ChatMsg {
   role: 'user' | 'assistant';
   text: string;
@@ -65,7 +67,11 @@ export class BpmDesignerAgentComponent {
   readonly stepKindIcon = stepKindIcon;
 
   private streamAbort: AbortController | null = null;
+  private streamConnected = false;
   private assistantIdx = -1;
+  private previewXmlApplied: string | null = null;
+  private runBaselineXml: string | null = null;
+  private previewCanvasDirty = signal(false);
 
   readonly bpmProcessId = computed(() => {
     const process = this.editor.getBpmProcess();
@@ -80,6 +86,10 @@ export class BpmDesignerAgentComponent {
   readonly awaitPlan = computed(() => this.status()?.stage === 'await_plan');
   readonly awaitPreview = computed(() => this.status()?.stage === 'await_preview');
   readonly awaitAsk = computed(() => this.status()?.stage === 'await_ask');
+  readonly previewEdited = computed(() => this.previewCanvasDirty());
+  readonly inputLocked = computed(
+    () => this.busy() || this.awaitPlan() || this.awaitPreview() || this.awaitAsk()
+  );
 
   constructor() {
     effect(() => {
@@ -88,12 +98,16 @@ export class BpmDesignerAgentComponent {
         this.status.set(null);
         return;
       }
+      if (this.streamConnected) {
+        return;
+      }
       this.agentApi
         .statusByTarget(id)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(s => {
-          this.status.set(s);
-          this.syncPlanDisplay(s);
+          if (!this.streamConnected) {
+            this.applyServerStatus(s);
+          }
         });
     });
   }
@@ -101,92 +115,115 @@ export class BpmDesignerAgentComponent {
   send(): void {
     const text = this.inputText().trim();
     const processId = this.bpmProcessId();
-    if (!text || !processId || this.busy()) {
+    if (!text || !processId || this.inputLocked()) {
       return;
     }
     this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
     this.inputText.set('');
     this.busy.set(true);
-    this.streamAbort?.abort();
-    void this.buildContext().then(ctx => {
-      this.streamAbort = this.agentApi.startRunStream(
-        {
-          scenario: text,
-          targetProcessId: processId,
-          selectedElementId: ctx.selectedElementId,
-          baseBpmnXml: ctx.bpmnXml
-        },
-        (event, name) => this.handleEvent(event, name),
-        err => {
-          this.busy.set(false);
-          this.nzMessage.error(err instanceof Error ? err.message : 'Agent 失败');
-        },
-        () => {
-          this.busy.set(false);
-        }
-      );
+    this.closeStream();
+    void this.buildContext().then(async ctx => {
+      try {
+        const created = await firstValueFrom(
+          this.agentApi.createRun({
+            scenario: text,
+            targetProcessId: processId,
+            selectedElementId: ctx.selectedElementId,
+            baseBpmnXml: ctx.bpmnXml
+          })
+        );
+        this.previewXmlApplied = null;
+        this.previewCanvasDirty.set(false);
+        this.runBaselineXml = ctx.bpmnXml.trim() || null;
+        this.editor.setAgentPreviewActive(false);
+        this.startAssistantBubble();
+        this.applyServerStatus(created);
+        this.streamConnected = true;
+        this.streamAbort = this.agentApi.openEventStream(
+          created.runId!,
+          (event, name) => void this.onStreamEvent(event, name),
+          err => {
+            this.streamConnected = false;
+            this.busy.set(false);
+            this.nzMessage.error(err instanceof Error ? err.message : '事件流失败');
+          },
+          () => {
+            this.streamConnected = false;
+            void this.refreshStatus(created.runId);
+          }
+        );
+      } catch (err) {
+        this.busy.set(false);
+        this.nzMessage.error(err instanceof Error ? err.message : '启动 Agent 失败');
+      }
     });
   }
 
   confirmPlan(confirmed: boolean): void {
     const runId = this.status()?.runId;
-    if (!runId) {
+    if (!runId || this.busy()) {
       return;
     }
-    this.busy.set(true);
-    this.attachContinuationStream(runId);
-    this.agentApi
-      .confirmPlan(runId, confirmed)
-      .pipe(finalize(() => this.busy.set(false)))
-      .subscribe({
-        next: s => {
-          this.status.set(s);
-          if (s.candidateXml) {
-            void this.editor.importBpmnXml(s.candidateXml);
-          }
-        },
-        error: e => this.nzMessage.error(e?.message ?? '确认失败')
-      });
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_plan', '计划确认');
+      const canvasBpmnXml = confirmed ? await this.captureCanvasForAction() : undefined;
+      await firstValueFrom(
+        this.agentApi.submitAction(runId, { type: 'confirm_plan', confirmed, canvasBpmnXml })
+      );
+    });
   }
 
   confirmPreview(confirmed: boolean): void {
     const runId = this.status()?.runId;
-    if (!runId) {
+    if (!runId || this.busy()) {
       return;
     }
-    this.busy.set(true);
-    this.agentApi
-      .confirmPreview(runId, confirmed)
-      .pipe(finalize(() => this.busy.set(false)))
-      .subscribe({
-        next: s => {
-          this.status.set(s);
-          if (confirmed) {
-            this.nzMessage.success('已保存流程');
-          }
-        },
-        error: e => this.nzMessage.error(e?.message ?? '预览确认失败')
-      });
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_preview', '预览确认');
+      const hadManualEdits = this.awaitPreview() ? await this.isPreviewCanvasDirty() : false;
+      const canvasBpmnXml = confirmed ? await this.captureCanvasForAction() : undefined;
+      const result = await firstValueFrom(
+        this.agentApi.submitAction(runId, {
+          type: 'confirm_preview',
+          confirmed,
+          canvasBpmnXml: confirmed ? canvasBpmnXml : undefined
+        })
+      );
+      this.applyServerStatus(result);
+      this.editor.setAgentPreviewActive(false);
+      this.previewCanvasDirty.set(false);
+      if (confirmed) {
+        this.previewXmlApplied = null;
+        this.runBaselineXml = canvasBpmnXml?.trim() ?? null;
+        if (hadManualEdits) {
+          this.nzMessage.success('已保存流程（含您在预览期间的手动修改）');
+        } else {
+          this.nzMessage.success('已保存流程');
+        }
+      } else {
+        await this.editor.rejectAgentPreview();
+        this.previewXmlApplied = null;
+        this.previewCanvasDirty.set(false);
+        this.nzMessage.info('已回退预览');
+      }
+    });
   }
 
   submitAsk(): void {
     const runId = this.status()?.runId;
     const answer = this.askText().trim();
-    if (!runId || !answer) {
+    if (!runId || !answer || this.busy()) {
       return;
     }
-    this.busy.set(true);
-    this.attachContinuationStream(runId);
-    this.agentApi
-      .answer(runId, answer)
-      .pipe(finalize(() => this.busy.set(false)))
-      .subscribe({
-        next: s => {
-          this.status.set(s);
-          this.askText.set('');
-        },
-        error: e => this.nzMessage.error(e?.message ?? '提交失败')
-      });
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_ask', '追问');
+      const canvasBpmnXml = await this.captureCanvasForAction();
+      await firstValueFrom(
+        this.agentApi.submitAction(runId, { type: 'answer', userAnswer: answer, canvasBpmnXml })
+      );
+      this.askText.set('');
+      this.runBaselineXml = canvasBpmnXml?.trim() ?? this.runBaselineXml;
+    });
   }
 
   onInputKeydown(ev: KeyboardEvent): void {
@@ -196,16 +233,11 @@ export class BpmDesignerAgentComponent {
     }
   }
 
-  private handleEvent(event: AgentStreamEvent, eventName: string): void {
-    if (eventName === 'run_started' && 'runId' in event) {
-      this.status.set(event as unknown as DesignerAgentRunStatus);
-      this.startAssistantBubble();
-      return;
-    }
+  /** 事件流只展示日志；阶段变化一律 GET /runs/{id} */
+  private async onStreamEvent(event: AgentStreamEvent, eventName: string): Promise<void> {
     const type = event.type ?? eventName;
     if (type === 'stage') {
       this.appendThinking(`${event.label ?? event.stage}: ${event.detail ?? ''}`);
-      this.status.update(s => ({ ...(s ?? { active: true }), stage: event.stage, active: true }));
       return;
     }
     if (type === 'thinking_delta' && event.delta) {
@@ -229,81 +261,242 @@ export class BpmDesignerAgentComponent {
       return;
     }
     if (type === 'plan_ready') {
-      this.syncPlanDisplayFromEvent(event);
-      this.status.update(s => ({
-        ...(s ?? { active: true }),
-        stage: 'await_plan',
-        editPlanJson: event.editPlanJson,
-        planDisplayJson: event.planDisplayJson,
-        assistantReply: event.summary ?? s?.assistantReply,
-        active: true
-      }));
       if (event.summary) {
         this.setAssistantText(event.summary);
       }
-      this.releaseBusyForHumanInput();
+      await this.refreshStatus(event.runId);
+      this.busy.set(false);
       return;
     }
-    if (type === 'preview_ready' && event.candidateXml) {
-      void this.editor.importBpmnXml(event.candidateXml);
-      this.status.update(s => ({
-        ...(s ?? { active: true }),
-        stage: 'await_preview',
-        candidateXml: event.candidateXml,
-        active: true
-      }));
-      this.releaseBusyForHumanInput();
+    if (type === 'preview_ready') {
+      await this.refreshStatus(event.runId);
+      this.busy.set(false);
       return;
     }
     if (type === 'await_human') {
-      this.status.update(s => ({
-        ...(s ?? { active: true }),
-        stage: event.stage,
-        askMessage: event.askMessage,
-        pluginHintJson: event.pluginHintJson,
-        active: true
-      }));
-      this.releaseBusyForHumanInput();
+      await this.refreshStatus(event.runId);
+      this.busy.set(false);
       return;
     }
     if (type === 'done') {
       if (event.content) {
         this.setAssistantText(event.content);
       }
-      this.status.update(s => ({ ...(s ?? { active: false }), stage: 'done', active: false }));
+      await this.refreshStatus(event.runId);
       this.busy.set(false);
       return;
     }
     if (type === 'error') {
       this.nzMessage.error(event.errorMessage ?? 'Agent 错误');
-      this.status.update(s => ({
-        ...(s ?? { active: false }),
-        stage: 'error',
-        active: false,
-        errorMessage: event.errorMessage
-      }));
+      await this.refreshStatus(event.runId);
       this.busy.set(false);
     }
   }
 
-  /** SSE 在 await_plan / await_preview / await_ask 等人机闸门处不会结束，需主动释放 busy。 */
-  private releaseBusyForHumanInput(): void {
+  private async assertStage(runId: string, expected: string, label: string): Promise<void> {
+    const current = await firstValueFrom(this.agentApi.statusByRunId(runId));
+    this.applyServerStatus(current);
+    if (current.stage !== expected) {
+      throw new Error(
+        `当前不在${label}阶段（${StageLabels[current.stage ?? ''] ?? current.stage ?? '未知'}）`
+      );
+    }
+  }
+
+  private async runHumanAction(runId: string, action: () => Promise<void>): Promise<void> {
+    this.busy.set(true);
+    try {
+      await action();
+      await this.refreshStatus(runId);
+      this.syncBusyAndStreamAfterAction(runId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '操作失败';
+      if (this.isSessionExpiredError(msg)) {
+        this.handleSessionExpired();
+        this.nzMessage.warning('Agent 会话已失效，请重新发送指令');
+      } else {
+        this.nzMessage.error(msg);
+        await this.refreshStatus(runId).catch(() => undefined);
+      }
+      this.busy.set(false);
+    }
+  }
+
+  /** Graph 继续跑时需要事件流；闸门阶段只依赖 GET 状态 */
+  private syncBusyAndStreamAfterAction(runId: string): void {
+    const current = this.status();
+    const stage = current?.stage ?? '';
+    if (HumanGateStages.has(stage)) {
+      this.busy.set(false);
+      return;
+    }
+    if (current?.active) {
+      this.ensureEventStream(runId);
+      this.busy.set(true);
+      return;
+    }
     this.busy.set(false);
   }
 
-  private attachContinuationStream(runId: string): void {
-    this.streamAbort?.abort();
-    this.streamAbort = this.agentApi.resumeRunStream(
+  private ensureEventStream(runId: string): void {
+    if (this.streamConnected) {
+      return;
+    }
+    this.streamConnected = true;
+    this.streamAbort = this.agentApi.openEventStream(
       runId,
-      (event, name) => this.handleEvent(event, name),
+      (event, name) => void this.onStreamEvent(event, name),
       err => {
+        this.streamConnected = false;
         this.busy.set(false);
-        this.nzMessage.error(err instanceof Error ? err.message : 'SSE 续推失败');
+        this.nzMessage.error(err instanceof Error ? err.message : '事件流失败');
       },
       () => {
-        this.busy.set(false);
+        this.streamConnected = false;
+        void this.refreshStatus(runId);
       }
     );
+  }
+
+  private isSessionExpiredError(message: string): boolean {
+    return /run 不存在|run 已结束|会话已失效|NOT_FOUND|GONE|404|410/i.test(message);
+  }
+
+  private handleSessionExpired(): void {
+    this.closeStream();
+    this.status.set(null);
+    this.editor.setAgentPreviewActive(false);
+    this.previewXmlApplied = null;
+    this.previewCanvasDirty.set(false);
+    this.runBaselineXml = null;
+  }
+
+  private async refreshStatus(runId?: string): Promise<void> {
+    const id = runId ?? this.status()?.runId;
+    if (!id) {
+      const targetId = this.bpmProcessId();
+      if (!targetId) {
+        return;
+      }
+      const s = await firstValueFrom(this.agentApi.statusByTarget(targetId));
+      this.applyServerStatus(s);
+      return;
+    }
+    try {
+      const s = await firstValueFrom(this.agentApi.statusByRunId(id));
+      this.applyServerStatus(s);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!this.isSessionExpiredError(msg)) {
+        throw err;
+      }
+      const targetId = this.bpmProcessId();
+      if (targetId) {
+        try {
+          const byTarget = await firstValueFrom(this.agentApi.statusByTarget(targetId));
+          if (byTarget.runId && byTarget.runId !== id) {
+            this.handleSessionExpired();
+            return;
+          }
+          if (byTarget.runId || byTarget.stage || byTarget.active) {
+            this.applyServerStatus(byTarget);
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
+      this.handleSessionExpired();
+    }
+  }
+
+  private applyServerStatus(incoming: DesignerAgentRunStatus): void {
+    if (!incoming.runId && !incoming.stage && !incoming.active) {
+      this.status.set(null);
+      return;
+    }
+    this.status.set(incoming);
+    this.syncPlanDisplay(incoming);
+    if (incoming.stage === 'await_preview' && incoming.candidateXml) {
+      void this.applyPreviewXml(incoming.candidateXml).then(applied => {
+        if (applied && HumanGateStages.has(incoming.stage ?? '')) {
+          this.nzMessage.info('已在画布加载预览，请查看流程图并确认是否保存');
+        }
+      });
+    } else if (incoming.stage !== 'await_preview') {
+      this.editor.setAgentPreviewActive(false);
+    }
+    if (HumanGateStages.has(incoming.stage ?? '')) {
+      this.busy.set(false);
+    }
+  }
+
+  private applyPreviewXml(xml: string): Promise<boolean> {
+    const trimmed = xml.trim();
+    if (!trimmed || trimmed === this.previewXmlApplied) {
+      return Promise.resolve(false);
+    }
+    return this.editor
+      .captureCurrentBpmnXml()
+      .then(current => {
+        const baseline = this.runBaselineXml;
+        if (baseline && current !== baseline && current !== trimmed) {
+          this.nzMessage.warning('检测到画布有手动修改，加载预览将暂时覆盖；确认保存时以当前画布为准');
+        }
+        return this.editor.importBpmnXmlForPreview(trimmed);
+      })
+      .then(() => {
+        this.previewXmlApplied = trimmed;
+        this.previewCanvasDirty.set(false);
+        this.watchPreviewCanvasEdits();
+        return true;
+      })
+      .catch(err => {
+        this.nzMessage.error(err instanceof Error ? err.message : '预览导入失败');
+        return false;
+      });
+  }
+
+  refreshPreviewDirtyHint(): void {
+    void this.refreshPreviewDirtyFlag();
+  }
+
+  private watchPreviewCanvasEdits(): void {
+    if (!this.awaitPreview()) {
+      return;
+    }
+    void this.refreshPreviewDirtyFlag();
+  }
+
+  private async refreshPreviewDirtyFlag(): Promise<void> {
+    const dirty = await this.isPreviewCanvasDirty();
+    this.previewCanvasDirty.set(dirty);
+  }
+
+  private async isPreviewCanvasDirty(): Promise<boolean> {
+    if (!this.previewXmlApplied) {
+      return false;
+    }
+    const current = (await this.editor.captureCurrentBpmnXml()).trim();
+    return current !== this.previewXmlApplied;
+  }
+
+  private async captureCanvasForAction(): Promise<string | undefined> {
+    const xml = (await this.editor.captureCurrentBpmnXml()).trim();
+    if (!xml) {
+      return undefined;
+    }
+    const maxLen = 48_000;
+    if (xml.length > maxLen) {
+      return `${xml.slice(0, maxLen)}\n<!-- truncated -->`;
+    }
+    return xml;
+  }
+
+  private closeStream(): void {
+    this.streamAbort?.abort();
+    this.streamAbort = null;
+    this.streamConnected = false;
   }
 
   private async buildContext(): Promise<{ bpmnXml: string; selectedElementId?: string }> {
@@ -373,17 +566,6 @@ export class BpmDesignerAgentComponent {
     );
     this.planDisplay.set(display);
     this.planTechnicalJson.set(status.editPlanJson ?? '');
-  }
-
-  private syncPlanDisplayFromEvent(event: AgentStreamEvent): void {
-    const display = resolvePlanDisplay(
-      event.planDisplayJson,
-      event.editPlanJson,
-      event.summary,
-      this.componentProvider
-    );
-    this.planDisplay.set(display);
-    this.planTechnicalJson.set(event.editPlanJson ?? '');
   }
 
   private setAssistantText(text: string): void {

@@ -109,23 +109,31 @@ public class DesignerAgentEvalClient {
             ((com.fasterxml.jackson.databind.node.ObjectNode) startBody).put("baseBpmnXml", baseBpmnXml);
         }
 
-        consumeSse(
-                baseUrl + "/bpm/designer-agent/runs/stream",
-                token,
-                startBody.toString(),
-                session,
-                DesignerAgentEvalClient::shouldPauseInitialStream,
-                Duration.ofSeconds(180));
-
-        String runId = session.runId;
+        JsonNode created = createRun(baseUrl, token, startBody.toString());
+        String runId = text(created, "runId", null);
+        session.mergeStatus(created);
         if (StringUtils.isBlank(runId)) {
             JsonNode byTarget = pollStatusByTarget(baseUrl, token, targetProcessId, Duration.ofSeconds(60));
             runId = text(byTarget, "runId", null);
             session.mergeStatus(byTarget);
         }
         if (StringUtils.isBlank(runId)) {
-            throw new IllegalStateException("SSE 未返回 runId，且 by-target 未找到 run: " + targetProcessId);
+            throw new IllegalStateException("createRun 未返回 runId: " + targetProcessId);
         }
+
+        final String eventsRunId = runId;
+        Thread eventsThread = Thread.startVirtualThread(() -> {
+            try {
+                consumeSseGet(
+                        baseUrl + "/bpm/designer-agent/runs/" + eventsRunId + "/events",
+                        token,
+                        session,
+                        s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
+                        Duration.ofSeconds(480));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         JsonNode status = fetchStatusByTargetOnce(baseUrl, token, targetProcessId);
         session.mergeStatus(status);
@@ -159,33 +167,46 @@ public class DesignerAgentEvalClient {
             session.mergeStatus(status);
         }
 
+        eventsThread.join(Duration.ofSeconds(5));
         return mergeSnapshot(runId, targetProcessId, status, session, baseBpmnXml, started);
     }
 
+    private JsonNode createRun(String baseUrl, String token, String jsonBody) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/bpm/designer-agent/runs"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + token)
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (res.statusCode() < 200 || res.statusCode() >= 300) {
+            String msg = res.body();
+            if (msg.contains("Agent 未启用")) {
+                throw new AgentNotEnabledException(msg);
+            }
+            throw new IllegalStateException("createRun 失败: " + res.statusCode() + " " + msg);
+        }
+        JsonNode root = objectMapper.readTree(res.body());
+        return root.has("data") ? root.get("data") : root;
+    }
+
     /**
-     * 与前端一致：先续订 SSE 再 confirm-plan，避免 apply 事件推到已关闭的初始流。
+     * 契约：GET /events 订阅 + POST /actions confirm_plan。
      */
     private void autoConfirmPlanAndWait(String baseUrl, String token, String runId, SseSession session)
             throws Exception {
-        Thread resumeThread = Thread.startVirtualThread(() -> {
-            try {
-                consumeSse(
-                        baseUrl + "/bpm/designer-agent/runs/" + runId + "/stream/resume",
-                        token,
-                        null,
-                        session,
-                        s -> isStableStage(s.stage) || AgentRunStage.Error.equals(s.stage),
-                        Duration.ofSeconds(300));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+        submitAction(baseUrl, token, runId, "confirm_plan", true, null);
+        long deadline = System.currentTimeMillis() + Duration.ofMinutes(6).toMillis();
+        while (System.currentTimeMillis() < deadline) {
+            JsonNode status = fetchStatusByRunIdOnce(baseUrl, token, runId);
+            session.mergeStatus(status);
+            String stage = resolveStage(status, session);
+            if (isStableStage(stage) || AgentRunStage.Error.equals(stage)) {
+                return;
             }
-        });
-        Thread.sleep(1000);
-        confirmPlan(baseUrl, token, runId, true, null);
-        resumeThread.join(Duration.ofMinutes(6));
-        if (resumeThread.isAlive()) {
-            throw new IllegalStateException("confirm-plan 后续 SSE 在超时内未到达稳定阶段");
+            Thread.sleep(1000);
         }
+        throw new IllegalStateException("confirm_plan 后续在超时内未到达稳定阶段");
     }
 
     private static String resolveStage(JsonNode status, SseSession session) {
@@ -251,26 +272,37 @@ public class DesignerAgentEvalClient {
                 || AgentRunStage.Error.equals(stage);
     }
 
-    private void confirmPlan(String baseUrl, String token, String runId, boolean confirmed, String editedPlanJson)
+    private void submitAction(
+            String baseUrl, String token, String runId, String type, boolean confirmed, String editedPlanJson)
             throws Exception {
-        var body = objectMapper.createObjectNode().put("confirmed", confirmed);
+        var body = objectMapper.createObjectNode().put("type", type).put("confirmed", confirmed);
         if (StringUtils.isNotBlank(editedPlanJson)) {
             body.put("editedPlanJson", editedPlanJson);
         }
-        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/bpm/designer-agent/runs/" + runId + "/confirm-plan"))
+        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/bpm/designer-agent/runs/" + runId + "/actions"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + token)
                 .timeout(Duration.ofSeconds(120))
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                 .build();
-        try {
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            if (res.statusCode() < 200 || res.statusCode() >= 300) {
-                throw new IllegalStateException("confirm-plan 失败: " + res.statusCode() + " " + res.body());
-            }
-        } catch (java.net.http.HttpTimeoutException timeout) {
-            // 服务端可能仍在异步 apply；后续轮询 status 即可
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (res.statusCode() < 200 || res.statusCode() >= 300) {
+            throw new IllegalStateException("submitAction 失败: " + res.statusCode() + " " + res.body());
         }
+    }
+
+    private JsonNode fetchStatusByRunIdOnce(String baseUrl, String token, String runId) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + "/bpm/designer-agent/runs/" + runId))
+                .header("Authorization", "Bearer " + token)
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build();
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (res.statusCode() < 200 || res.statusCode() >= 300) {
+            throw new IllegalStateException("status 失败: " + res.statusCode() + " " + res.body());
+        }
+        JsonNode root = objectMapper.readTree(res.body());
+        return root.has("data") ? root.get("data") : root;
     }
 
     private JsonNode pollStatusByTarget(String baseUrl, String token, String targetProcessId, Duration timeout)
@@ -302,35 +334,27 @@ public class DesignerAgentEvalClient {
         return root.has("data") ? root.get("data") : root;
     }
 
-    private static boolean shouldPauseInitialStream(SseSession session) {
-        if (StringUtils.isNotBlank(session.editPlanJson)
-                && (session.eventTypes.contains("plan_ready") || AgentRunStage.AwaitPlan.equals(session.stage))) {
-            return true;
-        }
-        if (StringUtils.isBlank(session.stage)) {
-            return false;
-        }
-        return AgentRunStage.AwaitPlan.equals(session.stage) || isStableStage(session.stage);
-    }
-
-    private void consumeSse(
+    private void consumeSseGet(
             String url,
             String token,
-            String jsonBody,
             SseSession session,
             Predicate<SseSession> stopWhen,
             Duration maxWait) throws Exception {
-        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                 .header("Authorization", "Bearer " + token)
                 .header("Accept", "text/event-stream")
-                .timeout(maxWait.plusSeconds(30));
-        if (jsonBody != null) {
-            builder.header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
-        } else {
-            builder.POST(HttpRequest.BodyPublishers.noBody());
-        }
-        HttpResponse<InputStream> response = http.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+                .timeout(maxWait.plusSeconds(30))
+                .GET()
+                .build();
+        consumeSseResponse(req, session, stopWhen, maxWait);
+    }
+
+    private void consumeSseResponse(
+            HttpRequest request,
+            SseSession session,
+            Predicate<SseSession> stopWhen,
+            Duration maxWait) throws Exception {
+        HttpResponse<InputStream> response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             try (InputStream err = response.body()) {
                 String msg = new String(err.readAllBytes(), StandardCharsets.UTF_8);

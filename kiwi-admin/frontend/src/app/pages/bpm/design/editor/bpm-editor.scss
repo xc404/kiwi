@@ -198,6 +198,16 @@
   overflow: hidden;
 }
 
+.bpm-editor-preview-banner {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  color: #0958d9;
+  font-size: 13px;
+  line-height: 20px;
+  background: #e6f4ff;
+  border-bottom: 1px solid #91caff;
+}
+
 .canvas,
 .bpm-editor-canvas {
   flex: 1 1 auto;

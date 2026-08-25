@@ -65,11 +65,15 @@
   }
 
   @if (awaitPreview()) {
-    <div class="bpm-designer-agent__card">
-      <p>已生成预览，请确认保存到流程。</p>
+    <div class="bpm-designer-agent__card" (mouseenter)="refreshPreviewDirtyHint()">
+      <p class="bpm-designer-agent__card-title">画布预览</p>
+      <p>候选 BPMN 已导入中间画布。您可以直接在画布上微调，<strong>确认保存时以当前画布为准</strong>；拒绝将整图回退到预览前。</p>
+      @if (previewEdited()) {
+        <p class="bpm-designer-agent__preview-dirty">已检测到手动改图，保存时将写入当前画布内容。</p>
+      }
       <div class="bpm-designer-agent__actions">
         <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPreview(true)">确认保存</button>
-        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPreview(false)">拒绝</button>
+        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPreview(false)">拒绝并回退</button>
       </div>
     </div>
   }
@@ -83,6 +87,9 @@
   }
 
   <footer class="bpm-designer-agent__input">
+    @if (inputLocked()) {
+      <p class="bpm-designer-agent__input-hint">请先完成上方确认/追问，再发送下一条指令。</p>
+    }
     <textarea
       nz-input
       rows="3"
@@ -90,7 +97,8 @@
       [ngModel]="inputText()"
       (ngModelChange)="inputText.set($event)"
       (keydown)="onInputKeydown($event)"
+      [disabled]="inputLocked()"
     ></textarea>
-    <button nz-button nzType="primary" nzSize="small" [disabled]="busy() || !inputText().trim()" (click)="send()">发送</button>
+    <button nz-button nzType="primary" nzSize="small" [disabled]="inputLocked() || !inputText().trim()" (click)="send()">发送</button>
   </footer>
 </section>

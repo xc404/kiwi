@@ -28,7 +28,7 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/bpm/designer-agent")
 @RequiredArgsConstructor
-@Tag(name = "BPM 设计器 Agent", description = "Greenfield 设计器 Agent：EditPlan + SSE")
+@Tag(name = "BPM 设计器 Agent", description = "EditPlan Agent：POST 创建 + GET 状态 + POST action + GET events")
 @Slf4j
 public class DesignerAgentCtl extends BaseCtl {
 
@@ -36,7 +36,51 @@ public class DesignerAgentCtl extends BaseCtl {
     private final DesignerAgentProperties properties;
     private final ObjectMapper objectMapper;
 
-    @Operation(operationId = "designerAgent_startStream", summary = "启动 Agent run 并通过 SSE 推送事件")
+    @Operation(operationId = "designerAgent_createRun", summary = "创建 Agent run 并异步启动 Graph")
+    @PostMapping("/runs")
+    public DesignerAgentRunStatus createRun(@RequestBody StartRunRequest request) {
+        String userId = getCurrentUser().getId();
+        return sessionService.createRun(
+                request.getScenario(),
+                request.getTargetProcessId(),
+                request.getSelectedElementId(),
+                request.getBaseBpmnXml(),
+                userId);
+    }
+
+    @Operation(operationId = "designerAgent_eventStream", summary = "订阅 run 事件流（仅日志/思考，不含状态变更语义）")
+    @GetMapping(value = "/runs/{runId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter eventStream(@PathVariable String runId) {
+        SseEmitter emitter = new SseEmitter(properties.getSseTimeoutMs());
+        sessionService.bindStream(runId, event -> sendEvent(emitter, event));
+        emitter.onCompletion(() -> log.debug("events stream completed runId={}", runId));
+        emitter.onTimeout(emitter::complete);
+        return emitter;
+    }
+
+    @Operation(operationId = "designerAgent_submitAction", summary = "提交人机操作（plan / preview / ask）")
+    @PostMapping("/runs/{runId}/actions")
+    public DesignerAgentRunStatus submitAction(
+            @PathVariable String runId,
+            @RequestBody DesignerAgentRunActionRequest body) {
+        return sessionService.submitAction(runId, body);
+    }
+
+    @Operation(operationId = "designerAgent_statusByTarget", summary = "按目标流程查询 Agent run 状态")
+    @GetMapping("/by-target")
+    public DesignerAgentRunStatus statusByTarget(@RequestParam String targetProcessId) {
+        return sessionService.statusByTarget(targetProcessId);
+    }
+
+    @Operation(operationId = "designerAgent_status", summary = "按 runId 查询状态（权威）")
+    @GetMapping("/runs/{runId}")
+    public DesignerAgentRunStatus status(@PathVariable String runId) {
+        return sessionService.statusByRunId(runId);
+    }
+
+    /** @deprecated 使用 POST {@code /runs} + GET {@code /runs/{id}/events} */
+    @Deprecated
+    @Operation(operationId = "designerAgent_startStream", summary = "（兼容）启动 run 并推送事件")
     @PostMapping(value = "/runs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter startStream(@RequestBody StartRunRequest request) {
         SseEmitter emitter = new SseEmitter(properties.getSseTimeoutMs());
@@ -51,72 +95,80 @@ public class DesignerAgentCtl extends BaseCtl {
         try {
             emitter.send(SseEmitter.event()
                     .name("run_started")
-                    .data(objectMapper.writeValueAsString(sessionService.statusOf(run))));
+                    .data(objectMapper.writeValueAsString(sessionService.statusByRunId(run.getRunId()))));
         } catch (IOException e) {
             emitter.completeWithError(e);
             return emitter;
         }
         sessionService.startRunExecution(run.getRunId());
-        emitter.onCompletion(() -> log.debug("SSE completed runId={}", run.getRunId()));
+        emitter.onCompletion(() -> log.debug("legacy stream completed runId={}", run.getRunId()));
         emitter.onTimeout(emitter::complete);
         return emitter;
     }
 
-    @Operation(operationId = "designerAgent_statusByTarget", summary = "按目标流程查询 Agent run 状态")
-    @GetMapping("/by-target")
-    public DesignerAgentRunStatus statusByTarget(@RequestParam String targetProcessId) {
-        return sessionService.statusByTarget(targetProcessId);
-    }
-
-    @Operation(operationId = "designerAgent_status", summary = "按 runId 查询状态")
-    @GetMapping("/runs/{runId}")
-    public DesignerAgentRunStatus status(@PathVariable String runId) {
-        return sessionService.statusByRunId(runId);
-    }
-
-    @Operation(operationId = "designerAgent_resumeStream", summary = "续订 Agent run 的 SSE 事件流")
+    /** @deprecated 使用 GET {@code /runs/{id}/events} */
+    @Deprecated
+    @Operation(operationId = "designerAgent_resumeStream", summary = "（兼容）续订事件流")
     @PostMapping(value = "/runs/{runId}/stream/resume", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter resumeStream(@PathVariable String runId) {
+    public SseEmitter resumeStream(
+            @PathVariable String runId,
+            @RequestParam(defaultValue = "true") @Schema(description = "是否重放历史事件") boolean replay) {
         SseEmitter emitter = new SseEmitter(properties.getSseTimeoutMs());
-        DesignerAgentRun run = sessionService.attachStream(
-                runId,
-                event -> sendEvent(emitter, event));
+        DesignerAgentRun run = sessionService.bindStream(runId, event -> sendEvent(emitter, event));
         try {
             emitter.send(SseEmitter.event()
                     .name("run_resumed")
-                    .data(objectMapper.writeValueAsString(sessionService.statusOf(run))));
+                    .data(objectMapper.writeValueAsString(sessionService.statusByRunId(runId))));
         } catch (IOException e) {
             emitter.completeWithError(e);
+            return emitter;
         }
-        emitter.onCompletion(() -> log.debug("SSE resumed completed runId={}", runId));
+        if (replay) {
+            sessionService.replayBufferedEvents(run, event -> sendEvent(emitter, event));
+        }
+        emitter.onCompletion(() -> log.debug("legacy resume completed runId={}", runId));
         emitter.onTimeout(emitter::complete);
         return emitter;
     }
 
-    @Operation(operationId = "designerAgent_confirmPlan", summary = "确认或拒绝 EditPlan")
+    /** @deprecated 使用 POST {@code /runs/{id}/actions} type=confirm_plan */
+    @Deprecated
+    @Operation(operationId = "designerAgent_confirmPlan", summary = "（兼容）确认或拒绝 EditPlan")
     @PostMapping("/runs/{runId}/confirm-plan")
     public DesignerAgentRunStatus confirmPlan(
             @PathVariable String runId,
             @RequestBody ConfirmPlanRequest body) {
-        boolean confirmed = body != null && Boolean.TRUE.equals(body.getConfirmed());
-        return sessionService.confirmPlan(runId, confirmed, body != null ? body.getEditedPlanJson() : null);
+        DesignerAgentRunActionRequest action = new DesignerAgentRunActionRequest();
+        action.setType("confirm_plan");
+        action.setConfirmed(body != null ? body.getConfirmed() : null);
+        action.setEditedPlanJson(body != null ? body.getEditedPlanJson() : null);
+        return sessionService.submitAction(runId, action);
     }
 
-    @Operation(operationId = "designerAgent_confirmPreview", summary = "确认或拒绝预览（确认则保存 BPMN）")
+    /** @deprecated 使用 POST {@code /runs/{id}/actions} type=confirm_preview */
+    @Deprecated
+    @Operation(operationId = "designerAgent_confirmPreview", summary = "（兼容）确认或拒绝预览")
     @PostMapping("/runs/{runId}/confirm-preview")
     public DesignerAgentRunStatus confirmPreview(
             @PathVariable String runId,
             @RequestBody ConfirmPreviewRequest body) {
-        boolean confirmed = body != null && Boolean.TRUE.equals(body.getConfirmed());
-        return sessionService.confirmPreview(runId, confirmed);
+        DesignerAgentRunActionRequest action = new DesignerAgentRunActionRequest();
+        action.setType("confirm_preview");
+        action.setConfirmed(body != null ? body.getConfirmed() : null);
+        return sessionService.submitAction(runId, action);
     }
 
-    @Operation(operationId = "designerAgent_answer", summary = "提交追问补充说明")
+    /** @deprecated 使用 POST {@code /runs/{id}/actions} type=answer */
+    @Deprecated
+    @Operation(operationId = "designerAgent_answer", summary = "（兼容）提交追问")
     @PostMapping("/runs/{runId}/answer")
     public DesignerAgentRunStatus answer(
             @PathVariable String runId,
             @RequestBody AnswerRequest body) {
-        return sessionService.answerAsk(runId, body != null ? body.getUserAnswer() : null);
+        DesignerAgentRunActionRequest action = new DesignerAgentRunActionRequest();
+        action.setType("answer");
+        action.setUserAnswer(body != null ? body.getUserAnswer() : null);
+        return sessionService.submitAction(runId, action);
     }
 
     private void sendEvent(SseEmitter emitter, AgentStreamEvent event) {
@@ -127,6 +179,8 @@ public class DesignerAgentCtl extends BaseCtl {
             if ("done".equals(event.getType()) || "error".equals(event.getType())) {
                 emitter.complete();
             }
+        } catch (IllegalStateException e) {
+            log.debug("event stream already completed, skip type={}", event.getType());
         } catch (IOException e) {
             emitter.completeWithError(e);
         }

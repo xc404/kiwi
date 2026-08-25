@@ -50,6 +50,17 @@ export interface StartRunRequest {
   baseBpmnXml?: string;
 }
 
+export type DesignerAgentActionType = 'confirm_plan' | 'confirm_preview' | 'answer';
+
+export interface DesignerAgentActionRequest {
+  type: DesignerAgentActionType;
+  confirmed?: boolean;
+  editedPlanJson?: string;
+  userAnswer?: string;
+  /** 当前画布 XML；用户可能在等待/预览期间手动改图 */
+  canvasBpmnXml?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BpmDesignerAgentService {
   private readonly http = inject(BaseHttpService);
@@ -61,50 +72,24 @@ export class BpmDesignerAgentService {
     });
   }
 
-  confirmPlan(runId: string, confirmed: boolean, editedPlanJson?: string): Observable<DesignerAgentRunStatus> {
-    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}/confirm-plan`, {
-      confirmed,
-      editedPlanJson
+  statusByRunId(runId: string): Observable<DesignerAgentRunStatus> {
+    return this.http.get<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}`, { showLoading: false });
+  }
+
+  /** 契约 ①：创建 run，JSON 返回状态 */
+  createRun(body: StartRunRequest): Observable<DesignerAgentRunStatus> {
+    return this.http.post<DesignerAgentRunStatus>('/bpm/designer-agent/runs', body, { showLoading: false });
+  }
+
+  /** 契约 ③：统一人机操作 */
+  submitAction(runId: string, action: DesignerAgentActionRequest): Observable<DesignerAgentRunStatus> {
+    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}/actions`, action, {
+      showLoading: false
     });
   }
 
-  confirmPreview(runId: string, confirmed: boolean): Observable<DesignerAgentRunStatus> {
-    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}/confirm-preview`, { confirmed });
-  }
-
-  answer(runId: string, userAnswer: string): Observable<DesignerAgentRunStatus> {
-    return this.http.post<DesignerAgentRunStatus>(`/bpm/designer-agent/runs/${runId}/answer`, { userAnswer });
-  }
-
-  startRunStream(
-    body: StartRunRequest,
-    onEvent: (event: AgentStreamEvent, eventName: string) => void,
-    onError: (err: unknown) => void,
-    onComplete: () => void
-  ): AbortController {
-    const controller = new AbortController();
-    const token = this.session.getToken() ?? '';
-    const url = `${environment.api.baseUrl}/bpm/designer-agent/runs/stream`;
-    void fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-        ...(token ? { [TokenKey]: token } : {})
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    })
-      .then(res => this.consumeSseResponse(res, onEvent, onComplete))
-      .catch(err => {
-        if ((err as Error).name !== 'AbortError') {
-          onError(err);
-        }
-      });
-    return controller;
-  }
-
-  resumeRunStream(
+  /** 契约 ④：仅订阅事件流（思考/工具/文本），状态请用 GET /runs/{id} */
+  openEventStream(
     runId: string,
     onEvent: (event: AgentStreamEvent, eventName: string) => void,
     onError: (err: unknown) => void,
@@ -112,16 +97,16 @@ export class BpmDesignerAgentService {
   ): AbortController {
     const controller = new AbortController();
     const token = this.session.getToken() ?? '';
-    const url = `${environment.api.baseUrl}/bpm/designer-agent/runs/${runId}/stream/resume`;
+    const url = `${environment.api.baseUrl}/bpm/designer-agent/runs/${runId}/events`;
     void fetch(url, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         Accept: 'text/event-stream',
         ...(token ? { [TokenKey]: token } : {})
       },
       signal: controller.signal
     })
-      .then(res => this.consumeSseResponse(res, onEvent, onComplete))
+      .then(res => this.consumeEventStream(res, onEvent, onComplete))
       .catch(err => {
         if ((err as Error).name !== 'AbortError') {
           onError(err);
@@ -130,13 +115,13 @@ export class BpmDesignerAgentService {
     return controller;
   }
 
-  private async consumeSseResponse(
+  private async consumeEventStream(
     res: Response,
     onEvent: (event: AgentStreamEvent, eventName: string) => void,
     onComplete: () => void
   ): Promise<void> {
     if (!res.ok || !res.body) {
-      throw new Error(`SSE 请求失败: ${res.status}`);
+      throw new Error(`事件流请求失败: ${res.status}`);
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -150,13 +135,13 @@ export class BpmDesignerAgentService {
       const parts = buffer.split('\n\n');
       buffer = parts.pop() ?? '';
       for (const block of parts) {
-        this.parseSseBlock(block, onEvent);
+        this.parseEventBlock(block, onEvent);
       }
     }
     onComplete();
   }
 
-  private parseSseBlock(block: string, onEvent: (event: AgentStreamEvent, eventName: string) => void): void {
+  private parseEventBlock(block: string, onEvent: (event: AgentStreamEvent, eventName: string) => void): void {
     let eventName = 'message';
     const dataLines: string[] = [];
     for (const line of block.split('\n')) {
@@ -170,8 +155,8 @@ export class BpmDesignerAgentService {
       return;
     }
     try {
-      const payload = JSON.parse(dataLines.join('\n')) as AgentStreamEvent | DesignerAgentRunStatus;
-      onEvent(payload as AgentStreamEvent, eventName);
+      const payload = JSON.parse(dataLines.join('\n')) as AgentStreamEvent;
+      onEvent(payload, eventName);
     } catch {
       // ignore parse errors
     }

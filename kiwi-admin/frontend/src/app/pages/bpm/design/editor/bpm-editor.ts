@@ -111,6 +111,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   paletteCollapsed = signal(false);
   propertiesCollapsed = signal(false);
   leftPanelTab = signal<LeftPanelTab>('palette');
+  agentPreviewActive = signal(false);
   paletteWidth = signal(PaletteWidthDefault);
   propertiesWidth = signal(PropertiesWidthDefault);
 
@@ -273,6 +274,53 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
           return Promise.reject(err);
         })
     );
+  }
+
+  importBpmnXmlForPreview(xml: string): Promise<void> {
+    const trimmed = typeof xml === 'string' ? xml.trim() : '';
+    return this.pushUndoSnapshot(false).then(() =>
+      importBpmnXmlToModeler(this.bpmnModeler, trimmed, this.message, () => this.clearSelection(), {
+        notifySuccess: false
+      })
+        .then(() => {
+          this.syncLocalBpmnXml(trimmed);
+          this.agentPreviewActive.set(true);
+          this.refreshCanvasAfterPreview();
+        })
+        .catch((err: unknown) => {
+          this.xmlUndoStack.pop();
+          return Promise.reject(err);
+        })
+    );
+  }
+
+  setAgentPreviewActive(active: boolean): void {
+    this.agentPreviewActive.set(active);
+  }
+
+  refreshCanvasAfterPreview(): void {
+    this.notifyCanvasResized();
+  }
+
+  captureCurrentBpmnXml(): Promise<string> {
+    return this.captureCurrentXml();
+  }
+
+  async rejectAgentPreview(): Promise<void> {
+    const entry = this.xmlUndoStack.pop();
+    if (!entry) {
+      this.agentPreviewActive.set(false);
+      return;
+    }
+    const currentXml = await this.captureCurrentXml();
+    if (currentXml) {
+      this.xmlRedoStack.push({ xml: currentXml, savedToServer: false });
+      if (this.xmlRedoStack.length > XmlHistoryMax) {
+        this.xmlRedoStack.splice(0, this.xmlRedoStack.length - XmlHistoryMax);
+      }
+    }
+    await this.restoreXmlFromHistory(entry.xml, false);
+    this.agentPreviewActive.set(false);
   }
 
   importBpmnXmlAndSave(xml: string): Promise<void> {

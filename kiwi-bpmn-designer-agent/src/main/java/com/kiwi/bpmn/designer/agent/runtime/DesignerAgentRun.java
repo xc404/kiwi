@@ -37,6 +37,7 @@ public class DesignerAgentRun {
     private boolean planSkipped;
     private boolean planConfirmed;
     private Boolean previewConfirmed;
+    private Boolean persistRequested;
     private Boolean installAccepted;
     private final List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
     private transient Consumer<AgentStreamEvent> eventSink;

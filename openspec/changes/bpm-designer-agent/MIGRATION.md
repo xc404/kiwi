@@ -7,8 +7,9 @@
 | 用途 | 路径 |
 |------|------|
 | 启动 run | `POST /bpm/designer-agent/runs` |
-| SSE 事件 | `GET /bpm/designer-agent/runs/{id}/events` |
-| 确认 Plan / 预览 / 追问 | `POST /bpm/designer-agent/runs/{id}/confirm-*` 等 |
+| 查询状态（权威） | `GET /bpm/designer-agent/runs/{id}`、`GET /bpm/designer-agent/by-target` |
+| 人机操作 | `POST /bpm/designer-agent/runs/{id}/actions`（`confirm_plan` / `confirm_preview` / `answer`） |
+| 事件流（可选） | `GET /bpm/designer-agent/runs/{id}/events` |
 | 前端 | 设计器右侧 `bpm-designer-agent` 面板 |
 | 开关 | `kiwi.bpm.designer-agent.enabled`（`KIWI_BPM_DESIGNER_AGENT_ENABLED`） |
 
