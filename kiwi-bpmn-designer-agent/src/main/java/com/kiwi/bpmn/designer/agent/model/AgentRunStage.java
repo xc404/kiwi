@@ -9,6 +9,7 @@ public final class AgentRunStage {
     public static final String Think = "think";
     public static final String Tool = "tool";
     public static final String PlanReady = "plan_ready";
+    public static final String AwaitClarify = "await_clarify";
     public static final String AwaitPlan = "await_plan";
     public static final String Apply = "apply";
     public static final String Validate = "validate";

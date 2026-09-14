@@ -8,7 +8,7 @@ import lombok.Data;
 public class DesignerAgentRunActionRequest {
 
     @Schema(
-            description = "操作类型：confirm_plan | confirm_preview | answer",
+            description = "操作类型：confirm_plan | confirm_preview | answer | submit_clarification | resume_install | skip_install",
             requiredMode = Schema.RequiredMode.REQUIRED)
     private String type;
 
@@ -26,4 +26,13 @@ public class DesignerAgentRunActionRequest {
 
     @Schema(description = "当前画布 BPMN XML（用户可能在预览/等待期间手动改图，以此为准）")
     private String canvasBpmnXml;
+
+    @Schema(description = "submit_clarification：questionId → optionId 或 optionId[]")
+    private java.util.Map<String, Object> answers;
+
+    @Schema(description = "submit_clarification：跳过的题目 id")
+    private java.util.List<String> skippedQuestionIds;
+
+    @Schema(description = "submit_clarification：底部聊天框补充说明")
+    private String supplementalText;
 }

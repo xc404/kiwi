@@ -84,6 +84,14 @@ public class DesignerAgentCtl extends BaseCtl {
         return sessionService.submitAction(runId, body);
     }
 
+    @Operation(operationId = "designerAgent_config", summary = "设计器 Agent 功能开关（前端探测）")
+    @GetMapping("/config")
+    public DesignerAgentConfigView config() {
+        DesignerAgentConfigView view = new DesignerAgentConfigView();
+        view.setEnabled(sessionService.isEnabled());
+        return view;
+    }
+
     @Operation(operationId = "designerAgent_statusByTarget", summary = "按目标流程查询 Agent run 状态")
     @GetMapping("/by-target")
     public DesignerAgentRunStatus statusByTarget(@RequestParam String targetProcessId) {

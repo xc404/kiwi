@@ -26,6 +26,8 @@ public class AgentStreamEvent {
     private String candidateXml;
     private String askMessage;
     private String pluginHintJson;
+    private String clarificationFormJson;
+    private String hitlItemJson;
     private String issuesJson;
     private String content;
     private String errorMessage;

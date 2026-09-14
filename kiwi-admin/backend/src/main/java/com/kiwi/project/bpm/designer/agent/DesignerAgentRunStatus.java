@@ -21,6 +21,8 @@ public class DesignerAgentRunStatus {
     private String assistantReply;
     private String askMessage;
     private String pluginHintJson;
+    private String clarificationFormJson;
+    private String pendingHitlItemsJson;
     private String issuesJson;
     private String errorMessage;
     private Boolean planSkipped;

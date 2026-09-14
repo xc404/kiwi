@@ -99,6 +99,7 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild(BpmToolbar) private toolbar?: BpmToolbar;
+  @ViewChild(BpmDesignerAgentComponent) private designerAgent?: BpmDesignerAgentComponent;
 
   readonly getToolbarContextFn = (): BpmDesignerToolbarContext | undefined => this.toolbar;
 
@@ -557,7 +558,9 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         next: (data: BpmProcess) => {
           this.bpmProcess.set(data);
           this.designerContext.setProjectId(data.projectId ?? null);
-          this.bpmnModeler.importXML(data.bpmnXml ?? '');
+          this.bpmnModeler.importXML(data.bpmnXml ?? '').then(() => {
+            this.designerAgent?.syncSessionFromServer();
+          });
         },
         error: () => {
           this.bpmProcess.set(null);

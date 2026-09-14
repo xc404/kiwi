@@ -49,6 +49,8 @@ public class DesignerAgentGraphFactory {
 
         graph.addNode(DesignerAgentGraphNodes.Ingest, node_async(nodes::ingest));
         graph.addNode(DesignerAgentGraphNodes.Explain, node_async(nodes::explain));
+        graph.addNode(DesignerAgentGraphNodes.PrepareClarify, node_async(nodes::prepareClarify));
+        graph.addNode(DesignerAgentGraphNodes.HumanClarify, node_async(nodes::humanClarify));
         graph.addNode(DesignerAgentGraphNodes.Generate, node_async(nodes::generate));
         graph.addNode(DesignerAgentGraphNodes.HumanPlan, node_async(nodes::humanPlan));
         graph.addNode(DesignerAgentGraphNodes.Apply, node_async(nodes::apply));
@@ -63,8 +65,12 @@ public class DesignerAgentGraphFactory {
         graph.addEdge(START, DesignerAgentGraphNodes.Ingest);
         graph.addConditionalEdges(DesignerAgentGraphNodes.Ingest, routeEdge(), Map.of(
                 DesignerAgentStateKeys.RouteExplain, DesignerAgentGraphNodes.Explain,
-                DesignerAgentStateKeys.RouteGenerate, DesignerAgentGraphNodes.Generate));
+                DesignerAgentStateKeys.RoutePrepareClarify, DesignerAgentGraphNodes.PrepareClarify));
         graph.addEdge(DesignerAgentGraphNodes.Explain, DesignerAgentGraphNodes.Finish);
+        graph.addConditionalEdges(DesignerAgentGraphNodes.PrepareClarify, routeEdge(), Map.of(
+                DesignerAgentStateKeys.RouteHumanClarify, DesignerAgentGraphNodes.HumanClarify,
+                DesignerAgentStateKeys.RouteGenerate, DesignerAgentGraphNodes.Generate));
+        graph.addEdge(DesignerAgentGraphNodes.HumanClarify, DesignerAgentGraphNodes.Generate);
         graph.addConditionalEdges(DesignerAgentGraphNodes.Generate, routeEdge(), Map.of(
                 DesignerAgentStateKeys.RouteHumanPlan, DesignerAgentGraphNodes.HumanPlan,
                 DesignerAgentStateKeys.RouteApply, DesignerAgentGraphNodes.Apply,
@@ -85,7 +91,10 @@ public class DesignerAgentGraphFactory {
                 DesignerAgentStateKeys.RouteHumanAsk, DesignerAgentGraphNodes.HumanAsk,
                 DesignerAgentStateKeys.RouteHumanPreview, DesignerAgentGraphNodes.HumanPreview));
         graph.addEdge(DesignerAgentGraphNodes.HumanAsk, DesignerAgentGraphNodes.Generate);
-        graph.addEdge(DesignerAgentGraphNodes.HumanInstall, END);
+        graph.addConditionalEdges(DesignerAgentGraphNodes.HumanInstall, routeEdge(), Map.of(
+                DesignerAgentStateKeys.RouteValidate, DesignerAgentGraphNodes.Validate,
+                DesignerAgentStateKeys.RouteHumanFollowUp, DesignerAgentGraphNodes.Finish,
+                DesignerAgentStateKeys.RouteHumanInstall, DesignerAgentGraphNodes.HumanInstall));
         graph.addEdge(DesignerAgentGraphNodes.Fail, DesignerAgentGraphNodes.Finish);
         graph.addEdge(DesignerAgentGraphNodes.Finish, DesignerAgentGraphNodes.HumanFollowUp);
         graph.addConditionalEdges(DesignerAgentGraphNodes.HumanFollowUp, routeEdge(), Map.of(
@@ -95,6 +104,7 @@ public class DesignerAgentGraphFactory {
         CompileConfig compileConfig = CompileConfig.builder()
                 .saverConfig(SaverConfig.builder().register(checkpointSaver).build())
                 .interruptBefore(
+                        DesignerAgentGraphNodes.HumanClarify,
                         DesignerAgentGraphNodes.HumanPlan,
                         DesignerAgentGraphNodes.HumanPreview,
                         DesignerAgentGraphNodes.HumanAsk,

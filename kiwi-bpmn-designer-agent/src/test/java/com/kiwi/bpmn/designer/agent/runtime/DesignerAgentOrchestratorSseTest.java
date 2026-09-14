@@ -71,6 +71,7 @@ class DesignerAgentOrchestratorSseTest {
         DesignerAgentProperties properties = new DesignerAgentProperties();
         properties.setPlanMode(true);
         properties.setPlanModeSkipSimple(true);
+        properties.setClarifyBeforePlan(false);
         EditPlanApplicator applicator = new EditPlanApplicator(
                 new AssistantBpmnToPlan(), new AssistantPlanCompiler(objectMapper));
         DesignerAgentStateMapper stateMapper = new DesignerAgentStateMapper();
@@ -82,11 +83,12 @@ class DesignerAgentOrchestratorSseTest {
                 objectMapper,
                 planGenerator,
                 new EditPlanPresenter(new AssistantBpmnToPlan()),
+                new DesignerAgentClarificationPlanner(objectMapper),
                 stateMapper);
         BaseCheckpointSaver saver = MemorySaver.builder().build();
         DesignerAgentGraphFactory factory = new DesignerAgentGraphFactory(nodes, java.util.Optional.of(saver));
         graphRuntime = new DesignerAgentGraphRuntime(
-                factory, stateMapper, saver, new DesignerAgentRunBinding());
+                factory, stateMapper, saver, new DesignerAgentRunBinding(), objectMapper);
         graphRuntime.initGraph();
     }
 

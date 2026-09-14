@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.StateSnapshot;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.bpmn.designer.agent.mcp.DesignerAgentToolTraceContext;
 import com.kiwi.bpmn.designer.agent.model.AgentRunStage;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,6 +30,7 @@ public class DesignerAgentGraphRuntime {
     private final DesignerAgentStateMapper stateMapper;
     private final BaseCheckpointSaver checkpointSaver;
     private final DesignerAgentRunBinding runBinding;
+    private final ObjectMapper objectMapper;
     private final DesignerAgentGraphSupport graphSupport = new DesignerAgentGraphSupport();
 
     private CompiledGraph compiledGraph;
@@ -36,11 +39,13 @@ public class DesignerAgentGraphRuntime {
             DesignerAgentGraphFactory graphFactory,
             DesignerAgentStateMapper stateMapper,
             BaseCheckpointSaver checkpointSaver,
-            DesignerAgentRunBinding runBinding) {
+            DesignerAgentRunBinding runBinding,
+            ObjectMapper objectMapper) {
         this.graphFactory = graphFactory;
         this.stateMapper = stateMapper;
         this.checkpointSaver = checkpointSaver;
         this.runBinding = runBinding;
+        this.objectMapper = objectMapper;
     }
 
     @PostConstruct
@@ -122,6 +127,45 @@ public class DesignerAgentGraphRuntime {
             run.setBaseBpmnXml(run.getCandidateXml());
         }
         enterFollowUpState(run);
+    }
+
+    public void resumeAfterClarify(
+            DesignerAgentRun run,
+            Map<String, Object> answers,
+            List<String> skippedQuestionIds,
+            String supplementalText) throws Exception {
+        var merged = DesignerAgentClarificationMerger.merge(
+                objectMapper,
+                run.getUserScenario(),
+                run.getClarificationFormJson(),
+                answers,
+                skippedQuestionIds,
+                supplementalText);
+        run.setClarificationContextJson(merged.contextJson());
+        run.setUserScenario(merged.augmentedScenario());
+        run.setClarificationFormJson(null);
+        String history = DesignerAgentConversationHistoryUtils.append(run.getConversationHistory(), "user", merged.humanSummary());
+        run.setConversationHistory(history);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(DesignerAgentStateKeys.ClarificationContextJson, merged.contextJson());
+        updates.put(DesignerAgentStateKeys.UserScenario, merged.augmentedScenario());
+        updates.put(DesignerAgentStateKeys.ClarificationFormJson, null);
+        updates.put(DesignerAgentStateKeys.ConversationHistory, history);
+        resume(run, updates, DesignerAgentGraphNodes.HumanClarify);
+    }
+
+    public void resumeAfterInstall(DesignerAgentRun run) {
+        run.setInstallAccepted(true);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(DesignerAgentStateKeys.InstallAccepted, true);
+        resume(run, updates, DesignerAgentGraphNodes.HumanInstall);
+    }
+
+    public void skipInstall(DesignerAgentRun run) {
+        run.setInstallSkipped(true);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(DesignerAgentStateKeys.InstallSkipped, true);
+        resume(run, updates, DesignerAgentGraphNodes.HumanInstall);
     }
 
     public void resumeAfterFollowUp(DesignerAgentRun run, String message, String canvasBpmnXml) {
@@ -248,7 +292,8 @@ public class DesignerAgentGraphRuntime {
         if (isBusyStage(stage)) {
             return false;
         }
-        if (AgentRunStage.AwaitPlan.equals(stage)
+        if (AgentRunStage.AwaitClarify.equals(stage)
+                || AgentRunStage.AwaitPlan.equals(stage)
                 || AgentRunStage.AwaitPreview.equals(stage)
                 || AgentRunStage.AwaitAsk.equals(stage)
                 || AgentRunStage.AwaitInstall.equals(stage)) {

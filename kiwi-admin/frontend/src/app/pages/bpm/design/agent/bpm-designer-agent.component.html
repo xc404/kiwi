@@ -1,4 +1,10 @@
 <section class="bpm-designer-agent" aria-label="BPM 设计器 Agent">
+  @if (agentEnabledLoaded() && !agentEnabled()) {
+    <div class="bpm-designer-agent__banner bpm-designer-agent__banner--warn">
+      Agent 未启用。请在后端设置 <code>kiwi.bpm.designer-agent.enabled=true</code> 后刷新。
+    </div>
+  }
+
   @if (stageLabel()) {
     <header class="bpm-designer-agent__head">
       <nz-tag nzColor="processing">{{ stageLabel() }}</nz-tag>
@@ -18,10 +24,22 @@
   }
 
   <div class="bpm-designer-agent__messages">
+    @if (messages().length === 0 && !busy()) {
+      <div class="bpm-designer-agent__empty">
+        <p class="bpm-designer-agent__empty-title">用自然语言改流程</p>
+        <p class="bpm-designer-agent__empty-hint">示例：</p>
+        <ul>
+          <li>在提交后增加经理审批</li>
+          <li>把 HTTP 节点改成调用订单服务</li>
+          <li>解释当前流程在做什么</li>
+        </ul>
+      </div>
+    }
+
     @for (m of messages(); track $index) {
       <div class="bpm-designer-agent__msg" [class.is-user]="m.role === 'user'">
         @if (m.thinking.length) {
-          <details class="bpm-designer-agent__thinking">
+          <details class="bpm-designer-agent__thinking" [attr.open]="busy() ? true : null">
             <summary>思考过程</summary>
             <ul>
               @for (t of m.thinking; track $index) {
@@ -33,65 +51,135 @@
         <div class="bpm-designer-agent__text">{{ m.text }}</div>
       </div>
     }
+
+    @for (item of pendingHitlItems(); track item.id) {
+      <div class="bpm-designer-agent__gate bpm-designer-agent__hitl">
+        <p class="bpm-designer-agent__gate-title">{{ item.title }}</p>
+        @if (item.detail) {
+          <p class="bpm-designer-agent__gate-body">{{ item.detail }}</p>
+        }
+        <p class="bpm-designer-agent__gate-hint">（决策队列预览：完整工具批准环将在后续版本接入）</p>
+      </div>
+    }
+
+    @if (awaitClarify() && clarifyForm(); as form) {
+      <div class="bpm-designer-agent__gate">
+        <p class="bpm-designer-agent__gate-title">需求澄清</p>
+        <p class="bpm-designer-agent__gate-body">请选择最符合的选项，或在下方输入补充说明，然后点「确认并继续」。</p>
+        @for (q of form.questions; track q.id) {
+          <div class="bpm-designer-agent__clarify-q">
+            <p class="bpm-designer-agent__clarify-prompt">{{ q.id }}. {{ q.prompt }}</p>
+            <div class="bpm-designer-agent__clarify-options">
+              @for (opt of q.options; track opt.id) {
+                <button
+                  type="button"
+                  nz-button
+                  nzSize="small"
+                  [nzType]="isClarifyOptionSelected(q.id, opt.id) ? 'primary' : 'default'"
+                  (click)="toggleClarifyOption(q, opt.id)"
+                >
+                  {{ opt.id }}. {{ opt.label }}
+                </button>
+              }
+              <button nz-button nzSize="small" nzType="link" (click)="skipClarifyQuestion(q.id)">跳过</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (awaitAsk()) {
+      <div class="bpm-designer-agent__gate">
+        <p class="bpm-designer-agent__gate-title">需要补充说明</p>
+        <p class="bpm-designer-agent__gate-body">Agent 需要更多信息才能继续，请在下方输入框回答。</p>
+      </div>
+    }
+
+    @if (awaitPlan()) {
+      <div class="bpm-designer-agent__gate">
+        <p class="bpm-designer-agent__gate-title">变更计划</p>
+        @if (planDisplay(); as plan) {
+          <p class="bpm-designer-agent__plan-summary">{{ plan.summary }}</p>
+          @if (plan.steps.length) {
+            <ol class="bpm-designer-agent__plan-steps">
+              @for (step of plan.steps; track step.index) {
+                <li class="bpm-designer-agent__plan-step">
+                  <div class="bpm-designer-agent__plan-step-head">
+                    <span nz-icon [nzType]="stepKindIcon(step.kind)" nzTheme="outline"></span>
+                    <span>{{ step.title }}</span>
+                  </div>
+                  @if (step.detail) {
+                    <p class="bpm-designer-agent__plan-step-detail">{{ step.detail }}</p>
+                  }
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="bpm-designer-agent__plan-empty">暂无具体步骤</p>
+          }
+        }
+        @if (planTechnicalJson()) {
+          <details class="bpm-designer-agent__plan-tech">
+            <summary>技术细节</summary>
+            <pre class="bpm-designer-agent__plan">{{ planTechnicalJson() }}</pre>
+          </details>
+        }
+        <div class="bpm-designer-agent__actions">
+          <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPlan(true)">
+            批准执行
+          </button>
+          <button nz-button nzSize="small" [disabled]="busy()" (click)="rejectPlanFromButton()">拒绝并说明</button>
+        </div>
+        <p class="bpm-designer-agent__gate-hint">也可在输入框用自然语言反馈，或短句「批准执行」。</p>
+      </div>
+    }
+
+    @if (awaitPreview()) {
+      <div class="bpm-designer-agent__gate">
+        <p class="bpm-designer-agent__gate-title">画布预览</p>
+        <p class="bpm-designer-agent__gate-body">
+          候选 BPMN 已导入中间画布。您可以直接在画布上微调，<strong>确认保存时以当前画布为准</strong>；拒绝将整图回退到预览前。
+        </p>
+        @if (previewEdited()) {
+          <p class="bpm-designer-agent__preview-dirty">已检测到手动改图，保存时将写入当前画布内容。</p>
+        }
+        <div class="bpm-designer-agent__actions">
+          <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPreview(true)">
+            确认保存
+          </button>
+          <button nz-button nzSize="small" [disabled]="busy()" (click)="rejectPreviewFromButton()">
+            拒绝并回退
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (awaitInstall()) {
+      <div class="bpm-designer-agent__gate">
+        <p class="bpm-designer-agent__gate-title">需要安装插件</p>
+        <p class="bpm-designer-agent__gate-body">校验发现缺失组件插件。安装完成后点「已安装，继续」；若暂无法安装可跳过。</p>
+        @if (status()?.pluginHintJson) {
+          <pre class="bpm-designer-agent__plugin-hint">{{ status()?.pluginHintJson }}</pre>
+        }
+        <div class="bpm-designer-agent__actions">
+          <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="resumeInstall()">
+            已安装，继续
+          </button>
+          <button nz-button nzSize="small" [disabled]="busy()" (click)="skipInstall()">暂时跳过</button>
+        </div>
+      </div>
+    }
+
     @if (busy()) {
       <div class="bpm-designer-agent__msg">
         <nz-spin nzSimple></nz-spin>
       </div>
     }
+    <div #messagesEnd class="bpm-designer-agent__scroll-anchor"></div>
   </div>
 
-  @if (awaitPlan()) {
-    <div class="bpm-designer-agent__card">
-      <p class="bpm-designer-agent__card-title">变更计划</p>
-      @if (planDisplay(); as plan) {
-        <p class="bpm-designer-agent__plan-summary">{{ plan.summary }}</p>
-        @if (plan.steps.length) {
-          <ol class="bpm-designer-agent__plan-steps">
-            @for (step of plan.steps; track step.index) {
-              <li class="bpm-designer-agent__plan-step">
-                <div class="bpm-designer-agent__plan-step-head">
-                  <span nz-icon [nzType]="stepKindIcon(step.kind)" nzTheme="outline"></span>
-                  <span>{{ step.title }}</span>
-                </div>
-                @if (step.detail) {
-                  <p class="bpm-designer-agent__plan-step-detail">{{ step.detail }}</p>
-                }
-              </li>
-            }
-          </ol>
-        } @else {
-          <p class="bpm-designer-agent__plan-empty">暂无具体步骤</p>
-        }
-      }
-      @if (planTechnicalJson()) {
-        <details class="bpm-designer-agent__plan-tech">
-          <summary>技术细节</summary>
-          <pre class="bpm-designer-agent__plan">{{ planTechnicalJson() }}</pre>
-        </details>
-      }
-      <div class="bpm-designer-agent__actions">
-        <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPlan(true)">批准执行</button>
-        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPlan(false)">拒绝</button>
-      </div>
-    </div>
-  }
-
-  @if (awaitPreview()) {
-    <div class="bpm-designer-agent__card" (mouseenter)="refreshPreviewDirtyHint()">
-      <p class="bpm-designer-agent__card-title">画布预览</p>
-      <p>候选 BPMN 已导入中间画布。您可以直接在画布上微调，<strong>确认保存时以当前画布为准</strong>；拒绝将整图回退到预览前。</p>
-      @if (previewEdited()) {
-        <p class="bpm-designer-agent__preview-dirty">已检测到手动改图，保存时将写入当前画布内容。</p>
-      }
-      <div class="bpm-designer-agent__actions">
-        <button nz-button nzSize="small" nzType="primary" [disabled]="busy()" (click)="confirmPreview(true)">确认保存</button>
-        <button nz-button nzSize="small" [disabled]="busy()" (click)="confirmPreview(false)">拒绝并回退</button>
-      </div>
-    </div>
-  }
-
   <footer class="bpm-designer-agent__input">
-    @if (busy()) {
+    @if (busy() && !awaitClarify()) {
       <p class="bpm-designer-agent__input-hint">Agent 正在处理，请稍候…</p>
     }
     <textarea
@@ -103,6 +191,14 @@
       (keydown)="onInputKeydown($event)"
       [disabled]="inputLocked()"
     ></textarea>
-    <button nz-button nzType="primary" nzSize="small" [disabled]="inputLocked() || !inputText().trim()" (click)="send()">发送</button>
+    <button
+      nz-button
+      nzType="primary"
+      nzSize="small"
+      [disabled]="inputLocked() || !canSubmitSend()"
+      (click)="send()"
+    >
+      {{ sendButtonLabel() }}
+    </button>
   </footer>
 </section>

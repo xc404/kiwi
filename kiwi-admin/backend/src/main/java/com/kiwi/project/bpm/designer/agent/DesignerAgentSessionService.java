@@ -149,6 +149,14 @@ public class DesignerAgentSessionService {
                     action.getCanvasBpmnXml(),
                     action.getFeedbackText());
             case "answer" -> answerAsk(runId, action.getUserAnswer(), action.getCanvasBpmnXml());
+            case "submit_clarification" -> submitClarification(
+                    runId,
+                    action.getAnswers(),
+                    action.getSkippedQuestionIds(),
+                    action.getSupplementalText(),
+                    action.getCanvasBpmnXml());
+            case "resume_install" -> resumeInstall(runId);
+            case "skip_install" -> skipInstall(runId);
             default -> throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "不支持的 action.type: " + action.getType());
         };
@@ -283,7 +291,10 @@ public class DesignerAgentSessionService {
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitPlan);
         if (confirmed) {
             applyCanvasBaseline(run, canvasBpmnXml);
-        } else if (StringUtils.isNotBlank(feedbackText)) {
+        } else {
+            if (StringUtils.isBlank(feedbackText)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "拒绝计划时请说明修改意见（输入框或反馈文字）");
+            }
             appendUserMessage(run, feedbackText.trim());
         }
         sessionStore.saveSession(run);
@@ -317,6 +328,49 @@ public class DesignerAgentSessionService {
         graphRuntime.syncRunFromCheckpoint(run);
         indexRun(run);
         sessionStore.saveSession(run);
+        return statusByRunId(runId);
+    }
+
+    public DesignerAgentRunStatus submitClarification(
+            String runId,
+            Map<String, Object> answers,
+            List<String> skippedQuestionIds,
+            String supplementalText,
+            String canvasBpmnXml) {
+        DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitClarify);
+        boolean hasAnswers = answers != null && !answers.isEmpty();
+        boolean hasText = StringUtils.isNotBlank(supplementalText);
+        if (!hasAnswers && !hasText) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "请至少选择一项或填写补充说明");
+        }
+        applyCanvasBaseline(run, canvasBpmnXml);
+        sessionStore.saveSession(run);
+        runGraphAsync(runId, () -> {
+            try {
+                graphRuntime.resumeAfterClarify(
+                        requireRun(runId),
+                        answers != null ? answers : Map.of(),
+                        skippedQuestionIds != null ? skippedQuestionIds : List.of(),
+                        supplementalText);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return statusByRunId(runId);
+    }
+
+    public DesignerAgentRunStatus resumeInstall(String runId) {
+        DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitInstall);
+        sessionStore.saveSession(run);
+        runGraphAsync(runId, () -> graphRuntime.resumeAfterInstall(requireRun(runId)));
+        return statusByRunId(runId);
+    }
+
+    public DesignerAgentRunStatus skipInstall(String runId) {
+        DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitInstall);
+        sessionStore.saveSession(run);
+        runGraphAsync(runId, () -> graphRuntime.skipInstall(requireRun(runId)));
         return statusByRunId(runId);
     }
 
@@ -452,6 +506,8 @@ public class DesignerAgentSessionService {
         s.setAssistantReply(run.getAssistantReply());
         s.setAskMessage(run.getAskMessage());
         s.setPluginHintJson(run.getPluginHintJson());
+        s.setClarificationFormJson(run.getClarificationFormJson());
+        s.setPendingHitlItemsJson(run.getPendingHitlItemsJson());
         s.setIssuesJson(run.getIssuesJson());
         s.setErrorMessage(run.getErrorMessage());
         s.setPlanSkipped(run.isPlanSkipped());

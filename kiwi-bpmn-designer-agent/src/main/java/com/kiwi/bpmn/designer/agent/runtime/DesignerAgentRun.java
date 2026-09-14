@@ -42,6 +42,10 @@ public class DesignerAgentRun {
     private Boolean previewFeedbackReady;
     private Boolean persistRequested;
     private Boolean installAccepted;
+    private Boolean installSkipped;
+    private String clarificationFormJson;
+    private String clarificationContextJson;
+    private String pendingHitlItemsJson;
     /** JSON：[{role,text},…] */
     private String conversationHistory;
     private final List<AgentStreamEvent> events = new CopyOnWriteArrayList<>();
@@ -58,7 +62,8 @@ public class DesignerAgentRun {
     }
 
     public boolean isAwaitingHuman() {
-        return com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitPlan.equals(stage)
+        return com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitClarify.equals(stage)
+                || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitPlan.equals(stage)
                 || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitPreview.equals(stage)
                 || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitInstall.equals(stage)
                 || com.kiwi.bpmn.designer.agent.model.AgentRunStage.AwaitAsk.equals(stage)

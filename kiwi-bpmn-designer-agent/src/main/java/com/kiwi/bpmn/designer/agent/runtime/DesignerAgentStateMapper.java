@@ -39,6 +39,11 @@ public class DesignerAgentStateMapper {
         data.put(DesignerAgentStateKeys.PreviewFeedbackReady, run.getPreviewFeedbackReady());
         data.put(DesignerAgentStateKeys.PersistRequested, run.getPersistRequested());
         put(data, DesignerAgentStateKeys.ConversationHistory, run.getConversationHistory());
+        put(data, DesignerAgentStateKeys.ClarificationFormJson, run.getClarificationFormJson());
+        put(data, DesignerAgentStateKeys.ClarificationContextJson, run.getClarificationContextJson());
+        put(data, DesignerAgentStateKeys.PendingHitlItemsJson, run.getPendingHitlItemsJson());
+        data.put(DesignerAgentStateKeys.InstallAccepted, run.getInstallAccepted());
+        data.put(DesignerAgentStateKeys.InstallSkipped, run.getInstallSkipped());
         return data;
     }
 
@@ -55,6 +60,8 @@ public class DesignerAgentStateMapper {
         data.put(DesignerAgentStateKeys.PlanConfirmed, false);
         data.put(DesignerAgentStateKeys.PreviewFeedbackReady, false);
         data.put(DesignerAgentStateKeys.PersistRequested, false);
+        data.put(DesignerAgentStateKeys.ClarificationFormJson, null);
+        data.put(DesignerAgentStateKeys.ClarificationContextJson, null);
         return data;
     }
 
@@ -90,6 +97,14 @@ public class DesignerAgentStateMapper {
         run.setPersistRequested((Boolean) data.getOrDefault(DesignerAgentStateKeys.PersistRequested, run.getPersistRequested()));
         run.setConversationHistory(
                 str(data, DesignerAgentStateKeys.ConversationHistory, run.getConversationHistory()));
+        run.setClarificationFormJson(
+                str(data, DesignerAgentStateKeys.ClarificationFormJson, run.getClarificationFormJson()));
+        run.setClarificationContextJson(
+                str(data, DesignerAgentStateKeys.ClarificationContextJson, run.getClarificationContextJson()));
+        run.setPendingHitlItemsJson(
+                str(data, DesignerAgentStateKeys.PendingHitlItemsJson, run.getPendingHitlItemsJson()));
+        run.setInstallAccepted((Boolean) data.getOrDefault(DesignerAgentStateKeys.InstallAccepted, run.getInstallAccepted()));
+        run.setInstallSkipped((Boolean) data.getOrDefault(DesignerAgentStateKeys.InstallSkipped, run.getInstallSkipped()));
     }
 
     public void applyState(OverAllState state, DesignerAgentRun run) {

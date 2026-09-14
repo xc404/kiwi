@@ -33,9 +33,20 @@ public final class DesignerAgentStateKeys {
     public static final String PreviewFeedbackReady = "previewFeedbackReady";
     /** JSON 数组：[{role,text},…]，供多轮上下文与 UI 恢复 */
     public static final String ConversationHistory = "conversationHistory";
+    /** 澄清表单 JSON（ClarificationForm） */
+    public static final String ClarificationFormJson = "clarificationFormJson";
+    /** 已提交的澄清结构化上下文 JSON */
+    public static final String ClarificationContextJson = "clarificationContextJson";
+    /** 决策队列 JSON（DesignerAgentHitlItem[]） */
+    public static final String PendingHitlItemsJson = "pendingHitlItemsJson";
+    /** 用户确认插件已安装后继续 validate */
+    public static final String InstallAccepted = "installAccepted";
+    public static final String InstallSkipped = "installSkipped";
     public static final String Route = "route";
 
     public static final String RouteExplain = "explain";
+    public static final String RoutePrepareClarify = "prepare_clarify";
+    public static final String RouteHumanClarify = "human_clarify";
     public static final String RouteGenerate = "generate";
     public static final String RouteApply = "apply";
     public static final String RouteHumanPlan = "human_plan";
@@ -54,7 +65,8 @@ public final class DesignerAgentStateKeys {
             Stage, Active, EditPlanJson, PlanDisplayJson, CandidateXml, AssistantReply, IssuesJson,
             AskMessage, PluginHintJson, ErrorMessage, RepairRound, ToolStepCount, PlanSkipped,
             PlanConfirmed, PreviewConfirmed, PersistRequested, RejectedEditPlanJson,
-            PreviewFeedbackReady, ConversationHistory, Route
+            PreviewFeedbackReady, ConversationHistory, ClarificationFormJson, ClarificationContextJson,
+            PendingHitlItemsJson, InstallAccepted, InstallSkipped, Route
     };
 
     private DesignerAgentStateKeys() {

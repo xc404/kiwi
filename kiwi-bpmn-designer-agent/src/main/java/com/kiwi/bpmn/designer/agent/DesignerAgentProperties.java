@@ -16,6 +16,8 @@ public class DesignerAgentProperties {
     private boolean planMode = true;
     /** 简单操作自动跳过 Plan 闸门 */
     private boolean planModeSkipSimple = true;
+    /** 在 generate 前是否尝试需求澄清（human_clarify） */
+    private boolean clarifyBeforePlan = true;
     /** 单次 run 最大 MCP/工具步数 */
     private int maxToolSteps = 20;
     /** SSE 超时（毫秒） */

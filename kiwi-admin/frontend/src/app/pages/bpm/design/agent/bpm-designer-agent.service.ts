@@ -22,10 +22,16 @@ export interface DesignerAgentRunStatus {
   assistantReply?: string;
   askMessage?: string;
   pluginHintJson?: string;
+  clarificationFormJson?: string;
+  pendingHitlItemsJson?: string;
   issuesJson?: string;
   errorMessage?: string;
   planSkipped?: boolean;
   messages?: DesignerAgentChatMessage[];
+}
+
+export interface DesignerAgentConfig {
+  enabled: boolean;
 }
 
 export interface AgentStreamEvent {
@@ -42,6 +48,8 @@ export interface AgentStreamEvent {
   candidateXml?: string;
   askMessage?: string;
   pluginHintJson?: string;
+  clarificationFormJson?: string;
+  hitlItemJson?: string;
   issuesJson?: string;
   content?: string;
   errorMessage?: string;
@@ -62,7 +70,13 @@ export interface FollowUpRequest {
   canvasBpmnXml?: string;
 }
 
-export type DesignerAgentActionType = 'confirm_plan' | 'confirm_preview' | 'answer';
+export type DesignerAgentActionType =
+  | 'confirm_plan'
+  | 'confirm_preview'
+  | 'answer'
+  | 'submit_clarification'
+  | 'resume_install'
+  | 'skip_install';
 
 export interface DesignerAgentActionRequest {
   type: DesignerAgentActionType;
@@ -72,12 +86,19 @@ export interface DesignerAgentActionRequest {
   feedbackText?: string;
   /** 当前画布 XML；用户可能在等待/预览期间手动改图 */
   canvasBpmnXml?: string;
+  answers?: Record<string, string | string[]>;
+  skippedQuestionIds?: string[];
+  supplementalText?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class BpmDesignerAgentService {
   private readonly http = inject(BaseHttpService);
   private readonly session = inject(SessionService);
+
+  fetchConfig(): Observable<DesignerAgentConfig> {
+    return this.http.get<DesignerAgentConfig>('/bpm/designer-agent/config', { showLoading: false });
+  }
 
   statusByTarget(targetProcessId: string): Observable<DesignerAgentRunStatus> {
     return this.http.get<DesignerAgentRunStatus>('/bpm/designer-agent/by-target', { targetProcessId }, {

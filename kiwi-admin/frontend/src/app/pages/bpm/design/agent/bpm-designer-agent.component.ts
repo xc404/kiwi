@@ -1,4 +1,14 @@
-import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import {
+  AfterViewChecked,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  signal,
+  ViewChild
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -10,6 +20,13 @@ import {
 } from './bpm-designer-agent.service';
 import { PlanDisplayView, resolvePlanDisplay, stepKindIcon } from './edit-plan-presenter';
 import { planFeedbackFromText, previewFeedbackFromText } from './designer-agent-intent';
+import {
+  ClarificationForm,
+  ClarificationQuestion,
+  DesignerAgentHitlItem,
+  parseClarificationForm,
+  parseHitlItems
+} from './designer-agent-clarification';
 
 import { ComponentProvider } from '../../flow-elements/component-provider';
 
@@ -28,6 +45,7 @@ const StageLabels: Record<string, string> = {
   apply: '应用变更',
   validate: '校验',
   repair: '修复',
+  await_clarify: '等待需求澄清',
   await_plan: '等待 Plan 确认',
   await_preview: '等待预览确认',
   await_install: '等待安装插件',
@@ -37,7 +55,13 @@ const StageLabels: Record<string, string> = {
   error: '失败'
 };
 
-const HumanGateStages = new Set(['await_plan', 'await_preview', 'await_ask', 'await_install']);
+const HumanGateStages = new Set([
+  'await_clarify',
+  'await_plan',
+  'await_preview',
+  'await_ask',
+  'await_install'
+]);
 
 interface ChatMsg {
   role: 'user' | 'assistant';
@@ -52,7 +76,11 @@ interface ChatMsg {
   templateUrl: './bpm-designer-agent.component.html',
   styleUrl: './bpm-designer-agent.component.scss'
 })
-export class BpmDesignerAgentComponent {
+export class BpmDesignerAgentComponent implements AfterViewChecked {
+  @ViewChild('messagesEnd') private messagesEnd?: ElementRef<HTMLElement>;
+
+  private scrollPending = false;
+  private canvasEditListener: (() => void) | null = null;
   private readonly editor = inject(BpmEditorToken);
   private readonly agentApi = inject(BpmDesignerAgentService);
   private readonly componentProvider = inject(ComponentProvider);
@@ -66,6 +94,12 @@ export class BpmDesignerAgentComponent {
   readonly planDisplay = signal<PlanDisplayView | null>(null);
   readonly planTechnicalJson = signal('');
   readonly stepKindIcon = stepKindIcon;
+  readonly agentEnabled = signal(true);
+  readonly agentEnabledLoaded = signal(false);
+  readonly clarifyForm = signal<ClarificationForm | null>(null);
+  readonly clarifyAnswers = signal<Record<string, string | string[]>>({});
+  readonly clarifySkipped = signal<Set<string>>(new Set());
+  readonly pendingHitlItems = signal<DesignerAgentHitlItem[]>([]);
 
   private streamAbort: AbortController | null = null;
   private streamConnected = false;
@@ -85,9 +119,11 @@ export class BpmDesignerAgentComponent {
     return stage ? (StageLabels[stage] ?? stage) : '';
   });
 
+  readonly awaitClarify = computed(() => this.status()?.stage === 'await_clarify');
   readonly awaitPlan = computed(() => this.status()?.stage === 'await_plan');
   readonly awaitPreview = computed(() => this.status()?.stage === 'await_preview');
   readonly awaitAsk = computed(() => this.status()?.stage === 'await_ask');
+  readonly awaitInstall = computed(() => this.status()?.stage === 'await_install');
   readonly awaitFollowUp = computed(() => this.status()?.stage === 'await_follow_up');
   readonly canFollowUp = computed(() => {
     const stage = this.status()?.stage;
@@ -95,8 +131,20 @@ export class BpmDesignerAgentComponent {
   });
   readonly hasOpenSession = computed(() => !!this.status()?.runId);
   readonly previewEdited = computed(() => this.previewCanvasDirty());
-  readonly inputLocked = computed(() => this.busy());
+  readonly inputLocked = computed(() => this.busy() && !this.awaitClarify());
+  readonly sendButtonLabel = computed(() => (this.awaitClarify() ? '确认并继续' : '发送'));
+  readonly canSubmitSend = computed(() => {
+    if (this.awaitClarify()) {
+      const hasAnswers = Object.keys(this.clarifyAnswers()).length > 0;
+      const hasSkip = this.clarifySkipped().size > 0;
+      return hasAnswers || hasSkip || !!this.inputText().trim();
+    }
+    return !!this.inputText().trim();
+  });
   readonly inputPlaceholder = computed(() => {
+    if (this.awaitClarify()) {
+      return '补充说明（可选），或与上方选项一并发送…';
+    }
     if (this.awaitAsk()) {
       return '补充说明您的需求…';
     }
@@ -113,9 +161,18 @@ export class BpmDesignerAgentComponent {
   });
 
   constructor() {
+    void firstValueFrom(this.agentApi.fetchConfig())
+      .then(cfg => {
+        this.agentEnabled.set(cfg.enabled);
+        this.agentEnabledLoaded.set(true);
+      })
+      .catch(() => {
+        this.agentEnabled.set(false);
+        this.agentEnabledLoaded.set(true);
+      });
+
     effect(() => {
       const id = this.bpmProcessId();
-      const tab = this.editor.getLeftPanelTab();
       if (!id) {
         this.status.set(null);
         this.messages.set([]);
@@ -127,11 +184,40 @@ export class BpmDesignerAgentComponent {
         this.loadedProcessId = id;
         this.closeStream();
       }
-      if (tab !== 'agent' || this.streamConnected) {
+      if (this.streamConnected) {
         return;
       }
       void this.loadPersistedSession(id);
     });
+
+    effect(() => {
+      if (this.awaitPreview()) {
+        this.attachCanvasEditListener();
+      } else {
+        this.detachCanvasEditListener();
+      }
+    });
+  }
+
+  ngAfterViewChecked(): void {
+    if (!this.scrollPending) {
+      return;
+    }
+    this.scrollPending = false;
+    this.messagesEnd?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+
+  /** 编辑器加载流程后调用：恢复会话/预览（不依赖 Agent Tab） */
+  syncSessionFromServer(): void {
+    const id = this.bpmProcessId();
+    if (!id || this.streamConnected) {
+      return;
+    }
+    void this.loadPersistedSession(id);
+  }
+
+  requestScrollToBottom(): void {
+    this.scrollPending = true;
   }
 
   private async loadPersistedSession(processId: string): Promise<void> {
@@ -155,7 +241,15 @@ export class BpmDesignerAgentComponent {
 
   send(): void {
     const text = this.inputText().trim();
+    if (this.awaitClarify()) {
+      void this.submitClarification(text);
+      return;
+    }
     if (!text || this.busy()) {
+      return;
+    }
+    if (!this.agentEnabled()) {
+      this.nzMessage.warning('BPM 设计器 Agent 未启用，请联系管理员配置 kiwi.bpm.designer-agent.enabled');
       return;
     }
     if (this.awaitPlan()) {
@@ -288,9 +382,27 @@ export class BpmDesignerAgentComponent {
     });
   }
 
+  rejectPlanFromButton(): void {
+    const draft = this.inputText().trim();
+    if (!draft) {
+      this.nzMessage.warning('拒绝计划前请在下方输入修改意见，或直接在输入框发送');
+      return;
+    }
+    this.confirmPlan(false, draft);
+  }
+
+  rejectPreviewFromButton(): void {
+    const draft = this.inputText().trim();
+    this.confirmPreview(false, draft || undefined);
+  }
+
   confirmPlan(confirmed: boolean, feedbackText?: string): void {
     const runId = this.status()?.runId;
     if (!runId || this.busy()) {
+      return;
+    }
+    if (!confirmed && !feedbackText?.trim()) {
+      this.nzMessage.warning('拒绝计划时请说明要如何调整');
       return;
     }
     void this.runHumanAction(runId, async () => {
@@ -364,6 +476,114 @@ export class BpmDesignerAgentComponent {
     this.confirmPreview(confirmed, feedbackText);
   }
 
+  private async submitClarification(supplementalText: string): Promise<void> {
+    const runId = this.status()?.runId;
+    if (!runId || this.busy()) {
+      return;
+    }
+    const answers = this.clarifyAnswers();
+    const skipped = [...this.clarifySkipped()];
+    const hasAnswers = Object.keys(answers).length > 0;
+    const hasText = !!supplementalText.trim();
+    if (!hasAnswers && !hasText) {
+      this.nzMessage.warning('请至少选择一项，或在输入框补充说明');
+      return;
+    }
+    const displayText =
+      supplementalText.trim() ||
+      Object.entries(answers)
+        .map(([q, a]) => `${q}: ${Array.isArray(a) ? a.join(',') : a}`)
+        .join('；');
+    this.messages.update(list => [...list, { role: 'user', text: displayText, thinking: [] }]);
+    this.inputText.set('');
+    this.startAssistantBubble();
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_clarify', '需求澄清');
+      const canvasBpmnXml = await this.captureCanvasForAction();
+      await firstValueFrom(
+        this.agentApi.submitAction(runId, {
+          type: 'submit_clarification',
+          answers,
+          skippedQuestionIds: skipped,
+          supplementalText: supplementalText.trim() || undefined,
+          canvasBpmnXml
+        })
+      );
+      this.clarifyAnswers.set({});
+      this.clarifySkipped.set(new Set());
+      this.clarifyForm.set(null);
+    });
+  }
+
+  resumeInstall(): void {
+    const runId = this.status()?.runId;
+    if (!runId || this.busy()) {
+      return;
+    }
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_install', '插件安装');
+      await firstValueFrom(this.agentApi.submitAction(runId, { type: 'resume_install' }));
+    });
+  }
+
+  skipInstall(): void {
+    const runId = this.status()?.runId;
+    if (!runId || this.busy()) {
+      return;
+    }
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_install', '插件安装');
+      await firstValueFrom(this.agentApi.submitAction(runId, { type: 'skip_install' }));
+    });
+  }
+
+  toggleClarifyOption(question: ClarificationQuestion, optionId: string): void {
+    const qid = question.id;
+    this.clarifyAnswers.update(current => {
+      const next = { ...current };
+      if (question.allowMultiple) {
+        const existing = next[qid];
+        const list = Array.isArray(existing) ? [...existing] : existing ? [existing] : [];
+        const idx = list.indexOf(optionId);
+        if (idx >= 0) {
+          list.splice(idx, 1);
+        } else {
+          list.push(optionId);
+        }
+        if (list.length === 0) {
+          delete next[qid];
+        } else {
+          next[qid] = list;
+        }
+      } else {
+        next[qid] = optionId;
+      }
+      return next;
+    });
+    this.clarifySkipped.update(set => {
+      const next = new Set(set);
+      next.delete(qid);
+      return next;
+    });
+  }
+
+  skipClarifyQuestion(questionId: string): void {
+    this.clarifySkipped.update(set => new Set(set).add(questionId));
+    this.clarifyAnswers.update(current => {
+      const next = { ...current };
+      delete next[questionId];
+      return next;
+    });
+  }
+
+  isClarifyOptionSelected(questionId: string, optionId: string): boolean {
+    const raw = this.clarifyAnswers()[questionId];
+    if (Array.isArray(raw)) {
+      return raw.includes(optionId);
+    }
+    return raw === optionId;
+  }
+
   private submitAnswer(answer: string): void {
     const runId = this.status()?.runId;
     if (!runId || this.busy()) {
@@ -416,6 +636,22 @@ export class BpmDesignerAgentComponent {
       this.appendAssistantText(event.delta);
       return;
     }
+    if (type === 'clarify_ready') {
+      await this.refreshStatus(event.runId);
+      this.busy.set(false);
+      this.requestScrollToBottom();
+      return;
+    }
+    if (type === 'hitl_pending' && event.hitlItemJson) {
+      try {
+        const item = JSON.parse(event.hitlItemJson) as DesignerAgentHitlItem;
+        this.pendingHitlItems.update(list => [...list, item]);
+      } catch {
+        /* ignore */
+      }
+      this.requestScrollToBottom();
+      return;
+    }
     if (type === 'plan_ready') {
       if (event.summary) {
         this.setAssistantText(event.summary);
@@ -450,9 +686,12 @@ export class BpmDesignerAgentComponent {
       return;
     }
     if (type === 'error') {
-      this.nzMessage.error(event.errorMessage ?? 'Agent 错误');
+      const errText = event.errorMessage ?? 'Agent 错误';
+      this.nzMessage.error(errText);
+      this.messages.update(list => [...list, { role: 'assistant', text: `⚠ ${errText}`, thinking: [] }]);
       await this.refreshStatus(event.runId);
       this.busy.set(false);
+      this.requestScrollToBottom();
     }
   }
 
@@ -583,6 +822,8 @@ export class BpmDesignerAgentComponent {
       this.hydrateChatFromServer(incoming);
     }
     this.syncPlanDisplay(incoming);
+    this.clarifyForm.set(parseClarificationForm(incoming.clarificationFormJson));
+    this.pendingHitlItems.set(parseHitlItems(incoming.pendingHitlItemsJson));
     if (incoming.stage === 'await_ask' && incoming.askMessage) {
       this.ensureAskMessageInChat(incoming.askMessage);
     }
@@ -594,6 +835,7 @@ export class BpmDesignerAgentComponent {
     } else if (incoming.stage === 'await_follow_up') {
       this.busy.set(false);
     }
+    this.requestScrollToBottom();
   }
 
   private hydrateChatFromServer(incoming: DesignerAgentRunStatus): void {
@@ -791,6 +1033,26 @@ export class BpmDesignerAgentComponent {
   }
 
   /** 刷新页面后恢复 await_ask 会话时，将追问补进聊天气泡 */
+  private attachCanvasEditListener(): void {
+    const modeler = this.editor.bpmnModeler;
+    if (!modeler || this.canvasEditListener) {
+      return;
+    }
+    const eventBus = modeler.get('eventBus') as {
+      on: (ev: string, fn: () => void) => void;
+      off: (ev: string, fn: () => void) => void;
+    };
+    const handler = () => void this.refreshPreviewDirtyFlag();
+    eventBus.on('commandStack.changed', handler);
+    this.canvasEditListener = () => eventBus.off('commandStack.changed', handler);
+    void this.refreshPreviewDirtyFlag();
+  }
+
+  private detachCanvasEditListener(): void {
+    this.canvasEditListener?.();
+    this.canvasEditListener = null;
+  }
+
   private ensureAskMessageInChat(askMessage: string): void {
     const trimmed = askMessage.trim();
     if (!trimmed) {

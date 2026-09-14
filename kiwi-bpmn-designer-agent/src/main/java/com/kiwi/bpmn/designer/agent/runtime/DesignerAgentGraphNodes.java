@@ -32,6 +32,8 @@ public class DesignerAgentGraphNodes {
 
     public static final String Ingest = "ingest";
     public static final String Explain = "explain";
+    public static final String PrepareClarify = "prepare_clarify";
+    public static final String HumanClarify = "human_clarify";
     public static final String Generate = "generate";
     public static final String HumanPlan = "human_plan";
     public static final String Apply = "apply";
@@ -50,6 +52,7 @@ public class DesignerAgentGraphNodes {
     private final ObjectMapper objectMapper;
     private final DesignerAgentPlanGenerator planGenerator;
     private final EditPlanPresenter editPlanPresenter;
+    private final DesignerAgentClarificationPlanner clarificationPlanner;
     private final DesignerAgentStateMapper stateMapper;
     private final DesignerAgentGraphSupport graphSupport = new DesignerAgentGraphSupport();
 
@@ -60,8 +63,42 @@ public class DesignerAgentGraphNodes {
         if (graphSupport.isReadOnly(run.getUserScenario())) {
             out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteExplain);
         } else {
-            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteGenerate);
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RoutePrepareClarify);
         }
+        mergeRun(out, run);
+        return out;
+    }
+
+    public Map<String, Object> prepareClarify(OverAllState state, RunnableConfig config) {
+        DesignerAgentRun run = requireRun(state, config);
+        Map<String, Object> out = new HashMap<>();
+        if (StringUtils.isNotBlank(run.getClarificationContextJson())
+                || !properties.isClarifyBeforePlan()) {
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteGenerate);
+            mergeRun(out, run);
+            return out;
+        }
+        var formJson = clarificationPlanner.buildFormJson(run.getUserScenario());
+        if (formJson.isEmpty()) {
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteGenerate);
+        } else {
+            run.setClarificationFormJson(formJson.get());
+            run.setStage(AgentRunStage.AwaitClarify);
+            AgentStreamEvent clarify = AgentStreamEvent.of("clarify_ready");
+            clarify.setClarificationFormJson(run.getClarificationFormJson());
+            clarify.setStage(AgentRunStage.AwaitClarify);
+            run.emit(clarify);
+            graphSupport.emitAwait(run, AgentRunStage.AwaitClarify);
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanClarify);
+        }
+        mergeRun(out, run);
+        return out;
+    }
+
+    public Map<String, Object> humanClarify(OverAllState state, RunnableConfig config) {
+        DesignerAgentRun run = requireRun(state, config);
+        Map<String, Object> out = new HashMap<>();
+        out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteGenerate);
         mergeRun(out, run);
         return out;
     }
@@ -259,7 +296,17 @@ public class DesignerAgentGraphNodes {
     public Map<String, Object> humanInstall(OverAllState state, RunnableConfig config) {
         DesignerAgentRun run = requireRun(state, config);
         Map<String, Object> out = new HashMap<>();
-        out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanInstall);
+        if (Boolean.TRUE.equals(run.getInstallAccepted())) {
+            run.setInstallAccepted(null);
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteValidate);
+        } else if (Boolean.TRUE.equals(run.getInstallSkipped())) {
+            run.setInstallSkipped(null);
+            run.setAssistantReply("已跳过插件安装，本次变更未继续校验。可安装插件后重新描述需求。");
+            graphSupport.appendConversation(run, "assistant", run.getAssistantReply());
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanFollowUp);
+        } else {
+            out.put(DesignerAgentStateKeys.Route, DesignerAgentStateKeys.RouteHumanInstall);
+        }
         mergeRun(out, run);
         return out;
     }
