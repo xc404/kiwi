@@ -28,6 +28,8 @@ export interface DesignerAgentRunStatus {
   errorMessage?: string;
   planSkipped?: boolean;
   messages?: DesignerAgentChatMessage[];
+  /** POST /actions 人机闸门：true=接受，false=拒绝 */
+  gateAccepted?: boolean;
 }
 
 export interface DesignerAgentConfig {
@@ -84,6 +86,8 @@ export interface DesignerAgentActionRequest {
   editedPlanJson?: string;
   userAnswer?: string;
   feedbackText?: string;
+  /** 输入框自然语言；由后端 LLM 判定意图（与 confirmed 互斥） */
+  userMessage?: string;
   /** 当前画布 XML；用户可能在等待/预览期间手动改图 */
   canvasBpmnXml?: string;
   answers?: Record<string, string | string[]>;

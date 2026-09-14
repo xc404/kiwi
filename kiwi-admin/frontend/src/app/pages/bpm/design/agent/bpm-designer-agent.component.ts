@@ -19,7 +19,6 @@ import {
   DesignerAgentRunStatus
 } from './bpm-designer-agent.service';
 import { PlanDisplayView, resolvePlanDisplay, stepKindIcon } from './edit-plan-presenter';
-import { planFeedbackFromText, previewFeedbackFromText } from './designer-agent-intent';
 import {
   ClarificationForm,
   ClarificationQuestion,
@@ -152,7 +151,7 @@ export class BpmDesignerAgentComponent implements AfterViewChecked {
       return '输入修改意见，或短句「批准执行」…';
     }
     if (this.awaitPreview()) {
-      return '输入调整意见，或短句「确认保存」…';
+      return '补充说明（可选）…';
     }
     if (this.canFollowUp()) {
       return '继续描述要如何修改流程…';
@@ -436,44 +435,82 @@ export class BpmDesignerAgentComponent implements AfterViewChecked {
           feedbackText: confirmed ? undefined : feedbackText
         })
       );
-      this.applyServerStatus(result);
-      if (confirmed) {
-        if (canvasBpmnXml?.trim()) {
-          await this.editor.commitAgentPreviewSave(canvasBpmnXml);
-        } else {
-          this.editor.setAgentPreviewActive(false);
-        }
-        this.previewXmlApplied = null;
-        this.previewCanvasDirty.set(false);
-        this.runBaselineXml = canvasBpmnXml?.trim() ?? null;
-        if (hadManualEdits) {
-          this.nzMessage.success('已保存流程（含您在预览期间的手动修改）');
-        } else {
-          this.nzMessage.success('已保存流程');
-        }
-      } else {
-        await this.editor.rejectAgentPreview();
-        this.previewXmlApplied = null;
-        this.previewCanvasDirty.set(false);
-        this.nzMessage.info('已回退预览');
-      }
+      await this.applyPreviewGateResult(result, hadManualEdits, canvasBpmnXml);
     });
   }
 
   private submitPlanFeedback(text: string): void {
-    const { confirmed, feedbackText } = planFeedbackFromText(text);
+    const runId = this.status()?.runId;
+    if (!runId || this.busy()) {
+      return;
+    }
     this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
     this.inputText.set('');
     this.startAssistantBubble();
-    this.confirmPlan(confirmed, feedbackText);
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_plan', '计划确认');
+      const canvasBpmnXml = await this.captureCanvasForAction();
+      await firstValueFrom(
+        this.agentApi.submitAction(runId, {
+          type: 'confirm_plan',
+          userMessage: text,
+          canvasBpmnXml
+        })
+      );
+    });
   }
 
   private submitPreviewFeedback(text: string): void {
-    const { confirmed, feedbackText } = previewFeedbackFromText(text);
+    const runId = this.status()?.runId;
+    if (!runId || this.busy()) {
+      return;
+    }
     this.messages.update(list => [...list, { role: 'user', text, thinking: [] }]);
     this.inputText.set('');
     this.startAssistantBubble();
-    this.confirmPreview(confirmed, feedbackText);
+    void this.runHumanAction(runId, async () => {
+      await this.assertStage(runId, 'await_preview', '预览确认');
+      const hadManualEdits = await this.isPreviewCanvasDirty();
+      const canvasBpmnXml = await this.captureCanvasForAction();
+      const result = await firstValueFrom(
+        this.agentApi.submitAction(runId, {
+          type: 'confirm_preview',
+          userMessage: text,
+          canvasBpmnXml
+        })
+      );
+      await this.applyPreviewGateResult(result, hadManualEdits, canvasBpmnXml);
+    });
+  }
+
+  private async applyPreviewGateResult(
+    result: DesignerAgentRunStatus,
+    hadManualEdits: boolean,
+    canvasBpmnXml?: string
+  ): Promise<void> {
+    this.applyServerStatus(result);
+    if (result.gateAccepted === true) {
+      if (canvasBpmnXml?.trim()) {
+        await this.editor.commitAgentPreviewSave(canvasBpmnXml);
+      } else {
+        this.editor.setAgentPreviewActive(false);
+      }
+      this.previewXmlApplied = null;
+      this.previewCanvasDirty.set(false);
+      this.runBaselineXml = canvasBpmnXml?.trim() ?? null;
+      if (hadManualEdits) {
+        this.nzMessage.success('已保存流程（含您在预览期间的手动修改）');
+      } else {
+        this.nzMessage.success('已保存流程');
+      }
+      return;
+    }
+    if (result.gateAccepted === false) {
+      await this.editor.rejectAgentPreview();
+      this.previewXmlApplied = null;
+      this.previewCanvasDirty.set(false);
+      this.nzMessage.info('已回退预览');
+    }
   }
 
   private async submitClarification(supplementalText: string): Promise<void> {

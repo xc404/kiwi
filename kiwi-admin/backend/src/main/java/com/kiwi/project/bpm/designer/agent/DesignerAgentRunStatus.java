@@ -28,4 +28,10 @@ public class DesignerAgentRunStatus {
     private Boolean planSkipped;
     /** 持久化聊天气泡，打开设计器时恢复 */
     private List<DesignerAgentChatMessage> messages = new ArrayList<>();
+
+    /**
+     * 最近一次人机闸门操作结果（仅 POST /actions 响应携带，供前端处理预览画布落库/回退）。
+     * {@code true}=接受，{@code false}=拒绝，未涉及闸门时为 null。
+     */
+    private Boolean gateAccepted;
 }

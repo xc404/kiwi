@@ -5,6 +5,9 @@ import com.kiwi.bpmn.designer.agent.model.AgentRunStage;
 import com.kiwi.bpmn.designer.agent.model.AgentStreamEvent;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentChatMessage;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentConversationHistoryUtils;
+import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentGateIntentClassifier;
+import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentGateIntentDecision;
+import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentGateKind;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentGraphRuntime;
 import com.kiwi.bpmn.designer.agent.runtime.DesignerAgentRun;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
@@ -33,6 +36,7 @@ public class DesignerAgentSessionService {
 
     private final DesignerAgentProperties properties;
     private final DesignerAgentGraphRuntime graphRuntime;
+    private final DesignerAgentGateIntentClassifier gateIntentClassifier;
     private final DesignerAgentAsyncExecutor asyncExecutor;
     private final DesignerAgentSessionStore sessionStore;
     private final BpmProcessDefinitionDao processDao;
@@ -137,17 +141,8 @@ public class DesignerAgentSessionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "action.type 不能为空");
         }
         return switch (action.getType()) {
-            case "confirm_plan" -> confirmPlan(
-                    runId,
-                    Boolean.TRUE.equals(action.getConfirmed()),
-                    action.getEditedPlanJson(),
-                    action.getCanvasBpmnXml(),
-                    action.getFeedbackText());
-            case "confirm_preview" -> confirmPreview(
-                    runId,
-                    Boolean.TRUE.equals(action.getConfirmed()),
-                    action.getCanvasBpmnXml(),
-                    action.getFeedbackText());
+            case "confirm_plan" -> confirmPlan(runId, action);
+            case "confirm_preview" -> confirmPreview(runId, action);
             case "answer" -> answerAsk(runId, action.getUserAnswer(), action.getCanvasBpmnXml());
             case "submit_clarification" -> submitClarification(
                     runId,
@@ -286,27 +281,36 @@ public class DesignerAgentSessionService {
         return orphan;
     }
 
-    public DesignerAgentRunStatus confirmPlan(
-            String runId, boolean confirmed, String editedPlanJson, String canvasBpmnXml, String feedbackText) {
+    public DesignerAgentRunStatus confirmPlan(String runId, DesignerAgentRunActionRequest action) {
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitPlan);
+        ResolvedGateIntent intent = resolveGateIntent(action, run, DesignerAgentGateKind.PLAN);
+        boolean confirmed = intent.confirmed();
+        String feedbackText = intent.feedbackText();
         if (confirmed) {
-            applyCanvasBaseline(run, canvasBpmnXml);
+            applyCanvasBaseline(run, action.getCanvasBpmnXml());
         } else {
             if (StringUtils.isBlank(feedbackText)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "拒绝计划时请说明修改意见（输入框或反馈文字）");
             }
-            appendUserMessage(run, feedbackText.trim());
+            if (StringUtils.isBlank(action.getUserMessage())) {
+                appendUserMessage(run, feedbackText.trim());
+            }
         }
         sessionStore.saveSession(run);
-        runGraphAsync(runId, () -> graphRuntime.resumeAfterPlan(requireRun(runId), confirmed, editedPlanJson, feedbackText));
-        return statusByRunId(runId);
+        runGraphAsync(
+                runId,
+                () -> graphRuntime.resumeAfterPlan(
+                        requireRun(runId), confirmed, action.getEditedPlanJson(), feedbackText));
+        return withGateOutcome(statusByRunId(runId), confirmed);
     }
 
-    public DesignerAgentRunStatus confirmPreview(
-            String runId, boolean confirmed, String canvasBpmnXml, String feedbackText) {
+    public DesignerAgentRunStatus confirmPreview(String runId, DesignerAgentRunActionRequest action) {
         DesignerAgentRun run = requireHumanGate(runId, AgentRunStage.AwaitPreview);
-        if (Boolean.TRUE.equals(confirmed)) {
-            String toSave = resolveCanvasOrCandidate(run, canvasBpmnXml);
+        ResolvedGateIntent intent = resolveGateIntent(action, run, DesignerAgentGateKind.PREVIEW);
+        boolean confirmed = intent.confirmed();
+        String feedbackText = intent.feedbackText();
+        if (confirmed) {
+            String toSave = resolveCanvasOrCandidate(run, action.getCanvasBpmnXml());
             if (StringUtils.isNotBlank(toSave)) {
                 run.setCandidateXml(toSave);
             }
@@ -316,20 +320,51 @@ public class DesignerAgentSessionService {
             }
             indexRun(run);
             sessionStore.saveSession(run);
-            return toStatus(run);
+            return withGateOutcome(toStatus(run), true);
         }
         if (StringUtils.isNotBlank(feedbackText)) {
-            appendUserMessage(run, feedbackText.trim());
+            if (StringUtils.isBlank(action.getUserMessage())) {
+                appendUserMessage(run, feedbackText.trim());
+            }
             sessionStore.saveSession(run);
             runGraphAsync(runId, () -> graphRuntime.resumeAfterPreviewReject(requireRun(runId), feedbackText));
-            return statusByRunId(runId);
+            return withGateOutcome(statusByRunId(runId), false);
         }
         graphRuntime.resumeAfterPreviewReject(run, null);
         graphRuntime.syncRunFromCheckpoint(run);
         indexRun(run);
         sessionStore.saveSession(run);
-        return statusByRunId(runId);
+        return withGateOutcome(statusByRunId(runId), false);
     }
+
+    private ResolvedGateIntent resolveGateIntent(
+            DesignerAgentRunActionRequest action, DesignerAgentRun run, DesignerAgentGateKind kind) {
+        if (StringUtils.isNotBlank(action.getUserMessage())) {
+            if (action.getConfirmed() != null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "userMessage 与 confirmed 不能同时提交");
+            }
+            String message = action.getUserMessage().trim();
+            appendUserMessage(run, message);
+            DesignerAgentGateIntentDecision decision = gateIntentClassifier.classify(kind, run, message);
+            if (!decision.ok()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, StringUtils.defaultIfBlank(decision.error(), "意图解析失败"));
+            }
+            return new ResolvedGateIntent(decision.accepted(), decision.feedback());
+        }
+        if (action.getConfirmed() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请提供 confirmed 或 userMessage");
+        }
+        return new ResolvedGateIntent(action.getConfirmed(), action.getFeedbackText());
+    }
+
+    private static DesignerAgentRunStatus withGateOutcome(DesignerAgentRunStatus status, boolean accepted) {
+        status.setGateAccepted(accepted);
+        return status;
+    }
+
+    private record ResolvedGateIntent(boolean confirmed, String feedbackText) {}
 
     public DesignerAgentRunStatus submitClarification(
             String runId,
