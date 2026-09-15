@@ -4,21 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
-import {
-  AiAuthoringStatus,
-  AiAuthoringTaskInfo,
-  AiWorkflowAuthoringService
-} from '@services/ai-chat/ai-workflow-authoring.service';
 import type { AiChatMessage } from '@services/ai-chat/ai-chat.service';
+import { AiAuthoringStatus, AiAuthoringTaskInfo, AiWorkflowAuthoringService } from '@services/ai-chat/ai-workflow-authoring.service';
 import type { AssistantActionHandler } from '@shared/ai-assistant/assistant-action-handler';
 import { ChatComponent } from '@shared/components/chat/chat.component';
-
-import { ComponentProvider } from '../../../flow-elements/component-provider';
-import { createBpmDesignerAssistantHandlers, type BpmDesignerAssistantDeps } from '../../assistant/bpm-designer-assistant.handlers';
-import { BpmEditorAppendService } from '../../service/bpm-editor-append.service';
-import { BpmDesignerToolbarService } from '../../toolbar/bpm-designer-toolbar.service';
-import type { BpmDesignerToolbarContext } from '../../toolbar/bpm-designer-toolbar.types';
-import { BpmEditorToken } from '../bpm-editor-token';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -26,6 +15,13 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
+
+import { ComponentProvider } from '../../../flow-elements/component-provider';
+import { createBpmDesignerAssistantHandlers, type BpmDesignerAssistantDeps } from '../../assistant/bpm-designer-assistant.handlers';
+import { BpmEditorAppendService } from '../../service/bpm-editor-append.service';
+import { BpmDesignerToolbarService } from '../../toolbar/bpm-designer-toolbar.service';
+import type { BpmDesignerToolbarContext } from '../../toolbar/bpm-designer-toolbar.types';
+import { BpmEditorToken } from '../bpm-editor-token';
 
 const TaskPreview = 'UserTask_Preview';
 const TaskInstall = 'UserTask_Install';
@@ -208,11 +204,7 @@ export class BpmAiChatComponent {
     this.xmlBeforePreview = '';
   }
 
-  private completeHumanTask(
-    task: AiAuthoringTaskInfo | undefined,
-    variables: Record<string, unknown>,
-    onOk?: () => void | Promise<void>
-  ): void {
+  private completeHumanTask(task: AiAuthoringTaskInfo | undefined, variables: Record<string, unknown>, onOk?: () => void | Promise<void>): void {
     if (!task?.id) {
       this.nzMessage.warning('当前没有待办任务');
       return;
@@ -246,9 +238,7 @@ export class BpmAiChatComponent {
       return;
     }
     const xml = status.candidateXml?.trim() ?? '';
-    const shouldApply = !!xml
-        && xml !== this.lastImportedPreviewXml
-        && (status.stage === 'await_preview' || status.stage === 'done');
+    const shouldApply = !!xml && xml !== this.lastImportedPreviewXml && (status.stage === 'await_preview' || status.stage === 'done');
     if (!shouldApply) {
       return;
     }

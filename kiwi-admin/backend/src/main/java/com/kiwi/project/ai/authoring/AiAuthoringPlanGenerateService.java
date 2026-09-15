@@ -3,6 +3,7 @@ package com.kiwi.project.ai.authoring;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiwi.project.ai.AiChatProperties;
+import com.kiwi.project.bpm.KiwiBpmnXml;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.ObjectProvider;
@@ -183,9 +184,9 @@ public class AiAuthoringPlanGenerateService {
                                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                                   xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-                                  xmlns:kiwi="http://kiwi.io/schema/bpmn"
+                                  xmlns:kiwi="%s"
                                   id="Definitions_%s"
-                                  targetNamespace="http://kiwi.io/ai-authoring">
+                                  targetNamespace="http://bpmn.io/schema/bpmn">
                   <bpmn:process id="%s" name="%s" isExecutable="true">
                     <bpmn:startEvent id="StartEvent_1" name="开始"/>
                 %s
@@ -193,7 +194,7 @@ public class AiAuthoringPlanGenerateService {
                 %s
                   </bpmn:process>
                 </bpmn:definitions>
-                """.formatted(processId, processId, escape(scenario), tasks, flows);
+                """.formatted(KiwiBpmnXml.Namespace, processId, processId, escape(scenario), tasks, flows);
         GenerateResult r = new GenerateResult();
         try {
             r.setPlanIrJson(objectMapper.writeValueAsString(

@@ -117,8 +117,8 @@ export class BpmViewer implements OnInit, OnDestroy {
     this.viewer = new NavigatedViewer({
       container: this.canvasHost.nativeElement,
       moddleExtensions: {
-        moddleProvider: this.elementModel.getModdleExtension(),
-        componentProvider: kiwiDescriptor
+        camunda: this.elementModel.getModdleExtension(),
+        kiwi: kiwiDescriptor
       }
     });
     this.canvas = this.viewer.get('canvas');

@@ -20,10 +20,11 @@ import { ComponentDescription, ComponentProvider } from '../../flow-elements/com
 import { ComponentService } from '../../flow-elements/component-service';
 import kiwiDescriptor from '../../flow-elements/kiwi.json';
 import type { BpmProcess } from '../../types/bpm-process';
+import { BpmDesignerAgentComponent } from '../agent/bpm-designer-agent.component';
+import { BpmDesignerContextService } from '../bpm-designer-context.service';
 import appendComponentModule from '../context-pad/append-component-module';
 import customContextPadModule from '../context-pad/index';
 import replaceComponentModule from '../context-pad/replace-component-module';
-import { BpmDesignerContextService } from '../bpm-designer-context.service';
 import { ElementModel } from '../extension/element-model';
 import { BpmPallete } from '../palette/pallete';
 import { BpmPropertiesPanel } from '../property-panel/properties-panel';
@@ -31,10 +32,10 @@ import { BpmEditorAppendService } from '../service/bpm-editor-append.service';
 import { BpmEditorReplaceService } from '../service/bpm-editor-replace.service';
 import { ProcessDesignService } from '../service/process-design.service';
 import { importBpmnXmlToModeler } from '../toolbar/bpm-canvas-import.utils';
+import type { BpmDesignerToolbarContext } from '../toolbar/bpm-designer-toolbar.types';
 import { BpmToolbar } from '../toolbar/bpm-toolbar';
 import { BpmAiChatComponent } from './bpm-ai-chat/bpm-ai-chat.component';
 import { BpmEditorProcessMetaComponent } from './bpm-editor-process-meta/bpm-editor-process-meta.component';
-import type { BpmDesignerToolbarContext } from '../toolbar/bpm-designer-toolbar.types';
 
 export { BpmExpressionVariableService } from '../expression/bpm-expression-variable.service';
 export { ExpressionVariableContext } from '../expression/expression-variable-context';
@@ -42,12 +43,16 @@ export type { SpelVariableSuggestion } from '../expression/expression-variable';
 
 export { BpmEditorToken };
 
+const StorageKeyLeftPanelTab = 'bpm-editor.leftPanelTab';
+
+type LeftPanelTab = 'palette' | 'agent';
+
 @Component({
   selector: 'bpm-editor',
   templateUrl: './bpm-editor.html',
   styleUrl: './bpm-editor.scss',
   providers: [{ provide: BpmEditorToken, useExisting: BpmEditor }, BpmEditorAppendService, BpmEditorReplaceService],
-  imports: [BpmPropertiesPanel, BpmPallete, NzLayoutComponent, NzLayoutModule, BpmToolbar, NzSpinModule, BpmEditorProcessMetaComponent, BpmAiChatComponent],
+  imports: [BpmPropertiesPanel, BpmPallete, NzLayoutComponent, NzLayoutModule, BpmToolbar, NzSpinModule, BpmEditorProcessMetaComponent, BpmAiChatComponent, BpmDesignerAgentComponent],
 
   standalone: true
 })
@@ -86,6 +91,8 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
 
   processMeta = computed((): BpmProcess | null => this.bpmProcess());
 
+  leftPanelTab = signal<LeftPanelTab>(this.readLeftPanelTab());
+
   stackIdx: number | undefined = undefined;
   commandStack: any;
 
@@ -116,8 +123,8 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         }
       },
       moddleExtensions: {
-        moddleProvider: this.elementModel.getModdleExtension(),
-        componentProvider: kiwiDescriptor
+        camunda: this.elementModel.getModdleExtension(),
+        kiwi: kiwiDescriptor
       }
     });
     this.append.init(this.bpmnModeler);
@@ -136,6 +143,11 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         ),
       error: () => this.recentComponentUsages.set([])
     });
+  }
+
+  setLeftPanelTab(tab: LeftPanelTab): void {
+    this.leftPanelTab.set(tab);
+    this.persistLeftPanelTab(tab);
   }
 
   dirty(): boolean {
@@ -198,6 +210,10 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
             });
           })
       );
+  }
+
+  exportBpmnXml(): Promise<string> {
+    return this.bpmnModeler.saveXML({ format: true }).then(bpmn => bpmn.xml ?? '');
   }
 
   private syncLocalBpmnXml(trimmed: string): void {
@@ -280,5 +296,21 @@ export class BpmEditor extends BpmEditorToken implements OnInit {
         ),
       error: () => {}
     });
+  }
+
+  private readLeftPanelTab(): LeftPanelTab {
+    try {
+      return localStorage.getItem(StorageKeyLeftPanelTab) === 'agent' ? 'agent' : 'palette';
+    } catch {
+      return 'palette';
+    }
+  }
+
+  private persistLeftPanelTab(tab: LeftPanelTab): void {
+    try {
+      localStorage.setItem(StorageKeyLeftPanelTab, tab);
+    } catch {
+      /* ignore */
+    }
   }
 }

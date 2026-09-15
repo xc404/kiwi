@@ -4,7 +4,36 @@
   <nz-layout class="full-height bpm-editor-layout">
     <nz-sider class="mix-sider-height side-explorer bpm-editor-palette-sider" nzNoAnimation nzTheme="light" nzWidth="300px">
       <div class="bpm-editor-palette-scroll">
-        <bpm-pallete></bpm-pallete>
+        <div class="bpm-editor-left-tabs">
+          <div class="bpm-editor-left-tabs__nav" role="tablist">
+            <button
+              class="bpm-editor-left-tabs__tab"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="leftPanelTab() === 'palette'"
+              [class.is-active]="leftPanelTab() === 'palette'"
+              (click)="setLeftPanelTab('palette')"
+            >
+              组件库
+            </button>
+            <button
+              class="bpm-editor-left-tabs__tab"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="leftPanelTab() === 'agent'"
+              [class.is-active]="leftPanelTab() === 'agent'"
+              (click)="setLeftPanelTab('agent')"
+            >
+              Agent
+            </button>
+          </div>
+          <div class="bpm-editor-left-tab-body" [hidden]="leftPanelTab() !== 'palette'">
+            <bpm-pallete></bpm-pallete>
+          </div>
+          <div class="bpm-editor-left-tab-body" [hidden]="leftPanelTab() !== 'agent'">
+            <bpm-designer-agent />
+          </div>
+        </div>
       </div>
     </nz-sider>
     <nz-content class="flex flex-column bpm-editor-main-content">

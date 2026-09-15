@@ -6,8 +6,8 @@
           <span>AI 写工作流</span>
           <nz-tag [nzColor]="authoringStatus()?.active ? 'processing' : 'success'">{{ stageLabel() }}</nz-tag>
         </div>
-        <button type="button" nz-button nzSize="small" nzType="text" (click)="panelOpen.set(false)" aria-label="收起">
-          <i nz-icon nzType="minus" nzTheme="outline"></i>
+        <button type="button" aria-label="收起" nz-button nzSize="small" nzType="text" (click)="panelOpen.set(false)">
+          <i nz-icon nzTheme="outline" nzType="minus"></i>
         </button>
       </header>
 
@@ -40,13 +40,7 @@
 
       @if (askTask()) {
         <div class="bpm-ai-authoring__ask">
-          <textarea
-            nz-input
-            rows="3"
-            placeholder="补充场景或约束后提交"
-            [ngModel]="askAnswer()"
-            (ngModelChange)="askAnswer.set($event)"
-          ></textarea>
+          <textarea nz-input placeholder="补充场景或约束后提交" rows="3" [ngModel]="askAnswer()" (ngModelChange)="askAnswer.set($event)"></textarea>
           <button nz-button nzSize="small" nzType="primary" [disabled]="authoringBusy()" (click)="submitAskAnswer()">提交说明</button>
         </div>
       }
@@ -57,13 +51,11 @@
         </div>
       }
 
-      <button class="bpm-ai-authoring__refresh" type="button" nz-button nzSize="small" nzType="link" [disabled]="authoringBusy()" (click)="refreshAuthoringStatus()">
-        刷新状态
-      </button>
+      <button class="bpm-ai-authoring__refresh" type="button" nz-button nzSize="small" nzType="link" [disabled]="authoringBusy()" (click)="refreshAuthoringStatus()"> 刷新状态 </button>
     </aside>
   } @else if (showAuthoringPanel() && !panelOpen()) {
     <button class="bpm-ai-authoring-fab" type="button" nz-button nzSize="small" nzType="default" (click)="panelOpen.set(true)">
-      <i nz-icon nzType="robot" nzTheme="outline"></i>
+      <i nz-icon nzTheme="outline" nzType="robot"></i>
       编排 · {{ stageLabel() }}
     </button>
   }

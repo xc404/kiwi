@@ -30,7 +30,9 @@
       ]
     },
     "expectedFragments": [
+      "xmlns:kiwi=\"http://kiwi.io/schema/bpmn\"",
       "kiwi:componentId=\"classpath_httpRequest\"",
+      "<camunda:property name=\"componentId\" value=\"classpath_httpRequest\"/>",
       "<camunda:inputParameter name=\"url\">${requestUrl}</camunda:inputParameter>",
       "<bpmndi:BPMNDiagram"
     ],
