@@ -2,7 +2,9 @@
 
 **状态：草案（2026-09-15）**  
 **对齐对象：** Cursor Agent / Claude Code — **对话线程 + 工具循环（harness）**，不是 StateGraph，也不是「generate→apply→validate」宿主状态机。  
-**范围：** `kiwi-bpmn-designer-agent`、`kiwi-admin` Session/API、设计器前端 Agent 面板
+**Git 基线：** `feat/designer-agent-harness` 从干净 `origin/master`（`9b46886`）拉出。  
+**实现方式：绿场。** 不 merge、不搬 `feat/extract-kiwi-bpmn-assistant` 里的 Graph / Session / 闸门代码。旧实验留在那条分支（最新提交 `4917ddb`，未 push）。  
+**范围：** 在 master 上新建设计器 Agent 模块 + admin API + 设计器侧栏；可复用 master 已有的 `kiwi-bpmn-core`、Spring AI ChatClient、组件目录 MCP，不复用旧 Graph 编排。
 
 ---
 
@@ -160,20 +162,25 @@ DesignerAgentSession
 
 ## 丢掉 / 保留
 
-**保留：** EditPlan IR、Applicator、校验器、MCP 发现、一流程一会话、预览回退按钮。
+**绿场要写的：** Session + turns API、ChatClient 工具循环、EditPlan IR、确定性改 XML、校验进工具返回、MCP 发现、一流程一会话、预览回退按钮。
 
-**丢掉：** StateGraph、全部 human 节点、计划/安装/澄清/追问闸门、`userScenario` 任务单主路径、GateIntentClassifier。
+**不要从 extract 分支带过来：** StateGraph、human_*、计划/安装/澄清闸门、`userScenario` 任务单、GateIntentClassifier。
+
+可对照 extract 里 Applicator / 校验的**算法**，在新模块里重写。
 
 ---
 
 ## 实施顺序
 
-1. Session 为唯一真相；GET 带 messages / ui / preview 缓冲。
+绿场落在 `feat/designer-agent-harness`（相对 master 几乎只有本计划文件）。
+
+1. 新建模块（名称可仍用 `kiwi-bpmn-designer-agent`）+ 接入 admin：Session、`POST /sessions/turns`、SSE。
 2. ChatClient：`.messages(近 N 轮)` + 工作区附件 + 工具循环；契约测试（第二轮含第一轮原文；改图必现 `apply_edit_plan` 工具调用）。
-3. 注册 `apply_edit_plan`（内含 validate 返回）；删除宿主 generate→apply→validate 边。
-4. `POST /sessions/turns`；gates 仅回退。
-5. 前端 `send` 只走 turn；去掉计划/安装/澄清闸门；busy 只跟 running。
-6. 删 Graph 与分类器；README 改成 harness 描述。
+3. `apply_edit_plan`（EditPlan IR + 确定性改 XML + 返回 validate issues）。
+4. 前端侧栏：`send` 只走 turn；预览缓冲 + 回退按钮；busy=running。
+5. README。
+
+旧分支 `feat/extract-kiwi-bpmn-assistant` 仅作对照，不作为本分支 merge 源。
 
 ---
 
