@@ -81,7 +81,7 @@ export class BpmMarket {
         )
           .then((res: { projectId?: string }) => {
             if (res?.projectId) {
-              void this.router.navigate(['/bpm/process-definition'], { queryParams: { projectId: res.projectId } });
+              void this.router.navigate(['/bpm/project'], { queryParams: { projectId: res.projectId } });
             }
           })
           .catch((err: unknown) => {

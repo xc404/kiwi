@@ -178,7 +178,7 @@ export class RemoteMarketDetail implements OnInit {
           .subscribe({
             next: res => {
               if (res.projectId) {
-                void this.router.navigate(['/bpm/project']);
+                void this.router.navigate(['/bpm/project'], { queryParams: { projectId: res.projectId } });
               }
             }
           })

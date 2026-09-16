@@ -9,7 +9,12 @@ export default [
     data: { key: 'bpm-component-plugin' },
     loadComponent: () => import('./flow-elements/bpm-component-plugin').then(m => m.BpmComponentPlugin)
   },
-  { path: 'project', title: '项目管理', data: { key: 'bpm-project' }, loadComponent: () => import('./project/bpm-project').then(m => m.BpmProject) },
+  {
+    path: 'project',
+    title: '项目管理',
+    data: { key: 'bpm-project' },
+    loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess)
+  },
   { path: 'market', title: '模板市场', data: { key: 'bpm-market' }, loadComponent: () => import('./market/bpm-market').then(m => m.BpmMarket) },
   { path: 'market/:packId', title: '模板详情', data: { key: 'bpm-market-detail' }, loadComponent: () => import('./market/bpm-market-detail').then(m => m.BpmMarketDetail) },
   {
@@ -24,7 +29,16 @@ export default [
     data: { key: 'bpm-remote-market-detail' },
     loadComponent: () => import('./remote-market/remote-market-detail').then(m => m.RemoteMarketDetail)
   },
-  { path: 'process-definition', title: '项目流程', data: { key: 'bpm-project-process' }, loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess) },
+  {
+    path: 'process-definition',
+    pathMatch: 'full',
+    redirectTo: ({ queryParams }) => {
+      const projectId = queryParams['projectId'];
+      return typeof projectId === 'string' && projectId.trim()
+        ? `/bpm/project?projectId=${encodeURIComponent(projectId.trim())}`
+        : '/bpm/project';
+    }
+  },
   {
     path: 'process-instances',
     title: '运行实例',

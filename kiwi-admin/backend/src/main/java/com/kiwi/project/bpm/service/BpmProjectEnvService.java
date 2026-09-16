@@ -90,6 +90,16 @@ public class BpmProjectEnvService {
         bpmProjectEnvVarDao.deleteById(id);
     }
 
+    public void deleteAllByProjectId(String projectId) {
+        if (StringUtils.isBlank(projectId)) {
+            return;
+        }
+        List<BpmProjectEnvVar> envVars = bpmProjectEnvVarDao.findBy(Query.query(Criteria.where("projectId").is(projectId)));
+        if (!envVars.isEmpty()) {
+            bpmProjectEnvVarDao.deleteAll(envVars);
+        }
+    }
+
     /**
      * 启动流程用：合并项目 env 与用户 variables（用户优先），拆分为普通变量与瞬态（加密）变量。
      */

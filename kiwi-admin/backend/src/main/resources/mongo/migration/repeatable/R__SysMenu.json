@@ -16,7 +16,7 @@
     "name": "组件管理",
     "menuType": "C",
     "path": "/bpm/component",
-    "sort": 1,
+    "sort": 10,
     "status": "0",
     "visible": true
   },
@@ -26,9 +26,9 @@
     "name": "组件插件",
     "menuType": "C",
     "path": "/bpm/plugins",
-    "sort": 2,
+    "sort": 20,
     "status": "0",
-    "visible": true
+    "visible": false
   },
   {
     "id": "bpm_project",
@@ -68,7 +68,7 @@
     "path": "/bpm/process-definition",
     "sort": 6,
     "status": "0",
-    "visible": true
+    "visible": false
   },
   {
     "id": "bpm_process_instances",

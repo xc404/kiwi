@@ -10,6 +10,7 @@ import com.kiwi.project.bpm.dto.PublishTemplatePackInput;
 import com.kiwi.project.bpm.dto.TemplatePackZipDownload;
 import com.kiwi.project.bpm.model.BpmTemplatePack;
 import com.kiwi.project.bpm.service.BpmOwnershipAccessService;
+import com.kiwi.project.bpm.service.BpmProjectService;
 import com.kiwi.project.bpm.service.BpmTemplatePackBundleService;
 import com.kiwi.project.bpm.service.BpmTemplatePackInstallService;
 import com.kiwi.project.bpm.service.BpmTemplatePackPublishService;
@@ -47,6 +48,7 @@ public class BpmProjectCtl extends BaseCtl {
 
     private final BpmProjectDao bpmProjectDao;
     private final BpmOwnershipAccessService bpmOwnershipAccessService;
+    private final BpmProjectService bpmProjectService;
     private final BpmTemplatePackPublishService templatePackPublishService;
     private final BpmTemplatePackInstallService templatePackInstallService;
     private final BpmTemplatePackBundleService templatePackBundleService;
@@ -103,7 +105,7 @@ public class BpmProjectCtl extends BaseCtl {
     @ResponseBody
     public void delete(@PathVariable String id) {
         requireOwnsProject(id);
-        bpmProjectDao.deleteById(id);
+        bpmProjectService.deleteProject(id);
     }
 
     @Operation(operationId = "bpmProj_exportAsTemplate", summary = "将项目导出为模板包（发布到市场）")

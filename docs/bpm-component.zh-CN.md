@@ -163,7 +163,7 @@ public class ShellActivityBehavior implements JavaDelegate {
 
 ### 2. 设计时：在 BPMN 设计器填值
 
-1. 打开 **项目流程** → 进入设计器。
+1. 打开 **项目管理** → 点击「设计」进入设计器。
 2. 从左侧**组件面板**拖入节点（或右键「追加组件」）。
 3. 选中节点，在右侧**属性面板**填写各参数。
 
@@ -201,7 +201,7 @@ Kiwi 扩展命名空间定义见 [kiwi.json](../kiwi-admin/frontend/src/app/page
 
 ### 1. 在设计器中使用
 
-1. **工作流 → 项目流程** → 选择项目 → 点击「流程管理」打开设计器。
+1. **工作流 → 项目管理** → 选择或新建项目 → 点击「设计」打开设计器。
 2. 从左侧拖入「命令行」「HTTP 请求」等组件。
 3. 在属性面板配置参数（如 `command` 填 `${scriptPath}` 或固定值 `ls -la`）。
 4. 用连线串联多个组件，保存 BPMN。
@@ -273,7 +273,7 @@ JavaDelegate.execute() 读取参数、写回输出变量
 | `value` | 值；`encrypted=true` 时 AES 存储，API 不回显 |
 | `encrypted` | 敏感项开启；启动时以 Operaton **瞬态变量**注入，避免进历史 |
 
-**管理**：工作流 → 项目流程 → 选择项目 → **环境变量** Tab。
+**管理**：工作流 → 项目管理 → 当前项目下拉 → **环境变量**。
 
 **启动注入**：`BpmProcessStartService` 读取流程所属 `projectId` 的 env，与用户启动 variables 合并（**同名 key 用户优先**）。组件 BPMN 中可写 `${API_URL}`、`${API_KEY}` 等。
 

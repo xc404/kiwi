@@ -1,8 +1,7 @@
 import { Component, computed, effect, inject, OnInit, signal, viewChild, ViewEncapsulation } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { finalize, tap } from 'rxjs/operators';
+import { tap } from 'rxjs/operators';
 
 import { BaseHttpService } from '@app/core/services/http/base-http.service';
 import { AddAction, toolbarAction } from '@app/shared/components/crud/actions';
@@ -12,18 +11,21 @@ import { PageHeaderComponent } from '@app/shared/components/page-header/page-hea
 import { ColumnToken } from '@app/shared/components/table/column';
 import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
 
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
 import { BpmCloneProcessModalComponent } from './bpm-clone-process-modal.component';
+import { BpmProjectEnvModalComponent } from './bpm-project-env-modal.component';
+import { BpmProjectNameModalComponent } from './bpm-project-name-modal.component';
 import { BpmWorkspaceService } from './bpm-workspace.service';
 import { ProcessDesignService } from '../design/service/process-design.service';
 import { TemplatePackExportModalComponent } from '../market/template-pack-export-modal.component';
+import { TemplatePackImportModalComponent } from '../market/template-pack-import-modal.component';
 import { TemplatePackInstallModalComponent } from '../market/template-pack-install-modal.component';
 import type { BpmProcess } from '../types/bpm-process';
 
@@ -43,14 +45,14 @@ interface BpmProjectOption {
             <i nz-icon nzTheme="outline" nzType="folder-open"></i>
           </span>
           <div class="bpm-workspace-toolbar-text">
-            <div class="bpm-workspace-toolbar-title">项目工作区</div>
+            <div class="bpm-workspace-toolbar-title">项目管理</div>
             <div class="bpm-workspace-toolbar-desc">切换项目以查看与管理该项目下的流程</div>
           </div>
         </div>
         <div class="bpm-workspace-toolbar-action">
           <span class="bpm-workspace-toolbar-label">当前项目</span>
 
-          <a #projectTrigger class="bpm-workspace-trigger" nz-dropdown nzOverlayClassName="bpm-workspace-project-menu-overlay" [nzDropdownMenu]="projectMenu">
+          <a class="bpm-workspace-trigger" nz-dropdown nzOverlayClassName="bpm-workspace-project-menu-overlay" [nzDropdownMenu]="projectMenu">
             <span class="bpm-workspace-trigger-label">{{ currentProjectLabel() }}</span>
             <nz-icon nzType="down" />
           </a>
@@ -71,24 +73,45 @@ interface BpmProjectOption {
                 </li>
               }
             }
+            <li nz-menu-divider></li>
+            <li nz-menu-item (click)="openCreateProject()">新建项目</li>
+            <li nz-menu-item [nzDisabled]="!projectId()" (click)="openRenameProject()">重命名</li>
+            <li nz-menu-item [nzDisabled]="!projectId()" (click)="openProjectEnvModal()">环境变量</li>
+            <li nz-menu-item [nzDisabled]="!projectId()" (click)="confirmDeleteProject()">删除项目</li>
+            <li nz-menu-item (click)="openImportAsNewProject()">从模板新建</li>
           </ul>
         </div>
       </nz-dropdown-menu>
 
-      <nz-tabs>
-        <nz-tab nzTitle="流程">
-          <crud-page [pageConfig]="pageConfig"> </crud-page>
-        </nz-tab>
-        <!-- 环境变量 
-         <nz-tab nzTitle="环境变量">
-           <app-bpm-project-env [projectId]="projectId()" />
-         </nz-tab>
-
-         -->
-      </nz-tabs>
+      @if (!projectsLoading() && projects().length === 0) {
+        <nz-alert
+          class="m-b-16"
+          nzShowIcon
+          nzType="info"
+          nzMessage="还没有项目"
+          nzDescription="新建一个项目后即可在其中创建流程、配置环境变量，或从模板包导入。"
+        ></nz-alert>
+        <button type="button" nz-button nzType="primary" class="m-r-8" (click)="openCreateProject()">新建项目</button>
+        <button type="button" nz-button (click)="openImportAsNewProject()">从模板新建</button>
+      } @else if (projectId()) {
+        <nz-tabs>
+          <nz-tab nzTitle="流程">
+            <crud-page [pageConfig]="pageConfig"> </crud-page>
+          </nz-tab>
+        </nz-tabs>
+      }
     </section>
   `,
-  imports: [PageHeaderComponent, CrudPage, FormsModule, NzButtonModule, NzDropdownModule, NzIconModule, NzInputModule, NzMenuModule, NzTabsModule],
+  imports: [
+    PageHeaderComponent,
+    CrudPage,
+    NzAlertModule,
+    NzButtonModule,
+    NzDropdownModule,
+    NzIconModule,
+    NzMenuModule,
+    NzTabsModule
+  ],
   styleUrls: ['./bpm-project-process.less'],
   encapsulation: ViewEncapsulation.None
 })
@@ -163,25 +186,59 @@ export class BpmProjectProcess implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadProjects();
+    void this.loadProjects();
   }
 
-  private loadProjects(): void {
+  private async loadProjects(): Promise<void> {
     this.projectsLoading.set(true);
-    this.http
-      .get<{ content?: Array<{ id?: string; name?: string }> }>('/bpm/project', { page: 0, size: 500 })
-      .pipe(finalize(() => this.projectsLoading.set(false)))
-      .subscribe({
-        next: res => {
-          const rows = res?.content ?? [];
-          this.projects.set(
-            rows.map(r => ({
-              id: String(r.id ?? ''),
-              name: r.name ?? ''
-            }))
-          );
-        }
-      });
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ content?: Array<{ id?: string; name?: string }> }>('/bpm/project', { page: 0, size: 500 })
+      );
+      const rows = res?.content ?? [];
+      this.projects.set(
+        rows
+          .map(r => ({
+            id: String(r.id ?? '').trim(),
+            name: r.name ?? ''
+          }))
+          .filter(p => p.id.length > 0)
+      );
+      this.ensureProjectSelection();
+    } finally {
+      this.projectsLoading.set(false);
+    }
+  }
+
+  private ensureProjectSelection(): void {
+    const list = this.projects();
+    const queryId = this.activatedRoute.snapshot.queryParamMap.get('projectId');
+    const remembered = this.workspace.getLastProjectId();
+    const preferred = queryId || remembered || this.projectId();
+    const exists = (id: string | null | undefined) => !!id && list.some(p => p.id === id);
+
+    if (!list.length) {
+      if (remembered) {
+        this.workspace.clearLastProjectId();
+      }
+      this.projectId.set(null);
+      if (queryId) {
+        void this.router.navigate([], {
+          relativeTo: this.activatedRoute,
+          queryParams: { projectId: null },
+          queryParamsHandling: 'merge'
+        });
+      }
+      return;
+    }
+
+    const next = exists(preferred) ? preferred! : list[0].id;
+    if (!exists(preferred) && remembered && remembered !== next) {
+      this.workspace.clearLastProjectId();
+    }
+    if (this.projectId() !== next || queryId !== next) {
+      this.setProjectId(next);
+    }
   }
 
   onProjectMenuVisible(visible: boolean): void {
@@ -195,6 +252,136 @@ export class BpmProjectProcess implements OnInit {
       relativeTo: this.activatedRoute,
       queryParams: { projectId: id },
       queryParamsHandling: 'merge'
+    });
+  }
+
+  openCreateProject(): void {
+    const ref = this.modalWrap.create({
+      nzTitle: '新建项目',
+      nzWidth: 480,
+      nzOkText: '创建',
+      nzCancelText: '取消',
+      nzContent: BpmProjectNameModalComponent,
+      nzData: {
+        hint: '项目是流程、环境变量与模板导入导出的容器。',
+        label: '项目名称',
+        defaultName: '',
+        emptyWarning: '请填写项目名称'
+      },
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as BpmProjectNameModalComponent;
+        const name = comp.tryGetName();
+        if (!name) {
+          return false;
+        }
+        return firstValueFrom(this.http.post<BpmProjectOption>('/bpm/project', { name }, { needSuccessInfo: true })).then(
+          created => {
+            const id = String(created?.id ?? '').trim();
+            if (!id) {
+              this.message.error('创建项目失败：未返回项目 id');
+              return;
+            }
+            this.projects.update(list => [...list, { id, name: created.name || name }]);
+            this.setProjectId(id);
+          }
+        );
+      }
+    });
+  }
+
+  openRenameProject(): void {
+    const pid = this.projectId();
+    if (!pid) {
+      this.message.warning('请先选择项目');
+      return;
+    }
+    const currentName = this.projects().find(p => p.id === pid)?.name || '';
+    const ref = this.modalWrap.create({
+      nzTitle: '重命名项目',
+      nzWidth: 480,
+      nzOkText: '保存',
+      nzCancelText: '取消',
+      nzContent: BpmProjectNameModalComponent,
+      nzData: {
+        hint: '仅修改项目显示名称，不影响已有流程。',
+        label: '项目名称',
+        defaultName: currentName,
+        emptyWarning: '请填写项目名称'
+      },
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as BpmProjectNameModalComponent;
+        const name = comp.tryGetName();
+        if (!name) {
+          return false;
+        }
+        return firstValueFrom(this.http.put<BpmProjectOption>(`/bpm/project/${pid}`, { name }, { needSuccessInfo: true })).then(
+          updated => {
+            this.projects.update(list => list.map(p => (p.id === pid ? { ...p, name: updated?.name || name } : p)));
+          }
+        );
+      }
+    });
+  }
+
+  openProjectEnvModal(): void {
+    const pid = this.projectId();
+    if (!pid) {
+      this.message.warning('请先选择项目');
+      return;
+    }
+    this.modalWrap.create({
+      nzTitle: '环境变量',
+      nzWidth: '75vw',
+      nzContent: BpmProjectEnvModalComponent,
+      nzData: { projectId: pid },
+      nzFooter: null
+    });
+  }
+
+  confirmDeleteProject(): void {
+    const pid = this.projectId();
+    if (!pid) {
+      this.message.warning('请先选择项目');
+      return;
+    }
+    const label = this.currentProjectLabel();
+    this.modalWrap.confirm({
+      nzTitle: '删除项目',
+      nzContent: `将删除项目「${label}」及其环境变量。若项目下仍有流程，删除会失败。`,
+      nzOkText: '删除',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => this.deleteCurrentProject(pid)
+    });
+  }
+
+  private async deleteCurrentProject(pid: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`/bpm/project/${pid}`, undefined, { needSuccessInfo: true }));
+    if (this.workspace.getLastProjectId() === pid) {
+      this.workspace.clearLastProjectId();
+    }
+    this.projects.update(list => list.filter(p => p.id !== pid));
+    this.ensureProjectSelection();
+  }
+
+  openImportAsNewProject(): void {
+    const ref = this.modalWrap.create({
+      nzTitle: '从模板包新建项目',
+      nzContent: TemplatePackImportModalComponent,
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as TemplatePackImportModalComponent;
+        const fd = comp.tryGetFormData();
+        if (!fd) {
+          return false;
+        }
+        return firstValueFrom(
+          this.http.post<{ projectId?: string }>('/bpm/market/import-and-install', fd, { needSuccessInfo: true })
+        ).then(res => {
+          if (res?.projectId) {
+            void this.loadProjects().then(() => this.setProjectId(res.projectId!));
+          }
+        });
+      }
     });
   }
 
@@ -369,7 +556,7 @@ export class BpmProjectProcess implements OnInit {
   }
 
   pageConfig: PageConfig = {
-    title: '工作流',
+    title: '项目管理',
     crud: '/bpm/process',
     tableConfig: {
       showCheckbox: true
@@ -398,7 +585,7 @@ export class BpmProjectProcess implements OnInit {
     columnActions: [
       {
         icon: 'deployment-unit',
-        tooltip: '流程管理',
+        tooltip: '设计',
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
@@ -414,7 +601,7 @@ export class BpmProjectProcess implements OnInit {
         handler: () => {
           const record = inject(ColumnToken, { optional: true })?.getRecord();
           if (record?.id) {
-            this.router.navigate(['/bpm/processinstances'], {
+            this.router.navigate(['/bpm/process-instances'], {
               queryParams: { processDefinitionKey: record.id }
             });
           }
@@ -452,7 +639,7 @@ export class BpmProjectProcess implements OnInit {
       {
         name: '项目ID',
         dataIndex: 'projectId',
-        column: 'disabled',
+        column: false,
         edit: {
           create: 'hidden',
           update: 'hidden'

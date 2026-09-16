@@ -130,7 +130,7 @@ export class BpmMarketDetail implements OnInit {
         return firstValueFrom(
           this.http.post<{ projectId: string }>(`/bpm/market/${this.packId}/install`, body, { needSuccessInfo: true })
         ).then(res => {
-          void this.router.navigate(['/bpm/process-definition'], { queryParams: { projectId: res.projectId } });
+          void this.router.navigate(['/bpm/project'], { queryParams: { projectId: res.projectId } });
         });
       }
     });
