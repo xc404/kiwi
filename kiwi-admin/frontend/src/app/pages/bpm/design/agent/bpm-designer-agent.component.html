@@ -1,0 +1,64 @@
+<section class="bpm-designer-agent" aria-label="BPM 设计器 Agent">
+  @if (agentEnabledLoaded() && !agentEnabled()) {
+    <div class="bpm-designer-agent__banner bpm-designer-agent__banner--warn"> Agent 未启用。请在后端设置 <code>kiwi.ai.enabled=true</code> 后刷新。 </div>
+  }
+
+  @if (stageLabel() || hasOpenSession()) {
+    <header class="bpm-designer-agent__head">
+      @if (stageLabel()) {
+        <nz-tag [nzColor]="busy() ? 'processing' : 'default'">{{ stageLabel() }}</nz-tag>
+      }
+      @if (hasOpenSession()) {
+        <button class="bpm-designer-agent__clear" nz-button nzSize="small" nzType="link" [disabled]="busy()" (click)="clearSession()"> 清空会话 </button>
+      }
+    </header>
+  }
+
+  <div class="bpm-designer-agent__messages">
+    @if (messages().length === 0 && !busy()) {
+      <div class="bpm-designer-agent__empty">
+        <p class="bpm-designer-agent__empty-title">用自然语言改流程</p>
+        <p class="bpm-designer-agent__empty-hint">示例：</p>
+        <ul>
+          <li>在提交后增加经理审批</li>
+          <li>把 HTTP 节点改成调用订单服务</li>
+          <li>解释当前流程在做什么</li>
+        </ul>
+      </div>
+    }
+
+    @for (m of messages(); track $index) {
+      <div class="bpm-designer-agent__msg" [class.is-user]="m.role === 'user'">
+        <div class="bpm-designer-agent__text">{{ m.text }}</div>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <p class="bpm-designer-agent__err">{{ errorMessage() }}</p>
+    }
+
+    @if (busy()) {
+      <div class="bpm-designer-agent__msg">
+        <nz-spin nzSimple></nz-spin>
+      </div>
+    }
+    <div #messagesEnd class="bpm-designer-agent__scroll-anchor"></div>
+  </div>
+
+  <footer class="bpm-designer-agent__input">
+    @if (busy()) {
+      <p class="bpm-designer-agent__input-hint">Agent 正在处理，请稍候…</p>
+    }
+    <textarea
+      #chatInput
+      class="bpm-designer-agent__chat-input"
+      nz-input
+      rows="3"
+      [disabled]="inputLocked()"
+      [ngModel]="inputText()"
+      [placeholder]="inputPlaceholder()"
+      (keydown)="onInputKeydown($event)"
+      (ngModelChange)="inputText.set($event)"
+    ></textarea>
+  </footer>
+</section>

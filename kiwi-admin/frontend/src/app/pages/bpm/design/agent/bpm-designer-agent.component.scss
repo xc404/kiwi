@@ -1,0 +1,119 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bpm-designer-agent {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bpm-designer-agent__head {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.bpm-designer-agent__clear {
+  margin-left: auto;
+}
+
+.bpm-designer-agent__messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+
+.bpm-designer-agent__msg {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--ant-color-fill-quaternary, #f5f5f5);
+  border-radius: 6px;
+
+  &.is-user {
+    background: var(--ant-color-primary-bg, #e6f4ff);
+  }
+}
+
+.bpm-designer-agent__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bpm-designer-agent__banner {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+
+  &--warn {
+    color: var(--ant-color-warning, #d48806);
+    background: var(--ant-color-warning-bg, #fffbe6);
+    border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  }
+}
+
+.bpm-designer-agent__empty {
+  padding: 12px;
+  color: var(--ant-color-text-secondary, #666);
+  font-size: 13px;
+
+  ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+  }
+}
+
+.bpm-designer-agent__empty-title {
+  margin: 0 0 8px;
+  color: var(--ant-color-text, rgb(0 0 0 / 0.88));
+  font-weight: 600;
+}
+
+.bpm-designer-agent__empty-hint {
+  margin: 0 0 4px;
+}
+
+.bpm-designer-agent__err {
+  margin: 0 0 12px;
+  color: #cf1322;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.bpm-designer-agent__scroll-anchor {
+  height: 1px;
+}
+
+.bpm-designer-agent__input {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.bpm-designer-agent__input-hint {
+  margin: 0;
+  color: rgb(0 0 0 / 0.45);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.bpm-designer-agent__chat-input {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+}

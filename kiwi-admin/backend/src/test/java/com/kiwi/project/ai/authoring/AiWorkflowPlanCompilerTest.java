@@ -1,6 +1,7 @@
 package com.kiwi.project.ai.authoring;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiwi.project.bpm.KiwiBpmnXml;
 import com.kiwi.project.system.ai.BpmDesignerXmlValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,9 @@ class AiWorkflowPlanCompilerTest {
         String xml = compiler.compile(plan, catalog);
 
         new BpmDesignerXmlValidator().validate(xml);
+        assertTrue(xml.contains("xmlns:kiwi=\"" + KiwiBpmnXml.Namespace + "\""));
         assertTrue(xml.contains("kiwi:componentId=\"classpath_httpRequest\""));
+        assertTrue(xml.contains("<camunda:property name=\"componentId\" value=\"classpath_httpRequest\"/>"));
         assertTrue(xml.contains("camunda:delegateExpression=\"${httpRequest}\""));
         assertTrue(xml.contains("<camunda:inputParameter name=\"url\">${requestUrl}</camunda:inputParameter>"));
         assertTrue(xml.contains("<bpmndi:BPMNShape"));

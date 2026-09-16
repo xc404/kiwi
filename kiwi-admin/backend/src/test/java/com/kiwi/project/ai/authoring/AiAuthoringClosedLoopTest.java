@@ -14,6 +14,7 @@ import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
 import com.kiwi.project.bpm.service.BpmRemoteMarketInstallService;
 import com.kiwi.project.bpm.service.BpmTemplatePackManifestScanner;
+import com.kiwi.project.bpm.KiwiBpmnXml;
 import com.kiwi.project.system.ai.BpmDesignerXmlValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -173,7 +174,7 @@ class AiAuthoringClosedLoopTest {
     private String componentXml(String componentId) {
         return """
                 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-                                  xmlns:kiwi="http://kiwi.io/schema/bpmn"
+                                  xmlns:kiwi="%s"
                                   id="Definitions_1" targetNamespace="tns">
                   <bpmn:process id="p1" isExecutable="true">
                     <bpmn:startEvent id="StartEvent_1"/>
@@ -183,6 +184,6 @@ class AiAuthoringClosedLoopTest {
                     <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="EndEvent_1"/>
                   </bpmn:process>
                 </bpmn:definitions>
-                """.formatted(componentId);
+                """.formatted(KiwiBpmnXml.Namespace, componentId);
     }
 }

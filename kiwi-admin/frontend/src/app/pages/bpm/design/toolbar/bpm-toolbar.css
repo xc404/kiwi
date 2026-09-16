@@ -1,17 +1,19 @@
 .bpm-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 4px 0;
-  min-height: 40px;
-  padding: 6px 12px;
-  background: #fafafa;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .bpm-toolbar__group {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 2px;
 }

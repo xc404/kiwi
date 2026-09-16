@@ -1,7 +1,7 @@
 {
     "name": "Kiwi",
     "prefix": "kiwi",
-    "uri": "http://kiwi.com/bpmn",
+    "uri": "http://kiwi.io/schema/bpmn",
     "xml": {
         "tagAlias": "lowerCase"
     },

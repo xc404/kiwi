@@ -1,6 +1,7 @@
 package com.kiwi.project.ai.authoring;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiwi.project.bpm.KiwiBpmnXml;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,7 @@ public class AiWorkflowPlanCompiler {
             "startEvent", "endEvent", "serviceTask", "userTask", "exclusiveGateway");
 
     private final ObjectMapper objectMapper;
+    private final AiWorkflowPlanLayout planLayout = new AiWorkflowPlanLayout();
 
     public AiWorkflowPlanCompiler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -45,7 +47,7 @@ public class AiWorkflowPlanCompiler {
     public String compile(AiWorkflowPlan plan, AiAuthoringCatalog catalog) {
         validatePlan(plan);
         Map<String, AiAuthoringCatalog.CatalogComponent> installed = installedIndex(catalog);
-        Map<String, Box> boxes = layout(plan);
+        Map<String, AiWorkflowPlanLayout.Box> boxes = planLayout.layout(plan);
         String processId = StringUtils.defaultIfBlank(plan.getProcessId(), "ai_generated_process");
 
         StringBuilder nodes = new StringBuilder();
@@ -73,9 +75,9 @@ public class AiWorkflowPlanCompiler {
                                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
                                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                   xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-                                  xmlns:kiwi="http://kiwi.io/schema/bpmn"
+                                  xmlns:kiwi="%s"
                                   id="Definitions_%s"
-                                  targetNamespace="http://kiwi.io/ai-authoring">
+                                  targetNamespace="http://bpmn.io/schema/bpmn">
                   <bpmn:process id="%s" name="%s" isExecutable="true">
                 %s%s  </bpmn:process>
                   <bpmndi:BPMNDiagram id="BPMNDiagram_%s">
@@ -84,6 +86,7 @@ public class AiWorkflowPlanCompiler {
                   </bpmndi:BPMNDiagram>
                 </bpmn:definitions>
                 """.formatted(
+                KiwiBpmnXml.Namespace,
                 escape(processId),
                 escape(processId),
                 escape(StringUtils.defaultIfBlank(plan.getName(), "AI Generated Workflow")),
@@ -182,25 +185,26 @@ public class AiWorkflowPlanCompiler {
         xml.append("    <bpmn:serviceTask id=\"").append(id).append("\"")
                 .append(nameAttribute)
                 .append(" camunda:delegateExpression=\"").append(escape(delegate)).append("\"")
-                .append(" kiwi:componentId=\"").append(escape(component.getId())).append("\"");
-        if (node.getParameters() == null || node.getParameters().isEmpty()) {
-            xml.append("/>\n");
-            return;
-        }
-        xml.append(">\n")
+                .append(" kiwi:componentId=\"").append(escape(component.getId())).append("\">\n")
                 .append("      <bpmn:extensionElements>\n")
-                .append("        <camunda:inputOutput>\n");
-        for (Map.Entry<String, Object> parameter : node.getParameters().entrySet()) {
-            if (StringUtils.isBlank(parameter.getKey())) {
-                continue;
+                .append("        <camunda:properties>\n")
+                .append("          <camunda:property name=\"componentId\" value=\"")
+                .append(escape(component.getId())).append("\"/>\n")
+                .append("        </camunda:properties>\n");
+        if (node.getParameters() != null && !node.getParameters().isEmpty()) {
+            xml.append("        <camunda:inputOutput>\n");
+            for (Map.Entry<String, Object> parameter : node.getParameters().entrySet()) {
+                if (StringUtils.isBlank(parameter.getKey())) {
+                    continue;
+                }
+                xml.append("          <camunda:inputParameter name=\"")
+                        .append(escape(parameter.getKey())).append("\">")
+                        .append(escape(parameterValue(parameter.getValue())))
+                        .append("</camunda:inputParameter>\n");
             }
-            xml.append("          <camunda:inputParameter name=\"")
-                    .append(escape(parameter.getKey())).append("\">")
-                    .append(escape(parameterValue(parameter.getValue())))
-                    .append("</camunda:inputParameter>\n");
+            xml.append("        </camunda:inputOutput>\n");
         }
-        xml.append("        </camunda:inputOutput>\n")
-                .append("      </bpmn:extensionElements>\n")
+        xml.append("      </bpmn:extensionElements>\n")
                 .append("    </bpmn:serviceTask>\n");
     }
 
@@ -219,19 +223,7 @@ public class AiWorkflowPlanCompiler {
                 .append("    </bpmn:sequenceFlow>\n");
     }
 
-    private Map<String, Box> layout(AiWorkflowPlan plan) {
-        Map<String, Box> boxes = new LinkedHashMap<>();
-        int x = 120;
-        for (AiWorkflowPlan.Node node : plan.getNodes()) {
-            int width = nodeSize(node.getType());
-            int height = nodeHeight(node.getType());
-            boxes.put(node.getId(), new Box(x, 120, width, height));
-            x += width + 100;
-        }
-        return boxes;
-    }
-
-    private void appendShape(StringBuilder xml, AiWorkflowPlan.Node node, Box box) {
+    private void appendShape(StringBuilder xml, AiWorkflowPlan.Node node, AiWorkflowPlanLayout.Box box) {
         xml.append("      <bpmndi:BPMNShape id=\"Shape_").append(escape(node.getId()))
                 .append("\" bpmnElement=\"").append(escape(node.getId())).append("\">\n")
                 .append("        <dc:Bounds x=\"").append(box.x()).append("\" y=\"").append(box.y())
@@ -240,15 +232,22 @@ public class AiWorkflowPlanCompiler {
                 .append("      </bpmndi:BPMNShape>\n");
     }
 
-    private void appendEdge(StringBuilder xml, AiWorkflowPlan.Flow flow, Map<String, Box> boxes) {
-        Box source = boxes.get(flow.getSourceRef());
-        Box target = boxes.get(flow.getTargetRef());
+    private void appendEdge(StringBuilder xml, AiWorkflowPlan.Flow flow, Map<String, AiWorkflowPlanLayout.Box> boxes) {
+        AiWorkflowPlanLayout.Box source = boxes.get(flow.getSourceRef());
+        AiWorkflowPlanLayout.Box target = boxes.get(flow.getTargetRef());
+        int x1 = source.right();
+        int y1 = source.centerY();
+        int x2 = target.x();
+        int y2 = target.centerY();
         xml.append("      <bpmndi:BPMNEdge id=\"Edge_").append(escape(flow.getId()))
                 .append("\" bpmnElement=\"").append(escape(flow.getId())).append("\">\n")
-                .append("        <di:waypoint x=\"").append(source.right()).append("\" y=\"")
-                .append(source.centerY()).append("\"/>\n")
-                .append("        <di:waypoint x=\"").append(target.x()).append("\" y=\"")
-                .append(target.centerY()).append("\"/>\n")
+                .append("        <di:waypoint x=\"").append(x1).append("\" y=\"").append(y1).append("\"/>\n");
+        if (y1 != y2) {
+            int midX = (x1 + x2) / 2;
+            xml.append("        <di:waypoint x=\"").append(midX).append("\" y=\"").append(y1).append("\"/>\n")
+                    .append("        <di:waypoint x=\"").append(midX).append("\" y=\"").append(y2).append("\"/>\n");
+        }
+        xml.append("        <di:waypoint x=\"").append(x2).append("\" y=\"").append(y2).append("\"/>\n")
                 .append("      </bpmndi:BPMNEdge>\n");
     }
 
@@ -275,22 +274,6 @@ public class AiWorkflowPlanCompiler {
         return separator >= 0 ? componentId.substring(separator + 1) : componentId;
     }
 
-    private int nodeSize(String type) {
-        return switch (type) {
-            case "startEvent", "endEvent" -> 36;
-            case "exclusiveGateway" -> 50;
-            default -> 120;
-        };
-    }
-
-    private int nodeHeight(String type) {
-        return switch (type) {
-            case "startEvent", "endEvent" -> 36;
-            case "exclusiveGateway" -> 50;
-            default -> 80;
-        };
-    }
-
     private String escape(String value) {
         if (value == null) {
             return "";
@@ -300,15 +283,5 @@ public class AiWorkflowPlanCompiler {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
-    }
-
-    private record Box(int x, int y, int width, int height) {
-        int right() {
-            return x + width;
-        }
-
-        int centerY() {
-            return y + height / 2;
-        }
     }
 }
