@@ -4,9 +4,8 @@ import { ActivatedRouteSnapshot, RouterStateSnapshot, CanActivateChildFn, CanAct
 import { SessionService } from '../session.service';
 import { WindowService } from '../window.service';
 
-// 有兴趣的可以看看class与fn的争议https://github.com/angular/angular/pull/47924
-// 我这里提供了跟judgeAuth.guard.ts的不同写法，供大家参考,也可以去官网查找mapToCanActivate 这个api，
-// 路由守卫，没有TokenKey则跳转登录页
+// 有兴趣的可以看看 class 与 fn 的争议 https://github.com/angular/angular/pull/47924
+// 也可以去官网查找 mapToCanActivate。路由守卫：没有会话则跳转登录页
 const canActivateChildFn: CanActivateFn = () => {
   // 这个方法可以检查inject是否在context中
   assertInInjectionContext(canActivateChildFn);

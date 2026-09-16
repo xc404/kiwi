@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { NonNullableFormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { LockedKey, salt } from '@config/constant';
@@ -31,7 +31,6 @@ export class LockWidgetComponent extends BasicConfirmModalComponent {
   private windowSrv = inject(WindowService);
   private lockScreenStoreService = inject(LockScreenStoreService);
   private activatedRoute = inject(ActivatedRoute);
-  private router = inject(Router);
   override modalRef = inject(NzModalRef);
 
   validateForm = this.fb.group({
@@ -52,7 +51,6 @@ export class LockWidgetComponent extends BasicConfirmModalComponent {
     this.lockScreenStoreService.lockScreenSignalStore.set(lockedState);
     this.windowSrv.setSessionStorage(LockedKey, fnEncrypt(lockedState, salt));
     this.modalRef.destroy();
-    this.router.navigateByUrl(`/blank/empty-for-lock`);
   }
 
   override getCurrentValue(): NzSafeAny {

@@ -1,17 +1,5 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Compiled output
-ui/dist
-ui/tmp
-ui/out-tsc
-ui/bazel-out
-nest-api/dist
-# Node
-ui/node_modules
-nest-api/node_modules
-ui/npm-debug.log
-ui/yarn-error.log
-
 # IDEs and editors
 .idea/
 .project
@@ -20,17 +8,9 @@ ui/yarn-error.log
 *.launch
 .settings/
 *.sublime-workspace
-
-# Visual Studio Code
-ui/.vscode/*
-!ui/.vscode/settings.json
-!ui/.vscode/tasks.json
-!ui/.vscode/launch.json
-!ui/.vscode/extensions.json
 .history/*
 
 # Miscellaneous
-ui/.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
@@ -41,8 +21,6 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-frontend/.angular/
-frontend/node_modules/
 /**/node_modules/**
 /**/target/classes/**
 /**/.angular/**
@@ -50,7 +28,6 @@ frontend/node_modules/
 # Local Spring overrides (secrets); copy from application-local.example.yml
 **/application-local.yml
 kiwi-admin/frontend/dist/
-kiwi-admin/script/__pycache__/
 kiwi-bpmn/kiwi-bpmn-core/target/
 kiwi-common/target/
 kiwi-bpmn/**/target/
@@ -64,3 +41,4 @@ kiwi-admin/frontend/deploy/__pycache__/
 kiwi-admin/frontend/dist-verify/
 docker/plugins/*.jar
 !docker/plugins/.gitkeep
+**/dependency-reduced-pom.xml

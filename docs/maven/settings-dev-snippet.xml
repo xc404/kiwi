@@ -6,7 +6,6 @@
 
   说明：
   - 仅影响从远程仓库解析的 SNAPSHOT；本地 mvn install 的 ~/.m2 副本不会因此自动更新。
-  - 跨仓库本地联调推荐 kiwi 使用 -Pcryoems-bpm-local（reactor 直接编 sibling）。
   - 单次强制更新可用：mvn -U ...
 -->
 <profiles>

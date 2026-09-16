@@ -29,7 +29,6 @@
         <module>kiwi-bpmn/kiwi-bpmn-component-payment</module>
     </modules>
     <properties>
-        <cryoems-bpm.version>1.0.0-SNAPSHOT</cryoems-bpm.version>
         <java.version>25</java.version>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -190,11 +189,6 @@
                 <groupId>com.kiwi</groupId>
                 <artifactId>kiwi-bpmn-component-payment</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.kiwi</groupId>
-                <artifactId>cryoems-bpm</artifactId>
-                <version>${cryoems-bpm.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

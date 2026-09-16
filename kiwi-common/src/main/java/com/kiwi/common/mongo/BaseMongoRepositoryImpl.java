@@ -52,18 +52,10 @@ public class BaseMongoRepositoryImpl<T extends IdEntity<ID>, ID> extends SimpleM
 
     @Override
     public Page<T> findBy(Query query, Pageable pageable) {
-        boolean total = true;
-//        if( pageable instanceof RequestTotalPageRequest ) {
-//            total = ((RequestTotalPageRequest) pageable).requestTotal();
-//        }
         Query countQuery = Query.of(query);
         query.with(pageable);
         List<T> list = this.kiwiMongoTemplate.find(query, clazz);
-        long count = list.size();
-        if( total ) {
-            count = this.kiwiMongoTemplate.count(countQuery, clazz);
-        }
-
+        long count = this.kiwiMongoTemplate.count(countQuery, clazz);
         return new PageImpl<>(list, pageable, count);
     }
 
