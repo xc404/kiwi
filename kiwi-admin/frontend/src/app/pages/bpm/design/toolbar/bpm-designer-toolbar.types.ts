@@ -7,6 +7,7 @@ import type { NzMessageService } from 'ng-zorro-antd/message';
 
 import type { BpmEditorToken } from '../editor/bpm-editor-token';
 import type { BpmSaveAsComponentModalData, SaveAsComponentFormPayload } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
+import type { BpmStartProcessModalData } from './bpm-start-process-modal/bpm-start-process-modal.component';
 
 /** 与后端 AssistantDesignerTools.DEFAULT_TOOLBAR_COMMANDS 对齐 */
 export const BPM_AI_TOOLBAR_COMMAND_IDS = [
@@ -40,7 +41,7 @@ export interface BpmDesignerToolbarContext {
 
   getSaveAsComponentModalDefaults(): BpmSaveAsComponentModalData;
   submitSaveAsComponent(payload: SaveAsComponentFormPayload): Promise<void>;
-  getStartProcessModalInitialText(): string;
+  prepareStartProcessModalData(): Promise<BpmStartProcessModalData>;
   submitStartProcessFromModal(variables: Record<string, unknown>): Promise<unknown>;
   importBpmnXml(xml: string): Promise<void>;
 }

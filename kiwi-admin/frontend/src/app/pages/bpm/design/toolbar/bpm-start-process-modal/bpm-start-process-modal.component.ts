@@ -7,6 +7,7 @@ import { NZ_MODAL_DATA } from 'ng-zorro-antd/modal';
 
 export interface BpmStartProcessModalData {
   initialText: string;
+  missingKeys?: string[];
 }
 
 /** 启动流程变量：仅 modal 内容区，由 NzModalWrapService 承载外壳与按钮 */
@@ -22,6 +23,11 @@ export class BpmStartProcessModalComponent {
   readonly nzData = inject<BpmStartProcessModalData>(NZ_MODAL_DATA);
 
   private readonly jsonEditor = viewChild(JsonCodeEditorComponent);
+
+  missingHint(): string {
+    const keys = (this.nzData.missingKeys ?? []).map(k => k.trim()).filter(Boolean);
+    return keys.join('、');
+  }
 
   /** 解析成功返回变量对象；失败返回 false（用于 nzOnOk 阻止关闭） */
   parseVariablesOrFalse(): Record<string, unknown> | false {

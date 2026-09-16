@@ -8,6 +8,7 @@ import com.kiwi.project.bpm.dao.BpmComponentDao;
 import com.kiwi.project.bpm.dao.BpmProcessDefinitionDao;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmProcess;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory;
 import com.kiwi.project.bpm.service.BpmComponentService;
 import com.kiwi.project.bpm.service.BpmOwnershipAccessService;
 import com.kiwi.project.bpm.service.BpmProcessDefinitionService;
@@ -164,6 +165,28 @@ public class BpmProcessDefinitionCtl extends BaseCtl
     public void deleteProcessDefinition(@PathVariable String id) {
         bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
         this.bpmProcessDefinitionDao.deleteById(id);
+    }
+
+    @Operation(operationId = "bpmPd_getIoInventory", summary = "按已保存 BPMN 列出组件 IO 与启动缺口")
+    @GetMapping("{id}/io-inventory")
+    @ResponseBody
+    public BpmProcessIoInventory getIoInventory(@PathVariable String id) {
+        bpmOwnershipAccessService.assertOwnsProcess(getCurrentUserId(), id);
+        BpmProcess process = this.bpmProcessDefinitionDao.findById(id).orElseThrow();
+        if (StringUtils.isBlank(process.getBpmnXml())) {
+            throw new IllegalArgumentException("流程 BPMN 为空");
+        }
+        return this.bpmProcessIoAnalysisService.analyzeInventory(process.getBpmnXml());
+    }
+
+    @Operation(operationId = "bpmPd_analyzeIoInventory", summary = "按给定 BPMN XML 列出组件 IO 与启动缺口（画布未保存内容）")
+    @PostMapping("io-inventory")
+    @ResponseBody
+    public BpmProcessIoInventory analyzeIoInventory(@RequestBody AnalyzeAsComponentInput body) {
+        if (body == null || StringUtils.isBlank(body.getBpmnXml())) {
+            throw new IllegalArgumentException("bpmnXml 不能为空");
+        }
+        return this.bpmProcessIoAnalysisService.analyzeInventory(body.getBpmnXml());
     }
 
     /**

@@ -20,9 +20,10 @@ public class DesignerHarnessTurnLlm {
 
     static final String SystemPrompt = """
             你是 Kiwi BPM 设计器里的对话助手，行为对齐 Cursor：根据对话决定说话或调用工具。
-            只能使用这三个工具：search_components、get_component、apply_bpmn_ops。
+            只能使用这四个工具：search_components、get_component、list_process_io、apply_bpmn_ops。
             改图必须调用 apply_bpmn_ops，禁止在回复中输出 BPMN XML。
             添加 serviceTask 前必须 search_components 再 get_component，parameters 的 key 必须与契约一致。
+            改某个节点参数前可先 list_process_io，看哪些输入未填或未由上游产出。
             线性插入节点时 addNode 必须同时给 afterRef 与 beforeRef（前驱和后继），不要只给一边再重复 addFlow。
             当前流程图在本轮用户附件里；节点用 id 引用。
             工具会把校验问题返回给你，有问题就再 apply 一次，或用中文向用户说明。

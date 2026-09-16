@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, input, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
 
 import { NzModalWrapService } from '@app/shared/modal/nz-modal-wrap.service';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
@@ -16,6 +16,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { BpmDesignerToolbarService } from './bpm-designer-toolbar.service';
 import type { BpmDesignerToolbarCommand, BpmDesignerToolbarContext } from './bpm-designer-toolbar.types';
 import type { BpmSaveAsComponentModalData, SaveAsComponentFormPayload } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
+import type { BpmStartProcessModalData } from './bpm-start-process-modal/bpm-start-process-modal.component';
 import { exportBpmnSvg, exportBpmnXml, logBpmnXml, openSaveAsComponentModal, openStartProcessModal, toggleGridSnapping, triggerEditorAction } from './bpm-toolbar-run.utils';
 import { buildToolbarLayout, type ToolbarOverflowGroup, type ToolbarSegment } from './build-toolbar-segments';
 import { BpmEditorToken } from '../editor/bpm-editor-token';
@@ -123,10 +124,26 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
       });
   }
 
-  getStartProcessModalInitialText(): string {
+  async prepareStartProcessModalData(): Promise<BpmStartProcessModalData> {
     const id = this.editor.getBpmnId();
     const cached = id ? this.startVariables.load(id) : undefined;
-    return cached !== undefined ? JSON.stringify(cached, null, 2) : '{}';
+    let startKeys: string[] = [];
+    try {
+      const xml = await this.editor.exportBpmnXml();
+      const inventory = await firstValueFrom(
+        this.processDefinitionService.analyzeIoInventory(xml).pipe(catchError(() => of(null)))
+      );
+      startKeys = (inventory?.startVariables ?? [])
+        .map(v => v.key)
+        .filter((key): key is string => !!key && key.trim().length > 0);
+    } catch {
+      startKeys = [];
+    }
+    const merged = this.startVariables.mergeSkeleton(cached, startKeys);
+    return {
+      initialText: JSON.stringify(merged, null, 2),
+      missingKeys: this.startVariables.emptyKeys(merged, startKeys)
+    };
   }
 
   submitStartProcessFromModal(variables: Record<string, unknown>): Promise<unknown> {

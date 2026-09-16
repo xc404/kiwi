@@ -66,4 +66,29 @@ export class BpmStartVariablesService {
     }
     return input;
   }
+
+  /**
+   * 用启动缺口生成空骨架，再用缓存值覆盖（缓存可含额外 key）。
+   */
+  mergeSkeleton(cached: Record<string, unknown> | undefined, startKeys: string[]): Record<string, unknown> {
+    const skeleton: Record<string, unknown> = {};
+    for (const key of startKeys) {
+      const k = key.trim();
+      if (k) {
+        skeleton[k] = '';
+      }
+    }
+    return { ...skeleton, ...(cached ?? {}) };
+  }
+
+  emptyKeys(variables: Record<string, unknown>, startKeys: string[]): string[] {
+    return startKeys.filter(key => {
+      const k = key.trim();
+      if (!k) {
+        return false;
+      }
+      const value = variables[k];
+      return value === undefined || value === null || value === '';
+    });
+  }
 }

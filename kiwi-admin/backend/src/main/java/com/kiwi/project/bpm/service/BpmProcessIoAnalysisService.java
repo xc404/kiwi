@@ -1,18 +1,25 @@
 package com.kiwi.project.bpm.service;
 
+import com.kiwi.project.bpm.KiwiBpmnXml;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import com.kiwi.project.bpm.model.BpmProcess;
 import com.kiwi.project.bpm.model.BpmProcessIoGapAnalysis;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory.Direction;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory.Param;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory.StartVariable;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory.ValueKind;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -31,118 +38,100 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * BPMN 流程级输入/输出（组件元数据与连线）分析。
+ * BPMN 流程级与组件级输入/输出分析。
  */
 @Service
 @RequiredArgsConstructor
-public class BpmProcessIoAnalysisService
-{
-    private static final String BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL";
-    private static final String CAMUNDA_NS = "http://camunda.org/schema/1.0/bpmn";
+public class BpmProcessIoAnalysisService {
 
+    private static final String BpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL";
+    private static final String CamundaNs = "http://camunda.org/schema/1.0/bpmn";
     /** 与运行时 AssignmentActivity 等一致：仅一层 ${varName} */
-    private static final Pattern INPUT_VAR_REF = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
+    private static final Pattern InputVarRef = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
 
     private final BpmComponentService bpmComponentService;
 
-    /**
-     * 分析整个流程的「流程级输入」需求：
-     * <ul>
-     *   <li>组件任务 {@code camunda:inputParameter} 的值中出现 {@code ${var}}，表示执行该任务时需要流程变量 {@code var}。</li>
-     *   <li>若控制流上存在<strong>上游</strong>组件任务，其元数据 {@code outputParameters} 中含有同名 {@code key}，
-     *       则视为该变量已由上游产出，不再算作流程启动时需注入的变量。</li>
-     *   <li>上游：沿 {@code sequenceFlow} 反向从当前任务可达的任意节点（不含自身）上的其它组件任务。</li>
-     *   <li>流程输出：所有已解析组件的 {@code outputParameters} 按控制流拓扑顺序合并，同名 key 以后出现的组件为准。</li>
-     * </ul>
-     *
-     * @param bpmnXml 完整 BPMN 2.0 文档
-     */
-    public BpmProcessIoGapAnalysis analyzeComponentIoGaps(String bpmnXml) {
+    public BpmProcessIoInventory analyzeInventory(String bpmnXml) {
         if (StringUtils.isBlank(bpmnXml)) {
             throw new IllegalArgumentException("bpmnXml 不能为空");
         }
-        Document doc;
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(true);
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            doc = factory.newDocumentBuilder().parse(new ByteArrayInputStream(bpmnXml.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
-            throw new IllegalArgumentException("无法解析 BPMN XML: " + e.getMessage(), e);
-        }
-
+        Document doc = parseDocument(bpmnXml);
         Map<String, List<String>> reverseAdj = buildReverseAdjacency(doc);
         Map<String, List<String>> forwardAdj = buildForwardAdjacency(doc);
-        List<Element> serviceTasks = findServiceTasks(doc);
+        List<Element> tasks = findComponentTasks(doc);
+
+        Map<String, Element> taskById = new LinkedHashMap<>();
+        Map<String, String> componentIdByTask = new LinkedHashMap<>();
         Map<String, BpmComponent> componentByTaskId = new HashMap<>();
-        for (Element task : serviceTasks) {
-            String cid = findCamundaPropertyValue(task, "componentId");
-            if (StringUtils.isBlank(cid)) {
+        for (Element task : tasks) {
+            String taskId = StringUtils.trimToNull(task.getAttribute("id"));
+            if (taskId == null) {
                 continue;
             }
-            BpmComponent c = bpmComponentService.resolveComponentById(cid.trim());
-            if (c != null) {
-                componentByTaskId.put(task.getAttribute("id"), c);
-            }
-        }
-
-        LinkedHashMap<String, BpmComponentParameter> processInputByVar = new LinkedHashMap<>();
-        for (Element task : serviceTasks) {
-            String componentId = findCamundaPropertyValue(task, "componentId");
+            String componentId = componentIdOf(task);
             if (StringUtils.isBlank(componentId)) {
                 continue;
             }
-            String taskId = task.getAttribute("id");
-            BpmComponent self = componentByTaskId.get(taskId);
-            String inputText = collectInputParameterText(task);
-            List<String> refs = extractVariableRefs(inputText);
-
-            Set<String> upstreamOutputKeys = new HashSet<>();
-            Set<String> predAll = backwardReachable(reverseAdj, taskId);
-            for (String pid : predAll) {
-                if (pid.equals(taskId)) {
-                    continue;
-                }
-                BpmComponent up = componentByTaskId.get(pid);
-                if (up != null) {
-                    upstreamOutputKeys.addAll(collectOutputKeys(up));
-                }
-            }
-
-            for (String v : refs) {
-                if (upstreamOutputKeys.contains(v) || processInputByVar.containsKey(v)) {
-                    continue;
-                }
-                processInputByVar.put(v, resolveProcessInputDescriptor(self, task, v));
+            taskById.put(taskId, task);
+            componentIdByTask.put(taskId, componentId.trim());
+            BpmComponent resolved = bpmComponentService.resolveComponentById(componentId.trim());
+            if (resolved != null) {
+                componentByTaskId.put(taskId, resolved);
             }
         }
 
-        List<String> orderedTaskIds = orderServiceTasksByFlow(forwardAdj, componentByTaskId.keySet());
+        List<String> orderedTaskIds = orderTasksByFlow(forwardAdj, taskById.keySet());
+        BpmProcessIoInventory inventory = new BpmProcessIoInventory();
+        LinkedHashMap<String, StartVariable> startByKey = new LinkedHashMap<>();
         LinkedHashMap<String, BpmComponentParameter> outputByKey = new LinkedHashMap<>();
-        for (String tid : orderedTaskIds) {
-            BpmComponent comp = componentByTaskId.get(tid);
-            if (comp == null || comp.getOutputParameters() == null) {
-                continue;
+
+        for (String taskId : orderedTaskIds) {
+            Element task = taskById.get(taskId);
+            BpmComponent component = componentByTaskId.get(taskId);
+            Set<String> upstreamOutputKeys = collectUpstreamOutputKeys(
+                    reverseAdj, taskId, taskById, componentByTaskId);
+
+            BpmProcessIoInventory.Node node = new BpmProcessIoInventory.Node();
+            node.setNodeId(taskId);
+            node.setName(StringUtils.trimToNull(task.getAttribute("name")));
+            node.setComponentId(componentIdByTask.get(taskId));
+            if (component != null) {
+                node.setComponentName(component.getName());
             }
-            for (BpmComponentParameter p : comp.getOutputParameters()) {
-                if (p == null || p.isHidden() || StringUtils.isBlank(p.getKey())) {
-                    continue;
-                }
-                String k = p.getKey().trim();
-                outputByKey.remove(k);
-                outputByKey.put(k, p);
+            Map<String, String> xmlInputs = collectNamedParameters(task, "inputParameter");
+            Map<String, String> xmlOutputs = collectNamedParameters(task, "outputParameter");
+            node.setInputs(buildInputs(component, xmlInputs, upstreamOutputKeys));
+            node.setOutputs(buildOutputs(component, xmlOutputs));
+            inventory.getNodes().add(node);
+
+            for (Param input : node.getInputs()) {
+                collectStartVariables(startByKey, taskId, input, upstreamOutputKeys);
             }
+            mergeProcessOutputs(outputByKey, component);
         }
 
+        inventory.setStartVariables(new ArrayList<>(startByKey.values()));
+        inventory.setProcessOutputs(new ArrayList<>(outputByKey.values()));
+        return inventory;
+    }
+
+    /**
+     * 流程级输入/输出汇总，由 {@link #analyzeInventory(String)} 派生。
+     */
+    public BpmProcessIoGapAnalysis analyzeComponentIoGaps(String bpmnXml) {
+        BpmProcessIoInventory inventory = analyzeInventory(bpmnXml);
         BpmProcessIoGapAnalysis result = new BpmProcessIoGapAnalysis();
-        result.setProcessInputs(new ArrayList<>(processInputByVar.values()));
-        result.setProcessOutputs(new ArrayList<>(outputByKey.values()));
+        List<BpmComponentParameter> processInputs = new ArrayList<>();
+        for (StartVariable start : inventory.getStartVariables()) {
+            processInputs.add(toProcessInputParameter(start));
+        }
+        result.setProcessInputs(processInputs);
+        result.setProcessOutputs(new ArrayList<>(inventory.getProcessOutputs()));
         return result;
     }
 
     /**
-     * 将流程定义包装为「逻辑 {@link BpmComponent}」：{@code inputParameters}/{@code outputParameters} 与
-     * {@link #analyzeComponentIoGaps(String)} 结果一致，供编排/文档展示；非可执行 Spring Bean。
+     * 将流程定义包装为逻辑 {@link BpmComponent}：输入/输出与缺口分析一致。
      */
     public BpmComponent wrapProcessAsComponent(BpmProcess process) {
         if (process == null) {
@@ -166,80 +155,250 @@ public class BpmProcessIoAnalysisService
         return c;
     }
 
-    /**
-     * 为「须由流程注入」的变量名构造 {@link BpmComponentParameter}：优先匹配当前任务上引用该变量的输入项元数据。
-     */
-    private static BpmComponentParameter resolveProcessInputDescriptor(BpmComponent self, Element task, String varName) {
-        if (self != null && self.getInputParameters() != null) {
-            for (BpmComponentParameter p : self.getInputParameters()) {
-                if (p == null || p.isHidden()) {
+    private List<Param> buildInputs(
+            BpmComponent component,
+            Map<String, String> xmlInputs,
+            Set<String> upstreamOutputKeys) {
+        List<Param> inputs = new ArrayList<>();
+        Set<String> catalogKeys = new HashSet<>();
+        if (component != null && component.getInputParameters() != null) {
+            for (BpmComponentParameter p : component.getInputParameters()) {
+                if (p == null || p.isHidden() || StringUtils.isBlank(p.getKey())) {
                     continue;
                 }
-                if (StringUtils.isNotBlank(p.getKey()) && varName.equals(p.getKey().trim())) {
-                    return copyBpmParameter(p);
-                }
-            }
-            String paramKey = findInputParameterNameContainingVarRef(task, varName);
-            if (StringUtils.isNotBlank(paramKey)) {
-                for (BpmComponentParameter p : self.getInputParameters()) {
-                    if (p == null || p.isHidden()) {
-                        continue;
-                    }
-                    if (paramKey.equals(p.getKey())) {
-                        return copyBpmParameter(p);
-                    }
-                }
+                String key = p.getKey().trim();
+                catalogKeys.add(key);
+                String configured = xmlInputs.get(key);
+                inputs.add(toInputParam(p, configured, true, upstreamOutputKeys));
             }
         }
-        BpmComponentParameter synthetic = new BpmComponentParameter();
-        synthetic.setKey(varName);
-        synthetic.setName(varName);
-        return synthetic;
-    }
-
-    private static String findInputParameterNameContainingVarRef(Element serviceTask, String varName) {
-        String needle = "${" + varName + "}";
-        NodeList byNs = serviceTask.getElementsByTagNameNS(CAMUNDA_NS, "inputParameter");
-        for (int i = 0; i < byNs.getLength(); i++) {
-            if (byNs.item(i) instanceof Element el) {
-                if (StringUtils.contains(el.getTextContent(), needle)) {
-                    String n = el.getAttribute("name");
-                    if (StringUtils.isNotBlank(n)) {
-                        return n.trim();
-                    }
-                }
-            }
-        }
-        NodeList all = serviceTask.getElementsByTagName("*");
-        for (int i = 0; i < all.getLength(); i++) {
-            if (!(all.item(i) instanceof Element el)) {
+        for (Map.Entry<String, String> extra : xmlInputs.entrySet()) {
+            if (catalogKeys.contains(extra.getKey())) {
                 continue;
             }
-            String ln = el.getLocalName();
-            if (ln == null) {
-                ln = stripPrefix(el.getTagName());
-            }
-            if ("inputParameter".equalsIgnoreCase(ln) && StringUtils.contains(el.getTextContent(), needle)) {
-                String n = el.getAttribute("name");
-                if (StringUtils.isNotBlank(n)) {
-                    return n.trim();
-                }
-            }
+            BpmComponentParameter synthetic = new BpmComponentParameter();
+            synthetic.setKey(extra.getKey());
+            synthetic.setName(extra.getKey());
+            inputs.add(toInputParam(synthetic, extra.getValue(), false, upstreamOutputKeys));
         }
-        return null;
+        return inputs;
     }
 
-    private static BpmComponentParameter copyBpmParameter(BpmComponentParameter p) {
+    private Param toInputParam(
+            BpmComponentParameter catalog,
+            String configuredRaw,
+            boolean fromCatalog,
+            Set<String> upstreamOutputKeys) {
+        String configured = configuredRaw == null ? null : configuredRaw.trim();
+        boolean filled = StringUtils.isNotBlank(configured);
+        List<String> refs = extractVariableRefs(configured);
+        boolean implicitRequired = fromCatalog && catalog.isRequired() && !filled;
+        if (implicitRequired) {
+            refs = List.of(catalog.getKey().trim());
+        }
+        Param param = new Param();
+        param.setKey(catalog.getKey().trim());
+        param.setName(StringUtils.defaultIfBlank(catalog.getName(), catalog.getKey()));
+        param.setDescription(catalog.getDescription());
+        param.setRequired(catalog.isRequired());
+        param.setDirection(Direction.Input);
+        param.setFilled(filled);
+        param.setConfiguredValue(filled ? configured : null);
+        param.setValueKind(classifyValue(configured, implicitRequired));
+        param.setExpressionRefs(new ArrayList<>(refs));
+        param.setSatisfiedByUpstream(allRefsProduced(refs, upstreamOutputKeys));
+        return param;
+    }
+
+    private List<Param> buildOutputs(BpmComponent component, Map<String, String> xmlOutputs) {
+        List<Param> outputs = new ArrayList<>();
+        Set<String> catalogKeys = new HashSet<>();
+        if (component != null && component.getOutputParameters() != null) {
+            for (BpmComponentParameter p : component.getOutputParameters()) {
+                if (p == null || p.isHidden() || StringUtils.isBlank(p.getKey())) {
+                    continue;
+                }
+                String key = p.getKey().trim();
+                catalogKeys.add(key);
+                String processVariable = StringUtils.defaultIfBlank(p.getDefaultValue(), key);
+                Param param = new Param();
+                param.setKey(key);
+                param.setName(StringUtils.defaultIfBlank(p.getName(), key));
+                param.setRequired(p.isRequired());
+                param.setDirection(Direction.Output);
+                param.setFilled(true);
+                param.setValueKind(ValueKind.Literal);
+                param.setConfiguredValue(xmlOutputs.get(key));
+                param.setProcessVariable(processVariable);
+                param.setSatisfiedByUpstream(false);
+                outputs.add(param);
+            }
+        }
+        for (Map.Entry<String, String> extra : xmlOutputs.entrySet()) {
+            if (catalogKeys.contains(extra.getKey())) {
+                continue;
+            }
+            Param param = new Param();
+            param.setKey(extra.getKey());
+            param.setName(extra.getKey());
+            param.setDirection(Direction.Output);
+            param.setFilled(true);
+            param.setValueKind(classifyValue(extra.getValue(), false));
+            param.setConfiguredValue(extra.getValue());
+            param.setProcessVariable(extra.getKey());
+            param.setExpressionRefs(extractVariableRefs(extra.getValue()));
+            outputs.add(param);
+        }
+        return outputs;
+    }
+
+    private void collectStartVariables(
+            LinkedHashMap<String, StartVariable> startByKey,
+            String taskId,
+            Param input,
+            Set<String> upstreamOutputKeys) {
+        if (input.getValueKind() == ValueKind.Literal) {
+            return;
+        }
+        for (String ref : input.getExpressionRefs()) {
+            if (StringUtils.isBlank(ref) || upstreamOutputKeys.contains(ref) || startByKey.containsKey(ref)) {
+                continue;
+            }
+            StartVariable start = new StartVariable();
+            start.setKey(ref);
+            start.setName(ref.equals(input.getKey()) ? input.getName() : ref);
+            start.setDescription(input.getDescription());
+            start.setRequired(input.isRequired());
+            start.setNodeId(taskId);
+            start.setParameterKey(input.getKey());
+            startByKey.put(ref, start);
+        }
+    }
+
+    private void mergeProcessOutputs(LinkedHashMap<String, BpmComponentParameter> outputByKey, BpmComponent component) {
+        if (component == null || component.getOutputParameters() == null) {
+            return;
+        }
+        for (BpmComponentParameter p : component.getOutputParameters()) {
+            if (p == null || p.isHidden() || StringUtils.isBlank(p.getKey())) {
+                continue;
+            }
+            String k = p.getKey().trim();
+            outputByKey.remove(k);
+            outputByKey.put(k, copyParameter(p));
+        }
+    }
+
+    private BpmComponentParameter toProcessInputParameter(StartVariable start) {
+        BpmComponentParameter p = new BpmComponentParameter();
+        p.setKey(start.getKey());
+        p.setName(StringUtils.defaultIfBlank(start.getName(), start.getKey()));
+        p.setDescription(start.getDescription());
+        p.setRequired(start.isRequired());
+        return p;
+    }
+
+    private BpmComponentParameter copyParameter(BpmComponentParameter p) {
         BpmComponentParameter c = new BpmComponentParameter();
-        BeanUtils.copyProperties(p, c);
+        c.setKey(p.getKey());
+        c.setName(p.getName());
+        c.setDescription(p.getDescription());
+        c.setDefaultValue(p.getDefaultValue());
+        c.setArray(p.isArray());
+        c.setRequired(p.isRequired());
+        c.setReadonly(p.isReadonly());
+        c.setHidden(p.isHidden());
+        c.setHtmlType(p.getHtmlType());
+        c.setType(p.getType());
+        c.setExample(p.getExample());
+        c.setDictKey(p.getDictKey());
+        c.setGroup(p.getGroup());
+        c.setImportant(p.isImportant());
+        c.setAdditionalOption(p.getAdditionalOption());
         return c;
     }
 
-    /**
-     * 将组件任务 id 按 BPMN sequenceFlow 的拓扑序排列（Kahn）；无法纳入排序的孤立任务按 id 排在后面。
-     */
-    private static List<String> orderServiceTasksByFlow(Map<String, List<String>> forwardAdj, Set<String> serviceTaskIds) {
-        if (serviceTaskIds.isEmpty()) {
+    private ValueKind classifyValue(String configured, boolean implicitRequired) {
+        if (implicitRequired || StringUtils.isBlank(configured)) {
+            return ValueKind.Empty;
+        }
+        if (!extractVariableRefs(configured).isEmpty()) {
+            return ValueKind.Expression;
+        }
+        return ValueKind.Literal;
+    }
+
+    private boolean allRefsProduced(List<String> refs, Set<String> upstreamOutputKeys) {
+        if (refs == null || refs.isEmpty()) {
+            return true;
+        }
+        for (String ref : refs) {
+            if (!upstreamOutputKeys.contains(ref)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Set<String> collectUpstreamOutputKeys(
+            Map<String, List<String>> reverseAdj,
+            String taskId,
+            Map<String, Element> taskById,
+            Map<String, BpmComponent> componentByTaskId) {
+        Set<String> keys = new HashSet<>();
+        Set<String> reachable = backwardReachable(reverseAdj, taskId);
+        for (String predId : reachable) {
+            if (predId.equals(taskId) || !taskById.containsKey(predId)) {
+                continue;
+            }
+            BpmComponent up = componentByTaskId.get(predId);
+            keys.addAll(collectProducedKeys(up, collectNamedParameters(taskById.get(predId), "outputParameter")));
+        }
+        return keys;
+    }
+
+    private Set<String> collectProducedKeys(BpmComponent component, Map<String, String> xmlOutputs) {
+        Set<String> keys = new HashSet<>();
+        if (component != null && component.getOutputParameters() != null) {
+            for (BpmComponentParameter p : component.getOutputParameters()) {
+                if (p == null || p.isHidden() || StringUtils.isBlank(p.getKey())) {
+                    continue;
+                }
+                keys.add(p.getKey().trim());
+            }
+        }
+        keys.addAll(xmlOutputs.keySet());
+        return keys;
+    }
+
+    private Document parseDocument(String bpmnXml) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            return factory.newDocumentBuilder()
+                    .parse(new ByteArrayInputStream(bpmnXml.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无法解析 BPMN XML: " + e.getMessage(), e);
+        }
+    }
+
+    private String componentIdOf(Element el) {
+        String fromNs = el.getAttributeNS(KiwiBpmnXml.Namespace, "componentId");
+        if (StringUtils.isNotBlank(fromNs)) {
+            return fromNs.trim();
+        }
+        String fromProperty = findCamundaPropertyValue(el, "componentId");
+        if (StringUtils.isNotBlank(fromProperty)) {
+            return fromProperty.trim();
+        }
+        String unprefixed = el.getAttribute("componentId");
+        return StringUtils.isBlank(unprefixed) ? null : unprefixed.trim();
+    }
+
+    private List<String> orderTasksByFlow(Map<String, List<String>> forwardAdj, Set<String> taskIds) {
+        if (taskIds.isEmpty()) {
             return List.of();
         }
         Set<String> nodes = new HashSet<>();
@@ -277,12 +436,12 @@ public class BpmProcessIoAnalysisService
         }
         List<String> out = new ArrayList<>();
         for (String id : topo) {
-            if (serviceTaskIds.contains(id)) {
+            if (taskIds.contains(id)) {
                 out.add(id);
             }
         }
         List<String> rest = new ArrayList<>();
-        for (String id : serviceTaskIds) {
+        for (String id : taskIds) {
             if (!out.contains(id)) {
                 rest.add(id);
             }
@@ -292,114 +451,61 @@ public class BpmProcessIoAnalysisService
         return out;
     }
 
-    private static Set<String> collectOutputKeys(BpmComponent c) {
-        Set<String> keys = new HashSet<>();
-        if (c.getOutputParameters() == null) {
-            return keys;
-        }
-        for (BpmComponentParameter p : c.getOutputParameters()) {
-            if (p == null || p.isHidden()) {
-                continue;
-            }
-            if (StringUtils.isNotBlank(p.getKey())) {
-                keys.add(p.getKey().trim());
-            }
-        }
-        return keys;
-    }
-
-    /**
-     * targetRef -&gt; 若干 sourceRef，用于从某节点反向找所有可达前驱。
-     */
-    private static Map<String, List<String>> buildReverseAdjacency(Document doc) {
+    private Map<String, List<String>> buildReverseAdjacency(Document doc) {
         Map<String, List<String>> rev = new HashMap<>();
-        NodeList flows = doc.getElementsByTagNameNS(BPMN_NS, "sequenceFlow");
-        for (int i = 0; i < flows.getLength(); i++) {
-            if (!(flows.item(i) instanceof Element flow)) {
-                continue;
-            }
-            String src = flow.getAttribute("sourceRef");
-            String tgt = flow.getAttribute("targetRef");
-            if (StringUtils.isAnyBlank(src, tgt)) {
-                continue;
-            }
-            rev.computeIfAbsent(tgt.trim(), k -> new ArrayList<>()).add(src.trim());
-        }
-        if (rev.isEmpty()) {
-            appendSequenceFlowsByLocalName(doc.getDocumentElement(), rev);
-        }
+        appendSequenceFlows(doc, rev, true);
         return rev;
     }
 
-    /** sourceRef -&gt; 若干 targetRef */
-    private static Map<String, List<String>> buildForwardAdjacency(Document doc) {
+    private Map<String, List<String>> buildForwardAdjacency(Document doc) {
         Map<String, List<String>> fwd = new HashMap<>();
-        NodeList flows = doc.getElementsByTagNameNS(BPMN_NS, "sequenceFlow");
-        for (int i = 0; i < flows.getLength(); i++) {
-            if (!(flows.item(i) instanceof Element flow)) {
-                continue;
-            }
-            String src = flow.getAttribute("sourceRef");
-            String tgt = flow.getAttribute("targetRef");
-            if (StringUtils.isAnyBlank(src, tgt)) {
-                continue;
-            }
-            fwd.computeIfAbsent(src.trim(), k -> new ArrayList<>()).add(tgt.trim());
-        }
-        if (fwd.isEmpty()) {
-            appendSequenceFlowsForwardByLocalName(doc.getDocumentElement(), fwd);
-        }
+        appendSequenceFlows(doc, fwd, false);
         return fwd;
     }
 
-    private static void appendSequenceFlowsForwardByLocalName(Element root, Map<String, List<String>> fwd) {
+    private void appendSequenceFlows(Document doc, Map<String, List<String>> adj, boolean reverse) {
+        NodeList flows = doc.getElementsByTagNameNS(BpmnNs, "sequenceFlow");
+        boolean any = false;
+        for (int i = 0; i < flows.getLength(); i++) {
+            if (flows.item(i) instanceof Element flow) {
+                any |= putFlow(adj, flow, reverse);
+            }
+        }
+        if (!any) {
+            appendSequenceFlowsByLocalName(doc.getDocumentElement(), adj, reverse);
+        }
+    }
+
+    private boolean putFlow(Map<String, List<String>> adj, Element flow, boolean reverse) {
+        String src = flow.getAttribute("sourceRef");
+        String tgt = flow.getAttribute("targetRef");
+        if (StringUtils.isAnyBlank(src, tgt)) {
+            return false;
+        }
+        if (reverse) {
+            adj.computeIfAbsent(tgt.trim(), k -> new ArrayList<>()).add(src.trim());
+        } else {
+            adj.computeIfAbsent(src.trim(), k -> new ArrayList<>()).add(tgt.trim());
+        }
+        return true;
+    }
+
+    private void appendSequenceFlowsByLocalName(Element root, Map<String, List<String>> adj, boolean reverse) {
         if (root == null) {
             return;
         }
-        String ln = root.getLocalName();
-        if (ln == null) {
-            ln = stripPrefix(root.getTagName());
-        }
-        if ("sequenceFlow".equalsIgnoreCase(ln)) {
-            String src = root.getAttribute("sourceRef");
-            String tgt = root.getAttribute("targetRef");
-            if (StringUtils.isNoneBlank(src, tgt)) {
-                fwd.computeIfAbsent(src.trim(), k -> new ArrayList<>()).add(tgt.trim());
-            }
+        if ("sequenceFlow".equalsIgnoreCase(localName(root))) {
+            putFlow(adj, root, reverse);
         }
         NodeList ch = root.getChildNodes();
         for (int i = 0; i < ch.getLength(); i++) {
             if (ch.item(i) instanceof Element child) {
-                appendSequenceFlowsForwardByLocalName(child, fwd);
+                appendSequenceFlowsByLocalName(child, adj, reverse);
             }
         }
     }
 
-    private static void appendSequenceFlowsByLocalName(Element root, Map<String, List<String>> rev) {
-        if (root == null) {
-            return;
-        }
-        String ln = root.getLocalName();
-        if (ln == null) {
-            ln = stripPrefix(root.getTagName());
-        }
-        if ("sequenceFlow".equalsIgnoreCase(ln)) {
-            String src = root.getAttribute("sourceRef");
-            String tgt = root.getAttribute("targetRef");
-            if (StringUtils.isNoneBlank(src, tgt)) {
-                rev.computeIfAbsent(tgt.trim(), k -> new ArrayList<>()).add(src.trim());
-            }
-        }
-        NodeList ch = root.getChildNodes();
-        for (int i = 0; i < ch.getLength(); i++) {
-            if (ch.item(i) instanceof Element child) {
-                appendSequenceFlowsByLocalName(child, rev);
-            }
-        }
-    }
-
-    /** 在反向图上从 nodeId BFS，得到原图中所有能到达 nodeId 的节点 id（含网关、事件等） */
-    private static Set<String> backwardReachable(Map<String, List<String>> reverseAdj, String nodeId) {
+    private Set<String> backwardReachable(Map<String, List<String>> reverseAdj, String nodeId) {
         Set<String> seen = new HashSet<>();
         Queue<String> q = new ArrayDeque<>();
         q.add(nodeId);
@@ -415,119 +521,120 @@ public class BpmProcessIoAnalysisService
         return seen;
     }
 
-    private static String collectInputParameterText(Element serviceTask) {
-        StringBuilder sb = new StringBuilder();
-        NodeList byNs = serviceTask.getElementsByTagNameNS(CAMUNDA_NS, "inputParameter");
-        appendElementTextContent(byNs, sb);
-        if (sb.length() > 0) {
-            return sb.toString();
+    private Map<String, String> collectNamedParameters(Element task, String localName) {
+        Map<String, String> values = new LinkedHashMap<>();
+        NodeList byNs = task.getElementsByTagNameNS(CamundaNs, localName);
+        putNamedParameters(byNs, values);
+        if (!values.isEmpty()) {
+            return values;
         }
-        NodeList all = serviceTask.getElementsByTagName("*");
+        NodeList all = task.getElementsByTagName("*");
         for (int i = 0; i < all.getLength(); i++) {
             if (!(all.item(i) instanceof Element el)) {
                 continue;
             }
-            String ln = el.getLocalName();
-            if (ln == null) {
-                ln = stripPrefix(el.getTagName());
-            }
-            if ("inputParameter".equalsIgnoreCase(ln)) {
-                sb.append(el.getTextContent());
+            if (localName.equalsIgnoreCase(localName(el))) {
+                String name = el.getAttribute("name");
+                if (StringUtils.isNotBlank(name) && !values.containsKey(name.trim())) {
+                    values.put(name.trim(), StringUtils.defaultString(el.getTextContent()));
+                }
             }
         }
-        return sb.toString();
+        return values;
     }
 
-    private static void appendElementTextContent(NodeList nl, StringBuilder sb) {
+    private void putNamedParameters(NodeList nl, Map<String, String> values) {
         for (int i = 0; i < nl.getLength(); i++) {
             if (nl.item(i) instanceof Element el) {
-                sb.append(el.getTextContent());
+                String name = el.getAttribute("name");
+                if (StringUtils.isNotBlank(name) && !values.containsKey(name.trim())) {
+                    values.put(name.trim(), StringUtils.defaultString(el.getTextContent()));
+                }
             }
         }
     }
 
-    private static List<String> extractVariableRefs(String text) {
+    private List<String> extractVariableRefs(String text) {
         if (StringUtils.isBlank(text)) {
             return List.of();
         }
         LinkedHashSet<String> unique = new LinkedHashSet<>();
-        Matcher m = INPUT_VAR_REF.matcher(text);
+        Matcher m = InputVarRef.matcher(text);
         while (m.find()) {
             unique.add(m.group(1));
         }
         return new ArrayList<>(unique);
     }
 
-    private static String stripPrefix(String tagName) {
-        int i = tagName.indexOf(':');
-        return i >= 0 ? tagName.substring(i + 1) : tagName;
-    }
-
-    private static String findCamundaPropertyValue(Element scope, String propertyName) {
-        NodeList byNs = scope.getElementsByTagNameNS(CAMUNDA_NS, "property");
-        String v = scanPropertyElements(byNs, propertyName);
-        if (v != null) {
-            return v;
-        }
-        NodeList all = scope.getElementsByTagName("*");
-        for (int i = 0; i < all.getLength(); i++) {
-            Node n = all.item(i);
-            if (!(n instanceof Element el)) {
-                continue;
-            }
-            String ln = el.getLocalName();
-            if (ln == null) {
-                ln = stripPrefix(el.getTagName());
-            }
-            if (!"property".equalsIgnoreCase(ln)) {
-                continue;
-            }
-            if (propertyName.equals(el.getAttribute("name"))) {
+    private String findCamundaPropertyValue(Element scope, String propertyName) {
+        NodeList byNs = scope.getElementsByTagNameNS(CamundaNs, "property");
+        for (int i = 0; i < byNs.getLength(); i++) {
+            if (byNs.item(i) instanceof Element el && propertyName.equals(el.getAttribute("name"))) {
                 return el.getAttribute("value");
             }
         }
-        return null;
-    }
-
-    private static String scanPropertyElements(NodeList nl, String propertyName) {
-        for (int i = 0; i < nl.getLength(); i++) {
-            Node n = nl.item(i);
-            if (n instanceof Element el) {
-                if (propertyName.equals(el.getAttribute("name"))) {
-                    return el.getAttribute("value");
+        NodeList all = scope.getElementsByTagName("*");
+        for (int i = 0; i < all.getLength(); i++) {
+            if (!(all.item(i) instanceof Element el)) {
+                continue;
+            }
+            if ("property".equalsIgnoreCase(localName(el)) && propertyName.equals(el.getAttribute("name"))) {
+                return el.getAttribute("value");
+            }
+        }
+        NamedNodeMap attributes = scope.getAttributes();
+        if (attributes != null) {
+            for (int i = 0; i < attributes.getLength(); i++) {
+                Node attribute = attributes.item(i);
+                if ("componentId".equals(attribute.getLocalName())
+                        || "componentId".equals(attribute.getNodeName())) {
+                    if ("componentId".equals(propertyName)) {
+                        return attribute.getNodeValue();
+                    }
                 }
             }
         }
         return null;
     }
 
-    private static List<Element> findServiceTasks(Document doc) {
+    private List<Element> findComponentTasks(Document doc) {
         List<Element> out = new ArrayList<>();
-        NodeList ns = doc.getElementsByTagNameNS(BPMN_NS, "serviceTask");
-        for (int i = 0; i < ns.getLength(); i++) {
-            out.add((Element) ns.item(i));
-        }
+        collectByNs(doc, "serviceTask", out);
+        collectByNs(doc, "callActivity", out);
         if (!out.isEmpty()) {
             return out;
         }
         collectByLocalName(doc.getDocumentElement(), "serviceTask", out);
+        collectByLocalName(doc.getDocumentElement(), "callActivity", out);
         return out;
     }
 
-    private static void collectByLocalName(Element el, String wantLocal, List<Element> out) {
-        String ln = el.getLocalName();
-        if (ln == null) {
-            ln = stripPrefix(el.getTagName());
+    private void collectByNs(Document doc, String local, List<Element> out) {
+        NodeList ns = doc.getElementsByTagNameNS(BpmnNs, local);
+        for (int i = 0; i < ns.getLength(); i++) {
+            out.add((Element) ns.item(i));
         }
-        if (wantLocal.equalsIgnoreCase(ln)) {
+    }
+
+    private void collectByLocalName(Element el, String wantLocal, List<Element> out) {
+        if (wantLocal.equalsIgnoreCase(localName(el))) {
             out.add(el);
         }
         NodeList ch = el.getChildNodes();
         for (int i = 0; i < ch.getLength(); i++) {
-            Node n = ch.item(i);
-            if (n instanceof Element child) {
+            if (ch.item(i) instanceof Element child) {
                 collectByLocalName(child, wantLocal, out);
             }
         }
+    }
+
+    private String localName(Element el) {
+        String ln = el.getLocalName();
+        if (ln != null) {
+            return ln;
+        }
+        String tag = el.getTagName();
+        int i = tag.indexOf(':');
+        return i >= 0 ? tag.substring(i + 1) : tag;
     }
 }

@@ -5,6 +5,7 @@ import { BaseHttpService } from '@app/core/services/http/base-http.service';
 
 import type { ComponentDescription } from '../../flow-elements/component-provider';
 import type { BpmProcess } from '../../types/bpm-process';
+import type { BpmProcessIoInventory } from '../../types/bpm-process-io-inventory';
 
 /** 与后端 {@code BpmProcessDefinitionCtl.SaveInput} 保存请求体一致 */
 export interface BpmProcessSaveBody {
@@ -94,6 +95,14 @@ export class ProcessDesignService {
   startProcess(id: string, body?: { variables?: Record<string, unknown> }) {
     const payload = body?.variables !== undefined ? { variables: body.variables } : {};
     return this.http.post<unknown>(`${this.apiUrl}/${id}/start`, payload);
+  }
+
+  getIoInventory(processId: string) {
+    return this.http.get<BpmProcessIoInventory>(`${this.apiUrl}/${processId}/io-inventory`);
+  }
+
+  analyzeIoInventory(bpmnXml: string) {
+    return this.http.post<BpmProcessIoInventory>(`${this.apiUrl}/io-inventory`, { bpmnXml }, { showLoading: false });
   }
 
   /** 未保存 BPMN 预览：包装为逻辑组件契约（只读分析） */

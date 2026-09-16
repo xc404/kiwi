@@ -39,31 +39,33 @@ export function openSaveAsComponentModal(ctx: BpmDesignerToolbarContext): void {
 }
 
 export function openStartProcessModal(ctx: BpmDesignerToolbarContext): void {
-  const ref = ctx.modalWrap.create({
-    nzTitle: '启动流程变量',
-    nzWidth: 560,
-    nzOkText: '部署并启动',
-    nzCancelText: '取消',
-    nzContent: BpmStartProcessModalComponent,
-    nzData: { initialText: ctx.getStartProcessModalInitialText() },
-    nzOnOk: () => {
-      const comp = ref.getContentComponent() as BpmStartProcessModalComponent;
-      const parsed = comp.parseVariablesOrFalse();
-      if (parsed === false) {
-        return false;
+  void ctx.prepareStartProcessModalData().then(data => {
+    const ref = ctx.modalWrap.create({
+      nzTitle: '启动流程变量',
+      nzWidth: 560,
+      nzOkText: '部署并启动',
+      nzCancelText: '取消',
+      nzContent: BpmStartProcessModalComponent,
+      nzData: data,
+      nzOnOk: () => {
+        const comp = ref.getContentComponent() as BpmStartProcessModalComponent;
+        const parsed = comp.parseVariablesOrFalse();
+        if (parsed === false) {
+          return false;
+        }
+        return ctx
+          .submitStartProcessFromModal(parsed)
+          .then(started => {
+            ctx.message.success('流程已启动');
+            promptOpenProcessInstanceViewer(ctx, started);
+          })
+          .catch((err: unknown) => {
+            const e = err as { error?: { message?: string }; message?: string };
+            ctx.message.error(e?.error?.message ?? e?.message ?? '启动失败');
+            return Promise.reject(err);
+          });
       }
-      return ctx
-        .submitStartProcessFromModal(parsed)
-        .then(started => {
-          ctx.message.success('流程已启动');
-          promptOpenProcessInstanceViewer(ctx, started);
-        })
-        .catch((err: unknown) => {
-          const e = err as { error?: { message?: string }; message?: string };
-          ctx.message.error(e?.error?.message ?? e?.message ?? '启动失败');
-          return Promise.reject(err);
-        });
-    }
+    });
   });
 }
 

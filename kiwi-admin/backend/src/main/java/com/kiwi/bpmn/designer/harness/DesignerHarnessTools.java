@@ -8,6 +8,8 @@ import com.kiwi.bpmn.designer.harness.model.EditOperation;
 import com.kiwi.project.bpm.model.BpmComponent;
 import com.kiwi.project.bpm.model.BpmComponentParameter;
 import com.kiwi.project.bpm.service.BpmComponentService;
+import com.kiwi.project.bpm.service.BpmProcessIoAnalysisService;
+import com.kiwi.project.bpm.model.BpmProcessIoInventory;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.tool.annotation.Tool;
@@ -26,6 +28,7 @@ public class DesignerHarnessTools {
     private final DesignerHarnessBpmnApplyService applyService;
     private final DesignerHarnessTurnContext turnContext;
     private final ObjectMapper objectMapper;
+    private final BpmProcessIoAnalysisService bpmProcessIoAnalysisService;
 
     @Tool(
             name = "search_components",
@@ -92,6 +95,29 @@ public class DesignerHarnessTools {
     }
 
     @Tool(
+            name = "list_process_io",
+            description = "列出当前图每个组件的 input/output（按连线顺序），标出已填/未填，以及启动时仍缺的变量。"
+                    + "改某个节点参数前先调用本工具；不要靠猜 XML。")
+    public String listProcessIo() {
+        DesignerHarnessTurnContext.Slot slot;
+        try {
+            slot = turnContext.require();
+        } catch (IllegalStateException e) {
+            return e.getMessage();
+        }
+        if (StringUtils.isBlank(slot.bpmnXml)) {
+            return "当前工作区 BPMN 为空";
+        }
+        BpmProcessIoInventory inventory;
+        try {
+            inventory = bpmProcessIoAnalysisService.analyzeInventory(slot.bpmnXml);
+        } catch (IllegalArgumentException e) {
+            return "无法分析当前图: " + e.getMessage();
+        }
+        return formatInventory(inventory);
+    }
+
+    @Tool(
             name = "apply_bpmn_ops",
             description = "唯一改图入口。参数 operationsJson 为 JSON 数组，元素含 op："
                     + "addNode(node, afterRef?, beforeRef?)、removeNode(nodeId)、updateNode(nodeId, patch)、"
@@ -120,6 +146,55 @@ public class DesignerHarnessTools {
             slot.bpmnXml = result.xml();
         }
         return result.toToolText();
+    }
+
+    private String formatInventory(BpmProcessIoInventory inventory) {
+        if (inventory.getNodes() == null || inventory.getNodes().isEmpty()) {
+            return "图中没有绑定组件的任务。";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (BpmProcessIoInventory.Node node : inventory.getNodes()) {
+            sb.append(node.getNodeId())
+                    .append(" ")
+                    .append(StringUtils.defaultIfBlank(node.getName(), "(未命名)"))
+                    .append(" (")
+                    .append(StringUtils.defaultString(node.getComponentId()))
+                    .append(")\n");
+            for (BpmProcessIoInventory.Param p : node.getInputs()) {
+                sb.append("  in ").append(p.getKey());
+                if (p.isRequired()) {
+                    sb.append(" required");
+                }
+                sb.append(" filled=").append(p.isFilled())
+                        .append(" kind=").append(p.getValueKind())
+                        .append(" upstream=").append(p.isSatisfiedByUpstream());
+                if (StringUtils.isNotBlank(p.getConfiguredValue())) {
+                    sb.append(" value=").append(StringUtils.abbreviate(p.getConfiguredValue(), 80));
+                }
+                if (p.getExpressionRefs() != null && !p.getExpressionRefs().isEmpty() && !p.isSatisfiedByUpstream()) {
+                    sb.append(" missingRefs=").append(String.join(",", p.getExpressionRefs()));
+                }
+                sb.append("\n");
+            }
+            for (BpmProcessIoInventory.Param p : node.getOutputs()) {
+                sb.append("  out ").append(p.getKey())
+                        .append(" produces=")
+                        .append(StringUtils.defaultIfBlank(p.getProcessVariable(), p.getKey()))
+                        .append("\n");
+            }
+        }
+        sb.append("startVariables:\n");
+        if (inventory.getStartVariables() == null || inventory.getStartVariables().isEmpty()) {
+            sb.append("  (无)\n");
+        } else {
+            for (BpmProcessIoInventory.StartVariable v : inventory.getStartVariables()) {
+                sb.append("  - ").append(v.getKey())
+                        .append(" neededBy=").append(v.getNodeId())
+                        .append(".").append(v.getParameterKey())
+                        .append("\n");
+            }
+        }
+        return sb.toString();
     }
 
     private List<EditOperation> parseOperations(String operationsJson) throws Exception {
