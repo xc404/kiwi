@@ -48,7 +48,7 @@
     "path": "/bpm/market",
     "sort": 4,
     "status": "0",
-    "visible": true
+    "visible": false
   },
   {
     "id": "bpm_remote_market",
@@ -58,7 +58,7 @@
     "path": "/bpm/remote-market",
     "sort": 5,
     "status": "0",
-    "visible": true
+    "visible": false
   },
   {
     "id": "bpm_process_definition",

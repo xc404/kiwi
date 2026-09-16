@@ -91,7 +91,7 @@ import { TemplatePackImportModalComponent } from '../market/template-pack-import
         <nz-input-group class="bpm-workspace-search" nzPrefixIcon="search">
           <input
             nz-input
-            placeholder="搜索项目名称或 ID"
+            placeholder="搜索项目名称"
             [ngModel]="projectSearch()"
             (ngModelChange)="projectSearch.set($event)"
             (click)="$event.stopPropagation()"
@@ -106,9 +106,6 @@ import { TemplatePackImportModalComponent } from '../market/template-pack-import
             @for (p of filteredProjects(); track p.id) {
               <li nz-menu-item [nzSelected]="p.id === projectId()" (click)="selectProject(p.id)">
                 <span class="bpm-workspace-menu-item-name">{{ p.name || '未命名项目' }}</span>
-                @if (p.name) {
-                  <span class="bpm-workspace-menu-item-id">{{ p.id }}</span>
-                }
               </li>
             }
           }
