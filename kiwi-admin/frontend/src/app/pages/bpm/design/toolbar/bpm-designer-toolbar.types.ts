@@ -53,6 +53,10 @@ export interface BpmDesignerToolbarCommand {
   run: (ctx: BpmDesignerToolbarContext, options?: Record<string, unknown>) => void | Promise<void>;
   /** 默认 true：AI 助手可通过 toolbar service 执行 */
   aiExposed?: boolean;
-  /** 默认 true：出现在 Toolbar 按钮 */
+  /** 默认 true：出现在 Toolbar（图标或「更多」菜单） */
   showInToolbar?: boolean;
+  /** 默认 false：主工具栏图标；true：收入「更多」菜单 */
+  overflow?: boolean;
+  /** 「更多」菜单文案，默认用 tooltip */
+  menuLabel?: string;
 }

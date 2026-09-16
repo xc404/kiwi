@@ -5,12 +5,46 @@
       <nz-divider class="bpm-toolbar__divider" nzType="vertical" />
     } @else {
       <div class="bpm-toolbar__group">
-        @for (btn of seg.buttons; track $index) {
+        @for (btn of seg.buttons; track btn.id) {
           <button class="bpm-toolbar__btn" type="button" nz-button nz-tooltip nzSize="small" nzType="text" [nzTooltipTitle]="btn.tooltip" (click)="btn.onClick()">
             <nz-icon nzTheme="outline" [nzType]="btn.icon" />
           </button>
         }
       </div>
     }
+  }
+  @if (overflowGroups.length) {
+    <nz-divider class="bpm-toolbar__divider" nzType="vertical" />
+    <button
+      class="bpm-toolbar__btn"
+      type="button"
+      nz-button
+      nz-dropdown
+      nz-tooltip
+      nzPlacement="bottomRight"
+      nzSize="small"
+      nzTooltipTitle="更多"
+      nzTrigger="click"
+      nzType="text"
+      [nzDropdownMenu]="moreMenu"
+    >
+      <nz-icon nzTheme="outline" nzType="ellipsis" />
+    </button>
+    <nz-dropdown-menu #moreMenu="nzDropdownMenu">
+      <ul nz-menu>
+        @for (group of overflowGroups; track group.group; let first = $first) {
+          @if (!first) {
+            <li nz-menu-divider></li>
+          }
+          <li class="bpm-toolbar__menu-heading" nz-menu-item nzDisabled>{{ group.title }}</li>
+          @for (item of group.items; track item.id) {
+            <li class="bpm-toolbar__menu-item" nz-menu-item (click)="item.onClick()">
+              <nz-icon nzTheme="outline" [nzType]="item.icon" />
+              <span>{{ item.label }}</span>
+            </li>
+          }
+        }
+      </ul>
+    </nz-dropdown-menu>
   }
 </div>

@@ -16,6 +16,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideRouter, RouteReuseStrategy, TitleStrategy, withComponentInputBinding, withHashLocation, withInMemoryScrolling, withPreloading, withViewTransitions } from '@angular/router';
 
 import {
+  AppstoreAddOutline,
   AppstoreOutline,
   BorderOutline,
   CloudUploadOutline,
@@ -26,6 +27,7 @@ import {
   DashboardOutline,
   DeleteOutline,
   DragOutline,
+  EllipsisOutline,
   ExpandOutline,
   FileImageOutline,
   FileTextOutline,
@@ -39,6 +41,7 @@ import {
   SearchOutline,
   SnippetsOutline,
   UndoOutline,
+  UploadOutline,
   ZoomInOutline,
   ZoomOutOutline
 } from '@ant-design/icons-angular/icons';
@@ -89,13 +92,16 @@ const icons = [
   ExpandOutline,
   SearchOutline,
   AppstoreOutline,
+  AppstoreAddOutline,
   ControlOutline,
   SaveOutline,
   CloudUploadOutline,
   PlayCircleOutline,
   CodeOutline,
   FileImageOutline,
-  FileTextOutline
+  FileTextOutline,
+  EllipsisOutline,
+  UploadOutline
 ];
 
 registerLocaleData(zh);

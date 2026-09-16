@@ -7,7 +7,9 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
@@ -15,7 +17,7 @@ import { BpmDesignerToolbarService } from './bpm-designer-toolbar.service';
 import type { BpmDesignerToolbarCommand, BpmDesignerToolbarContext } from './bpm-designer-toolbar.types';
 import type { BpmSaveAsComponentModalData, SaveAsComponentFormPayload } from './bpm-save-as-component-modal/bpm-save-as-component-modal.component';
 import { exportBpmnSvg, exportBpmnXml, logBpmnXml, openSaveAsComponentModal, openStartProcessModal, toggleGridSnapping, triggerEditorAction } from './bpm-toolbar-run.utils';
-import { buildToolbarSegments, type ToolbarSegment } from './build-toolbar-segments';
+import { buildToolbarLayout, type ToolbarOverflowGroup, type ToolbarSegment } from './build-toolbar-segments';
 import { BpmEditorToken } from '../editor/bpm-editor-token';
 import { BpmStartVariablesService } from '../service/bpm-start-variables.service';
 import { ProcessDesignService } from '../service/process-design.service';
@@ -25,7 +27,7 @@ import { ProcessDesignService } from '../service/process-design.service';
   templateUrl: './bpm-toolbar.html',
   styleUrls: ['bpm-toolbar.css'],
   standalone: true,
-  imports: [NzButtonModule, NzIconModule, NzTooltipModule, NzDividerModule]
+  imports: [NzButtonModule, NzIconModule, NzTooltipModule, NzDividerModule, NzDropDownModule, NzMenuModule]
 })
 export class BpmToolbar implements BpmDesignerToolbarContext {
   readonly editor = inject(BpmEditorToken);
@@ -43,10 +45,13 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
   readonly openImportFile = (): void => this.onImportXmlClick();
 
   readonly toolbarSegments: ToolbarSegment[];
+  readonly overflowGroups: ToolbarOverflowGroup[];
 
   constructor() {
     this.registerCommands();
-    this.toolbarSegments = buildToolbarSegments(this.toolbarService.listUiCommands(), id => this.runCommand(id));
+    const layout = buildToolbarLayout(this.toolbarService.listUiCommands(), id => this.runCommand(id));
+    this.toolbarSegments = layout.segments;
+    this.overflowGroups = layout.overflowGroups;
   }
 
   get modeler(): BpmnModeler {
@@ -199,6 +204,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '复制',
         icon: 'copy',
         group: 'edit',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'copy')
       },
       {
@@ -206,6 +212,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '粘贴',
         icon: 'snippets',
         group: 'edit',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'paste')
       },
       {
@@ -213,6 +220,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '删除',
         icon: 'delete',
         group: 'edit',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'removeSelection')
       },
       {
@@ -220,6 +228,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '放大',
         icon: 'zoom-in',
         group: 'view',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'stepZoom', { value: 1 })
       },
       {
@@ -227,6 +236,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '缩小',
         icon: 'zoom-out',
         group: 'view',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'stepZoom', { value: -1 })
       },
       {
@@ -241,6 +251,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '搜索元素',
         icon: 'search',
         group: 'view',
+        overflow: true,
         run: ctx => triggerEditorAction(ctx, 'find')
       },
       {
@@ -248,6 +259,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '切换网格吸附',
         icon: 'appstore',
         group: 'view',
+        overflow: true,
         aiExposed: false,
         run: ctx => toggleGridSnapping(ctx)
       },
@@ -265,6 +277,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '另存为组件',
         icon: 'appstore-add',
         group: 'file',
+        overflow: true,
         run: ctx => openSaveAsComponentModal(ctx)
       },
       {
@@ -272,6 +285,8 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '从文件导入 BPMN XML（覆盖当前图，需再保存）',
         icon: 'upload',
         group: 'file',
+        overflow: true,
+        menuLabel: '导入 BPMN',
         aiExposed: false,
         run: ctx => ctx.openImportFile?.()
       },
@@ -280,6 +295,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '下载 BPMN XML',
         icon: 'file-text',
         group: 'file',
+        overflow: true,
         run: ctx => exportBpmnXml(ctx)
       },
       {
@@ -287,6 +303,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '下载 SVG',
         icon: 'file-image',
         group: 'file',
+        overflow: true,
         run: ctx => exportBpmnSvg(ctx)
       },
       {
@@ -294,6 +311,7 @@ export class BpmToolbar implements BpmDesignerToolbarContext {
         tooltip: '控制台输出 XML',
         icon: 'code',
         group: 'file',
+        overflow: true,
         aiExposed: false,
         run: ctx => logBpmnXml(ctx)
       },

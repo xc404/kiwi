@@ -44,6 +44,21 @@
   font-size: 16px;
 }
 
+.bpm-toolbar__menu-heading {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.bpm-toolbar__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpm-toolbar__menu-item nz-icon {
+  font-size: 14px;
+}
+
 .bpm-toolbar__file-input {
   position: absolute;
   width: 1px;
