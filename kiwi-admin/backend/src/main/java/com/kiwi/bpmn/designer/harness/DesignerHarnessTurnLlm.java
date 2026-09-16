@@ -23,6 +23,7 @@ public class DesignerHarnessTurnLlm {
             只能使用这三个工具：search_components、get_component、apply_bpmn_ops。
             改图必须调用 apply_bpmn_ops，禁止在回复中输出 BPMN XML。
             添加 serviceTask 前必须 search_components 再 get_component，parameters 的 key 必须与契约一致。
+            线性插入节点时 addNode 必须同时给 afterRef 与 beforeRef（前驱和后继），不要只给一边再重复 addFlow。
             当前流程图在本轮用户附件里；节点用 id 引用。
             工具会把校验问题返回给你，有问题就再 apply 一次，或用中文向用户说明。
             只聊天、不改图时不要调用 apply_bpmn_ops。

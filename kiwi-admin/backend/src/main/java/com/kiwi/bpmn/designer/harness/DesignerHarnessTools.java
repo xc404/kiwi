@@ -96,6 +96,8 @@ public class DesignerHarnessTools {
             description = "唯一改图入口。参数 operationsJson 为 JSON 数组，元素含 op："
                     + "addNode(node, afterRef?, beforeRef?)、removeNode(nodeId)、updateNode(nodeId, patch)、"
                     + "addFlow(flow)、removeFlow(flowId)、setProcessMeta(name)。"
+                    + "线性插入请同时给 afterRef 与 beforeRef；缺一边时会接到唯一断链上。"
+                    + "同一对 source/target 不要重复 addFlow。"
                     + "node.type 为 startEvent|endEvent|serviceTask|userTask|exclusiveGateway；"
                     + "serviceTask 必须带已存在的 componentId。"
                     + "成功则立刻保存流程定义并刷新画布；禁止输出 BPMN XML。")

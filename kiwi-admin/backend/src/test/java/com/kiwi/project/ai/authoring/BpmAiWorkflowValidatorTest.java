@@ -139,4 +139,61 @@ class BpmAiWorkflowValidatorTest {
         assertEquals(AiAuthoringVariables.DispatchRepair, result.getDispatchCode());
         assertEquals(AiAuthoringVariables.DispatchAsk, validator.toDispatchCode(result.getIssues(), 99));
     }
+
+    @Test
+    void validate_disconnectedAndDuplicateFlows_repair() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                                  id="Definitions_1" targetNamespace="tns">
+                  <bpmn:process id="p1" isExecutable="true">
+                    <bpmn:startEvent id="StartEvent_1"/>
+                    <bpmn:userTask id="ServiceTask_writeFile"/>
+                    <bpmn:userTask id="ServiceTask_readFile"/>
+                    <bpmn:userTask id="ServiceTask_delFile"/>
+                    <bpmn:endEvent id="EndEvent_1"/>
+                    <bpmn:sequenceFlow id="Flow_start_2_write" sourceRef="StartEvent_1" targetRef="ServiceTask_writeFile"/>
+                    <bpmn:sequenceFlow id="Flow_9ee40114" sourceRef="ServiceTask_readFile" targetRef="ServiceTask_delFile"/>
+                    <bpmn:sequenceFlow id="Flow_read_2_del" sourceRef="ServiceTask_readFile" targetRef="ServiceTask_delFile"/>
+                    <bpmn:sequenceFlow id="Flow_del_2_end2" sourceRef="ServiceTask_delFile" targetRef="EndEvent_1"/>
+                  </bpmn:process>
+                </bpmn:definitions>
+                """;
+
+        var result = validator.validate(xml, new AiAuthoringCatalog());
+
+        assertTrue(result.getIssues().stream().anyMatch(i ->
+                BpmAiWorkflowValidator.CodeMissingOutgoing.equals(i.getCode())
+                        && "ServiceTask_writeFile".equals(i.getElementId())));
+        assertTrue(result.getIssues().stream().anyMatch(i ->
+                BpmAiWorkflowValidator.CodeUnreachableNode.equals(i.getCode())
+                        && "ServiceTask_readFile".equals(i.getElementId())));
+        assertTrue(result.getIssues().stream().anyMatch(i ->
+                BpmAiWorkflowValidator.CodeDuplicateFlow.equals(i.getCode())));
+        assertEquals(AiAuthoringVariables.DispatchRepair, result.getDispatchCode());
+    }
+
+    @Test
+    void validate_linearConnected_noGraphIssues() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                                  id="Definitions_1" targetNamespace="tns">
+                  <bpmn:process id="p1" isExecutable="true">
+                    <bpmn:startEvent id="StartEvent_1"/>
+                    <bpmn:userTask id="Activity_1"/>
+                    <bpmn:endEvent id="EndEvent_1"/>
+                    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_1"/>
+                    <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="EndEvent_1"/>
+                  </bpmn:process>
+                </bpmn:definitions>
+                """;
+
+        var result = validator.validate(xml, new AiAuthoringCatalog());
+
+        assertTrue(result.getIssues().stream().noneMatch(i ->
+                BpmAiWorkflowValidator.CodeUnreachableNode.equals(i.getCode())
+                        || BpmAiWorkflowValidator.CodeMissingOutgoing.equals(i.getCode())
+                        || BpmAiWorkflowValidator.CodeDuplicateFlow.equals(i.getCode())));
+    }
 }

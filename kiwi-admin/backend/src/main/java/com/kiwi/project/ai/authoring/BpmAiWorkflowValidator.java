@@ -21,9 +21,11 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +43,12 @@ public class BpmAiWorkflowValidator {
     public static final String CodeDanglingFlow = "DANGLING_FLOW";
     public static final String CodeNoStart = "NO_START_EVENT";
     public static final String CodeNoEnd = "NO_END_EVENT";
+    public static final String CodeUnreachableNode = "UNREACHABLE_NODE";
+    public static final String CodeMissingOutgoing = "MISSING_OUTGOING";
+    public static final String CodeDuplicateFlow = "DUPLICATE_FLOW";
+
+    private static final Set<String> FlowNodeTypes = Set.of(
+            "startEvent", "endEvent", "serviceTask", "userTask", "exclusiveGateway");
 
     private final BpmDesignerXmlValidator xmlValidator;
     private final BpmComponentService bpmComponentService;
@@ -137,6 +145,122 @@ public class BpmAiWorkflowValidator {
                 }
             }
         }
+        validateFlowGraph(doc, issues);
+    }
+
+    private void validateFlowGraph(Document doc, List<AiAuthoringValidationIssue> issues) {
+        Map<String, String> nodeTypes = flowNodeTypes(doc);
+        if (nodeTypes.isEmpty()) {
+            return;
+        }
+        NodeList flowEls = doc.getElementsByTagNameNS("*", "sequenceFlow");
+        Map<String, List<String>> outgoing = new LinkedHashMap<>();
+        for (String id : nodeTypes.keySet()) {
+            outgoing.put(id, new ArrayList<>());
+        }
+        Set<String> seenPairs = new HashSet<>();
+        for (int i = 0; i < flowEls.getLength(); i++) {
+            Element flow = (Element) flowEls.item(i);
+            String source = flow.getAttribute("sourceRef");
+            String target = flow.getAttribute("targetRef");
+            if (StringUtils.isAnyBlank(source, target)) {
+                continue;
+            }
+            String pair = source + "\0" + target;
+            if (!seenPairs.add(pair)) {
+                AiAuthoringValidationIssue issue = addRuleIssue(
+                        issues,
+                        AiAuthoringRuleSet.RuleNoDuplicateSequenceFlow,
+                        CodeDuplicateFlow,
+                        "重复的 sequenceFlow: " + source + " → " + target,
+                        "REPAIR");
+                if (issue != null) {
+                    issue.setElementId(flow.getAttribute("id"));
+                }
+            }
+            if (outgoing.containsKey(source) && nodeTypes.containsKey(target)) {
+                outgoing.get(source).add(target);
+            }
+        }
+        for (Map.Entry<String, String> node : nodeTypes.entrySet()) {
+            if ("endEvent".equals(node.getValue())) {
+                continue;
+            }
+            if (outgoing.get(node.getKey()).isEmpty()) {
+                AiAuthoringValidationIssue issue = addRuleIssue(
+                        issues,
+                        AiAuthoringRuleSet.RuleNonEndHasOutgoing,
+                        CodeMissingOutgoing,
+                        "非结束节点没有出边: " + node.getKey(),
+                        "REPAIR");
+                if (issue != null) {
+                    issue.setElementId(node.getKey());
+                }
+            }
+        }
+        Set<String> starts = new LinkedHashSet<>();
+        for (Map.Entry<String, String> node : nodeTypes.entrySet()) {
+            if ("startEvent".equals(node.getValue())) {
+                starts.add(node.getKey());
+            }
+        }
+        if (starts.isEmpty()) {
+            return;
+        }
+        Set<String> reached = new HashSet<>();
+        ArrayDeque<String> queue = new ArrayDeque<>(starts);
+        reached.addAll(starts);
+        while (!queue.isEmpty()) {
+            String current = queue.removeFirst();
+            for (String next : outgoing.getOrDefault(current, List.of())) {
+                if (reached.add(next)) {
+                    queue.add(next);
+                }
+            }
+        }
+        for (String id : nodeTypes.keySet()) {
+            if (reached.contains(id)) {
+                continue;
+            }
+            AiAuthoringValidationIssue issue = addRuleIssue(
+                    issues,
+                    AiAuthoringRuleSet.RuleFlowReachableFromStart,
+                    CodeUnreachableNode,
+                    "从 startEvent 无法到达: " + id,
+                    "REPAIR");
+            if (issue != null) {
+                issue.setElementId(id);
+            }
+        }
+    }
+
+    private Map<String, String> flowNodeTypes(Document doc) {
+        Map<String, String> types = new LinkedHashMap<>();
+        NodeList all = doc.getElementsByTagName("*");
+        for (int i = 0; i < all.getLength(); i++) {
+            if (!(all.item(i) instanceof Element el)) {
+                continue;
+            }
+            String type = localName(el);
+            if (!FlowNodeTypes.contains(type)) {
+                continue;
+            }
+            String id = el.getAttribute("id");
+            if (StringUtils.isNotBlank(id)) {
+                types.put(id, type);
+            }
+        }
+        return types;
+    }
+
+    private String localName(Element el) {
+        String ln = el.getLocalName();
+        if (ln != null) {
+            return ln;
+        }
+        String tag = el.getTagName();
+        int i = tag.indexOf(':');
+        return i >= 0 ? tag.substring(i + 1) : tag;
     }
 
     private void validateComponents(Document doc, AiAuthoringCatalog catalog, List<AiAuthoringValidationIssue> issues) {

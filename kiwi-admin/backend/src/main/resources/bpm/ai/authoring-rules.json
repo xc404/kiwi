@@ -18,7 +18,7 @@
     "kind": "soft",
     "mode": "both",
     "enabled": true,
-    "promptText": "XML 必须含 startEvent、endEvent、sequenceFlow；至少保留或包含合理业务节点。"
+    "promptText": "XML 必须含 startEvent、endEvent、sequenceFlow；从开始事件要能走到每个节点；非结束节点必须有出边；同一对 source/target 不要重复连线。"
   },
   {
     "id": "summary_for_users",
@@ -49,6 +49,30 @@
     "severity": "REPAIR",
     "enabled": true,
     "message": "sequenceFlow 的 sourceRef/targetRef 必须指向图中存在的节点"
+  },
+  {
+    "id": "flow_reachable_from_start",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "每个流程节点必须能从 startEvent 沿 sequenceFlow 到达"
+  },
+  {
+    "id": "non_end_has_outgoing",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "非 endEvent 节点必须至少有一条出边"
+  },
+  {
+    "id": "no_duplicate_sequence_flow",
+    "kind": "hard",
+    "mode": "both",
+    "severity": "REPAIR",
+    "enabled": true,
+    "message": "同一对 sourceRef/targetRef 不能有多条 sequenceFlow"
   },
   {
     "id": "component_id_in_catalog",

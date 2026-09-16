@@ -99,53 +99,121 @@ public class DesignerHarnessPlanMutator {
     }
 
     private void wireInsert(AiWorkflowPlan plan, String newNodeId, String afterRef, String beforeRef) {
-        if (StringUtils.isNotBlank(afterRef) && StringUtils.isNotBlank(beforeRef)) {
-            boolean split = false;
-            for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
-                if (afterRef.equals(flow.getSourceRef()) && beforeRef.equals(flow.getTargetRef())) {
-                    flow.setTargetRef(newNodeId);
-                    split = true;
-                    break;
-                }
-            }
-            if (!split) {
-                addEdge(plan, afterRef, newNodeId);
-            }
-            addEdge(plan, newNodeId, beforeRef);
+        boolean hasAfter = StringUtils.isNotBlank(afterRef);
+        boolean hasBefore = StringUtils.isNotBlank(beforeRef);
+        if (hasAfter && hasBefore) {
+            spliceBetween(plan, afterRef, newNodeId, beforeRef);
             return;
         }
-        if (StringUtils.isNotBlank(afterRef)) {
-            List<AiWorkflowPlan.Flow> outgoing = new ArrayList<>();
-            for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
-                if (afterRef.equals(flow.getSourceRef())) {
-                    outgoing.add(flow);
-                }
-            }
-            if (outgoing.size() == 1) {
-                AiWorkflowPlan.Flow flow = outgoing.get(0);
-                String oldTarget = flow.getTargetRef();
-                flow.setTargetRef(newNodeId);
-                addEdge(plan, newNodeId, oldTarget);
-            } else {
-                addEdge(plan, afterRef, newNodeId);
-            }
+        if (hasAfter) {
+            spliceAfter(plan, afterRef, newNodeId);
             return;
         }
-        if (StringUtils.isNotBlank(beforeRef)) {
-            List<AiWorkflowPlan.Flow> incoming = new ArrayList<>();
-            for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
-                if (beforeRef.equals(flow.getTargetRef())) {
-                    incoming.add(flow);
-                }
-            }
-            if (incoming.size() == 1) {
-                AiWorkflowPlan.Flow flow = incoming.get(0);
+        if (hasBefore) {
+            spliceBefore(plan, newNodeId, beforeRef);
+        }
+    }
+
+    private void spliceBetween(AiWorkflowPlan plan, String afterRef, String newNodeId, String beforeRef) {
+        for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
+            if (afterRef.equals(flow.getSourceRef()) && beforeRef.equals(flow.getTargetRef())) {
                 flow.setTargetRef(newNodeId);
-                addEdge(plan, newNodeId, beforeRef);
-            } else {
-                addEdge(plan, newNodeId, beforeRef);
+                break;
             }
         }
+        ensureEdge(plan, afterRef, newNodeId);
+        ensureEdge(plan, newNodeId, beforeRef);
+    }
+
+    private void spliceAfter(AiWorkflowPlan plan, String afterRef, String newNodeId) {
+        List<AiWorkflowPlan.Flow> outgoing = edgesFrom(plan, afterRef);
+        if (outgoing.size() == 1) {
+            String oldTarget = outgoing.get(0).getTargetRef();
+            outgoing.get(0).setTargetRef(newNodeId);
+            ensureEdge(plan, newNodeId, oldTarget);
+            return;
+        }
+        ensureEdge(plan, afterRef, newNodeId);
+        if (outgoing.isEmpty()) {
+            String next = uniqueDanglingHead(plan, newNodeId);
+            if (next != null) {
+                ensureEdge(plan, newNodeId, next);
+            }
+        }
+    }
+
+    private void spliceBefore(AiWorkflowPlan plan, String newNodeId, String beforeRef) {
+        List<AiWorkflowPlan.Flow> incoming = edgesTo(plan, beforeRef);
+        if (incoming.size() == 1) {
+            incoming.get(0).setTargetRef(newNodeId);
+            ensureEdge(plan, newNodeId, beforeRef);
+            return;
+        }
+        ensureEdge(plan, newNodeId, beforeRef);
+        if (incoming.isEmpty()) {
+            String prev = uniqueDanglingTail(plan, newNodeId);
+            if (prev != null) {
+                ensureEdge(plan, prev, newNodeId);
+            }
+        }
+    }
+
+    private List<AiWorkflowPlan.Flow> edgesFrom(AiWorkflowPlan plan, String sourceRef) {
+        List<AiWorkflowPlan.Flow> outgoing = new ArrayList<>();
+        for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
+            if (sourceRef.equals(flow.getSourceRef())) {
+                outgoing.add(flow);
+            }
+        }
+        return outgoing;
+    }
+
+    private List<AiWorkflowPlan.Flow> edgesTo(AiWorkflowPlan plan, String targetRef) {
+        List<AiWorkflowPlan.Flow> incoming = new ArrayList<>();
+        for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
+            if (targetRef.equals(flow.getTargetRef())) {
+                incoming.add(flow);
+            }
+        }
+        return incoming;
+    }
+
+    private String uniqueDanglingHead(AiWorkflowPlan plan, String excludeId) {
+        List<String> heads = new ArrayList<>();
+        for (AiWorkflowPlan.Node node : plan.getNodes()) {
+            if (excludeId.equals(node.getId()) || "startEvent".equals(node.getType())) {
+                continue;
+            }
+            if (edgesTo(plan, node.getId()).isEmpty()) {
+                heads.add(node.getId());
+            }
+        }
+        return heads.size() == 1 ? heads.get(0) : null;
+    }
+
+    private String uniqueDanglingTail(AiWorkflowPlan plan, String excludeId) {
+        List<String> tails = new ArrayList<>();
+        for (AiWorkflowPlan.Node node : plan.getNodes()) {
+            if (excludeId.equals(node.getId()) || "endEvent".equals(node.getType())) {
+                continue;
+            }
+            if (edgesFrom(plan, node.getId()).isEmpty()) {
+                tails.add(node.getId());
+            }
+        }
+        return tails.size() == 1 ? tails.get(0) : null;
+    }
+
+    private boolean hasEdge(AiWorkflowPlan plan, String sourceRef, String targetRef) {
+        return plan.getFlows().stream().anyMatch(flow ->
+                sourceRef.equals(flow.getSourceRef()) && targetRef.equals(flow.getTargetRef()));
+    }
+
+    private void ensureEdge(AiWorkflowPlan plan, String sourceRef, String targetRef) {
+        if (StringUtils.isAnyBlank(sourceRef, targetRef) || sourceRef.equals(targetRef) || hasEdge(plan, sourceRef, targetRef)) {
+            return;
+        }
+        addEdge(plan, sourceRef, targetRef);
     }
 
     private void addEdge(AiWorkflowPlan plan, String sourceRef, String targetRef) {
@@ -160,8 +228,29 @@ public class DesignerHarnessPlanMutator {
         if (StringUtils.isBlank(nodeId)) {
             throw new IllegalArgumentException("removeNode 需要 nodeId");
         }
+        List<String> predecessors = new ArrayList<>();
+        List<String> successors = new ArrayList<>();
+        for (AiWorkflowPlan.Flow flow : plan.getFlows()) {
+            if (nodeId.equals(flow.getTargetRef()) && !predecessors.contains(flow.getSourceRef())) {
+                predecessors.add(flow.getSourceRef());
+            }
+            if (nodeId.equals(flow.getSourceRef()) && !successors.contains(flow.getTargetRef())) {
+                successors.add(flow.getTargetRef());
+            }
+        }
         plan.getNodes().removeIf(n -> nodeId.equals(n.getId()));
         plan.getFlows().removeIf(f -> nodeId.equals(f.getSourceRef()) || nodeId.equals(f.getTargetRef()));
+        boolean linearOrFan = (predecessors.size() == 1 || successors.size() == 1)
+                && !predecessors.isEmpty()
+                && !successors.isEmpty();
+        if (!linearOrFan) {
+            return;
+        }
+        for (String predecessor : predecessors) {
+            for (String successor : successors) {
+                ensureEdge(plan, predecessor, successor);
+            }
+        }
     }
 
     private void updateNode(AiWorkflowPlan plan, String nodeId, NodeSpec patch) {
@@ -195,6 +284,9 @@ public class DesignerHarnessPlanMutator {
     private void addFlow(AiWorkflowPlan plan, FlowSpec spec) {
         if (spec == null || StringUtils.isBlank(spec.getSourceRef()) || StringUtils.isBlank(spec.getTargetRef())) {
             throw new IllegalArgumentException("addFlow 需要 sourceRef 与 targetRef");
+        }
+        if (hasEdge(plan, spec.getSourceRef(), spec.getTargetRef())) {
+            return;
         }
         AiWorkflowPlan.Flow flow = new AiWorkflowPlan.Flow();
         flow.setId(StringUtils.defaultIfBlank(spec.getId(), "Flow_" + UUID.randomUUID().toString().substring(0, 8)));

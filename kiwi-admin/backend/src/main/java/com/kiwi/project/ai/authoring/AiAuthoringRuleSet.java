@@ -25,6 +25,9 @@ public class AiAuthoringRuleSet {
     public static final String RuleRequiredParamsPresent = "required_params_present";
     public static final String RuleHasStartAndEnd = "has_start_and_end";
     public static final String RuleSequenceFlowEndpoints = "sequence_flow_endpoints_valid";
+    public static final String RuleFlowReachableFromStart = "flow_reachable_from_start";
+    public static final String RuleNonEndHasOutgoing = "non_end_has_outgoing";
+    public static final String RuleNoDuplicateSequenceFlow = "no_duplicate_sequence_flow";
     public static final String RuleModifyPreserveUnrelated = "modify_preserve_unrelated";
     public static final String RuleOutputJsonOnly = "output_json_only";
     public static final String RuleSummaryForUsers = "summary_for_users";
@@ -135,7 +138,8 @@ public class AiAuthoringRuleSet {
         list.add(soft(RuleComponentIdInCatalog, "both",
                 "componentId 只能使用 Catalog.installed 中的 id；若必须用 installable，在 plan 中标记 requiresInstall=true。"));
         list.add(soft(RuleHasStartAndEnd, "both",
-                "XML 必须含 startEvent、endEvent、sequenceFlow；至少保留或包含合理业务节点。"));
+                "XML 必须含 startEvent、endEvent、sequenceFlow；从开始事件要能走到每个节点；"
+                        + "非结束节点必须有出边；同一对 source/target 不要重复连线。"));
         list.add(soft(RuleSummaryForUsers, "both",
                 "summary 面向业务用户，不要提内部变量名或实例 id。"));
         list.add(soft(RuleModifyPreserveUnrelated, "modify",
@@ -144,6 +148,12 @@ public class AiAuthoringRuleSet {
                 "流程必须包含 startEvent 与 endEvent"));
         list.add(hard(RuleSequenceFlowEndpoints, "both", "REPAIR",
                 "sequenceFlow 的 sourceRef/targetRef 必须指向图中存在的节点"));
+        list.add(hard(RuleFlowReachableFromStart, "both", "REPAIR",
+                "每个流程节点必须能从 startEvent 沿 sequenceFlow 到达"));
+        list.add(hard(RuleNonEndHasOutgoing, "both", "REPAIR",
+                "非 endEvent 节点必须至少有一条出边"));
+        list.add(hard(RuleNoDuplicateSequenceFlow, "both", "REPAIR",
+                "同一对 sourceRef/targetRef 不能有多条 sequenceFlow"));
         list.add(hard(RuleComponentIdInCatalog, "both", "REPAIR",
                 "componentId 必须出现在本轮 Catalog（installed 或 installable）"));
         list.add(hard(RuleRequiredParamsPresent, "both", "REPAIR",
