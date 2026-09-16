@@ -1,0 +1,164 @@
+// 项目下拉浮层（CDK overlay）
+.cdk-overlay-pane.bpm-workspace-project-menu-overlay,
+.bpm-workspace-project-menu-overlay.ant-dropdown,
+.bpm-workspace-project-menu-overlay {
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+}
+
+app-bpm-project-workspace {
+  display: block;
+
+  .bpm-workspace-panel {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .bpm-workspace-body {
+    padding: 16px 20px 20px;
+  }
+
+  .bpm-workspace-loading {
+    display: flex;
+    justify-content: center;
+    padding: 28px 0;
+  }
+
+  .bpm-workspace-empty {
+    padding: 8px 0 4px;
+    text-align: center;
+
+    .bpm-workspace-empty-desc {
+      margin: -8px auto 16px;
+      max-width: 360px;
+      font-size: 13px;
+      color: rgba(0, 0, 0, 0.45);
+      line-height: 1.5;
+    }
+
+    .bpm-workspace-empty-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+  }
+
+  .bpm-workspace-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .bpm-workspace-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .bpm-workspace-picker-label {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+    flex-shrink: 0;
+  }
+
+  .bpm-workspace-picker-btn {
+    max-width: min(320px, 100%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    .bpm-workspace-picker-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 220px;
+    }
+  }
+
+  .bpm-workspace-picker-id {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .bpm-workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .bpm-workspace-dropdown {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 4px 0 0;
+  }
+
+  .bpm-workspace-search {
+    display: block;
+    width: calc(100% - 16px);
+    max-width: 100%;
+    margin: 0 8px 4px;
+    box-sizing: border-box;
+  }
+
+  .bpm-workspace-menu {
+    max-height: min(360px, 55vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: none;
+    box-shadow: none;
+    width: 100%;
+  }
+
+  .bpm-workspace-menu .ant-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    line-height: 1.4;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    max-width: 100%;
+  }
+
+  .bpm-workspace-menu-item-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .bpm-workspace-menu-item-id {
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.45);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bpm-workspace-menu-empty {
+    padding: 8px 16px 12px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    text-align: center;
+    list-style: none;
+  }
+}
