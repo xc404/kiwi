@@ -7,6 +7,8 @@
     'compact-mode': $themeStyle() === 'compact',
     'aliyun-mode': $themeStyle() === 'aliyun'
   }"
+  [style.right.px]="embed() ? null : dockRight()"
+  [style.bottom.px]="embed() ? null : dockBottom()"
 >
   <div #chatPanel class="chat-wrap" [style.height.px]="panelHeight()" [style.width.px]="embed() ? null : panelWidth()">
     @if (embed() || show) {
@@ -54,6 +56,7 @@
             </div>
           }
         }
+        <ng-content select="[chat-context-card]" />
       </div>
     </nz-card>
   </div>
@@ -93,7 +96,12 @@
   </ul>
 </nz-dropdown-menu>
 <ng-template #titleTemplate>
-  <span class="chat-title-bar sp-14" [title]="currentConversationTitle()">
+  <span
+    class="chat-title-bar sp-14"
+    [class.chat-title-bar--draggable]="!embed() && show"
+    [title]="currentConversationTitle()"
+    (pointerdown)="onDragStart($event)"
+  >
     {{ isSending ? '对方正在输入中...' : currentConversationTitle() }}
   </span>
 </ng-template>

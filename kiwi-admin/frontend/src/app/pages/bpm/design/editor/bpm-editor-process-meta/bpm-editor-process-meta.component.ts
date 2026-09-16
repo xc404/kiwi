@@ -4,6 +4,7 @@ import { Component, inject, input } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 
 import type { BpmProcess } from '../../../types/bpm-process';
@@ -11,7 +12,7 @@ import type { BpmProcess } from '../../../types/bpm-process';
 @Component({
   selector: 'bpm-editor-process-meta',
   standalone: true,
-  imports: [DatePipe, NzSpinModule, NzButtonModule, NzIconModule],
+  imports: [DatePipe, NzSpinModule, NzButtonModule, NzIconModule, NzPopoverModule],
   templateUrl: './bpm-editor-process-meta.component.html',
   styleUrl: './bpm-editor-process-meta.component.scss'
 })

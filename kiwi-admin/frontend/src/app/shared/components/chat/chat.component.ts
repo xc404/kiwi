@@ -61,8 +61,11 @@ export class ChatComponent implements OnInit, OnDestroy {
   readonly turnCompleted = output<{ userText: string; assistantText: string }>();
   readonly panelWidth = signal(CHAT_PANEL_DEFAULT_WIDTH);
   readonly panelHeight = signal(CHAT_PANEL_DEFAULT_HEIGHT);
+  readonly dockRight = signal<number | null>(null);
+  readonly dockBottom = signal<number | null>(null);
   readonly embed = input(false);
   readonly defaultOpen = input(false);
+  readonly attentionOpen = input(false);
   readonly actionHandlers = input<AssistantActionHandler[]>([]);
   readonly messagesEnricher = input<((messages: AiChatMessage[]) => AiChatMessage[] | Promise<AiChatMessage[]>) | undefined>(undefined);
   readonly conversationScope = input<AiConversationScope>('global');
@@ -95,9 +98,23 @@ export class ChatComponent implements OnInit, OnDestroy {
   private resizeStartH = 0;
   private resizeMoveListener: ((e: MouseEvent) => void) | null = null;
   private resizeUpListener: (() => void) | null = null;
+  private dragActive = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragStartRight = 0;
+  private dragStartBottom = 0;
+  private dragMoveListener: ((e: PointerEvent) => void) | null = null;
+  private dragUpListener: ((e: PointerEvent) => void) | null = null;
   private scopeWatchInitialized = false;
 
   constructor() {
+    effect(() => {
+      if (!this.embed() && this.attentionOpen()) {
+        this.show = true;
+        this.cdr.markForCheck();
+        this.scrollToBottom();
+      }
+    });
     effect(() => {
       this.conversationScope();
       this.scopeRef();
@@ -113,6 +130,65 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.teardownResizeListeners();
+    this.teardownDragListeners();
+  }
+
+  onDragStart(event: PointerEvent): void {
+    if (this.embed() || !this.show || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    this.teardownDragListeners();
+    this.dragActive = true;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    const dock = (event.currentTarget as HTMLElement).closest('.chat-dock')?.getBoundingClientRect();
+    this.dragStartRight = this.dockRight() ?? (dock ? window.innerWidth - dock.right : 30);
+    this.dragStartBottom = this.dockBottom() ?? (dock ? window.innerHeight - dock.bottom : 0);
+    this.dragMoveListener = e => this.onDragMove(e);
+    this.dragUpListener = e => this.onDragEnd(e);
+    document.addEventListener('pointermove', this.dragMoveListener);
+    document.addEventListener('pointerup', this.dragUpListener);
+    document.addEventListener('pointercancel', this.dragUpListener);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'move';
+  }
+
+  private onDragMove(event: PointerEvent): void {
+    if (!this.dragActive) {
+      return;
+    }
+    const maxRight = Math.max(0, window.innerWidth - this.panelWidth());
+    const maxBottom = Math.max(0, window.innerHeight - this.panelHeight());
+    const right = this.dragStartRight - (event.clientX - this.dragStartX);
+    const bottom = this.dragStartBottom - (event.clientY - this.dragStartY);
+    this.dockRight.set(Math.min(maxRight, Math.max(0, right)));
+    this.dockBottom.set(Math.min(maxBottom, Math.max(0, bottom)));
+    this.cdr.markForCheck();
+  }
+
+  private onDragEnd(event: PointerEvent): void {
+    if (!this.dragActive) {
+      return;
+    }
+    this.onDragMove(event);
+    this.dragActive = false;
+    this.teardownDragListeners();
+    this.cdr.markForCheck();
+  }
+
+  private teardownDragListeners(): void {
+    if (this.dragMoveListener) {
+      document.removeEventListener('pointermove', this.dragMoveListener);
+      this.dragMoveListener = null;
+    }
+    if (this.dragUpListener) {
+      document.removeEventListener('pointerup', this.dragUpListener);
+      document.removeEventListener('pointercancel', this.dragUpListener);
+      this.dragUpListener = null;
+    }
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
   }
 
   onResizeStart(event: MouseEvent): void {
