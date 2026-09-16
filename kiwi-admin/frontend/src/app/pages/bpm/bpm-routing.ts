@@ -13,7 +13,7 @@ export default [
     path: 'project',
     title: '项目管理',
     data: { key: 'bpm-project' },
-    loadComponent: () => import('./project/bpm-project-process').then(m => m.BpmProjectProcess)
+    loadComponent: () => import('./project/bpm-project').then(m => m.BpmProject)
   },
   { path: 'market', title: '模板市场', data: { key: 'bpm-market' }, loadComponent: () => import('./market/bpm-market').then(m => m.BpmMarket) },
   { path: 'market/:packId', title: '模板详情', data: { key: 'bpm-market-detail' }, loadComponent: () => import('./market/bpm-market-detail').then(m => m.BpmMarketDetail) },

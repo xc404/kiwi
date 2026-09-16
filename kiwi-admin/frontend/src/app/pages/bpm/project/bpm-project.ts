@@ -35,7 +35,7 @@ interface BpmProjectOption {
 }
 
 @Component({
-  selector: 'app-bpm-project-process',
+  selector: 'app-bpm-project',
   template: `
     <app-page-header></app-page-header>
     <section class="page-content">
@@ -112,10 +112,10 @@ interface BpmProjectOption {
     NzMenuModule,
     NzTabsModule
   ],
-  styleUrls: ['./bpm-project-process.less'],
+  styleUrls: ['./bpm-project.less'],
   encapsulation: ViewEncapsulation.None
 })
-export class BpmProjectProcess implements OnInit {
+export class BpmProject implements OnInit {
   private readonly activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
   private readonly workspace = inject(BpmWorkspaceService);
