@@ -31,4 +31,4 @@ Kiwi 工作流目前缺少可发现、可复用、可分享的流程起点：用
 - C3 公网 Registry 与审核工作流
 - 安装前对 `requiredComponentKeys` 的强拦截（当前仅 manifest 扫描记录）
 - GPG `SIGNATURE` 文件与 trustKeys（C3）
-- AI Planner 完整集成（见 `ai_场景生图优化` plan）
+- AI Planner 完整集成（见 Designer Agent harness / `designer_agent_conversation_first`）

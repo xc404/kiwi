@@ -34,7 +34,7 @@ isProject: false
 
 # BPM 流程模板 Market — 独立实施计划
 
-> 与 AI 场景生图的关系见 [ai_场景生图优化_73adc83b.plan.md](ai_场景生图优化_73adc83b.plan.md)：Market 提供高质量流程起点，AI Planner 负责搜模板、安装与微调。
+> 与 AI 场景生图的关系：Market 提供高质量流程起点；Designer Agent harness（[`designer_agent_conversation_first_b6e2d814.plan.md`](designer_agent_conversation_first_b6e2d814.plan.md)）负责搜模板、安装与微调。
 
 ## 目标
 
@@ -131,7 +131,7 @@ Market **列表默认展示 Pack**；`single` 包在 UI 上可简化（详情直
 | [`bpmPd_saveAsComponent`](kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/ctl/BpmProcessDefinitionCtl.java) | 发布向导参考「另存为」的元数据收集 |
 | [`BpmProcessDefinitionService`](kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/BpmProcessDefinitionService.java) + [`bpm-template.xml`](kiwi-admin/backend/src/main/resources/bpm/bpm-template.xml) | 空白流程创建 vs 模板安装两条路径 |
 | [`BpmComponentBundleService`](kiwi-admin/backend/src/main/java/com/kiwi/project/bpm/service/BpmComponentBundleService.java) | manifest + 签名校验 + 上传/分发心智 |
-| [`kiwi_组件生态路线图`](kiwi_组件生态路线图_0125f55e.plan.md) | remote provider、component-bundle.json 同级设计 |
+| 组件生态长尾（见功能缺口路线图） | remote provider、component-bundle.json 同级设计 |
 | [`cryo-movie-minimal.bpmn`](kiwi-admin/backend/src/main/resources/bpm/samples/cryo-movie-minimal.bpmn) | 首批官方种子模板 |
 
 ---
@@ -498,7 +498,7 @@ sequenceDiagram
 
 - 空白项目 / 流程
 - **从 Market 安装包**（新建项目，推荐）
-- 用 AI 描述（见 [AI plan](ai_场景生图优化_73adc83b.plan.md)）
+- 用 AI 描述（Designer Agent harness）
 
 ---
 
@@ -536,7 +536,7 @@ flowchart LR
 
 - **C1** 可独立交付，立刻改善人工建图与团队共享
 - **C2** 为公网签名与离线分发铺路
-- **C3** 生态二期；可与 [组件 remote provider](kiwi_组件生态路线图_0125f55e.plan.md) 协同
+- **C3** 生态二期；可与组件 remote provider（生态长尾）协同
 - **AI 集成** 在 C1 API 完成后即可开始，不必等 C3
 
 ---
